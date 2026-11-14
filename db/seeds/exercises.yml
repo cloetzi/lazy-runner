@@ -1,0 +1,1403 @@
+# Exercise library. Cues are short lines shown in the player while the step runs.
+# Cue text is original; form notes from the source program are paraphrased.
+# Review each cue for accuracy before relying on it.
+# `equipment` lists slugs from equipment.yml; leave it out for bodyweight.
+# One held weight that a dumbbell or a kettlebell does equally well is
+# `weight`; a pair in the hands (`weights_held: 2`) is `dumbbell`, since a
+# kettlebell rarely comes in pairs at home. A step can still name other gear.
+# `areas` is where it works, for finding it in the library: legs, hips, core,
+# upper_body (the first is the main one). `pattern` is the movement it trains,
+# for offering swaps that do the same job: squat, lunge, hinge, push, pull,
+# anti_extension, anti_rotation (core) or mobility.
+# `unilateral: true` is done one side at a time: a set runs left then right, and
+# its reps or seconds count per side. `alternating: true` switches sides within
+# one set (a dead bug): its reps count both sides together.
+# `weights_held` is 2 when a dumbbell goes in each hand; weights are per weight.
+
+# --- Stretches ---
+- slug: half-kneel-quad-stretch
+  name: Half-kneel quad stretch
+  category: stretch
+  areas: [legs, hips]
+  pattern: mobility
+  unilateral: true
+  default_seconds: 20
+  cues:
+    - Back knee down, front foot flat
+    - Tuck the pelvis under
+    - Feel the front of the back thigh
+  instructions:
+    - Kneel on a mat on your back knee, front foot flat and the front knee over the ankle.
+    - Stand tall and tuck the pelvis under, as if pulling your belt buckle up.
+    - Shift the hips gently forward until you feel a stretch at the front of the back thigh and hip.
+    - Keep the chest up and the lower back neutral; do not arch to go further.
+  # Left side: the near (back) knee is down and stretched.
+  animation:
+    anchor: knee_near
+    accent: [thigh_near]
+    highlight: [thigh_near]
+    props: [{ type: mat, x: 40, width: 130 }]
+    still: 1
+    keyframes:
+      - pose: { torso: -90, thigh_near: 90, shin_near: 180, foot_near: 180, thigh_far: 10, shin_far: 70, upper_arm_near: 95, forearm_near: 75, upper_arm_far: 92, forearm_far: 75 }
+        at: [80, 179]
+        hold: 0.6
+        move: 1.5
+      - pose: { torso: -94, thigh_near: 120, thigh_far: 0, shin_far: 102 }
+        hold: 2.5
+        move: 1.5
+
+- slug: pigeon-stretch
+  name: Pigeon stretch
+  category: stretch
+  areas: [hips]
+  pattern: mobility
+  unilateral: true
+  default_seconds: 20
+  cues:
+    - Front knee in line with your belly button
+    - Back leg long behind you
+    - Sink the hips evenly
+  mistakes:
+    - Twisting the hips toward the bent leg
+  instructions:
+    - From hands and knees, slide one knee forward behind the same wrist and let the shin angle across toward the other hip.
+    - Straighten the other leg long behind you, top of the foot on the mat.
+    - Square the hips to the floor and sink them evenly; stay upright or walk the hands forward to fold over the front leg.
+    - Ease off if you feel it in the front knee rather than the outside of the hip.
+  animation:
+    anchor: hip
+    accent: [torso]
+    highlight: [hip]
+    props: [{ type: mat, x: 40, width: 140 }]
+    still: 1
+    keyframes:
+      - pose: { torso: -80, neck: 0, thigh_near: 12, shin_near: 180, foot_near: 200, thigh_far: 168, shin_far: 180, foot_far: 180, upper_arm_near: 95, forearm_near: 90, upper_arm_far: 85, forearm_far: 90 }
+        scale: { shin_near: 0.6, foot_near: 0.5 }
+        at: [100, 168]
+        hold: 2.5
+        move: 2
+      - pose: { torso: -25, neck: 10, upper_arm_near: 85, forearm_near: 0, upper_arm_far: 82, forearm_far: 0 }
+        hold: 3
+        move: 2
+
+# Form reference: https://www.acefitness.org/resources/everyone/blog/5657/5-chest-stretch-variations/
+- slug: chest-stretch-wall
+  name: Chest stretch on wall
+  category: stretch
+  areas: [upper_body]
+  pattern: mobility
+  unilateral: true
+  default_seconds: 20
+  cues:
+    - Forearm on the wall, elbow above shoulder
+    - Turn the body gently away
+    - Feel the front of the chest and shoulder
+  instructions:
+    - Stand side-on to a wall, forearm on it with the elbow at or just above shoulder height.
+    - Step the near foot forward and slowly turn the chest away from the wall.
+    - Keep the shoulder down and back; stop at a gentle stretch across the chest and front of the shoulder.
+    - Breathe and hold, then switch arms.
+  animation:
+    anchor: ankle_far
+    accent: [upper_arm_near, forearm_near]
+    highlight: [shoulder]
+    props: [{ type: wall, x: 77 }]
+    still: 1
+    keyframes:
+      - pose: { torso: -90, thigh_near: 85, shin_near: 92, thigh_far: 95, shin_far: 92, upper_arm_near: 180, forearm_near: -90, upper_arm_far: 90, forearm_far: 90 }
+        at: [110, 182]
+        hold: 1
+        move: 2
+      - pose: { torso: -84, thigh_near: 75, shin_near: 95, thigh_far: 95, shin_far: 100, upper_arm_near: -175, forearm_near: -112, upper_arm_far: 95, forearm_far: 92 }
+        hold: 3
+        move: 2
+
+# Form reference: https://www.acefitness.org/education-and-resources/lifestyle/exercise-library/235/supine-hamstrings-stretch/
+- slug: hamstring-stretch-wall
+  name: Hamstring stretch on wall
+  category: stretch
+  areas: [legs]
+  pattern: mobility
+  unilateral: true
+  default_seconds: 20
+  cues:
+    - Lie down, one leg up the wall
+    - Other leg long on the floor
+    - Let the raised leg drop slowly as it loosens
+  instructions:
+    - Lie on your back in a doorway or beside a wall, other leg long on the floor.
+    - Rest one heel up on the wall with the knee straight or very slightly bent.
+    - Keep the lower back and hips flat; the stretch should be in the back of the raised thigh.
+    - As it loosens, move the hips a little closer to the wall so the leg comes nearer vertical.
+  animation:
+    anchor: shoulder
+    accent: [thigh_near, shin_near]
+    highlight: [thigh_near]
+    props: [{ type: mat, x: 14, width: 172 }]
+    still: 1
+    keyframes:
+      - pose: { torso: 180, neck: 0, thigh_near: -72, shin_near: -72, foot_near: -162, thigh_far: 0, shin_far: 0, foot_far: -90, upper_arm_near: 2, forearm_near: 0, upper_arm_far: 3, forearm_far: 0 }
+        at: [48, 175]
+        hold: 1.5
+        move: 3
+      - pose: { thigh_near: -88, shin_near: -88, foot_near: -178 }
+        hold: 3
+        move: 2
+
+# Form reference: https://www.acefitness.org/resources/everyone/exercise-library/152/standing-dorsi-flexion-calf-stretch/
+- slug: calf-stretch
+  name: Calf stretch
+  category: stretch
+  areas: [legs]
+  pattern: mobility
+  unilateral: true
+  default_seconds: 20
+  cues:
+    - Hands on the wall, back heel down
+    - Half the time knee straight
+    - Half the time knee bent
+  instructions:
+    - Hands on a wall, one foot forward with the knee bent and the other a long step back.
+    - Press the back heel into the floor, toes pointing straight ahead, back knee straight.
+    - Lean into the wall until you feel the upper calf, and hold.
+    - Then bend the back knee slightly, heel still down, to move the stretch lower toward the Achilles.
+  animation:
+    anchor: ankle_near
+    accent: [shin_near]
+    highlight: [shin_near]
+    props: [{ type: wall, x: 168 }]
+    still: 0
+    keyframes:
+      - pose: { torso: -62, thigh_near: 110, shin_near: 110, foot_near: 0, thigh_far: 60, shin_far: 100, foot_far: 0, upper_arm_near: -5, forearm_near: -55, upper_arm_far: -8, forearm_far: -58 }
+        at: [66, 182]
+        hold: 4
+        move: 1.5
+      - pose: { thigh_near: 98, shin_near: 124, thigh_far: 64, shin_far: 104 }
+        hold: 4
+        move: 1.5
+
+- slug: quad-stretch-bench
+  name: Quad stretch on bench
+  category: stretch
+  areas: [legs]
+  pattern: mobility
+  equipment: [bench]
+  unilateral: true
+  default_seconds: 30
+  cues:
+    - Back foot up on the bench
+    - Tuck the pelvis, stand tall
+    - Feel the front of the back thigh
+  instructions:
+    - Stand tall with your back to a bench or sturdy chair, one foot flat on the floor.
+    - Rest the top of the other foot on the seat behind you.
+    - Tuck the pelvis under and squeeze the glute of the back leg until the front of the thigh stretches.
+    - Bend the standing knee a little to deepen it; keep the chest up and the lower back neutral.
+  animation:
+    anchor: ankle_far
+    accent: [thigh_near, shin_near]
+    highlight: [thigh_near]
+    props: [{ type: bench, x: 26, width: 56, height: 40 }]
+    still: 1
+    keyframes:
+      - pose: { torso: -90, thigh_far: 90, shin_far: 90, foot_far: 0, thigh_near: 103.8, shin_near: -178.9, foot_near: 175, upper_arm_near: 112, forearm_near: 50, upper_arm_far: 110, forearm_far: 48 }
+        at: [120, 182]
+        hold: 1
+        move: 2
+      - pose: { torso: -86, thigh_far: 70.4, shin_far: 106.1, thigh_near: 100.1, shin_near: -172.3, foot_near: 178 }
+        hold: 3
+        move: 2
+
+# Form reference: https://www.acefitness.org/education-and-resources/lifestyle/exercise-library/273/modified-hurdler-s-stretch/
+- slug: seated-hamstring-stretch
+  name: Seated hamstring stretch
+  category: stretch
+  areas: [legs]
+  pattern: mobility
+  unilateral: true
+  default_seconds: 30
+  cues:
+    - Sit tall, one leg long
+    - Hinge forward from the hips
+    - Keep the back long, not rounded
+  instructions:
+    - Sit tall on the floor, one leg straight in front with the toes up.
+    - Bend the other knee out to the side, sole against the inside of the straight leg.
+    - Hinge forward from the hips with a long back, reaching toward the shin or foot.
+    - Stop where you feel the back of the thigh; don't round the back to reach further.
+  animation:
+    anchor: hip
+    accent: [torso]
+    highlight: [thigh_near]
+    props: [{ type: mat, x: 30, width: 150 }]
+    still: 1
+    keyframes:
+      - pose: { torso: -75, neck: 0, thigh_near: 0, shin_near: 0, foot_near: -85, thigh_far: 8, shin_far: 172, foot_far: 180, upper_arm_near: 67.1, forearm_near: 24.3, upper_arm_far: 64, forearm_far: 22 }
+        scale: { thigh_far: 0.5, shin_far: 0.55, foot_far: 0.4 }
+        at: [70, 175]
+        hold: 1
+        move: 2.5
+      - pose: { torso: -30, neck: 10, upper_arm_near: -13.8, forearm_near: 60.7, upper_arm_far: -10, forearm_far: 58 }
+        hold: 3
+        move: 2
+
+- slug: glute-hug-stretch
+  name: Glute hug stretch
+  category: stretch
+  areas: [hips]
+  pattern: mobility
+  unilateral: true
+  default_seconds: 30
+  cues:
+    - Lie on your back
+    - Hug one knee toward the opposite shoulder
+    - Feel the outside of the hip
+  instructions:
+    - Lie on your back with both legs long.
+    - Bend one knee and hold it with both hands.
+    - Pull the knee up toward the opposite shoulder until you feel the outside of the hip.
+    - Keep the other leg relaxed on the floor and the head down.
+  animation:
+    anchor: shoulder
+    accent: [thigh_near]
+    highlight: [hip]
+    props: [{ type: mat, x: 20, width: 170 }]
+    still: 1
+    keyframes:
+      - pose: { torso: 180, neck: 0, thigh_near: -100, shin_near: 15, foot_near: -60, thigh_far: 0, shin_far: 0, foot_far: -88, upper_arm_near: -48.6, forearm_near: -91.1, upper_arm_far: -45, forearm_far: -88 }
+        scale: { shin_near: 0.7 }
+        at: [64, 175]
+        hold: 1
+        move: 2
+      - pose: { thigh_near: -122, shin_near: 25, foot_near: -50, upper_arm_near: -23.4, forearm_near: -84.9, upper_arm_far: -20, forearm_far: -82 }
+        hold: 3
+        move: 2
+
+# Form reference: https://www.acefitness.org/resources/everyone/exercise-library/223/side-lying-arm-rolls/
+- slug: back-shoulder-rotation
+  name: Back and shoulder rotation
+  category: stretch
+  areas: [upper_body]
+  pattern: mobility
+  unilateral: true
+  default_seconds: 30
+  cues:
+    - Lie on your side, knees bent
+    - Open the top arm across to the other side
+    - Follow the hand with your eyes
+  instructions:
+    - Lie on your side, knees bent and stacked, arms straight out in front.
+    - Lift the top arm up and over to the other side, letting the chest open toward the ceiling.
+    - Follow the hand with your eyes and keep the knees together on the floor.
+    - Rest the arm wherever it reaches and breathe into the stretch.
+  animation:
+    anchor: shoulder
+    accent: [upper_arm_near, forearm_near]
+    highlight: [torso]
+    props: [{ type: mat, x: 20, width: 160 }]
+    still: 2
+    keyframes:
+      - pose: { torso: 180, neck: 0, thigh_far: 40, shin_far: 0, foot_far: 0, thigh_near: 5, shin_near: 0, foot_near: 0, upper_arm_far: 15, forearm_far: 15, upper_arm_near: 20, forearm_near: 20 }
+        scale: { thigh_far: 0.55, thigh_near: 0.55, foot_far: 0.4, foot_near: 0.4, upper_arm_far: 0.35, forearm_far: 0.35, upper_arm_near: 0.35, forearm_near: 0.35 }
+        at: [56, 174]
+        hold: 1
+        move: 2
+      - pose: { upper_arm_near: -90, forearm_near: -90, neck: 8 }
+        scale: { upper_arm_near: 1, forearm_near: 1 }
+        hold: 0
+        move: 2
+      - pose: { upper_arm_near: 160, forearm_near: 160, neck: 14 }
+        scale: { upper_arm_near: 0.35, forearm_near: 0.35 }
+        hold: 5
+        move: 2
+      - pose: { upper_arm_near: -90, forearm_near: -90, neck: 8 }
+        scale: { upper_arm_near: 1, forearm_near: 1 }
+        hold: 0
+        move: 2
+
+- slug: frog-groin-stretch
+  name: Frog groin stretch
+  category: stretch
+  areas: [hips]
+  pattern: mobility
+  default_seconds: 30
+  cues:
+    - On hands or forearms, knees wide
+    - Ankles in line with knees
+    - Rock the hips back gently
+  instructions:
+    - Start on hands or forearms, knees wide apart on a mat.
+    - Turn the feet out so the ankles line up behind the knees.
+    - Slowly rock the hips back toward the heels until the inner thighs stretch.
+    - Keep the back flat and come forward again if the hips or knees pinch.
+  animation:
+    anchor: knee_near
+    accent: [torso]
+    highlight: [hip]
+    props: [{ type: mat, x: 30, width: 150 }]
+    still: 1
+    keyframes:
+      - pose: { torso: -13.1, neck: 0, thigh_near: 90, shin_near: 180, foot_near: 180, thigh_far: 90, shin_far: 180, foot_far: 180, upper_arm_near: 90, forearm_near: 0, upper_arm_far: 90, forearm_far: 0 }
+        scale: { thigh_near: 0.4, thigh_far: 0.4, foot_near: 0.5, foot_far: 0.5 }
+        at: [107, 180]
+        hold: 1
+        move: 2
+      - pose: { torso: -18, thigh_near: 50, thigh_far: 50 }
+        hold: 3
+        move: 2
+
+# Form reference: https://www.acefitness.org/resources/everyone/exercise-library/174/overhead-triceps-stretch/
+- slug: overhead-triceps-stretch
+  name: Overhead triceps stretch
+  category: stretch
+  areas: [upper_body]
+  pattern: mobility
+  unilateral: true
+  default_seconds: 30
+  cues:
+    - Hand reaches down between the shoulder blades
+    - Other hand eases the elbow back
+    - Ribs down, don't arch
+  instructions:
+    - Stand tall and raise one arm overhead.
+    - Bend the elbow so the hand drops down between the shoulder blades.
+    - With the other hand, ease the raised elbow gently back behind the head.
+    - Keep the ribs down so the lower back doesn't arch.
+  animation:
+    anchor: ankle_near
+    accent: [upper_arm_near, forearm_near]
+    highlight: [upper_arm_near]
+    still: 1
+    keyframes:
+      - pose: { torso: -90, upper_arm_near: -100, forearm_near: 95, upper_arm_far: -44.8, forearm_far: -162.3 }
+        at: [100, 182]
+        hold: 1
+        move: 2
+      - pose: { upper_arm_near: -108, forearm_near: 100, upper_arm_far: -52.8, forearm_far: -170.5 }
+        hold: 3
+        move: 2
+
+# --- Activation and mobility ---
+- slug: side-plank-knee-leg-raise
+  name: Side plank from knee with leg raise
+  category: activation
+  areas: [core, hips]
+  pattern: anti_rotation
+  unilateral: true
+  default_reps: 8
+  cues:
+    - Elbow under shoulder, bottom knee down
+    - Hips up in a straight line
+    - Lift the top leg slowly, then lower
+  instructions:
+    - Lie on your side, elbow under the shoulder, bottom knee bent and top leg straight.
+    - Lift the hips so the body makes a line from the shoulder through the bottom knee.
+    - Raise the straight top leg slowly, toes pointing forward, then lower it with control.
+    - Keep the hips up and stacked the whole set.
+  animation:
+    anchor: elbow_far
+    accent: [thigh_near, shin_near]
+    highlight: [hip]
+    props: [{ type: mat, x: 20, width: 140 }]
+    still: 1
+    keyframes:
+      - pose: { torso: -161, neck: 0, upper_arm_far: 90, forearm_far: 180, thigh_far: 19, shin_far: 180, foot_far: 180, thigh_near: 10, shin_near: 10, foot_near: 100, upper_arm_near: 19, forearm_near: -10 }
+        scale: { forearm_far: 0.6, shin_far: 0.35, foot_far: 0.3, foot_near: 0.4 }
+        at: [46, 181]
+        hold: 0.6
+        move: 1.2
+      - pose: { thigh_near: -18, shin_near: -18, foot_near: 72 }
+        hold: 0.8
+        move: 1.2
+
+# Form reference: https://www.acefitness.org/resources/pros/expert-articles/5203/top-exercises-to-gain-thoracic-mobility/
+- slug: open-books
+  name: Open books
+  category: mobility
+  areas: [upper_body]
+  pattern: mobility
+  unilateral: true
+  default_reps: 10
+  cues:
+    - Lie on your side, knees stacked and bent
+    - Open the top arm to the other side
+    - Keep the knees together
+  instructions:
+    - Lie on your side, knees bent and stacked in front of you, arms straight out at shoulder height.
+    - Lift the top arm up and over to the other side, turning the chest toward the ceiling.
+    - Follow the hand with your eyes and keep the knees together on the floor.
+    - Pause, then bring the arm back over to the start.
+  animation:
+    anchor: shoulder
+    accent: [upper_arm_near, forearm_near]
+    highlight: [torso]
+    props: [{ type: mat, x: 20, width: 160 }]
+    still: 2
+    keyframes:
+      - pose: { torso: 180, neck: 0, thigh_far: 40, shin_far: 0, foot_far: 0, thigh_near: 5, shin_near: 0, foot_near: 0, upper_arm_far: 15, forearm_far: 15, upper_arm_near: 20, forearm_near: 20 }
+        scale: { thigh_far: 0.55, thigh_near: 0.55, foot_far: 0.4, foot_near: 0.4, upper_arm_far: 0.35, forearm_far: 0.35, upper_arm_near: 0.35, forearm_near: 0.35 }
+        at: [56, 174]
+        hold: 0.8
+        move: 1.5
+      - pose: { upper_arm_near: -90, forearm_near: -90, neck: 8 }
+        scale: { upper_arm_near: 1, forearm_near: 1 }
+        hold: 0.2
+        move: 1.5
+      - pose: { upper_arm_near: 160, forearm_near: 160, neck: 14 }
+        scale: { upper_arm_near: 0.35, forearm_near: 0.35 }
+        hold: 2
+        move: 1.5
+      - pose: { upper_arm_near: -90, forearm_near: -90, neck: 8 }
+        scale: { upper_arm_near: 1, forearm_near: 1 }
+        hold: 0.2
+        move: 1.5
+
+- slug: glute-bridge-single-leg-lift
+  name: Glute bridge with single-leg lifts
+  alternating: true
+  category: activation
+  areas: [hips, core]
+  pattern: hinge
+  default_reps: 16
+  cues:
+    - Bridge up, squeeze the glutes
+    - Lift one foot, then the other
+    - Keep the hips level
+  instructions:
+    - Lie on your back, knees bent and feet flat about hip-width apart, arms by your sides.
+    - Press through the heels and squeeze the glutes to lift the hips into a straight line from shoulders to knees.
+    - Keeping the hips up and level, lift one foot a little off the floor, put it down, then lift the other.
+    - Lower slowly when the set is done.
+  animation:
+    anchor: shoulder
+    accent: [thigh_near, shin_near, thigh_far, shin_far]
+    highlight: [hip]
+    props: [{ type: mat, x: 14, width: 172 }]
+    still: 2
+    keyframes:
+      - pose: { torso: 180, neck: 0, thigh_near: -39, shin_near: 54, foot_near: 0, thigh_far: -37, shin_far: 56, foot_far: 0, upper_arm_near: 4, forearm_near: 2, upper_arm_far: 3, forearm_far: 1 }
+        at: [52, 175]
+        hold: 0.5
+        move: 1
+      - pose: { torso: 150, neck: 28, thigh_near: -9, shin_near: 59, thigh_far: -7, shin_far: 61, upper_arm_near: 10, forearm_near: 6, upper_arm_far: 9, forearm_far: 5 }
+        hold: 0.3
+        move: 0.6
+      - pose: { thigh_near: -80, shin_near: -10, foot_near: -20 }
+        hold: 0.5
+        move: 0.6
+      - pose: { thigh_near: -9, shin_near: 59, foot_near: 0 }
+        hold: 0.3
+        move: 0.6
+      - pose: { thigh_far: -80, shin_far: -10, foot_far: -20 }
+        hold: 0.5
+        move: 0.6
+      - pose: { thigh_far: -7, shin_far: 61, foot_far: 0 }
+        hold: 0.3
+        move: 1
+
+# Form reference: https://www.acefitness.org/resources/everyone/exercise-library/303/side-plank/
+- slug: side-plank
+  name: Side plank
+  category: activation
+  areas: [core]
+  pattern: anti_rotation
+  unilateral: true
+  default_seconds: 45
+  cues:
+    - Elbow under shoulder
+    - Drive the elbow into the ground
+    - Hips high, body in one line
+  instructions:
+    - Lie on your side with the legs straight and stacked, elbow under the shoulder.
+    - Push the forearm into the floor and lift the hips until the body is one straight line.
+    - Keep the head in line with the spine and the top hip stacked over the bottom one.
+    - Hold and breathe; lower before the hips start to sag.
+  animation:
+    anchor: elbow_far
+    accent: [torso, thigh_far, shin_far]
+    highlight: [hip]
+    props: [{ type: mat, x: 20, width: 170 }]
+    still: 1
+    keyframes:
+      - pose: { torso: -154.4, neck: 0, upper_arm_far: 90, forearm_far: 180, thigh_far: 6.3, shin_far: 6.3, foot_far: 100, thigh_near: 6.3, shin_near: 6.3, foot_near: 100, upper_arm_near: 6, forearm_near: 6 }
+        scale: { forearm_far: 0.5, foot_far: 0.4, foot_near: 0.4 }
+        at: [47, 181]
+        hold: 0.5
+        move: 1.5
+      - pose: { torso: -167.2, thigh_far: 12.8, shin_far: 12.8, thigh_near: 12.8, shin_near: 12.8, upper_arm_near: 13, forearm_near: 13 }
+        hold: 4
+        move: 1.5
+
+- slug: wall-angels-wall-sit
+  name: Wall angels in a wall sit
+  category: mobility
+  areas: [upper_body, legs]
+  pattern: mobility
+  default_reps: 10
+  cues:
+    - Sit against the wall, thighs about level
+    - Back and arms flat on the wall
+    - Slide the arms up and down slowly
+  instructions:
+    - Sit against a wall with thighs about level and knees over the ankles.
+    - Press the back, head and arms flat on the wall, elbows bent like a goalpost.
+    - Slide the arms up the wall as far as they go without lifting off, then back down.
+    - Move slowly and keep the ribs down.
+  animation:
+    anchor: ankle_near
+    accent: [upper_arm_near, forearm_near]
+    highlight: [torso]
+    props: [{ type: wall, x: 54 }]
+    still: 0
+    keyframes:
+      - pose: { torso: -90, thigh_near: 0, shin_near: 90, foot_near: 0, thigh_far: 0, shin_far: 90, foot_far: 0, upper_arm_near: 180, forearm_near: -90, upper_arm_far: 180, forearm_far: -90 }
+        scale: { upper_arm_near: 0.2, upper_arm_far: 0.2 }
+        at: [110, 182]
+        hold: 0.6
+        move: 2
+      - pose: { upper_arm_near: -90, forearm_near: -90, upper_arm_far: -90, forearm_far: -90 }
+        scale: { upper_arm_near: 1, upper_arm_far: 1 }
+        hold: 0.4
+        move: 2
+
+# Form reference: https://www.acefitness.org/resources/everyone/exercise-library/237/shoulder-stability-mobility-series-i-y-t-w-formations/
+- slug: w-raise-hinge
+  name: W's in a hinge
+  category: activation
+  areas: [upper_body]
+  pattern: pull
+  default_reps: 15
+  cues:
+    - Hinge forward, flat back
+    - Pull elbows back into a W
+    - Squeeze the shoulder blades
+  instructions:
+    - Stand with soft knees and hinge forward to a flat back, arms hanging.
+    - Pull the elbows back and up beside the ribs, hands out wide, to make a W.
+    - Squeeze the shoulder blades together and down, then lower slowly.
+    - Keep the neck long and the lower back still.
+  animation:
+    anchor: ankle_near
+    accent: [upper_arm_near, forearm_near]
+    highlight: [shoulder]
+    still: 1
+    keyframes:
+      - pose: { torso: -25, neck: 0, thigh_near: 65, shin_near: 98, foot_near: 0, thigh_far: 65, shin_far: 98, foot_far: 0, upper_arm_near: 92, forearm_near: 92, upper_arm_far: 88, forearm_far: 88 }
+        at: [112, 182]
+        hold: 0.4
+        move: 1
+      - pose: { upper_arm_near: 150, forearm_near: -40, upper_arm_far: 150, forearm_far: -40 }
+        scale: { upper_arm_near: 0.75, forearm_near: 0.8, upper_arm_far: 0.75, forearm_far: 0.8 }
+        hold: 1
+        move: 1.2
+
+# Form reference: https://www.acefitness.org/resources/everyone/exercise-library/237/shoulder-stability-mobility-series-i-y-t-w-formations/
+- slug: t-raise-hinge
+  name: T's in a hinge
+  category: activation
+  areas: [upper_body]
+  pattern: pull
+  default_reps: 15
+  cues:
+    - Hinge forward, flat back
+    - Raise straight arms out into a T
+    - Thumbs up, squeeze the shoulder blades
+  instructions:
+    - Stand with soft knees and hinge forward to a flat back, arms hanging.
+    - With straight arms and thumbs up, raise the arms out to the sides into a T.
+    - Squeeze the shoulder blades at the top, then lower slowly.
+    - Lift only as high as you can without shrugging.
+  animation:
+    anchor: ankle_near
+    accent: [upper_arm_near, forearm_near]
+    highlight: [shoulder]
+    still: 1
+    keyframes:
+      - pose: { torso: -25, neck: 0, thigh_near: 65, shin_near: 98, foot_near: 0, thigh_far: 65, shin_far: 98, foot_far: 0, upper_arm_near: 92, forearm_near: 92, upper_arm_far: 88, forearm_far: 88 }
+        at: [112, 182]
+        hold: 0.4
+        move: 1
+      - pose: { upper_arm_near: 110, forearm_near: 110, upper_arm_far: 110, forearm_far: 110 }
+        scale: { upper_arm_near: 0.25, forearm_near: 0.25, upper_arm_far: 0.25, forearm_far: 0.25 }
+        hold: 1
+        move: 1.2
+
+- slug: dead-bug
+  name: Dead bug
+  category: activation
+  alternating: true
+  areas: [core]
+  pattern: anti_extension
+  default_reps: 10
+  cues:
+    - Lie on your back, arms up, knees over hips
+    - Lower opposite arm and leg slowly
+    - Keep the lower back on the floor
+  instructions:
+    - Lie on your back, arms reaching to the ceiling, hips and knees bent at 90 degrees.
+    - Press the lower back gently into the floor.
+    - Slowly lower one arm overhead and the opposite leg toward the floor, stopping before the back arches.
+    - Return and repeat on the other side.
+  animation:
+    anchor: shoulder
+    accent: [upper_arm_near, forearm_near, thigh_far, shin_far]
+    highlight: [torso]
+    props: [{ type: mat, x: 10, width: 180 }]
+    still: 1
+    keyframes:
+      - pose: { torso: 180, neck: 0, upper_arm_near: -90, forearm_near: -90, upper_arm_far: -90, forearm_far: -90, thigh_near: -90, shin_near: 0, foot_near: -90, thigh_far: -90, shin_far: 0, foot_far: -90 }
+        at: [64, 175]
+        hold: 0.5
+        move: 2
+      - pose: { upper_arm_near: -172, forearm_near: -172, thigh_far: -9, shin_far: -9, foot_far: -99 }
+        hold: 0.5
+        move: 1.5
+      - pose: { upper_arm_near: -90, forearm_near: -90, thigh_far: -90, shin_far: 0, foot_far: -90 }
+        hold: 0.5
+        move: 2
+      - pose: { upper_arm_far: -172, forearm_far: -172, thigh_near: -9, shin_near: -9, foot_near: -99 }
+        hold: 0.5
+        move: 1.5
+
+# Form reference: https://www.hybridcalisthenics.com/barhangs
+- slug: scapular-pull-hangboard
+  name: Hangboard scapular pull
+  category: activation
+  areas: [upper_body, core]
+  pattern: pull
+  equipment: [hangboard]
+  default_reps: 6
+  cues:
+    - Hang on the big holds, arms straight
+    - Pull the shoulders down, away from the ears
+    - Lower slowly back to the hang
+  instructions:
+    - Hold the largest, most comfortable holds of the hangboard with an open hand, thumbs alongside.
+    - Keep your toes on a chair under the board to take as much weight as you need.
+    - With the arms straight, draw the shoulder blades down and back so the body rises a little.
+    - Pause, then let the shoulders rise slowly back up without dropping into the hang.
+  mistakes:
+    - Bending the elbows to turn it into a pull-up
+    - Small edges or full crimps; this is shoulder work, not finger work
+  animation:
+    anchor: hand_near
+    accent: [upper_arm_near]
+    highlight: [shoulder]
+    props: [{ type: hangboard, x: 82, y: 0 }]
+    still: 1
+    keyframes:
+      - pose: { torso: -90, neck: 0, upper_arm_near: -90, forearm_near: -90, upper_arm_far: -92, forearm_far: -91, thigh_near: 80, shin_near: 160, foot_near: 120, thigh_far: 84, shin_far: 156, foot_far: 115 }
+        at: [100, 10]
+        hold: 0.6
+        move: 1
+      - pose: { torso: -84, neck: -4, upper_arm_near: -96, forearm_near: -94, upper_arm_far: -98, forearm_far: -95 }
+        scale: { upper_arm_near: 0.85, upper_arm_far: 0.85 }
+        hold: 1
+        move: 1.2
+
+# --- Strength ---
+- slug: goblet-squat
+  name: Goblet squat
+  category: strength
+  areas: [legs]
+  pattern: squat
+  equipment: [weight]
+  default_reps: 8
+  cues:
+    - Hold the weight at your chest
+    - Weight in the heels
+    - Sit down between the knees, chest up
+  instructions:
+    - Stand with the feet a little wider than the hips, toes turned slightly out.
+    - Hold one weight against your chest with both hands, elbows pointing down (a dumbbell upright by one end, a kettlebell by the horns).
+    - Sit the hips down and back between the knees, chest up and weight in the heels.
+    - Go as low as you can with a flat back, then drive through the heels to stand tall.
+  # Timed to the 2111 tempo used in the workout: two seconds down, one at the
+  # bottom, one up, one at the top.
+  animation:
+    anchor: ankle_near
+    accent: [thigh_near, shin_near]
+    highlight: [thigh_near, hip]
+    props: [{ type: dumbbell, at: hand_near }]
+    still: 0
+    keyframes:
+      - pose: { torso: -90, thigh_near: 88, shin_near: 92, thigh_far: 91, shin_far: 89, foot_far: -4, upper_arm_near: 72, forearm_near: -62, upper_arm_far: 76, forearm_far: -58 }
+        at: [96, 182]
+        hold: 1
+        move: 2
+      - pose: { torso: -62, thigh_near: 12, shin_near: 118, thigh_far: 16, shin_far: 116, upper_arm_near: 100, forearm_near: -38, upper_arm_far: 104, forearm_far: -34 }
+        hold: 1
+        move: 1
+
+- slug: hamstring-bridge-bench
+  name: Hamstring bridge on bench
+  category: strength
+  areas: [legs, hips]
+  pattern: hinge
+  equipment: [bench]
+  default_reps: 15
+  cues:
+    - Heels on the bench, knees slightly bent
+    - Drive the hips up
+    - Lower with control
+  instructions:
+    - Lie on your back with the heels on a bench or chair seat, knees slightly bent.
+    - Press the heels down and drive the hips up until shoulders, hips and knees line up.
+    - Feel the back of the thighs working, not the lower back.
+    - Lower the hips slowly to the floor.
+  animation:
+    anchor: shoulder
+    accent: [thigh_near, thigh_far]
+    highlight: [thigh_near, hip]
+    props: [{ type: bench, x: 140, width: 56, height: 40 }]
+    still: 1
+    keyframes:
+      - pose: { torso: 180, neck: 0, thigh_near: -39.2, shin_near: -9.3, foot_near: -80, thigh_far: -37, shin_far: -11, foot_far: -82, upper_arm_near: 2, forearm_near: 0, upper_arm_far: 3, forearm_far: 0 }
+        at: [44, 175]
+        hold: 0.4
+        move: 1
+      - pose: { torso: 150, neck: 30, thigh_near: -23.6, shin_near: 8.4, foot_near: -72, thigh_far: -21.6, shin_far: 6.4, foot_far: -74 }
+        hold: 0.6
+        move: 1.6
+
+# Form reference: https://www.acefitness.org/resources/everyone/exercise-library/127/single-arm-single-leg-romanian-dead-lift/
+- slug: single-leg-deadlift
+  name: Single-leg deadlift
+  category: strength
+  areas: [legs, hips]
+  pattern: hinge
+  equipment: [weight]
+  unilateral: true
+  default_reps: 10
+  cues:
+    - Stand on one leg, soft knee
+    - Hinge and reach the back leg long
+    - Hips stay square to the floor
+  instructions:
+    - Stand on one leg with a soft knee, weight in the opposite hand.
+    - Hinge at the hip, reaching the free leg straight back as the chest tips forward.
+    - Let the weight hang below the shoulder and keep the hips square to the floor.
+    - Drive through the standing foot to return upright, then balance before the next rep.
+  animation:
+    anchor: ankle_near
+    accent: [torso, thigh_far, shin_far]
+    highlight: [thigh_near, hip]
+    props: [{ type: dumbbell, at: hand_far }]
+    still: 1
+    keyframes:
+      - pose: { torso: -90, thigh_near: 88, shin_near: 92, foot_near: 0, thigh_far: 100, shin_far: 112, foot_far: 20, upper_arm_near: 92, forearm_near: 90, upper_arm_far: 88, forearm_far: 90 }
+        at: [104, 182]
+        hold: 0.5
+        move: 2
+      - pose: { torso: -8, neck: 5, thigh_near: 72, shin_near: 96, thigh_far: 172, shin_far: 172, foot_far: 85, upper_arm_near: 92, forearm_near: 90, upper_arm_far: 88, forearm_far: 90 }
+        hold: 0.5
+        move: 1.5
+
+# Form reference: https://www.acefitness.org/resources/everyone/exercise-library/126/single-arm-row/
+- slug: single-arm-single-leg-row
+  name: Single-arm single-leg row
+  category: strength
+  areas: [upper_body, legs]
+  pattern: pull
+  equipment: [weight]
+  unilateral: true
+  default_reps: 10
+  cues:
+    - Stand on one leg, hinge forward
+    - Row the weight toward the hip
+    - Keep the hips level
+  instructions:
+    - Stand on one leg, weight in the opposite hand, and hinge until the back is nearly flat.
+    - Reach the free leg long behind you for balance.
+    - Row the weight up toward the hip, elbow close to the body, then lower it slowly.
+    - Keep the hips level and the shoulders square throughout.
+  animation:
+    anchor: ankle_far
+    accent: [upper_arm_near, forearm_near]
+    highlight: [shoulder]
+    props: [{ type: dumbbell, at: hand_near }]
+    still: 1
+    keyframes:
+      - pose: { torso: -15, neck: 5, thigh_far: 72, shin_far: 96, foot_far: 0, thigh_near: 165, shin_near: 165, foot_near: 80, upper_arm_near: 90, forearm_near: 90, upper_arm_far: 90, forearm_far: 90 }
+        at: [104, 182]
+        hold: 0.4
+        move: 1
+      - pose: { upper_arm_near: 178, forearm_near: 90 }
+        hold: 0.6
+        move: 1.5
+
+# Form reference: https://www.acefitness.org/resources/everyone/exercise-library/353/reverse-fly/
+- slug: reverse-fly
+  name: Reverse fly
+  category: strength
+  weights_held: 2
+  areas: [upper_body]
+  pattern: pull
+  equipment: [dumbbell]
+  default_reps: 12
+  cues:
+    - Hinge forward, flat back
+    - Raise the arms out like the T in the warm-up
+    - Squeeze the shoulder blades, lower slowly
+  instructions:
+    - Hold light dumbbells, knees soft, and hinge forward to a flat back.
+    - Let the arms hang with a slight bend in the elbows.
+    - Raise the arms out to the sides to shoulder height, squeezing the shoulder blades.
+    - Lower slowly without swinging the body.
+  animation:
+    anchor: ankle_near
+    accent: [upper_arm_near, forearm_near]
+    highlight: [shoulder]
+    props: [{ type: dumbbell, at: hand_near }]
+    still: 1
+    keyframes:
+      - pose: { torso: -25, neck: 0, thigh_near: 65, shin_near: 98, foot_near: 0, thigh_far: 65, shin_far: 98, foot_far: 0, upper_arm_near: 92, forearm_near: 88, upper_arm_far: 88, forearm_far: 84 }
+        at: [112, 182]
+        hold: 0.3
+        move: 1.2
+      - pose: { upper_arm_near: 105, forearm_near: 100, upper_arm_far: 105, forearm_far: 100 }
+        scale: { upper_arm_near: 0.25, forearm_near: 0.25, upper_arm_far: 0.25, forearm_far: 0.25 }
+        hold: 0.6
+        move: 1.8
+
+# Form reference: https://www.acefitness.org/resources/everyone/exercise-library/49/glute-bridge/
+- slug: glute-bridge-pullover
+  name: Glute bridge with straight-arm pull-over
+  category: strength
+  areas: [hips, upper_body]
+  pattern: hinge
+  equipment: [weight]
+  default_reps: 12
+  cues:
+    - Hold the bridge, glutes squeezed
+    - Lower the weight overhead with straight arms
+    - Ribs down as the arms come back up
+  instructions:
+    - Lie on your back, knees bent, feet flat, holding one weight above the chest with both hands (a dumbbell by one end, a kettlebell by the horns).
+    - Lift the hips into a bridge and keep the glutes squeezed.
+    - With straight arms, lower the weight slowly overhead toward the floor.
+    - Bring it back over the chest, keeping the ribs down and the hips up.
+  animation:
+    anchor: shoulder
+    accent: [upper_arm_near, forearm_near]
+    highlight: [hip, torso]
+    props: [{ type: mat, x: 6, width: 188 }, { type: dumbbell, at: hand_near }]
+    still: 1
+    keyframes:
+      - pose: { torso: 150, neck: 28, thigh_near: -9, shin_near: 59, foot_near: 0, thigh_far: -7, shin_far: 61, foot_far: 0, upper_arm_near: -90, forearm_near: -90, upper_arm_far: -92, forearm_far: -92 }
+        at: [72, 175]
+        hold: 0.5
+        move: 2
+      - pose: { upper_arm_near: -176, forearm_near: -176, upper_arm_far: -178, forearm_far: -178 }
+        hold: 0.3
+        move: 1.3
+
+# Form reference: https://www.acefitness.org/continuing-education/prosource/january-2016/5767/ace-technique-series-romanian-deadlift/
+- slug: straight-leg-deadlift
+  name: Straight-leg deadlift
+  category: strength
+  weights_held: 2
+  areas: [legs, hips]
+  pattern: hinge
+  equipment: [dumbbell]
+  default_reps: 12
+  cues:
+    - Knees bent but fixed
+    - Chest forward, push the hips back
+    - Feel the hamstrings, then stand tall
+  instructions:
+    - Stand tall holding the weights in front of the thighs, knees slightly bent.
+    - Keep the knees fixed and push the hips back, letting the weights slide down the thighs.
+    - Go until you feel a strong stretch in the hamstrings with a flat back.
+    - Squeeze the glutes and drive the hips forward to stand tall.
+  animation:
+    anchor: ankle_near
+    accent: [torso]
+    highlight: [thigh_near, hip]
+    props: [{ type: dumbbell, at: hand_near }]
+    still: 1
+    keyframes:
+      - pose: { torso: -90, thigh_near: 86, shin_near: 95, foot_near: 0, thigh_far: 88, shin_far: 93, foot_far: 0, upper_arm_near: 95, forearm_near: 92, upper_arm_far: 92, forearm_far: 90 }
+        at: [112, 182]
+        hold: 0.4
+        move: 2
+      - pose: { torso: -12, neck: 8, thigh_near: 68, shin_near: 96, thigh_far: 70, shin_far: 95, upper_arm_near: 90, forearm_near: 90, upper_arm_far: 88, forearm_far: 88 }
+        hold: 0.3
+        move: 1.2
+
+# Form reference: https://www.acefitness.org/resources/everyone/exercise-library/41/push-up/
+- slug: push-up
+  name: Push-up
+  category: strength
+  areas: [upper_body, core]
+  pattern: push
+  default_reps: 10
+  cues:
+    - Hands under shoulders
+    - Ribs down, core engaged
+    - Body moves as one piece
+  instructions:
+    - Hands under the shoulders, legs long, body in one line from head to heels.
+    - Brace the core and lower the chest toward the floor, elbows angled back.
+    - Push the floor away to straighten the arms, moving as one piece.
+    - Put the hands on a chair seat if the hips sag or the reps fall short.
+  animation:
+    anchor: hand_near
+    accent: [upper_arm_near, forearm_near]
+    highlight: [shoulder]
+    still: 0
+    keyframes:
+      - pose: { torso: -22.4, neck: 0, thigh_near: 157.6, shin_near: 157.6, foot_near: 95, thigh_far: 157.6, shin_far: 157.6, foot_far: 95, upper_arm_near: 90, forearm_near: 90, upper_arm_far: 90, forearm_far: 90 }
+        at: [150, 181]
+        hold: 0.4
+        move: 1.5
+      - pose: { torso: -5.9, thigh_near: 174.1, shin_near: 174.1, foot_near: 105, thigh_far: 174.1, shin_far: 174.1, foot_far: 105, upper_arm_near: 171.5, forearm_near: 43.4, upper_arm_far: 171.5, forearm_far: 43.4 }
+        hold: 0.2
+        move: 1
+
+# Form reference: https://www.acefitness.org/resources/everyone/exercise-library/366/bulgarian-split-squat/
+- slug: rear-foot-elevated-split-squat
+  name: Rear-foot-elevated split squat
+  category: strength
+  weights_held: 2
+  areas: [legs]
+  pattern: lunge
+  equipment: [dumbbell, bench]
+  unilateral: true
+  default_reps: 12
+  cues:
+    - Back foot on the bench
+    - Drop the back knee straight down
+    - Push up through the front heel
+  instructions:
+    - Stand a long stride in front of a bench or chair, top of the back foot on the seat.
+    - Hold the weights at your sides, chest up.
+    - Drop the back knee straight down until the front thigh is about level.
+    - Push up through the front heel, keeping the front knee over the toes.
+  animation:
+    anchor: ankle_near
+    accent: [thigh_near, shin_near]
+    highlight: [thigh_near, hip]
+    props: [{ type: bench, x: 4, width: 56, height: 40 }, { type: dumbbell, at: hand_near }]
+    still: 1
+    keyframes:
+      - pose: { torso: -88, thigh_near: 53.7, shin_near: 78.3, foot_near: 0, thigh_far: 85.3, shin_far: -164.2, foot_far: 175, upper_arm_near: 92, forearm_near: 90, upper_arm_far: 88, forearm_far: 90 }
+        at: [118, 182]
+        hold: 0.4
+        move: 2
+      - pose: { torso: -80, thigh_near: 20.3, shin_near: 99.2, thigh_far: 101.3, shin_far: -132.8, foot_far: 200, upper_arm_near: 95, forearm_near: 92, upper_arm_far: 92, forearm_far: 90 }
+        hold: 0.3
+        move: 1.2
+
+# Form reference: https://www.acefitness.org/resources/everyone/exercise-library/12/bent-over-row/
+- slug: two-arm-row
+  name: Two-arm row
+  category: strength
+  weights_held: 2
+  areas: [upper_body]
+  pattern: pull
+  equipment: [dumbbell]
+  default_reps: 12
+  cues:
+    - Hinge forward, flat back
+    - Row both weights toward the ribs
+    - Elbows at 90 degrees
+  instructions:
+    - Hold a dumbbell in each hand, knees soft, and hinge forward to a flat back.
+    - Let the arms hang below the shoulders.
+    - Row both weights toward the lower ribs until the elbows are bent about 90 degrees.
+    - Squeeze the shoulder blades, then lower slowly.
+  animation:
+    anchor: ankle_near
+    accent: [upper_arm_near, forearm_near]
+    highlight: [shoulder]
+    props: [{ type: dumbbell, at: hand_near }]
+    still: 1
+    keyframes:
+      - pose: { torso: -22, neck: 0, thigh_near: 65, shin_near: 98, foot_near: 0, thigh_far: 65, shin_far: 98, foot_far: 0, upper_arm_near: 92, forearm_near: 90, upper_arm_far: 88, forearm_far: 88 }
+        at: [112, 182]
+        hold: 0.3
+        move: 1
+      - pose: { upper_arm_near: 176, forearm_near: 92, upper_arm_far: 174, forearm_far: 90 }
+        hold: 0.6
+        move: 1.6
+
+# Form reference: https://www.strengthlog.com/curtsy-lunge/
+- slug: curtsy-lunge
+  name: Curtsy lunge
+  category: strength
+  areas: [legs, hips]
+  pattern: lunge
+  equipment: [weight]
+  unilateral: true
+  default_reps: 12
+  cues:
+    - Step back and across behind you
+    - Front knee tracks over the toes
+    - Push back up through the front foot
+  instructions:
+    - Stand tall holding the weight at your chest.
+    - Step one foot back and across behind the other, like a curtsy.
+    - Bend both knees until the back knee nears the floor, front knee tracking over the toes.
+    - Push through the front heel to stand and bring the feet together.
+  animation:
+    anchor: ankle_near
+    accent: [thigh_near, shin_near]
+    highlight: [thigh_near, hip]
+    props: [{ type: dumbbell, at: hand_near }]
+    still: 1
+    keyframes:
+      - pose: { torso: -90, thigh_near: 90, shin_near: 92, foot_near: 0, thigh_far: 92, shin_far: 90, foot_far: 0, upper_arm_near: 72, forearm_near: -62, upper_arm_far: 76, forearm_far: -58 }
+        at: [112, 182]
+        hold: 0.5
+        move: 1.6
+      - pose: { torso: -84, thigh_near: 16.9, shin_near: 108.3, thigh_far: 69.9, shin_far: 170.5, foot_far: 25, upper_arm_near: 76, forearm_near: -58, upper_arm_far: 80, forearm_far: -54 }
+        scale: { shin_far: 0.8 }
+        hold: 0.3
+        move: 1.2
+
+# Form reference: https://www.acefitness.org/education-and-resources/lifestyle/exercise-library/59/stability-ball-hamstring-curl
+- slug: swiss-ball-hamstring-curl
+  name: Swiss ball hamstring curl
+  category: strength
+  areas: [legs]
+  pattern: hinge
+  equipment: [stability_ball]
+  default_reps: 10
+  cues:
+    - Heels on the ball, hips up
+    - Pull the ball in with your heels
+    - Roll it out slowly, hips stay up
+  instructions:
+    - Lie on your back with the heels and lower calves on a stability ball, arms on the floor.
+    - Squeeze the glutes and lift the hips into a straight line from shoulders to heels.
+    - Pull the ball in toward you with the heels, letting the hips rise a little more.
+    - Roll it back out slowly without dropping the hips.
+  animation:
+    anchor: shoulder
+    accent: [thigh_near, shin_near]
+    highlight: [thigh_near]
+    props: [{ type: swiss_ball, at: ankle_near }]
+    still: 1
+    keyframes:
+      - pose: { torso: 159.1, neck: 21, thigh_near: -20.9, shin_near: -20.9, foot_near: -70, thigh_far: -20.9, shin_far: -20.9, foot_far: -72, upper_arm_near: 0, forearm_near: 0, upper_arm_far: 1, forearm_far: 0 }
+        at: [44, 175]
+        hold: 0.5
+        move: 1.5
+      - pose: { torso: 145, neck: 35, thigh_near: -75, shin_near: 31.4, foot_near: 0, thigh_far: -75, shin_far: 31.4, foot_far: 0 }
+        hold: 0.5
+        move: 2
+
+# Form reference: https://www.acefitness.org/resources/everyone/exercise-library/32/front-plank/
+- slug: plank
+  name: Plank
+  category: strength
+  areas: [core]
+  pattern: anti_extension
+  default_seconds: 60
+  cues:
+    - Elbows under shoulders
+    - Ribs down, squeeze the glutes
+    - Breathe, body in one line
+  instructions:
+    - Forearms on the floor with the elbows under the shoulders, legs long behind you.
+    - Lift onto the toes so the body makes one line from head to heels.
+    - Ribs down, glutes squeezed, and breathe steadily.
+    - Drop the knees before the hips sag or the back arches.
+  animation:
+    anchor: elbow_near
+    accent: [torso]
+    highlight: [torso]
+    props: [{ type: mat, x: 4, width: 170 }]
+    still: 1
+    keyframes:
+      - pose: { torso: -20, neck: 0, upper_arm_near: 90, forearm_near: 0, upper_arm_far: 90, forearm_far: 0, thigh_near: 164.8, shin_near: 180, foot_near: 180, thigh_far: 164.8, shin_far: 180, foot_far: 180 }
+        at: [140, 181]
+        hold: 0.6
+        move: 1.5
+      - pose: { torso: -8.7, thigh_near: 171.3, shin_near: 171.3, foot_near: 95, thigh_far: 171.3, shin_far: 171.3, foot_far: 95 }
+        hold: 5
+        move: 1.5
+
+- slug: swiss-ball-single-leg-bridge
+  name: Swiss ball single-leg bridge
+  category: strength
+  areas: [hips, legs]
+  pattern: hinge
+  equipment: [stability_ball]
+  unilateral: true
+  default_seconds: 20
+  cues:
+    - One heel on the ball, other leg up
+    - Hips up and level
+    - Hold still, breathe
+  instructions:
+    - Lie on your back with one heel on a stability ball, other leg raised straight up.
+    - Lift the hips until they are level and in line with the shoulders.
+    - Hold still and breathe, keeping the ball from rolling.
+    - Lower slowly, then switch legs.
+  animation:
+    anchor: shoulder
+    accent: [thigh_near, shin_near]
+    highlight: [thigh_near, hip]
+    props: [{ type: swiss_ball, at: ankle_near }]
+    still: 1
+    keyframes:
+      - pose: { torso: 180, neck: 0, thigh_near: -56.4, shin_near: -14.5, foot_near: -80, thigh_far: -80, shin_far: -80, foot_far: -170, upper_arm_near: 2, forearm_near: 0, upper_arm_far: 3, forearm_far: 0 }
+        at: [44, 175]
+        hold: 0.5
+        move: 1.2
+      - pose: { torso: 155, neck: 25, thigh_near: -50.8, shin_near: 8.9, foot_near: -72, thigh_far: -96, shin_far: -96, foot_far: 174 }
+        hold: 4
+        move: 1.2
+
+# Form reference: https://www.hybridcalisthenics.com/barhangs
+- slug: dead-hang
+  name: Dead hang
+  category: strength
+  areas: [upper_body, core]
+  pattern: pull
+  equipment: [hangboard]
+  default_seconds: 20
+  cues:
+    - Big holds, open hand
+    - Shoulders active, not shrugged
+    - Toes on the chair if you need it
+  instructions:
+    - Hold the largest holds of the hangboard with an open hand, about shoulder-width apart.
+    - Start with your toes on a chair under the board and take only as much weight off them as feels easy on the fingers and shoulders.
+    - Keep the arms straight and the shoulders gently drawn down, ribs in, and breathe.
+    - Step back onto the chair before the grip fails rather than dropping off.
+  mistakes:
+    - Hanging from small edges or crimping
+    - Letting the shoulders shrug up to the ears
+  animation:
+    anchor: hand_near
+    accent: [forearm_near]
+    highlight: [upper_arm_near, forearm_near]
+    props: [{ type: hangboard, x: 82, y: 0 }]
+    still: 0
+    keyframes:
+      - pose: { torso: -90, neck: 0, upper_arm_near: -90, forearm_near: -90, upper_arm_far: -92, forearm_far: -91, thigh_near: 80, shin_near: 160, foot_near: 120, thigh_far: 84, shin_far: 156, foot_far: 115 }
+        at: [100, 10]
+        hold: 3
+        move: 2
+      - pose: { torso: -88, thigh_near: 76, shin_near: 156, thigh_far: 80, shin_far: 152 }
+        hold: 3
+        move: 2
+
+- slug: lateral-step-down
+  name: Lateral step-down
+  category: strength
+  areas: [legs, hips]
+  pattern: lunge
+  equipment: [step]
+  unilateral: true
+  default_reps: 8
+  cues:
+    - Stand side-on at the edge of the step
+    - Sit the hips back, knee over the middle toes
+    - Tap the heel down, then stand tall
+  instructions:
+    - Stand side-on on a stair or step, the working foot flat near its edge and the other foot hanging off the side.
+    - Sit the hips back and bend the standing knee to lower the free heel slowly toward the floor, over about three seconds.
+    - Keep the knee tracking over the middle toes and the hips level; reach the arms forward to balance.
+    - Lightly tap the heel down without putting weight on it, then push through the standing foot to rise.
+  mistakes:
+    - The knee caving inward
+    - The free-leg hip dropping
+    - Dropping onto the free heel instead of tapping it
+  # Left side: the near leg stands on the step. Seen from the side, the free
+  # leg lowers past the step towards the floor.
+  animation:
+    anchor: ankle_near
+    accent: [thigh_near, shin_near]
+    highlight: [thigh_near, hip]
+    props: [{ type: block, x: 88, width: 44, height: 18 }]
+    still: 1
+    keyframes:
+      - pose: { torso: -90, neck: 0, thigh_near: 90, shin_near: 90, foot_near: 0, thigh_far: 86, shin_far: 90, foot_far: 10, upper_arm_near: 88, forearm_near: 88, upper_arm_far: 92, forearm_far: 90 }
+        at: [100, 164]
+        hold: 0.5
+        move: 2
+      - pose: { torso: -62, thigh_near: 35.5, shin_near: 117.1, thigh_far: 72, shin_far: 72, foot_far: -10, upper_arm_near: 10, forearm_near: 0, upper_arm_far: 14, forearm_far: 2 }
+        hold: 0.3
+        move: 1.5
+
+- slug: single-leg-calf-raise
+  name: Single-leg calf raise
+  category: strength
+  areas: [legs]
+  equipment: [step]
+  unilateral: true
+  default_reps: 12
+  cues:
+    - Ball of the foot on the edge
+    - Rise all the way onto the toes
+    - Lower slowly below the step
+  instructions:
+    - Stand on one foot with its ball on the edge of a step, heel hanging off, a hand on the wall for balance.
+    - Keep the knee straight but not locked and the other foot off the step.
+    - Rise as high as you can onto the toes in about a second.
+    - Lower slowly, over two to three seconds, until the heel is a little below the step.
+  mistakes:
+    - Bouncing at the bottom
+    - Rolling out onto the little toe
+  # Left side: the near foot is on the step. Slow on the way down.
+  animation:
+    anchor: toe_near
+    accent: [shin_near, foot_near]
+    highlight: [shin_near]
+    props: [{ type: block, x: 104, width: 44, height: 18 }, { type: wall, x: 154 }]
+    still: 1
+    keyframes:
+      - pose: { torso: -90, neck: 0, thigh_near: 90, shin_near: 90, foot_near: -25, thigh_far: 100, shin_far: 150, foot_far: 100, upper_arm_near: 10, forearm_near: -10, upper_arm_far: 92, forearm_far: 90 }
+        at: [112, 164]
+        hold: 0.5
+        move: 1
+      - pose: { foot_near: 50 }
+        hold: 1
+        move: 2
+
+# Form reference: https://catalystathletics.com/exercise/474/Lateral-Lunge/
+- slug: lateral-lunge
+  name: Lateral lunge
+  category: strength
+  areas: [legs, hips]
+  pattern: lunge
+  unilateral: true
+  default_reps: 8
+  cues:
+    - Big step out to the side
+    - Sit back into that hip, other leg straight
+    - Push off and step back to the middle
+  instructions:
+    - Stand tall with the feet together and the hands at your chest.
+    - Take a wide step to one side, toes pointing forward, and sit the hips back over that foot.
+    - Bend the stepping knee over its toes while the other leg stays straight with the foot flat.
+    - Push off the bent leg to step back to the middle.
+  mistakes:
+    - The bent knee caving in or passing far beyond the toes
+    - Rounding the back to reach lower
+  # Left side: the near leg steps out and bends. The straight far leg reaches
+  # sideways, away from the viewer, so it is drawn foreshortened.
+  animation:
+    anchor: ankle_near
+    accent: [thigh_near, shin_near]
+    highlight: [thigh_near, hip]
+    still: 1
+    keyframes:
+      - pose: { torso: -90, neck: 0, thigh_near: 90, shin_near: 90, foot_near: 0, thigh_far: 90, shin_far: 90, foot_far: 0, upper_arm_near: 80, forearm_near: -60, upper_arm_far: 84, forearm_far: -56 }
+        at: [100, 182]
+        hold: 0.5
+        move: 1.5
+      - pose: { torso: -55, thigh_near: 22.2, shin_near: 121.5, thigh_far: 95, shin_far: 95, upper_arm_near: 70, forearm_near: -30, upper_arm_far: 74, forearm_far: -26 }
+        scale: { thigh_far: 0.62, shin_far: 0.62 }
+        hold: 0.4
+        move: 1.2
+
+- slug: half-kneeling-press
+  name: Half-kneeling single-arm press
+  category: strength
+  areas: [upper_body, core]
+  pattern: push
+  equipment: [weight]
+  unilateral: true
+  default_reps: 8
+  cues:
+    - Down knee on the pressing side
+    - Squeeze the glute, ribs down
+    - Press straight up beside the ear
+  instructions:
+    - Kneel on a mat on the knee of the pressing side, the other foot flat in front with the knee over the ankle.
+    - Hold the weight at the shoulder, elbow in front of the body and the wrist straight; a kettlebell rests on the back of the forearm.
+    - Squeeze the glute of the down leg and keep the ribs down so the back does not arch.
+    - Press the weight straight up until the arm is beside the ear, then lower it under control to the shoulder.
+  mistakes:
+    - Leaning back or arching to finish the press
+    - Shrugging the shoulder up
+  # Left side: the near knee is down and the near arm presses.
+  animation:
+    anchor: knee_near
+    accent: [upper_arm_near, forearm_near]
+    highlight: [shoulder]
+    props: [{ type: mat, x: 40, width: 130 }, { type: dumbbell, at: hand_near }]
+    still: 1
+    keyframes:
+      - pose: { torso: -90, neck: 0, thigh_near: 90, shin_near: 180, foot_near: 180, thigh_far: 5, shin_far: 85, foot_far: 0, upper_arm_near: 75, forearm_near: -100, upper_arm_far: 100, forearm_far: 60 }
+        at: [80, 179]
+        hold: 0.4
+        move: 1
+      - pose: { upper_arm_near: -93, forearm_near: -90 }
+        hold: 0.4
+        move: 1.5
+
+# Form reference: https://catalystathletics.com/exercise/749/Wall-Sit/
+- slug: wall-sit
+  name: Wall sit
+  category: strength
+  areas: [legs]
+  pattern: squat
+  default_seconds: 40
+  cues:
+    - Back flat on the wall
+    - Thighs about level, knees over ankles
+    - Breathe and hold
+  instructions:
+    - Stand with your back on a wall and walk the feet out about two feet, hip-width apart.
+    - Slide down until the thighs are about level, or higher if the knees complain.
+    - Keep the knees over the ankles and in line with the toes, back and head on the wall.
+    - Hold and breathe, then walk the feet back in to stand up.
+  mistakes:
+    - Knees drifting in front of the toes or caving in
+    - Pushing the hands on the thighs
+  animation:
+    anchor: ankle_near
+    accent: [thigh_near]
+    highlight: [thigh_near]
+    props: [{ type: wall, x: 54 }]
+    still: 0
+    keyframes:
+      - pose: { torso: -90, neck: 0, thigh_near: 0, shin_near: 90, foot_near: 0, thigh_far: 0, shin_far: 90, foot_far: 0, upper_arm_near: 5, forearm_near: 0, upper_arm_far: 8, forearm_far: 2 }
+        at: [110, 182]
+        hold: 3
+        move: 1.5
+      - pose: { upper_arm_near: 10, forearm_near: 4, upper_arm_far: 12, forearm_far: 6 }
+        hold: 3
+        move: 1.5
+
+# Form reference: https://bodysolid.com/exercises/article/164/exercise_ball_-_roll_out
+- slug: stability-ball-rollout
+  name: Stability ball rollout
+  category: strength
+  areas: [core]
+  pattern: anti_extension
+  equipment: [stability_ball]
+  default_reps: 8
+  cues:
+    - Forearms on the ball, ribs down
+    - Roll out only as far as the back stays flat
+    - Pull the ball back with the abs
+  instructions:
+    - Kneel on a mat with the forearms on a stability ball in front of you, hands together.
+    - Brace the abs and squeeze the glutes so the body is straight from knees to head.
+    - Roll the ball forward by straightening the hips and reaching the arms out, as far as you can keep the lower back from sagging.
+    - Pull the ball back with the abs to the start, keeping the hips in line.
+  mistakes:
+    - The lower back sagging at the far end
+    - Piking the hips back first on the way in
+  animation:
+    anchor: knee_near
+    accent: [torso, upper_arm_near]
+    highlight: [torso]
+    props: [{ type: mat, x: 4, width: 180 }, { type: swiss_ball, at: elbow_near }]
+    still: 1
+    keyframes:
+      - pose: { torso: -45, neck: 0, thigh_near: 100, shin_near: 180, foot_near: 180, thigh_far: 100, shin_far: 180, foot_far: 180, upper_arm_near: 60, forearm_near: 0, upper_arm_far: 62, forearm_far: 2 }
+        at: [60, 179]
+        hold: 0.5
+        move: 2
+      - pose: { torso: -20, thigh_near: 130, thigh_far: 130, upper_arm_near: 0, forearm_near: 0, upper_arm_far: 2, forearm_far: 2 }
+        hold: 0.5
+        move: 1.5

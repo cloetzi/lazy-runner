@@ -1,0 +1,81 @@
+import { getJson, send, errorMessage } from "./api.js";
+import { escape } from "./html.js";
+
+// The example programs, drawn in a list with an Import button each: on the
+// Settings page and the welcome screen. An imported one says so and offers
+// another copy, after asking.
+
+// "2 workouts, 25-30 min": the main workouts and their minutes.
+export function exampleSummary(example) {
+  const mains = example.workouts.filter((workout) => workout.kind === "workout").map((workout) => workout.estimated_minutes);
+  if (mains.length === 0) return "";
+  const [low, high] = [Math.min(...mains), Math.max(...mains)];
+  return `${mains.length} ${mains.length === 1 ? "workout" : "workouts"}, ${low === high ? low : `${low}-${high}`} min`;
+}
+
+// "Session A: Knees and pull · 25 min": a workout of an example, as listed
+// under "What's in it". Warm-ups and cool-downs go without minutes.
+export function workoutHeading(workout) {
+  const title = workout.subtitle ? `${workout.title}: ${workout.subtitle}` : workout.title;
+  return workout.kind === "workout" ? `${title} · ${workout.estimated_minutes} min` : title;
+}
+
+// `list` holds the examples, `error` and `done` say how an import went.
+export function mountExamples({ list, error, done }) {
+  const showError = (message) => {
+    error.textContent = message ?? "";
+    error.hidden = !message;
+  };
+
+  async function load() {
+    let examples;
+    try {
+      const { data, stale } = await getJson("/api/examples");
+      if (stale) throw new Error("offline");
+      examples = data;
+    } catch {
+      list.innerHTML = `<li class="muted">The list shows when the server is reachable.</li>`;
+      return;
+    }
+    list.innerHTML = examples.map((example) => `
+      <li>
+        <div class="example-head">
+          <span class="device-name"><strong>${escape(example.name)}</strong><br>
+            <span class="muted">${escape(exampleSummary(example))}${example.imported ? " · imported" : ""}</span></span>
+          <button class="secondary small" data-import="${escape(example.slug)}" data-name="${escape(example.name)}"
+            ${example.imported ? 'data-copy="true"' : ""}>${example.imported ? "Import again" : "Import"}</button>
+        </div>
+        <details class="example-contents">
+          <summary>What's in it</summary>
+          ${example.description ? `<p>${escape(example.description)}</p>` : ""}
+          <ul>${example.workouts.map((workout) => `
+            <li><strong>${escape(workoutHeading(workout))}</strong>
+              <span class="muted">${escape((workout.exercises ?? []).join(", "))}</span></li>`).join("")}</ul>
+        </details>
+      </li>`).join("");
+  }
+
+  list.onclick = async (event) => {
+    const button = event.target.closest("[data-import]");
+    if (!button) return;
+    const copy = button.dataset.copy === "true";
+    if (copy && !confirm(`You have ${button.dataset.name} already. Import another copy?`)) return;
+    showError(null);
+    done.hidden = true;
+    button.disabled = true;
+    try {
+      const response = await send(`/api/examples/${encodeURIComponent(button.dataset.import)}/import`, { body: copy ? { copy: true } : {} });
+      const json = await response.json().catch(() => null);
+      if (!response.ok) return showError(errorMessage(json, response.status));
+      done.innerHTML = `${escape(json.name)} is in your <a href="/#workouts">workouts</a>.`;
+      done.hidden = false;
+    } catch {
+      showError("Couldn't reach the server. Try again when you're online.");
+    } finally {
+      button.disabled = false;
+      load();
+    }
+  };
+
+  return { load };
+}

@@ -1,0 +1,218 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <!-- The browser bar follows --bg in each scheme. The manifest keeps one dark
+       colour: it takes only one, and the icon and splash are designed on dark. -->
+  <meta name="theme-color" content="#f6f5f2" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#111418" media="(prefers-color-scheme: dark)">
+  <title>The Lazy Runner</title>
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="icon" href="/icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+  <meta name="apple-mobile-web-app-title" content="Lazy Runner">
+  <link rel="stylesheet" href="/css/app.css">
+  <script type="module" src="/js/pwa.js"></script>
+  <script type="module" src="/js/app.js"></script>
+</head>
+<body>
+  <section class="card" id="in-progress" aria-live="polite" hidden></section>
+  <div class="toast" id="toast" role="status" hidden></div>
+
+  <main id="home" class="view">
+    <header class="brand">
+      <h1>Today</h1>
+      <p class="tagline" id="today-date"></p>
+    </header>
+    <ul class="list day-sessions" id="today-day" aria-label="Today's sessions" hidden></ul>
+    <section class="card" id="today" aria-live="polite">
+      <p class="muted">Loading today's session…</p>
+    </section>
+    <section class="today-activities" id="today-activities" aria-label="Activities today" hidden></section>
+    <aside class="card week" id="week" aria-label="This week" hidden></aside>
+    <p class="sync muted" id="sync" hidden></p>
+    <div class="sync rejected" id="sync-rejected" role="alert" hidden></div>
+  </main>
+
+  <main id="workouts" class="view" hidden>
+    <header class="brand">
+      <h1>Workouts</h1>
+      <p class="tagline">Everything you can train. Open one to see it and set the weights, or start it straight away.</p>
+      <a class="button secondary small new-workout" id="new-workout" href="#edit/new"><svg class="icon" aria-hidden="true"><use href="/icons/sprite.svg#plus"/></svg>New workout</a>
+    </header>
+    <div class="workout-list" id="workouts-list"></div>
+  </main>
+
+  <main id="workout" class="view" hidden>
+    <header class="brand">
+      <button class="back" id="workout-back"><svg class="icon" aria-hidden="true"><use href="/icons/sprite.svg#chevron-left"/></svg>Back</button>
+      <h1 id="workout-title"></h1>
+      <p class="tagline" id="workout-subtitle"></p>
+    </header>
+    <div class="workout-blocks" id="workout-blocks"></div>
+    <p class="muted" id="workout-saved" aria-live="polite"></p>
+    <button class="primary" id="workout-start" hidden>Start this workout</button>
+    <section class="card workout-own" id="workout-own" hidden></section>
+  </main>
+
+  <main id="edit" class="view" hidden>
+    <header class="brand">
+      <button class="back" id="edit-back"><svg class="icon" aria-hidden="true"><use href="/icons/sprite.svg#chevron-left"/></svg>Cancel</button>
+      <h1 id="edit-heading"></h1>
+      <p class="tagline" id="edit-tagline"></p>
+    </header>
+    <div class="editor" id="edit-form"></div>
+    <div class="editor-bar">
+      <p class="muted" id="edit-status" role="status"></p>
+      <button class="primary" id="edit-save" hidden>Save</button>
+    </div>
+  </main>
+
+  <main id="ready" class="view" hidden>
+    <section class="card">
+      <p class="muted">Get ready</p>
+      <h2 id="ready-title"></h2>
+      <section class="ready-section" id="ready-need">
+        <h3>You'll need</h3>
+        <ul class="list" id="ready-pickup"></ul>
+      </section>
+      <section class="ready-section" id="ready-weights">
+        <h3>Weights today</h3>
+        <ul class="targets" id="ready-targets"></ul>
+      </section>
+      <button class="primary" id="ready-go">Ready</button>
+      <button class="link" id="ready-back">Back</button>
+    </section>
+  </main>
+
+  <main id="player" class="view" hidden>
+    <div class="progress"><div class="progress-bar" id="progress-bar"></div></div>
+    <header class="player-top">
+      <span class="player-where"><span id="where"></span> <span id="count" class="muted"></span></span>
+      <span class="player-actions">
+        <button class="link" id="quit">End session</button>
+        <button class="link" id="skip-part" hidden></button>
+      </span>
+    </header>
+
+    <section class="stage">
+      <div class="figure-box" id="figure" hidden></div>
+      <div class="figure-box rest-dial" id="rest-dial" hidden aria-hidden="true">
+        <svg viewBox="0 0 100 100">
+          <circle class="track" cx="50" cy="50" r="42"/>
+          <circle class="arc" id="rest-arc" cx="50" cy="50" r="42" pathLength="1"/>
+          <circle class="core" cx="50" cy="50" r="26"/>
+          <g class="pause-bars"><rect x="41" y="40" width="6" height="20" rx="2"/><rect x="53" y="40" width="6" height="20" rx="2"/></g>
+        </svg>
+      </div>
+      <div class="stage-text">
+      <p class="phase" id="phase"></p>
+      <h2 class="exercise" id="exercise-name"></h2>
+      <p class="set-label" id="set-label" hidden></p>
+      <p class="side" id="side" hidden></p>
+      <p class="target" id="target" role="button" tabindex="0" aria-label="Pause or resume the countdown"></p>
+      <p class="paused-note" id="paused-note" hidden>Paused</p>
+      <div class="timer-actions" id="timer-actions" hidden>
+        <button class="secondary small" id="pause">Pause</button>
+        <button class="secondary small" id="more-time" hidden>+10 s</button>
+      </div>
+      <div class="adjust" id="adjust" hidden>
+        <div class="stepper" id="weight-stepper" hidden>
+          <button class="secondary" id="weight-down" aria-label="Less weight"><svg class="icon" aria-hidden="true"><use href="/icons/sprite.svg#minus"/></svg></button>
+          <span id="weight-value"></span>
+          <button class="secondary" id="weight-up" aria-label="More weight"><svg class="icon" aria-hidden="true"><use href="/icons/sprite.svg#plus"/></svg></button>
+        </div>
+        <div class="stepper" id="reps-stepper" hidden>
+          <button class="secondary" id="reps-down" aria-label="Fewer reps"><svg class="icon" aria-hidden="true"><use href="/icons/sprite.svg#minus"/></svg></button>
+          <span id="reps-value"></span>
+          <button class="secondary" id="reps-up" aria-label="More reps"><svg class="icon" aria-hidden="true"><use href="/icons/sprite.svg#plus"/></svg></button>
+        </div>
+      </div>
+      <p class="details" id="details"></p>
+      <ul class="equipment-list player-gear" id="equipment" aria-label="Equipment" hidden></ul>
+      <ul class="cues" id="cues"></ul>
+      <div class="stage-links">
+        <button class="link" id="howto-open"><svg class="icon" aria-hidden="true"><use href="/icons/sprite.svg#info"/></svg>How to</button>
+        <button class="link" id="swap-open"><svg class="icon" aria-hidden="true"><use href="/icons/sprite.svg#swap"/></svg>Swap</button>
+      </div>
+      </div>
+    </section>
+
+    <footer class="player-bottom">
+      <p class="next muted" id="next"></p>
+      <div class="controls">
+        <button class="secondary" id="prev" aria-label="Previous step"><svg class="icon" aria-hidden="true"><use href="/icons/sprite.svg#chevron-left"/></svg><span class="label">Back</span></button>
+        <button class="primary" id="main-action">Done</button>
+        <button class="secondary" id="skip" aria-label="Skip step"><span class="label">Skip</span><svg class="icon" aria-hidden="true"><use href="/icons/sprite.svg#chevron-right"/></svg></button>
+      </div>
+    </footer>
+    <dialog id="end-sheet" class="sheet"></dialog>
+  </main>
+
+  <main id="finish" class="view" hidden>
+    <section class="card" id="finish-form">
+      <header class="finish-head">
+        <span class="done-badge" id="finish-badge"><svg class="icon" aria-hidden="true"><use href="/icons/sprite.svg#check"/></svg></span>
+        <h2 id="finish-title">Done!</h2>
+      </header>
+      <dl class="stats" id="finish-stats"></dl>
+      <p class="muted" id="summary"></p>
+      <div id="changes-box" hidden>
+        <h3>Weights for next time</h3>
+        <ul class="changes" id="changes"></ul>
+      </div>
+      <h3>How hard was it? <span class="muted">(optional)</span></h3>
+      <div class="rpe segmented" id="rpe" role="group" aria-label="How hard it was"></div>
+      <h3>The weights felt <span class="muted">(optional)</span></h3>
+      <div class="feedback segmented" role="group" aria-label="How the weights felt">
+        <button data-feedback="too_easy" aria-pressed="false">Too easy</button>
+        <button data-feedback="right" aria-pressed="false">Right</button>
+        <button data-feedback="too_hard" aria-pressed="false">Too hard</button>
+      </div>
+      <button class="primary" id="finish-save">Save</button>
+    </section>
+    <section class="card finish-saved" id="finish-done" hidden>
+      <header class="finish-head">
+        <span class="done-badge"><svg class="icon" aria-hidden="true"><use href="/icons/sprite.svg#check"/></svg></span>
+        <h2>Saved</h2>
+      </header>
+      <p id="finish-result"></p>
+      <ul class="targets" id="finish-suggestions"></ul>
+      <a class="button secondary" id="next-up" hidden></a>
+      <button class="secondary" id="home-again">Back to Today</button>
+    </section>
+  </main>
+
+  <main id="history" class="view" hidden>
+    <header class="brand">
+      <h1>History</h1>
+      <p class="tagline" id="history-week"></p>
+    </header>
+    <ul class="list" id="history-list"></ul>
+    <h2 class="section-title">By exercise</h2>
+    <ul class="list" id="history-exercises"></ul>
+  </main>
+
+  <main id="exercise-history" class="view" hidden>
+    <header class="brand">
+      <button class="back" id="exercise-history-back"><svg class="icon" aria-hidden="true"><use href="/icons/sprite.svg#chevron-left"/></svg>History</button>
+      <h1 id="exercise-history-name"></h1>
+      <p class="tagline" id="exercise-history-remembered"></p>
+      <button class="secondary small" id="exercise-history-howto">How to</button>
+    </header>
+    <ul class="list" id="exercise-history-list"></ul>
+  </main>
+
+  <main id="session" class="view" hidden>
+    <header class="brand">
+      <button class="back" id="session-back"><svg class="icon" aria-hidden="true"><use href="/icons/sprite.svg#chevron-left"/></svg>History</button>
+      <h1 id="session-title"></h1>
+      <p class="tagline" id="session-summary"></p>
+    </header>
+    <p class="note" id="session-note" hidden></p>
+    <ul class="list" id="session-exercises"></ul>
+    <button class="secondary delete" id="session-delete" hidden>Delete this session</button>
+  </main>
+</body>
+</html>

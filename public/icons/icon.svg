@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" fill="#111418"/>
+  <!-- Scaled to stay inside the circle a maskable icon keeps (80% of the width). -->
+  <g transform="translate(256 256) scale(0.8) translate(-256 -246)">
+    <g transform="translate(222 300) scale(0.82) translate(-256 -261)">
+      <path d="M184 250 L170 186 Q164 130 220 130 H292 Q348 130 342 186 L328 250" fill="none" stroke="#ff7a50" stroke-width="30" stroke-linejoin="round"/>
+      <path d="M184 392 A112 112 0 1 1 328 392 Z" fill="#ff7a50"/>
+    </g>
+    <g fill="none" stroke="#f1f1ee" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M300 160 h22 l-22 24 h22" stroke-width="9" opacity="0.6"/>
+      <path d="M334 118 h30 l-30 33 h30" stroke-width="11" opacity="0.8"/>
+      <path d="M376 64 h40 l-40 44 h40" stroke-width="13"/>
+    </g>
+  </g>
+</svg>

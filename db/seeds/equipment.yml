@@ -1,0 +1,30 @@
+# The equipment catalogue, shared by everyone. Exercises list what they need
+# by slug; anything not listed needs nothing but the floor and a wall, which
+# every home has. `unit` marks gear in set weights. What a user owns, which
+# weights and in which unit, is theirs (Equipment page): nothing here.
+#
+# `any_weight` is for exercises that need a weight but not which kind: one
+# held weight, where a dumbbell or a kettlebell does the job. Nobody owns it
+# as such; any gear in set weights they own stands in for it. Exercises that
+# hold a pair, or need the gear's shape, name it instead.
+
+- slug: mat
+  name: Mat
+- slug: bench
+  name: Bench or sturdy chair
+- slug: stability_ball
+  name: Stability ball
+- slug: weight
+  name: Weight
+  unit: lb
+  any_weight: true
+- slug: dumbbell
+  name: Dumbbells
+  unit: lb
+- slug: kettlebell
+  name: Kettlebell
+  unit: lb
+- slug: hangboard
+  name: Hangboard
+- slug: step
+  name: Stair or step

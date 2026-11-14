@@ -1,0 +1,25 @@
+{
+  "canvas": { "width": 200, "height": 200, "floor": 186, "origin": [100, 100] },
+  "segments": {
+    "torso": { "from": "hip", "to": "shoulder", "length": 44 },
+    "neck": { "from": "shoulder", "to": "neck", "length": 8, "relative": true },
+    "head": { "from": "neck", "to": "head", "length": 12, "relative": true },
+    "upper_arm_far": { "from": "shoulder", "to": "elbow_far", "length": 28 },
+    "forearm_far": { "from": "elbow_far", "to": "hand_far", "length": 26 },
+    "thigh_far": { "from": "hip", "to": "knee_far", "length": 42 },
+    "shin_far": { "from": "knee_far", "to": "ankle_far", "length": 40 },
+    "foot_far": { "from": "ankle_far", "to": "toe_far", "length": 13 },
+    "upper_arm_near": { "from": "shoulder", "to": "elbow_near", "length": 28 },
+    "forearm_near": { "from": "elbow_near", "to": "hand_near", "length": 26 },
+    "thigh_near": { "from": "hip", "to": "knee_near", "length": 42 },
+    "shin_near": { "from": "knee_near", "to": "ankle_near", "length": 40 },
+    "foot_near": { "from": "ankle_near", "to": "toe_near", "length": 13 }
+  },
+  "rest": {
+    "torso": -90, "neck": 0, "head": 0,
+    "upper_arm_far": 90, "forearm_far": 90, "thigh_far": 90, "shin_far": 90, "foot_far": 0,
+    "upper_arm_near": 90, "forearm_near": 90, "thigh_near": 90, "shin_near": 90, "foot_near": 0
+  },
+  "head_radius": 11,
+  "props": ["mat", "wall", "bench", "block", "swiss_ball", "dumbbell", "kettlebell", "hangboard", "band"]
+}

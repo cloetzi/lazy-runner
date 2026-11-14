@@ -1,0 +1,84 @@
+name: CI
+
+# Tests only, on GitHub-hosted runners: the image is built on release
+# (release.yml). Jobs run in parallel with their toolchains and dependencies
+# cached, and a newer push to a branch cancels its older run.
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+jobs:
+  ruby:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      # Ruby from .ruby-version, gems cached by Gemfile.lock.
+      - uses: ruby/setup-ruby@v1
+        with:
+          bundler-cache: true
+      - run: bundle exec rake test
+
+  node:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .node-version
+      # The player tests need no dependencies.
+      - run: npm test
+
+  # A session run in a real browser against the server, with the connection
+  # lost before the finish.
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ruby/setup-ruby@v1
+        with:
+          bundler-cache: true
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .node-version
+          cache: npm
+      # Plain http, so no Secure cookie. The test reads the setup code from
+      # the log.
+      - name: Start the server
+        run: |
+          bundle exec rage s -e production -p 3000 > server.log 2>&1 &
+        env:
+          SECURE_COOKIES: "false"
+      - run: npm ci
+      # The browser for the Playwright version in package-lock.json; only its
+      # system libraries are installed on every run.
+      - uses: actions/cache@v6
+        id: browsers
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('package-lock.json') }}
+      - name: Install the browser
+        run: |
+          if [ "${{ steps.browsers.outputs.cache-hit }}" = true ]; then
+            npx playwright install-deps chromium
+          else
+            npx playwright install --with-deps --only-shell chromium
+          fi
+      - name: Browser tests
+        run: npm run test:e2e
+        env:
+          BASE_URL: http://localhost:3000
+          SERVER_LOG: server.log
+      - name: Server log
+        if: always()
+        run: tail -100 server.log

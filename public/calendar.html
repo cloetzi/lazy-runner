@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#f6f5f2" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#111418" media="(prefers-color-scheme: dark)">
+  <title>Calendar · The Lazy Runner</title>
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="icon" href="/icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+  <meta name="apple-mobile-web-app-title" content="Lazy Runner">
+  <link rel="stylesheet" href="/css/app.css">
+  <script type="module" src="/js/pwa.js"></script>
+  <script type="module" src="/js/calendar-page.js"></script>
+</head>
+<body>
+  <main class="view calendar" id="calendar">
+    <header class="brand">
+      <h1>Calendar</h1>
+      <p class="tagline">What you plan, and what you did. Tap a day's plus to plan a workout or a run, log an activity or write a note.</p>
+    </header>
+
+    <div class="calendar-bar">
+      <div class="calendar-nav">
+        <button class="icon-button" id="calendar-prev"><svg class="icon" aria-hidden="true"><use href="/icons/sprite.svg#chevron-left"/></svg></button>
+        <h2 class="calendar-range" id="calendar-range" aria-live="polite"></h2>
+        <button class="icon-button" id="calendar-next"><svg class="icon" aria-hidden="true"><use href="/icons/sprite.svg#chevron-right"/></svg></button>
+      </div>
+      <button class="secondary small" id="calendar-today">Today</button>
+      <div class="segmented calendar-switch" role="group" aria-label="Show" id="calendar-switch">
+        <button data-value="week">Week</button>
+        <button data-value="month">Month</button>
+      </div>
+    </div>
+
+    <p class="muted calendar-note" id="calendar-note" hidden></p>
+    <div class="calendar-body" id="calendar-body"><p class="muted">Loading…</p></div>
+
+    <ul class="calendar-key" aria-label="Key">
+      <li><span class="mark done"></span>Done</li>
+      <li><span class="mark next"></span>Up next</li>
+      <li><span class="mark planned"></span>Planned</li>
+      <li><span class="mark missed"></span>Missed</li>
+      <li><span class="mark skipped"></span>Skipped</li>
+      <li><span class="sport-tile tiny"><svg class="icon" aria-hidden="true"><use href="/icons/sprite.svg#sport-run"/></svg></span>Activity</li>
+    </ul>
+
+    <p class="sync muted" id="sync" hidden></p>
+    <div class="sync rejected" id="sync-rejected" role="alert" hidden></div>
+  </main>
+</body>
+</html>

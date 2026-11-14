@@ -1,0 +1,94 @@
+import { test } from "node:test";
+import assert from "node:assert/strict";
+import {
+  authorLabel, authorInitials, knownCoaches, weekDays, notesByDay, noteFields, goalFields,
+  noteRequest, changeNoteRequest, resolveRequest, reopenRequest, deleteNoteRequest,
+  addGoalRequest, changeGoalRequest, acceptRequest, dismissRequest, movedPosition,
+} from "../../public/js/coach.js";
+
+const note = (fields = {}) => ({ id: 1, kind: "note", title: null, body: "Easy week", author_kind: "user", author_name: null, date: null, created_at: "2026-11-03T08:00:00Z", ...fields });
+
+test("names who wrote a note: you, the coach, or the agent", () => {
+  assert.equal(authorLabel(note()), "You");
+  assert.equal(authorLabel(note({ author_kind: "human", author_name: "Mara" })), "Mara");
+  assert.equal(authorLabel(note({ author_kind: "llm" })), "Trainer agent");
+  assert.equal(authorLabel(note({ author_kind: "llm", author_name: "Claude" })), "Claude");
+  assert.equal(authorInitials(note()), "ME");
+  assert.equal(authorInitials(note({ author_kind: "llm" })), "AI");
+  assert.equal(authorInitials(note({ author_kind: "human", author_name: "Mara van Keller" })), "MK");
+  assert.equal(authorInitials(note({ author_kind: "human", author_name: "Mara" })), "MA");
+});
+
+test("lists the coaches named so far, latest first, once each", () => {
+  const notes = [
+    note({ id: 1, author_kind: "human", author_name: "Mara" }),
+    note({ id: 2, author_kind: "human", author_name: "Jo" }),
+    note({ id: 3, author_kind: "human", author_name: "Mara" }),
+    note({ id: 4 }),
+  ];
+  assert.deepEqual(knownCoaches(notes), ["Mara", "Jo"]);
+});
+
+test("lays the week out Monday to Sunday with what is on each day", () => {
+  const days = weekDays({
+    from: "2026-11-02", to: "2026-11-08",
+    sessions: [{ id: 1, date: "2026-11-04" }], activities: [{ id: 2, date: "2026-11-02" }], notes: [note({ date: "2026-11-04" })],
+  });
+  assert.deepEqual(days.map((d) => d.date), ["2026-11-02", "2026-11-03", "2026-11-04", "2026-11-05", "2026-11-06", "2026-11-07", "2026-11-08"]);
+  assert.equal(days[0].activities.length, 1);
+  assert.equal(days[2].sessions.length, 1);
+  assert.equal(days[2].notes.length, 1);
+});
+
+test("puts dated notes under their day, in the order written", () => {
+  const days = notesByDay([note({ id: 2, date: "2026-11-03" }), note({ id: 1, date: "2026-11-03" }), note({ id: 3 })]);
+  assert.deepEqual(Object.keys(days), ["2026-11-03"]);
+  assert.deepEqual(days["2026-11-03"].map((n) => n.id), [1, 2]);
+});
+
+test("reads the note form: blanks left out of a new note, cleared on an edit", () => {
+  assert.deepEqual(noteFields({ kind: "note", body: " Felt easy ", about: "activity:3" }), {
+    fields: { kind: "note", body: "Felt easy", activity_id: 3, author_kind: "user" }, problems: [],
+  });
+  assert.deepEqual(noteFields({ kind: "note", body: "Felt easy" }, { editing: true }).fields, {
+    kind: "note", title: null, body: "Felt easy", date: null, activity_id: null, session_id: null, author_kind: "user", author_name: null,
+  });
+  assert.deepEqual(noteFields({ kind: "status", body: "Week 3", author: "Mara", date: "2026-11-03", about: "session:9" }).fields, {
+    kind: "status", body: "Week 3", date: "2026-11-03", session_id: 9, author_kind: "human", author_name: "Mara",
+  });
+  assert.equal(noteFields({ kind: "note", body: "Hi", author: "other", authorName: " Jo " }).fields.author_name, "Jo");
+});
+
+test("says what a note needs before it can be sent", () => {
+  assert.deepEqual(noteFields({ kind: "concern", body: " " }).problems, ["Write something.", "Give the concern a short title."]);
+  assert.deepEqual(noteFields({ kind: "note", body: "Hi", author: "other", authorName: "" }).problems, ["Name the coach who wrote it."]);
+  assert.deepEqual(noteFields({ kind: "mood", body: "Hi" }).problems, ["Pick what kind of note it is."]);
+});
+
+test("reads the goal form", () => {
+  assert.deepEqual(goalFields({ title: " Ski season ", why: "", target_date: "2026-12-15" }), {
+    fields: { title: "Ski season", why: null, target_date: "2026-12-15" }, problems: [],
+  });
+  assert.deepEqual(goalFields({ title: "" }).problems, ["Name the goal."]);
+});
+
+test("builds the requests for notes and goals", () => {
+  assert.deepEqual(noteRequest({ kind: "note", body: "Hi" }), { method: "POST", path: "/api/coach/notes", body: { kind: "note", body: "Hi" } });
+  assert.deepEqual(changeNoteRequest({ id: 4 }, { body: "Hey" }), { method: "PATCH", path: "/api/coach/notes/4", body: { body: "Hey" } });
+  assert.deepEqual(resolveRequest({ id: 4 }, " gone "), { method: "PATCH", path: "/api/coach/notes/4", body: { resolved: true, resolution: "gone" } });
+  assert.deepEqual(resolveRequest({ id: 4 }, ""), { method: "PATCH", path: "/api/coach/notes/4", body: { resolved: true, resolution: null } });
+  assert.deepEqual(reopenRequest({ id: 4 }).body, { resolved: false });
+  assert.deepEqual(deleteNoteRequest({ id: 4 }), { method: "DELETE", path: "/api/coach/notes/4" });
+  assert.deepEqual(addGoalRequest({ title: "Ski" }), { method: "POST", path: "/api/goals", body: { title: "Ski" } });
+  assert.deepEqual(changeGoalRequest({ id: 2 }, { status: "achieved" }), { method: "PATCH", path: "/api/goals/2", body: { status: "achieved" } });
+  assert.deepEqual(acceptRequest({ id: 2 }), { method: "POST", path: "/api/goals/2/accept" });
+  assert.deepEqual(dismissRequest({ id: 2 }), { method: "POST", path: "/api/goals/2/dismiss" });
+});
+
+test("moves a goal a place up or down, not past either end", () => {
+  const goals = [{ id: 5 }, { id: 6 }, { id: 7 }];
+  assert.equal(movedPosition(goals, 6, -1), 1);
+  assert.equal(movedPosition(goals, 6, 1), 3);
+  assert.equal(movedPosition(goals, 5, -1), null);
+  assert.equal(movedPosition(goals, 7, 1), null);
+});

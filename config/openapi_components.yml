@@ -1,0 +1,1112 @@
+# Shared parts of the API description built from the controller comments
+# (Rage::OpenAPI, served at /api/openapi). Every error has the Error shape,
+# see app/controllers/application_controller.rb.
+#
+# Success bodies: every key listed is always sent, as null when it has no
+# value (`nullable`). The request tests check each response against these
+# (test/openapi_schema.rb), keys left out here included.
+components:
+  schemas:
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code:
+              type: string
+              enum: [bad_request, unauthorized, password_change_required, forbidden, not_found, no_workouts, conflict, already_imported, user_mismatch, invalid, too_many_requests]
+            message:
+              type: string
+              description: What went wrong, in a sentence a person can read.
+            fields:
+              type: object
+              description: The parameters at fault, each with what is wrong with it.
+              additionalProperties:
+                type: array
+                items: { type: string }
+            resource:
+              type: string
+              description: For not_found, the kind of record looked for, such as exercise.
+            id:
+              description: For not_found, the id looked for.
+    Version:
+      type: object
+      required: [release, version, commit]
+      properties:
+        release: { type: string, description: "A digest of the frontend's files, which changes with any of them; the service worker keeps one cache per release." }
+        version: { type: string, description: "The release the image was built for, such as 0.2.0, or dev for any other build." }
+        commit: { type: string, nullable: true, description: The short sha of the commit it was built from, when known. }
+    User:
+      type: object
+      required: [id, username, owner, password_change_required, welcomed]
+      properties:
+        id: { type: integer }
+        username: { type: string }
+        owner: { type: boolean, description: Made the install; can invite and remove users. }
+        password_change_required: { type: boolean, description: Signed in with a temporary password the owner gave them; must choose their own first. }
+        welcomed: { type: boolean, description: Has finished or skipped the welcome screen. }
+    UserAccount:
+      description: A user as the owner's list shows them.
+      allOf:
+        - { $ref: "#/components/schemas/User" }
+        - type: object
+          required: [created_at]
+          properties:
+            created_at: { type: string, format: date-time }
+    Users:
+      type: object
+      required: [users]
+      properties:
+        users:
+          type: array
+          items: { $ref: "#/components/schemas/UserAccount" }
+    TemporaryPassword:
+      type: object
+      required: [password]
+      properties:
+        password: { type: string, description: "16 characters in groups of four, shown only this once; the user changes it when they sign in." }
+    Invite:
+      type: object
+      required: [id, created_at, expires_at]
+      properties:
+        id: { type: integer }
+        created_at: { type: string, format: date-time }
+        expires_at: { type: string, format: date-time, description: 7 days after it was made. }
+    Invites:
+      type: object
+      required: [invites]
+      properties:
+        invites:
+          type: array
+          items: { $ref: "#/components/schemas/Invite" }
+    NewInvite:
+      type: object
+      required: [invite, token, path]
+      properties:
+        invite: { $ref: "#/components/schemas/Invite" }
+        token: { type: string, description: "43 characters, shown only this once." }
+        path: { type: string, description: "The link on this server, /signin.html#invite/<token>." }
+    Me:
+      type: object
+      required: [user]
+      properties:
+        user: { $ref: "#/components/schemas/User" }
+    SignedOut:
+      description: Nobody is signed in on this device.
+      allOf:
+        - { $ref: "#/components/schemas/Error" }
+        - type: object
+          required: [setup_required]
+          properties:
+            setup_required:
+              type: boolean
+              description: True while the install has no users yet; the owner account is made with the setup code from the server's log.
+            sign_in_with:
+              type: string
+              nullable: true
+              description: The install's OpenID Connect provider, as the sign-in button names it, when it has one.
+    Device:
+      type: object
+      required: [id, device, signed_in_at, last_used_at, current]
+      properties:
+        id: { type: integer }
+        device: { type: string, nullable: true, description: The browser's user agent when it signed in. }
+        signed_in_at: { type: string, format: date-time }
+        last_used_at: { type: string, format: date-time }
+        current: { type: boolean, description: The device asking. }
+    Devices:
+      type: object
+      required: [devices]
+      properties:
+        devices:
+          type: array
+          items: { $ref: "#/components/schemas/Device" }
+    ApiToken:
+      type: object
+      required: [id, name, created_at, last_used_at]
+      properties:
+        id: { type: integer }
+        name: { type: string, description: What it is for, such as "Trainer agent". }
+        created_at: { type: string, format: date-time }
+        last_used_at: { type: string, format: date-time, nullable: true, description: To the minute. }
+    ApiTokens:
+      type: object
+      required: [tokens]
+      properties:
+        tokens:
+          type: array
+          items: { $ref: "#/components/schemas/ApiToken" }
+    Identity:
+      type: object
+      required: [id, username, current, created_at, last_used_at]
+      properties:
+        id: { type: integer }
+        username: { type: string, nullable: true, description: What the provider calls you (preferred_username, else email or name), as of the last sign-in. }
+        current: { type: boolean, description: False for an identity at a provider the install no longer uses; it signs nobody in. }
+        created_at: { type: string, format: date-time, description: When it was linked. }
+        last_used_at: { type: string, format: date-time, nullable: true }
+    Identities:
+      type: object
+      required: [provider, password, identities]
+      properties:
+        provider:
+          type: object
+          nullable: true
+          required: [name]
+          properties:
+            name: { type: string }
+        password: { type: boolean, description: Whether you can also sign in with a password. }
+        identities:
+          type: array
+          items: { $ref: "#/components/schemas/Identity" }
+    NewApiToken:
+      type: object
+      required: [token, secret]
+      properties:
+        token: { $ref: "#/components/schemas/ApiToken" }
+        secret: { type: string, description: "The token, lr_ and 43 characters: shown only this once." }
+    Unit:
+      type: string
+      enum: [lb, kg]
+    DistanceUnit:
+      type: string
+      enum: [km, mi]
+      description: How distances are shown (climb in m or ft); they are kept in metres.
+    Weight:
+      type: object
+      required: [value, unit]
+      properties:
+        value: { type: number }
+        unit: { $ref: "#/components/schemas/Unit" }
+    Target:
+      type: object
+      description: What a set aims for; reps or seconds, and a weight when weighted.
+      required: [reps, seconds, weight]
+      properties:
+        reps: { type: integer, nullable: true }
+        seconds: { type: integer, nullable: true }
+        weight: { allOf: [{ $ref: "#/components/schemas/Weight" }], nullable: true }
+    AllowedWeights:
+      type: array
+      nullable: true
+      description: The owned weights to step through, in the exercise's unit; null when the equipment has no fixed weights.
+      items: { type: number }
+    WeightSteps:
+      type: object
+      description: >-
+        Stepper increments per equipment type (default, dumbbell, ...) and unit, from
+        config/coach.yml. The first band whose `below` is above the weight wins.
+      additionalProperties:
+        type: object
+        additionalProperties:
+          type: array
+          items:
+            type: object
+            required: [step]
+            properties:
+              below: { type: number }
+              step: { type: number }
+    ExerciseRef:
+      type: object
+      required: [id, slug, name]
+      properties:
+        id: { type: integer }
+        slug: { type: string }
+        name: { type: string }
+    Equipment:
+      type: object
+      required: [id, slug, name, owned, weights, unit, any_weight]
+      properties:
+        id: { type: integer }
+        slug: { type: string }
+        name: { type: string }
+        owned: { type: boolean, description: Whether the user owns it. }
+        any_weight:
+          type: boolean
+          description: >-
+            The generic weight, for exercises where any dumbbell or kettlebell will do. It can't be
+            changed: it is owned with any gear in set weights the user owns, and its weights are all of
+            theirs, in its unit.
+        weights:
+          type: array
+          description: The weights the user owns, in its unit, for fixed-weight equipment such as dumbbells.
+          items: { type: number }
+        unit:
+          allOf: [{ $ref: "#/components/schemas/Unit" }]
+          nullable: true
+          description: The unit the user's weights of it come in; null for equipment without set weights.
+    Animation:
+      type: object
+      nullable: true
+      description: Keyframes for the figure, see public/js/figure.js.
+    Exercise:
+      type: object
+      required: [id, slug, name, category, areas, pattern, cues, mistakes, equipment, unilateral, alternating, weights_held, default_reps, default_seconds, instructions, animation]
+      properties:
+        id: { type: integer }
+        slug: { type: string }
+        name: { type: string }
+        category: { type: string, enum: [stretch, mobility, activation, strength, cardio] }
+        areas: { type: array, items: { type: string, enum: [legs, hips, core, upper_body] } }
+        pattern: { type: string, nullable: true, enum: [squat, lunge, hinge, push, pull, anti_extension, anti_rotation, mobility] }
+        cues: { type: array, items: { type: string } }
+        mistakes: { type: array, items: { type: string } }
+        equipment: { type: array, description: Equipment slugs it needs; empty for bodyweight., items: { type: string } }
+        unilateral: { type: boolean }
+        alternating: { type: boolean, description: "Sides in turn within one set; its reps count both sides together." }
+        weights_held: { type: integer, description: "1, or 2 for a weight in each hand." }
+        default_reps: { type: integer, nullable: true }
+        default_seconds: { type: integer, nullable: true }
+        instructions: { type: array, items: { type: string } }
+        animation: { $ref: "#/components/schemas/Animation" }
+    Alternative:
+      description: An exercise offered as a swap, with how well it matches.
+      allOf:
+        - $ref: "#/components/schemas/Exercise"
+        - type: object
+          required: [match, reason, weight, weight_unit, allowed_weights]
+          properties:
+            match: { type: string, enum: [same, similar, other] }
+            reason: { type: string }
+            weight: { allOf: [{ $ref: "#/components/schemas/Weight" }], nullable: true, description: The weight to start at. }
+            weight_unit: { type: string, nullable: true, enum: [lb, kg], description: "The unit it takes a weight in; null when it is done without weights." }
+            allowed_weights: { $ref: "#/components/schemas/AllowedWeights" }
+    Suggestion:
+      type: object
+      description: A pending step up or down for an exercise's weight, from a finished session.
+      required: [id, exercise_id, direction, value, unit, reason]
+      properties:
+        id: { type: integer }
+        exercise_id: { type: integer }
+        direction: { type: string, enum: [up, down] }
+        value: { type: number }
+        unit: { $ref: "#/components/schemas/Unit" }
+        reason: { type: string }
+    RememberedWeight:
+      type: object
+      required: [exercise_id, value, unit, updated_at]
+      properties:
+        exercise_id: { type: integer }
+        value: { type: number, nullable: true }
+        unit: { allOf: [{ $ref: "#/components/schemas/Unit" }], nullable: true }
+        updated_at: { type: string, format: date-time, nullable: true }
+    ExerciseWeight:
+      allOf:
+        - $ref: "#/components/schemas/RememberedWeight"
+        - type: object
+          required: [suggestion]
+          properties:
+            suggestion: { allOf: [{ $ref: "#/components/schemas/Suggestion" }], nullable: true }
+    FrameChoice:
+      description: A workout id, "none", or null for the program's.
+      nullable: true
+      oneOf:
+        - { type: integer }
+        - { type: string, enum: [none] }
+    WorkoutSummary:
+      type: object
+      required: [id, example_slug, kind, title, subtitle, position, source, archived, estimated_minutes]
+      properties:
+        id: { type: integer }
+        example_slug: { type: string, nullable: true, description: The example workout it was imported as. }
+        kind: { type: string, enum: [warmup, workout, cooldown] }
+        title: { type: string }
+        subtitle: { type: string, nullable: true }
+        position: { type: integer }
+        source: { type: string, enum: [user, llm], description: "Yours, or an assistant's through MCP." }
+        archived: { type: boolean }
+        estimated_minutes: { type: integer }
+    WorkoutCard:
+      allOf:
+        - $ref: "#/components/schemas/WorkoutSummary"
+        - type: object
+          required: [exercises, exercise_ids, equipment, up_next, framed_minutes, last_done]
+          properties:
+            exercises: { type: array, description: Exercise names., items: { type: string } }
+            exercise_ids: { type: array, items: { type: integer } }
+            equipment: { type: array, description: Equipment slugs., items: { type: string } }
+            up_next: { type: boolean }
+            framed_minutes: { type: integer, description: With the warm-up and cool-down. }
+            last_done: { type: string, format: date, nullable: true }
+    ProgramWorkouts:
+      type: object
+      required: [id, name, workouts]
+      properties:
+        id: { type: integer, nullable: true, description: Null for "My workouts", the user's own. }
+        name: { type: string }
+        workouts: { type: array, items: { $ref: "#/components/schemas/WorkoutCard" } }
+    Program:
+      type: object
+      required: [id, example_slug, name, description, workouts]
+      properties:
+        id: { type: integer }
+        example_slug: { type: string, nullable: true, description: The example program it was imported from. }
+        name: { type: string }
+        description: { type: string, nullable: true }
+        workouts: { type: array, items: { $ref: "#/components/schemas/WorkoutSummary" } }
+    Examples:
+      type: array
+      items: { $ref: "#/components/schemas/Example" }
+    Example:
+      type: object
+      required: [slug, name, description, workouts, equipment, imported]
+      properties:
+        slug: { type: string }
+        name: { type: string }
+        description: { type: string, nullable: true }
+        workouts:
+          type: array
+          items:
+            type: object
+            required: [slug, kind, title, subtitle, estimated_minutes, exercises]
+            properties:
+              slug: { type: string }
+              kind: { type: string, enum: [warmup, workout, cooldown] }
+              title: { type: string }
+              subtitle: { type: string, nullable: true }
+              estimated_minutes: { type: integer, description: "Without the warm-up and cool-down." }
+              exercises: { type: array, description: "The exercises' names, in order, each once.", items: { type: string } }
+        equipment: { type: array, description: Equipment slugs its steps need., items: { type: string } }
+        imported: { type: boolean, description: Whether you have a copy. }
+    Step:
+      type: object
+      required: [id, position, reps, duration_seconds, tempo, weight, weights_held, per_side, note, equipment, equipment_needed, exercise, target, weight_unit, allowed_weights, suggestion]
+      properties:
+        id: { type: integer }
+        position: { type: integer }
+        reps: { type: integer, nullable: true }
+        duration_seconds: { type: integer, nullable: true }
+        tempo: { type: string, nullable: true, description: "3 or 4 digits, such as 3110." }
+        weight: { allOf: [{ $ref: "#/components/schemas/Weight" }], nullable: true, description: The step's own weight, which a remembered one wins over. }
+        weights_held: { type: integer, nullable: true, description: "The step's own count of weights held, when done with other gear than its exercise names; null for the exercise's." }
+        per_side: { type: boolean }
+        note: { type: string, nullable: true }
+        equipment: { type: array, nullable: true, items: { type: string }, description: "The step's own equipment slugs, when done with other gear than its exercise names; null for the exercise's." }
+        equipment_needed: { type: array, items: { type: string }, description: "What it is done with: its own equipment, else its exercise's." }
+        exercise: { $ref: "#/components/schemas/Exercise" }
+        target: { $ref: "#/components/schemas/Target" }
+        weight_unit: { type: string, nullable: true, enum: [lb, kg], description: "The unit its weight is kept in; null when it is done without weights (no weight and no gear in set weights)." }
+        allowed_weights: { $ref: "#/components/schemas/AllowedWeights" }
+        suggestion: { allOf: [{ $ref: "#/components/schemas/Suggestion" }], nullable: true }
+    Block:
+      type: object
+      description: A circuit; every round runs its steps in order.
+      required: [id, label, position, rounds, rest_seconds, steps]
+      properties:
+        id: { type: integer }
+        label: { type: string }
+        position: { type: integer }
+        rounds: { type: integer }
+        rest_seconds: { type: integer, description: After each round but the last. }
+        steps: { type: array, items: { $ref: "#/components/schemas/Step" } }
+    Workout:
+      allOf:
+        - $ref: "#/components/schemas/WorkoutSummary"
+        - type: object
+          required: [program_id, editable, warmup, cooldown, blocks, framed, plan, weight_steps, unit]
+          properties:
+            program_id: { type: integer, nullable: true }
+            editable: { type: boolean }
+            warmup: { $ref: "#/components/schemas/FrameChoice" }
+            cooldown: { $ref: "#/components/schemas/FrameChoice" }
+            blocks: { type: array, items: { $ref: "#/components/schemas/Block" } }
+            framed: { type: array, description: The warm-up, workout and cool-down a session runs., items: { $ref: "#/components/schemas/WorkoutSummary" } }
+            plan: { $ref: "#/components/schemas/PlayerPlan" }
+            weight_steps: { $ref: "#/components/schemas/WeightSteps" }
+            unit: { $ref: "#/components/schemas/Unit" }
+    StepInput:
+      type: object
+      description: >-
+        A step as the builder writes it. Name its `id` to keep it (and the
+        link from its logged sets); leave the id out for a new step. Its
+        exercise is `exercise_id`, or `exercise`: a slug, an id, or the
+        exercise GET gives; `exercise_id` wins when both are there. A step from GET /api/workouts/:id fits as it is:
+        what only GET has (`position`, `equipment_needed`, `target`, ...) is
+        ignored.
+      anyOf:
+        - { required: [exercise_id] }
+        - { required: [exercise] }
+      additionalProperties: false
+      properties:
+        id: { type: integer, description: A step of this workout to keep. }
+        exercise_id: { type: integer }
+        exercise:
+          description: The exercise's slug or id, or the exercise as GET gives it (only its `id` is read).
+          oneOf:
+            - { type: string }
+            - { type: integer }
+            - { type: object, required: [id], properties: { id: { type: integer } }, additionalProperties: true }
+        reps: { type: integer, nullable: true, minimum: 1, maximum: 1000 }
+        duration_seconds: { type: integer, nullable: true, minimum: 1, maximum: 3600, description: Instead of reps. }
+        tempo: { type: string, nullable: true, description: "3 or 4 digits, seconds per phase, such as 3110." }
+        weight:
+          nullable: true
+          description: The value and unit, or the value alone in the exercise's unit.
+          oneOf:
+            - { type: number, minimum: 0 }
+            - type: object
+              required: [value]
+              additionalProperties: false
+              properties:
+                value: { type: number, minimum: 0 }
+                unit: { allOf: [{ $ref: "#/components/schemas/Unit" }], description: "The exercise's unit if left out." }
+        weights_held: { type: integer, nullable: true, enum: [1, 2], description: When done with other gear than the exercise names. }
+        per_side: { type: boolean, nullable: true, description: "Must match the exercise; its own if left out." }
+        note: { type: string, nullable: true, maxLength: 500 }
+        equipment: { type: array, nullable: true, items: { type: string }, description: "Equipment slugs, when done with other gear than the exercise names; null or left out for the exercise's." }
+        position: { description: "From GET; ignored, the order given counts." }
+        equipment_needed: { description: "From GET; ignored." }
+        target: { description: "From GET; ignored." }
+        weight_unit: { description: "From GET; ignored." }
+        allowed_weights: { description: "From GET; ignored." }
+        suggestion: { description: "From GET; ignored." }
+    BlockInput:
+      type: object
+      description: A block as the builder writes it; one from GET /api/workouts/:id fits as it is.
+      required: [label, steps]
+      additionalProperties: false
+      properties:
+        id: { type: integer, description: A block of this workout to keep. }
+        label: { type: string, maxLength: 60, description: Unique in the workout. }
+        rounds: { type: integer, minimum: 1, maximum: 20, description: 1 if left out. }
+        rest_seconds: { type: integer, minimum: 0, maximum: 600, description: "After each round but the last; 0 if left out." }
+        position: { description: "From GET; ignored, the order given counts." }
+        steps: { type: array, minItems: 1, maxItems: 30, items: { $ref: "#/components/schemas/StepInput" } }
+    WorkoutStructure:
+      type: object
+      description: The whole structure, replacing what is there; title and framing as PATCH takes them.
+      required: [blocks]
+      properties:
+        title: { type: string, maxLength: 100 }
+        subtitle: { type: string, nullable: true, maxLength: 200 }
+        warmup: { $ref: "#/components/schemas/FrameChoice" }
+        cooldown: { $ref: "#/components/schemas/FrameChoice" }
+        blocks: { type: array, minItems: 1, maxItems: 12, items: { $ref: "#/components/schemas/BlockInput" } }
+    NewWorkout:
+      type: object
+      required: [kind, title, blocks]
+      properties:
+        kind: { type: string, enum: [warmup, workout, cooldown] }
+        title: { type: string, maxLength: 100 }
+        subtitle: { type: string, nullable: true, maxLength: 200 }
+        warmup: { $ref: "#/components/schemas/FrameChoice" }
+        cooldown: { $ref: "#/components/schemas/FrameChoice" }
+        blocks: { type: array, minItems: 1, maxItems: 12, items: { $ref: "#/components/schemas/BlockInput" } }
+    PlanWorkout:
+      type: object
+      required: [id, kind, title]
+      properties:
+        id: { type: integer }
+        kind: { type: string, enum: [warmup, workout, cooldown] }
+        title: { type: string }
+    PlanBlock:
+      type: object
+      required: [label, round, rounds]
+      properties:
+        label: { type: string }
+        round: { type: integer }
+        rounds: { type: integer }
+    PlanExercise:
+      type: object
+      required: [id, slug, name, category, alternating, cues, mistakes, instructions, animation]
+      properties:
+        id: { type: integer }
+        slug: { type: string }
+        name: { type: string }
+        category: { type: string }
+        alternating: { type: boolean, description: "Sides in turn within one set; its reps count both sides together." }
+        cues: { type: array, items: { type: string } }
+        mistakes: { type: array, items: { type: string } }
+        instructions: { type: array, items: { type: string } }
+        animation: { $ref: "#/components/schemas/Animation" }
+    PlanExerciseItem:
+      type: object
+      description: One set of a step, for one side.
+      required: [type, mode, workout, block, step_id, side, reps, seconds, tempo, weight, weight_unit, weights_held, weight_equipment, allowed_weights, seed_weight, suggestion, note, equipment, exercise]
+      properties:
+        type: { type: string, enum: [exercise] }
+        mode: { type: string, enum: [timed, reps] }
+        workout: { $ref: "#/components/schemas/PlanWorkout" }
+        block: { $ref: "#/components/schemas/PlanBlock" }
+        step_id: { type: integer }
+        side: { type: string, nullable: true, enum: [left, right] }
+        reps: { type: integer, nullable: true }
+        seconds: { type: integer, nullable: true }
+        tempo: { type: string, nullable: true }
+        weight: { allOf: [{ $ref: "#/components/schemas/Weight" }], nullable: true, description: The target weight. }
+        weight_unit: { type: string, nullable: true, enum: [lb, kg], description: "The unit its weight is kept in; null when it is done without weights (no weight and no gear in set weights)." }
+        weights_held: { type: integer, nullable: true }
+        weight_equipment: { type: string, nullable: true, description: The equipment slug that carries the weight. }
+        allowed_weights: { $ref: "#/components/schemas/AllowedWeights" }
+        seed_weight: { allOf: [{ $ref: "#/components/schemas/Weight" }], nullable: true }
+        suggestion: { allOf: [{ $ref: "#/components/schemas/Suggestion" }], nullable: true }
+        note: { type: string, nullable: true }
+        equipment: { type: array, items: { type: string } }
+        exercise: { $ref: "#/components/schemas/PlanExercise" }
+    PlanRestItem:
+      type: object
+      description: The rest between two rounds of a block.
+      required: [type, mode, workout, block, seconds]
+      properties:
+        type: { type: string, enum: [rest] }
+        mode: { type: string, enum: [timed] }
+        workout: { $ref: "#/components/schemas/PlanWorkout" }
+        block: { $ref: "#/components/schemas/PlanBlock" }
+        seconds: { type: integer }
+    PlanTarget:
+      type: object
+      description: One exercise that takes a weight, for the get-ready screen; its weight is null while none is set.
+      required: [weight, weight_unit, weights_held, weight_equipment, seed_weight, suggestion, equipment, allowed_weights, exercise]
+      properties:
+        weight: { allOf: [{ $ref: "#/components/schemas/Weight" }], nullable: true }
+        weight_unit: { type: string, enum: [lb, kg] }
+        weights_held: { type: integer }
+        weight_equipment: { type: string, nullable: true }
+        seed_weight: { allOf: [{ $ref: "#/components/schemas/Weight" }], nullable: true }
+        suggestion: { allOf: [{ $ref: "#/components/schemas/Suggestion" }], nullable: true }
+        equipment: { type: array, items: { type: string } }
+        allowed_weights: { $ref: "#/components/schemas/AllowedWeights" }
+        exercise:
+          type: object
+          required: [id, name]
+          properties:
+            id: { type: integer }
+            name: { type: string }
+    PlayerPlan:
+      type: object
+      description: The workouts flattened into the screens the player walks through.
+      required: [equipment, targets, items]
+      properties:
+        equipment: { type: array, description: Every equipment slug the plan needs., items: { type: string } }
+        targets: { type: array, items: { $ref: "#/components/schemas/PlanTarget" } }
+        items:
+          type: array
+          items:
+            oneOf:
+              - $ref: "#/components/schemas/PlanExerciseItem"
+              - $ref: "#/components/schemas/PlanRestItem"
+    Completion:
+      type: object
+      required: [finished_at, rpe, feedback, note, ended_early]
+      properties:
+        finished_at: { type: string, format: date-time }
+        rpe: { type: integer, nullable: true, description: 1 to 10. }
+        feedback: { type: string, nullable: true, enum: [too_easy, right, too_hard] }
+        note: { type: string, nullable: true }
+        ended_early: { type: boolean }
+    Session:
+      type: object
+      required: [id, date, position, status, created_by, note, started_at, client_ref, parts, routine_id, routine_date, workout, sets_done, completion]
+      properties:
+        id: { type: integer }
+        date: { type: string, format: date }
+        position: { type: integer, description: Its place on the day, 1 first. }
+        status: { type: string, enum: [planned, missed, in_progress, done, skipped], description: Missed is a planned session on a day before today. }
+        created_by: { type: string, enum: [seed, manual, llm] }
+        note: { type: string, nullable: true, description: The planner's reason for it. }
+        started_at: { type: string, format: date-time, nullable: true }
+        client_ref: { type: string, nullable: true }
+        parts: { type: array, nullable: true, description: The parts it runs; null for all of them., items: { type: string, enum: [warmup, workout, cooldown] } }
+        routine_id: { type: integer, nullable: true, description: "The workout routine whose day it was planned for, when the day was confirmed." }
+        routine_date: { type: string, format: date, nullable: true, description: "The routine's own day; `date` differs once the session moved." }
+        workout: { $ref: "#/components/schemas/WorkoutSummary" }
+        sets_done: { type: integer }
+        completion: { allOf: [{ $ref: "#/components/schemas/Completion" }], nullable: true }
+    SessionWithPlan:
+      allOf:
+        - $ref: "#/components/schemas/Session"
+        - type: object
+          required: [plan]
+          properties:
+            plan: { $ref: "#/components/schemas/PlayerPlan" }
+    LoggedSet:
+      type: object
+      required: [set_number, side, status, reps, seconds, weight, target]
+      properties:
+        set_number: { type: integer }
+        side: { type: string, nullable: true, enum: [left, right] }
+        status: { type: string, enum: [done, skipped] }
+        reps: { type: integer, nullable: true }
+        seconds: { type: integer, nullable: true }
+        weight: { allOf: [{ $ref: "#/components/schemas/Weight" }], nullable: true }
+        target: { $ref: "#/components/schemas/Target" }
+    SessionDetail:
+      allOf:
+        - $ref: "#/components/schemas/Session"
+        - type: object
+          required: [minutes, exercises]
+          properties:
+            minutes: { type: integer, nullable: true, description: From the start to the finish, when both are known. }
+            exercises:
+              type: array
+              items:
+                type: object
+                required: [exercise, instead_of, block_label, sets]
+                properties:
+                  exercise: { $ref: "#/components/schemas/ExerciseRef" }
+                  instead_of: { allOf: [{ $ref: "#/components/schemas/ExerciseRef" }], nullable: true, description: The exercise planned, when this one was a swap. }
+                  block_label: { type: string }
+                  sets: { type: array, items: { $ref: "#/components/schemas/LoggedSet" } }
+    SetLog:
+      type: object
+      required: [id, session_id, step_id, step_ref, exercise_id, planned_exercise_id, block_label, set_number, side, reps, seconds, weight, status, target]
+      properties:
+        id: { type: integer }
+        session_id: { type: integer }
+        step_id: { type: integer, nullable: true, description: Null once the step has left the workout, or when it was logged for a step the session no longer ran. }
+        step_ref: { type: integer, nullable: true, description: "The id of the step it was logged against, kept after the step has gone; with the round and side it names the set." }
+        exercise_id: { type: integer, description: The exercise done. }
+        planned_exercise_id: { type: integer, description: The exercise the step planned. }
+        block_label: { type: string }
+        set_number: { type: integer }
+        side: { type: string, nullable: true, enum: [left, right] }
+        reps: { type: integer, nullable: true }
+        seconds: { type: integer, nullable: true }
+        weight: { allOf: [{ $ref: "#/components/schemas/Weight" }], nullable: true }
+        status: { type: string, enum: [done, skipped] }
+        target: { $ref: "#/components/schemas/Target" }
+    CompletedSession:
+      type: object
+      required: [session, completion, suggestions]
+      properties:
+        session: { $ref: "#/components/schemas/Session" }
+        completion: { $ref: "#/components/schemas/Completion" }
+        suggestions: { type: array, description: For next time., items: { $ref: "#/components/schemas/Suggestion" } }
+    History:
+      type: object
+      required: [from, to, sessions, weeks]
+      properties:
+        from: { type: string, format: date }
+        to: { type: string, format: date }
+        sessions: { type: array, items: { $ref: "#/components/schemas/Session" } }
+        weeks:
+          type: array
+          items:
+            type: object
+            required: [week_start, done, partial]
+            properties:
+              week_start: { type: string, format: date, description: The Monday. }
+              done: { type: integer }
+              partial: { type: integer, description: Sessions ended early. }
+    LoggedExercise:
+      type: object
+      required: [id, slug, name, last_date, sessions, remembered, last_set]
+      properties:
+        id: { type: integer }
+        slug: { type: string }
+        name: { type: string }
+        last_date: { type: string, format: date }
+        sessions: { type: integer }
+        remembered: { allOf: [{ $ref: "#/components/schemas/Weight" }], nullable: true }
+        last_set:
+          type: object
+          description: The best set of the last day it was done.
+          required: [reps, seconds, weight]
+          properties:
+            reps: { type: integer, nullable: true }
+            seconds: { type: integer, nullable: true }
+            weight: { allOf: [{ $ref: "#/components/schemas/Weight" }], nullable: true }
+    ExerciseHistory:
+      type: object
+      required: [exercise, remembered, sessions]
+      properties:
+        exercise:
+          allOf:
+            - $ref: "#/components/schemas/ExerciseRef"
+            - type: object
+              required: [timed, unit]
+              properties:
+                timed: { type: boolean }
+                unit: { $ref: "#/components/schemas/Unit" }
+        remembered: { allOf: [{ $ref: "#/components/schemas/RememberedWeight" }], nullable: true }
+        sessions:
+          type: array
+          items:
+            type: object
+            required: [session_id, date, status, workout, sets]
+            properties:
+              session_id: { type: integer }
+              date: { type: string, format: date }
+              status: { type: string, enum: [planned, in_progress, done, skipped] }
+              workout: { $ref: "#/components/schemas/WorkoutSummary" }
+              sets:
+                type: array
+                items:
+                  type: object
+                  required: [set_number, block_label, side, reps, seconds, weight, target, swapped]
+                  properties:
+                    set_number: { type: integer }
+                    block_label: { type: string }
+                    side: { type: string, nullable: true, enum: [left, right] }
+                    reps: { type: integer, nullable: true }
+                    seconds: { type: integer, nullable: true }
+                    weight: { allOf: [{ $ref: "#/components/schemas/Weight" }], nullable: true }
+                    target: { $ref: "#/components/schemas/Target" }
+                    swapped: { type: boolean }
+    Activity:
+      type: object
+      required: [id, date, started_at, sport, title, moving_seconds, elapsed_seconds, distance_m, climb_m, avg_hr, max_hr, rpe, note, source, external_id, client_ref, created_by, routine_id, routine_date, created_at, updated_at]
+      properties:
+        id: { type: integer }
+        date: { type: string, format: date, description: The sender's own day it started on. }
+        started_at: { type: string, format: date-time, nullable: true }
+        sport: { type: string, description: "Free text, trimmed and lowercase, such as run or trail run." }
+        title: { type: string, nullable: true, description: Null when none was given; show the sport instead. }
+        moving_seconds: { type: integer, nullable: true }
+        elapsed_seconds: { type: integer, nullable: true }
+        distance_m: { type: integer, nullable: true, description: In metres. }
+        climb_m: { type: integer, nullable: true, description: In metres. }
+        avg_hr: { type: integer, nullable: true, description: Beats a minute. }
+        max_hr: { type: integer, nullable: true, description: Beats a minute. }
+        rpe: { type: integer, nullable: true, description: "1 to 10, as the person (or a coach they told) gave it." }
+        note: { type: string, nullable: true }
+        source: { type: string, nullable: true, description: "Where it came from, such as garmin; null for one logged in the app." }
+        external_id: { type: string, nullable: true, description: Its id at the source. }
+        client_ref: { type: string, nullable: true }
+        created_by: { type: string, enum: [manual, llm] }
+        routine_id: { type: integer, nullable: true, description: The sport routine whose day it was linked to by hand. }
+        routine_date: { type: string, format: date, nullable: true, description: That routine's day. }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+    ActivityInput:
+      type: object
+      required: [date, sport]
+      properties:
+        date: { type: string, format: date }
+        today: { type: string, format: date, description: "The sender's own date, which `date` may not be after." }
+        started_at: { type: string, format: date-time }
+        sport: { type: string }
+        title: { type: string }
+        moving_seconds: { type: integer, minimum: 0 }
+        elapsed_seconds: { type: integer, minimum: 0 }
+        distance_m: { type: integer, minimum: 0 }
+        climb_m: { type: integer, minimum: 0 }
+        avg_hr: { type: integer, minimum: 0 }
+        max_hr: { type: integer, minimum: 0 }
+        rpe: { type: integer, minimum: 1, maximum: 10 }
+        note: { type: string }
+        source: { type: string }
+        external_id: { type: string, description: "Needs `source`." }
+        client_ref: { type: string }
+        routine_id: { type: integer, nullable: true, description: "Links it by hand to a day of one of the user's sport routines, with `routine_date`." }
+        routine_date: { type: string, format: date, nullable: true }
+    ActivityBatchInput:
+      type: object
+      required: [activities]
+      properties:
+        today: { type: string, format: date }
+        activities: { type: array, maxItems: 500, items: { $ref: "#/components/schemas/ActivityInput" } }
+    ActivityWrite:
+      oneOf:
+        - $ref: "#/components/schemas/ActivityInput"
+        - $ref: "#/components/schemas/ActivityBatchInput"
+    ActivityBatch:
+      type: object
+      required: [activities]
+      properties:
+        activities: { type: array, description: Every activity in the order sent., items: { $ref: "#/components/schemas/Activity" } }
+    ActivityOrBatch:
+      oneOf:
+        - $ref: "#/components/schemas/Activity"
+        - $ref: "#/components/schemas/ActivityBatch"
+    Calendar:
+      type: object
+      required: [sessions, activities, notes, routines, routine_days]
+      properties:
+        sessions: { type: array, items: { $ref: "#/components/schemas/Session" } }
+        activities: { type: array, items: { $ref: "#/components/schemas/Activity" } }
+        notes: { type: array, description: The coach's notes dated to a day in the range., items: { $ref: "#/components/schemas/CoachNote" } }
+        routines: { type: array, description: The routines with days in the range., items: { $ref: "#/components/schemas/Routine" } }
+        routine_days: { type: array, description: "Their days that show in the range, by the day they show on.", items: { $ref: "#/components/schemas/RoutineDay" } }
+    Routine:
+      type: object
+      required: [id, title, sport, workout, weekdays, one_off, starts_on, ends_on, minutes, distance_m, effort, note, created_by, created_at, updated_at]
+      properties:
+        id: { type: integer }
+        title: { type: string, nullable: true, description: Null when none was given; show the sport or workout instead. }
+        sport: { type: string, nullable: true, description: "Trimmed and lowercase, such as run; null for a workout routine." }
+        workout: { allOf: [{ $ref: "#/components/schemas/WorkoutSummary" }], nullable: true, description: The workout a workout routine runs. }
+        weekdays: { type: array, description: "ISO weekdays, 1 Monday to 7 Sunday; empty for a one-off.", items: { type: integer, minimum: 1, maximum: 7 } }
+        one_off: { type: boolean, description: "A single day, `starts_on`." }
+        starts_on: { type: string, format: date }
+        ends_on: { type: string, format: date, nullable: true, description: Its last day; null while it runs on. }
+        minutes: { type: integer, nullable: true, description: Roughly how long. }
+        distance_m: { type: integer, nullable: true, description: Roughly how far, in metres. }
+        effort: { type: string, enum: [easy, moderate, hard], nullable: true }
+        note: { type: string, nullable: true }
+        created_by: { type: string, enum: [manual, llm], description: "llm for one an agent planned." }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+    Routines:
+      type: object
+      required: [routines]
+      properties:
+        routines: { type: array, items: { $ref: "#/components/schemas/Routine" } }
+    RoutineInput:
+      type: object
+      properties:
+        today: { type: string, format: date, description: "The sender's own date, which a new start may not be before." }
+        title: { type: string }
+        sport: { type: string, description: "A sport or `workout_id`, not both." }
+        workout_id: { type: integer, description: One of the user's workouts. }
+        weekdays: { type: array, description: "ISO weekdays, 1 Monday to 7 Sunday; empty (or left out) for a one-off.", items: { type: integer, minimum: 1, maximum: 7 } }
+        starts_on: { type: string, format: date, description: "Today or later; today when left out. A one-off's day." }
+        ends_on: { type: string, format: date, nullable: true }
+        minutes: { type: integer, minimum: 1, nullable: true }
+        distance_m: { type: integer, minimum: 1, nullable: true }
+        effort: { type: string, enum: [easy, moderate, hard], nullable: true }
+        note: { type: string, nullable: true }
+        confirmed: { type: boolean, description: "A one-off only: its day is confirmed at once (Planned rather than Maybe)." }
+    RoutineDay:
+      type: object
+      required: [routine_id, date, "on", state, confirmed, moved, session_id, activity_id, linked]
+      properties:
+        routine_id: { type: integer }
+        date: { type: string, format: date, description: The routine's own day. }
+        "on": { type: string, format: date, description: "The day it shows on: its own, the one it was moved to, or its session's." }
+        state: { type: string, enum: [tentative, confirmed, done, skipped, missed], description: "Missed: tentative or confirmed on a day before today, with nothing fulfilling it." }
+        confirmed: { type: boolean, description: "The user said they're going; tentative or missed days read again from it against the device's today." }
+        moved: { type: boolean }
+        session_id: { type: integer, nullable: true, description: "A workout routine's: the session planned for the day, or the done session that fulfilled it." }
+        activity_id: { type: integer, nullable: true, description: "A sport routine's: the activity that fulfilled it." }
+        linked: { type: boolean, description: The activity was linked to the day by hand. }
+    RoutineDayChange:
+      type: object
+      required: [status]
+      properties:
+        status: { type: string, enum: [confirmed, skipped, moved] }
+        moved_to: { type: string, format: date, description: "For moved: the day, today or later; the day's own date takes a move back." }
+        today: { type: string, format: date }
+    Goal:
+      type: object
+      required: [id, title, why, target_date, status, position, created_by, proposed_reason, replaces_id, decided_at, created_at, updated_at]
+      properties:
+        id: { type: integer }
+        title: { type: string }
+        why: { type: string, nullable: true }
+        target_date: { type: string, format: date, nullable: true }
+        status: { type: string, enum: [active, achieved, dropped, proposed, dismissed] }
+        position: { type: integer, nullable: true, description: "An active goal's place, 1 first; null for the others." }
+        created_by: { type: string, enum: [user, llm], description: "llm for a goal an agent proposed." }
+        proposed_reason: { type: string, nullable: true, description: Why the agent proposed it. }
+        replaces_id: { type: integer, nullable: true, description: The goal a proposal would change. }
+        decided_at: { type: string, format: date-time, nullable: true, description: "When it was accepted, dismissed, achieved or dropped." }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+    Goals:
+      type: object
+      required: [goals, proposals, past]
+      properties:
+        goals: { type: array, description: The active goals in order., items: { $ref: "#/components/schemas/Goal" } }
+        proposals: { type: array, description: What an agent proposed, waiting for the user., items: { $ref: "#/components/schemas/Goal" } }
+        past: { type: array, description: "Achieved, dropped and dismissed goals, the latest decided first.", items: { $ref: "#/components/schemas/Goal" } }
+    GoalInput:
+      type: object
+      properties:
+        title: { type: string, maxLength: 200 }
+        why: { type: string, nullable: true, maxLength: 2000 }
+        target_date: { type: string, format: date, nullable: true }
+        status: { type: string, enum: [active, achieved, dropped] }
+        position: { type: integer, minimum: 1 }
+    CoachNote:
+      type: object
+      required: [id, kind, title, body, author_kind, author_name, date, activity_id, session_id, about, resolved_at, resolution, created_at, updated_at]
+      properties:
+        id: { type: integer }
+        kind: { type: string, enum: [status, focus, concern, note] }
+        title: { type: string, nullable: true }
+        body: { type: string }
+        author_kind: { type: string, enum: [user, human, llm], description: "user is the signed-in person (You), human a coach named in author_name, llm an agent." }
+        author_name: { type: string, nullable: true }
+        date: { type: string, format: date, nullable: true, description: The day it is about. }
+        activity_id: { type: integer, nullable: true }
+        session_id: { type: integer, nullable: true }
+        about:
+          type: object
+          nullable: true
+          description: The activity or session it is about, to show.
+          required: [type, id, date, label]
+          properties:
+            type: { type: string, enum: [activity, session] }
+            id: { type: integer }
+            date: { type: string, format: date }
+            label: { type: string, nullable: true }
+        resolved_at: { type: string, format: date-time, nullable: true, description: A concern's; null while open. }
+        resolution: { type: string, nullable: true }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+    CurrentCoachNote:
+      allOf:
+        - $ref: "#/components/schemas/CoachNote"
+        - type: object
+          required: [replaces]
+          properties:
+            replaces:
+              type: object
+              nullable: true
+              description: The note of its kind before it.
+              required: [id, created_at]
+              properties:
+                id: { type: integer }
+                created_at: { type: string, format: date-time }
+    CoachNotes:
+      type: object
+      required: [notes, next_before]
+      properties:
+        notes: { type: array, items: { $ref: "#/components/schemas/CoachNote" } }
+        next_before: { type: integer, nullable: true, description: "The `before` for the next page; null on the last one." }
+    WeightInput:
+      type: object
+      required: [value]
+      properties:
+        value: { type: number, minimum: 0, nullable: true, description: The weight; null or 0 for no weight. }
+        unit: { $ref: "#/components/schemas/Unit" }
+    CoachNoteInput:
+      type: object
+      required: [kind, body]
+      properties:
+        kind: { type: string, enum: [status, focus, concern, note] }
+        title: { type: string, maxLength: 200 }
+        body: { type: string, maxLength: 5000 }
+        author_kind: { type: string, enum: [user, human], description: Default user. }
+        author_name: { type: string, maxLength: 100, description: Needed for human. }
+        date: { type: string, format: date, nullable: true }
+        activity_id: { type: integer, nullable: true }
+        session_id: { type: integer, nullable: true }
+    CoachNoteChange:
+      type: object
+      properties:
+        kind: { type: string, enum: [status, focus, concern, note] }
+        title: { type: string, nullable: true }
+        body: { type: string }
+        author_kind: { type: string, enum: [user, human] }
+        author_name: { type: string, nullable: true }
+        date: { type: string, format: date, nullable: true }
+        activity_id: { type: integer, nullable: true }
+        session_id: { type: integer, nullable: true }
+        resolved: { type: boolean, description: "A concern: true resolves it, false opens it again." }
+        resolution: { type: string, nullable: true, description: How it was resolved. }
+    CoachBoard:
+      type: object
+      required: [today, goals, proposals, status, focus, concerns, notes, notes_before, week]
+      properties:
+        today: { type: string, format: date }
+        goals: { type: array, items: { $ref: "#/components/schemas/Goal" } }
+        proposals: { type: array, items: { $ref: "#/components/schemas/Goal" } }
+        status: { allOf: [{ $ref: "#/components/schemas/CurrentCoachNote" }], nullable: true }
+        focus: { allOf: [{ $ref: "#/components/schemas/CurrentCoachNote" }], nullable: true }
+        concerns: { type: array, description: Open concerns, newest first., items: { $ref: "#/components/schemas/CoachNote" } }
+        notes: { type: array, description: "The latest of the journal, newest first: every note but the current status and focus and the open concerns.", items: { $ref: "#/components/schemas/CoachNote" } }
+        notes_before: { type: integer, nullable: true, description: "The `before` for GET /api/coach/notes?journal=true to page on; null when these are all." }
+        week:
+          type: object
+          required: [from, to, sessions, activities, notes]
+          properties:
+            from: { type: string, format: date, description: Monday. }
+            to: { type: string, format: date, description: Sunday. }
+            sessions: { type: array, items: { $ref: "#/components/schemas/Session" } }
+            activities: { type: array, items: { $ref: "#/components/schemas/Activity" } }
+            notes: { type: array, items: { $ref: "#/components/schemas/CoachNote" } }
+    Today:
+      type: object
+      required: [date, source, session, day, next_planned, activities, routines, routine_days, logged, program, workout_id, title, subtitle, estimated_minutes, workouts, plan, weight_steps, unit, distance_unit]
+      properties:
+        date: { type: string, format: date }
+        source: { type: string, enum: [session, default, picked], description: "Where the workout comes from: one of the day's sessions, the one up next in the rotation, or `workout_id`." }
+        session: { allOf: [{ $ref: "#/components/schemas/Session" }], nullable: true }
+        day: { type: array, description: Every session on the date, in order., items: { $ref: "#/components/schemas/Session" } }
+        next_planned: { allOf: [{ $ref: "#/components/schemas/Session" }], nullable: true, description: The first session planned after the date. }
+        activities: { type: array, description: The date's activities, in the order they started., items: { $ref: "#/components/schemas/Activity" } }
+        routines: { type: array, description: The routines with a day on the date., items: { $ref: "#/components/schemas/Routine" } }
+        routine_days: { type: array, description: "Their days on the date, read against it as today.", items: { $ref: "#/components/schemas/RoutineDay" } }
+        logged:
+          type: array
+          description: The sets already logged in the session, so the player can pick up where it was left.
+          items:
+            type: object
+            required: [step_id, set_number, side, status]
+            properties:
+              step_id: { type: integer, nullable: true }
+              set_number: { type: integer }
+              side: { type: string, nullable: true, enum: [left, right] }
+              status: { type: string, enum: [done, skipped] }
+        program:
+          type: object
+          nullable: true
+          required: [id, name]
+          properties:
+            id: { type: integer }
+            name: { type: string }
+        workout_id: { type: integer }
+        title: { type: string }
+        subtitle: { type: string, nullable: true }
+        estimated_minutes: { type: integer, description: Of the parts this session runs. }
+        workouts:
+          type: array
+          description: Every part the workout can have, and whether this session runs it.
+          items:
+            allOf:
+              - $ref: "#/components/schemas/WorkoutSummary"
+              - type: object
+                required: [included]
+                properties:
+                  included: { type: boolean }
+        plan: { $ref: "#/components/schemas/PlayerPlan" }
+        weight_steps: { $ref: "#/components/schemas/WeightSteps" }
+        unit: { $ref: "#/components/schemas/Unit" }
+        distance_unit: { $ref: "#/components/schemas/DistanceUnit" }
+    Setting:
+      type: object
+      required: [unit, distance_unit, updated_at]
+      properties:
+        unit: { $ref: "#/components/schemas/Unit" }
+        distance_unit: { $ref: "#/components/schemas/DistanceUnit" }
+        updated_at: { type: string, format: date-time }
+    # Lists, for the endpoints that answer with an array.
+    EquipmentList: { type: array, items: { $ref: "#/components/schemas/Equipment" } }
+    Exercises: { type: array, items: { $ref: "#/components/schemas/Exercise" } }
+    Alternatives: { type: array, items: { $ref: "#/components/schemas/Alternative" } }
+    LoggedExercises: { type: array, items: { $ref: "#/components/schemas/LoggedExercise" } }
+    Programs: { type: array, items: { $ref: "#/components/schemas/Program" } }
+    ProgramWorkoutsList: { type: array, items: { $ref: "#/components/schemas/ProgramWorkouts" } }
+    Sessions: { type: array, items: { $ref: "#/components/schemas/Session" } }
+    Activities: { type: array, items: { $ref: "#/components/schemas/Activity" } }
+  responses:
+    Unauthorized:
+      description: Nobody is signed in, the device was signed out, or the API token is unknown or revoked; or, with the code password_change_required, the user signed in with a temporary password and must change it first. Every route under /api can answer this but /api/version, /api/openapi and /api/me.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    SignedOut:
+      description: Nobody is signed in on this device; `setup_required` says whether to set up the install or sign in.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/SignedOut" }
+    BadRequest:
+      description: A parameter can't be read as asked; nothing changed.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    Forbidden:
+      description: The record can't be changed this way, or only the owner may do this; the message says what to do instead.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    NotFound:
+      description: A record named in the path or body does not exist.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    Conflict:
+      description: The record is not in a state that allows this (a session that has started can't be moved, a workout being trained can't be restructured), or a concurrent write got there first; the message says which.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    Invalid:
+      description: The values don't pass validation; `fields` says which and why.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }

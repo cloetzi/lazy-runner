@@ -1,0 +1,13 @@
+{
+  "$schema": "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/config.json",
+  "release-type": "simple",
+  "include-component-in-tag": false,
+  "bump-minor-pre-major": true,
+  "initial-version": "0.1.0",
+  "bootstrap-sha": "919c877e5340684fd4330e75f04461e90f80f2ca",
+  "packages": {
+    ".": {
+      "package-name": "lazy-runner"
+    }
+  }
+}

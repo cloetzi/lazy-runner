@@ -1,0 +1,25 @@
+# Tunable rules for remembered weights. Plain app logic, no LLM.
+
+# Stepper increments per equipment type and unit, for equipment without a list
+# of owned weights; fixed weights step to the next one owned instead. The first band whose `below`
+# is above the weight wins; a band without `below` covers everything else.
+weight_steps:
+  default:
+    lb: [{ step: 5 }]
+    kg: [{ step: 2.5 }]
+  dumbbell: &light
+    lb: [{ below: 15, step: 2.5 }, { step: 5 }]
+    kg: [{ below: 7, step: 1 }, { step: 2.5 }]
+  # Any one dumbbell or kettlebell (equipment.yml): steps as light dumbbells do.
+  weight: *light
+
+# Next-time suggestion from the finish feedback. One step up when every set was
+# done at target reps and the session felt like `up_feedback`; one step down when
+# it felt like `down_feedback` or reps were missed. Sets up to
+# `missed_reps_tolerance` reps short of the target still count as made. A
+# skipped set never means "down"; with `skip_blocks_up` it rules out "up".
+suggestions:
+  up_feedback: [too_easy]
+  down_feedback: [too_hard]
+  missed_reps_tolerance: 0
+  skip_blocks_up: true

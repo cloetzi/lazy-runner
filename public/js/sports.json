@@ -1,0 +1,11 @@
+{
+  "run": ["run", "running", "trail run", "trail running", "jog", "jogging", "treadmill", "track run", "virtual run"],
+  "ride": ["ride", "bike", "biking", "cycling", "cycle", "mountain bike", "mountain biking", "mtb", "gravel", "gravel ride", "road ride", "virtual ride", "e bike", "indoor cycling", "spin"],
+  "hike": ["hike", "hiking", "trek", "trekking", "mountaineering"],
+  "walk": ["walk", "walking"],
+  "ski": ["ski", "skiing", "alpine ski", "alpine skiing", "backcountry ski", "backcountry skiing", "nordic ski", "cross-country ski", "cross country skiing", "skate ski", "ski touring", "snowboard", "snowboarding"],
+  "swim": ["swim", "swimming", "open water swim", "open water swimming", "pool swim"],
+  "climb": ["climb", "climbing", "rock climbing", "bouldering", "indoor climbing"],
+  "yoga": ["yoga", "pilates", "stretching", "mobility"],
+  "strength": ["strength", "strength training", "weights", "weight training", "gym", "crossfit"]
+}

@@ -1,0 +1,342 @@
+import { test } from "node:test";
+import assert from "node:assert/strict";
+import { previousIndex, switchesSides, mainActionLabel, plannedExercise, swapExercise, swapRun, shortlist, SHORTLIST, resumeChoice, sessionProgress, endsEarly, loggedFromServer, pickUpIndex, partEnd, setLabel, minutesLeft, tempoText, leadInSeconds, GEAR_LEAD_IN, extraSeconds, upNextDetails, equipmentChanges, finishSummary } from "../../public/js/player.js";
+
+const squat = { id: 1, name: "Goblet squat", equipment: ["dumbbell"], default_reps: 8, default_seconds: null };
+const deadlift = { id: 2, name: "Straight-leg deadlift", equipment: ["dumbbell"], default_reps: 12, default_seconds: null };
+const plank = { id: 3, name: "Plank", equipment: ["mat"], default_reps: null, default_seconds: 60 };
+
+const set = (exercise, round, overrides = {}) => ({
+  type: "exercise", mode: "reps", step_id: 10, side: null, block: { label: "A", round, rounds: 2 },
+  exercise, reps: 8, seconds: null, tempo: "3010", weight: { value: 40, unit: "lb" }, weight_unit: "lb", weights_held: 1, seed_weight: { value: 40, unit: "lb" },
+  allowed_weights: [20, 40], suggestion: null, note: null, equipment: ["dumbbell"],
+  ...overrides,
+});
+const rest = (round) => ({ type: "rest", mode: "timed", block: { label: "A", round, rounds: 2 }, seconds: 60 });
+
+test("goes back to the step before, skipping rests", () => {
+  const items = [set(squat, 1), rest(1), set(squat, 2)];
+
+  assert.equal(previousIndex(items, 2), 0);
+  assert.equal(previousIndex(items, 1), 0);
+  assert.equal(previousIndex(items, 0), 0);
+});
+
+test("cues a switch only from the left side to the right side of the same set", () => {
+  const left = set(squat, 1, { side: "left" });
+  const right = set(squat, 1, { side: "right" });
+  const items = [left, right, set(squat, 2, { side: "right" }), set(squat, 2, { side: "left" }), set(squat, 2, { side: "right", step_id: 11 })];
+
+  assert.equal(switchesSides(items, 1), true);
+  assert.equal(switchesSides(items, 0), false);
+  assert.equal(switchesSides(items, 2), false);
+  assert.equal(switchesSides(items, 4), false);
+});
+
+test("finishes a set with Done and cuts a lead-in or a rest short", () => {
+  assert.equal(mainActionLabel("reps"), "Done");
+  assert.equal(mainActionLabel("work"), "Done");
+  assert.equal(mainActionLabel("lead"), "Start");
+  assert.equal(mainActionLabel("rest"), "Start");
+});
+
+test("adds more time to a lead-in or a rest, never to a hold", () => {
+  assert.equal(extraSeconds("lead"), 10);
+  assert.equal(extraSeconds("rest"), 15);
+  assert.equal(extraSeconds("work"), 0);
+  assert.equal(extraSeconds("reps"), 0);
+});
+
+test("says what comes after a rest", () => {
+  assert.equal(upNextDetails(set(squat, 2, { side: "left" }), "40 lb"), "Set 2 of 2 · 8 reps each side · 40 lb · left side first");
+  assert.equal(upNextDetails(set({ ...squat, alternating: true }, 1, { reps: 10, block: { round: 1, rounds: 1 } }), null), "10 reps in total, 5 each side");
+  assert.equal(upNextDetails(set(plank, 1, { mode: "timed", reps: null, seconds: 45, block: { round: 1, rounds: 1 } }), null), "45 s");
+});
+
+test("uses the chosen lead-in when moving on with the same gear, and at most 5 s after a rest or between sets", () => {
+  const left = set(plank, 1, { side: "left", mode: "timed" });
+  const right = set(plank, 1, { side: "right", mode: "timed" });
+  const items = [left, right, set(squat, 1), set(plank, 2, { mode: "timed" }), rest(2), set(plank, 2, { mode: "timed" })];
+
+  assert.equal(leadInSeconds(items, 1, 10), 5);
+  assert.equal(leadInSeconds(items, 3, 10), 10);
+  assert.equal(leadInSeconds(items, 5, 10), 5);
+  assert.equal(leadInSeconds(items, 3, 3), 3);
+  assert.equal(leadInSeconds(items, 5, 3), 3);
+});
+
+test("gives longer to get into position when new gear is needed", () => {
+  const squat1 = set(squat, 1);
+  const hang = (round, overrides) => set(plank, round, { mode: "timed", equipment: ["hangboard"], ...overrides });
+  const bodyweight = set(plank, 1, { mode: "timed", equipment: [] });
+  const benchRow = set(deadlift, 1, { equipment: ["dumbbell", "bench"] });
+  const dumbbellHold = set(plank, 1, { mode: "timed", equipment: ["dumbbell"] });
+  const items = [hang(1), squat1, hang(1), rest(1), hang(2), squat1, bodyweight, benchRow, dumbbellHold];
+  assert.equal(GEAR_LEAD_IN, 15);
+
+  // At the start the gear still has to be fetched, unless there is none.
+  assert.equal(leadInSeconds(items, 0, 5), GEAR_LEAD_IN);
+  assert.equal(leadInSeconds([bodyweight], 0, 3), 3);
+  assert.equal(leadInSeconds(items, 2, 3), GEAR_LEAD_IN);
+  // The rest screen names the gear: set up during it.
+  assert.equal(leadInSeconds(items, 4, 10), 5);
+  // Nothing to pick up, or only gear put down: the chosen lead-in.
+  assert.equal(leadInSeconds(items, 6, 5), 5);
+  assert.equal(leadInSeconds(items, 8, 5), 5);
+});
+
+test("swaps the exercise from the current set on, keeping earlier sets", () => {
+  const items = [set(squat, 1), rest(1), set(squat, 2), set(plank, 2, { step_id: 12 })];
+  const swapped = swapExercise(items, 2, { ...deadlift, weight: { value: 30, unit: "lb" } });
+
+  assert.equal(swapped[0].exercise.id, squat.id);
+  assert.equal(swapped[2].exercise.id, deadlift.id);
+  assert.equal(swapped[2].exercise.weight, undefined);
+  assert.deepEqual(swapped[2].weight, { value: 30, unit: "lb" });
+  assert.equal(swapped[2].reps, 8);
+  assert.equal(swapped[2].tempo, "3010");
+  assert.equal(plannedExercise(swapped[2]).id, squat.id);
+  assert.equal(swapped[3].exercise.id, plank.id);
+  assert.equal(swapped[1], items[1]);
+});
+
+test("switches to a timed target when the alternative is held", () => {
+  const [swapped] = swapExercise([set(squat, 1)], 0, { ...plank, weight: null });
+
+  assert.equal(swapped.mode, "timed");
+  assert.equal(swapped.seconds, 60);
+  assert.equal(swapped.reps, null);
+  assert.equal(swapped.tempo, null);
+  assert.equal(swapped.weight, null);
+  assert.deepEqual(swapped.equipment, ["mat"]);
+});
+
+test("carries the planned weight to an alternative with the same equipment and no weight of its own", () => {
+  const [swapped] = swapExercise([set(squat, 1)], 0, { ...deadlift, weight: null });
+
+  assert.deepEqual(swapped.weight, { value: 40, unit: "lb" });
+  assert.deepEqual(swapped.allowed_weights, [20, 40]);
+});
+
+test("steps a swapped exercise through its own owned weights", () => {
+  const [swapped] = swapExercise([set(squat, 1)], 0, { ...deadlift, weight: { value: 10, unit: "lb" }, allowed_weights: [10, 20] });
+  const [held] = swapExercise([set(squat, 1)], 0, { ...plank, weight: null, allowed_weights: null });
+
+  assert.deepEqual(swapped.allowed_weights, [10, 20]);
+  assert.equal(swapped.exercise.allowed_weights, undefined);
+  assert.equal(held.allowed_weights, null);
+});
+
+test("a swap takes a weight when the alternative does, even with none to start at", () => {
+  const plain = set(plank, 1, { weight: null, weight_unit: null, weights_held: null, allowed_weights: null, equipment: ["mat"] });
+  const [weighted] = swapExercise([plain], 0, { ...deadlift, weight: null, weight_unit: "lb", allowed_weights: [10, 20] });
+  const [bodyweight] = swapExercise([set(squat, 1, { weight: null, weight_unit: "lb" })], 0, { ...plank, weight: null, weight_unit: null, allowed_weights: null });
+
+  assert.equal(weighted.weight, null);
+  assert.equal(weighted.weight_unit, "lb");
+  assert.deepEqual(weighted.allowed_weights, [10, 20]);
+  assert.equal(bodyweight.weight_unit, null);
+  assert.equal(bodyweight.allowed_weights, null);
+
+  const [onBench] = swapExercise([set(squat, 1, { equipment: ["dumbbell", "bench"] })], 0, { ...plank, equipment: ["bench"], weight: null, weight_unit: null, allowed_weights: null });
+  assert.equal(onBench.weight, null);
+  assert.equal(onBench.weight_unit, null);
+});
+
+test("swapping back puts the plan back, and a second swap still knows the plan", () => {
+  const items = [set(squat, 1)];
+  const once = swapExercise(items, 0, { ...plank, weight: null });
+  const twice = swapExercise(once, 0, { ...deadlift, weight: null });
+  const back = swapExercise(twice, 0, squat);
+
+  assert.equal(plannedExercise(twice[0]).id, squat.id);
+  assert.equal(twice[0].mode, "reps");
+  assert.equal(twice[0].reps, 8);
+  assert.deepEqual(back[0], items[0]);
+});
+
+const lunge = { id: 4, name: "Curtsy lunge", equipment: ["dumbbell"], default_reps: 10, default_seconds: null, unilateral: true };
+
+test("runs a per-side alternative on both sides of each set, and back", () => {
+  const items = [set(squat, 1), rest(1), set(squat, 2)];
+  const swapped = swapExercise(items, 0, { ...lunge, weight: null });
+
+  assert.deepEqual(swapped.map((i) => [i.type, i.exercise?.id, i.side]), [
+    ["exercise", 4, "left"], ["exercise", 4, "right"], ["rest", undefined, undefined], ["exercise", 4, "left"], ["exercise", 4, "right"],
+  ]);
+  assert.equal(swapped[1].reps, 8);
+  assert.deepEqual(swapExercise(swapped, 0, squat), items);
+});
+
+test("runs a two-sided alternative once per set of a per-side exercise, and back", () => {
+  const items = [set(lunge, 1, { side: "left" }), set(lunge, 1, { side: "right" }), set(lunge, 2, { side: "left" }), set(lunge, 2, { side: "right" })];
+  const swapped = swapExercise(items, 0, { ...squat, weight: null });
+
+  assert.deepEqual(swapped.map((i) => [i.exercise.id, i.side, i.block.round]), [[1, null, 1], [1, null, 2]]);
+  assert.deepEqual(swapExercise(swapped, 0, lunge), items);
+});
+
+test("counts reps the alternative's way between per-side and alternating exercises", () => {
+  const bug = { id: 5, name: "Dead bug", equipment: [], default_reps: 10, default_seconds: null, alternating: true };
+  const sided = [set(lunge, 1, { side: "left" }), set(lunge, 1, { side: "right" })];
+  assert.deepEqual(swapExercise(sided, 0, { ...bug, weight: null }).map((i) => [i.exercise.id, i.side, i.reps]), [[5, null, 16]]);
+
+  const alternating = [set(bug, 1, { reps: 9 })];
+  assert.deepEqual(swapExercise(alternating, 0, { ...lunge, weight: null }).map((i) => [i.side, i.reps]), [["left", 5], ["right", 5]]);
+  assert.equal(swapExercise(alternating, 0, { ...squat, weight: null })[0].reps, 9);
+  // The right side left after the left was done is half a set.
+  assert.deepEqual(swapExercise(sided, 1, { ...bug, weight: null }).map((i) => [i.exercise.id, i.reps]), [[4, 8], [5, 8]]);
+});
+
+test("finishes a set started on the left as one set when swapped to a two-sided exercise", () => {
+  const items = [set(lunge, 1, { side: "left" }), set(lunge, 1, { side: "right" }), set(lunge, 2, { side: "left" }), set(lunge, 2, { side: "right" })];
+  const swapped = swapExercise(items, 1, { ...squat, weight: null });
+
+  assert.deepEqual(swapped.map((i) => [i.exercise.id, i.side]), [[4, "left"], [1, null], [1, null]]);
+});
+
+test("keeps the logged marks on their items when a swap adds sides", () => {
+  const items = [set(plank, 1, { step_id: 12 }), set(squat, 1), set(plank, 2, { step_id: 12 })];
+  const run = swapRun({ items, logged: { 0: "done" } }, 1, { ...lunge, weight: null });
+
+  assert.equal(run.items.length, 4);
+  assert.deepEqual(run.logged, { 0: "done" });
+  assert.deepEqual(swapRun({ items, logged: { 0: "done", 2: "skipped" } }, 1, { ...lunge, weight: null }).logged, { 0: "done", 3: "skipped" });
+});
+
+test("shortlists alternatives that train the same or a similar movement, the session's own last", () => {
+  const option = (id, match) => ({ id, match });
+  const found = [option(1, "same"), option(2, "similar"), option(3, "other"), option(4, "same"), option(5, "other")];
+
+  const { best, rest } = shortlist(found, new Set([1]));
+  assert.deepEqual(best.map((e) => e.id), [2, 4, 1]);
+  assert.deepEqual(rest.map((e) => e.id), [3, 5]);
+
+  const none = shortlist([option(1, "other"), option(2, "other")]);
+  assert.deepEqual(none.best.map((e) => e.id), [1, 2]);
+  assert.equal(shortlist(Array.from({ length: 9 }, (_, i) => option(i, "same"))).best.length, SHORTLIST);
+});
+
+const HOUR = 3_600_000;
+
+test("resumes a run touched recently, whatever its stage", () => {
+  const now = 10 * HOUR;
+  for (const stage of ["ready", "player", "finish"]) {
+    assert.equal(resumeChoice({ stage, startedAt: 0, touchedAt: now - HOUR }, now, 2 * HOUR), "resume");
+  }
+});
+
+test("asks about an old run that started, and drops one that never left Get ready", () => {
+  const now = 50 * HOUR;
+  assert.equal(resumeChoice({ stage: "player", startedAt: 0, touchedAt: 3 * HOUR }, now, 2 * HOUR), "ask");
+  assert.equal(resumeChoice({ stage: "finish", startedAt: 0, touchedAt: 3 * HOUR }, now, 2 * HOUR), "ask");
+  assert.equal(resumeChoice({ stage: "ready", startedAt: 0, touchedAt: 3 * HOUR }, now, 2 * HOUR), "drop");
+});
+
+test("goes by the start time for a run saved before runs were stamped", () => {
+  assert.equal(resumeChoice({ stage: "player", startedAt: HOUR }, 2 * HOUR, 2 * HOUR), "resume");
+  assert.equal(resumeChoice({ stage: "player", startedAt: HOUR }, 4 * HOUR, 2 * HOUR), "ask");
+  assert.equal(resumeChoice(null, 0, 2 * HOUR), "none");
+});
+
+test("counts the exercises with a set done, a swap counting for the planned one", () => {
+  const swapped = swapExercise([set(deadlift, 1)], 0, { ...plank, weight: null })[0];
+  const items = [set(squat, 1), rest(1), set(squat, 2), swapped, set(plank, 1)];
+  const run = { items, logged: { 0: "done", 2: "done", 3: "done", 4: "skipped" } };
+
+  assert.deepEqual(sessionProgress(run), { exercises: 3, done: 2, sets: 3 });
+  assert.deepEqual(sessionProgress({ items }), { exercises: 3, done: 0, sets: 0 });
+});
+
+const part = (kind, item) => ({ ...item, workout: { id: 1, kind, title: kind } });
+
+test("ends early until the player is past the main workout's last item", () => {
+  const items = [part("warmup", set(plank, 1)), part("workout", set(squat, 1)), part("workout", rest(1)), part("workout", set(squat, 2)), part("cooldown", set(plank, 1))];
+
+  assert.equal(endsEarly(items, 0), true);
+  assert.equal(endsEarly(items, 3), true);
+  assert.equal(endsEarly(items, 4), false);
+  assert.equal(endsEarly(items, 5), false);
+});
+
+test("matches the server's logged sets to items by step, round and side", () => {
+  const items = [set(squat, 1, { side: "left" }), set(squat, 1, { side: "right" }), rest(1), set(squat, 2, { side: "left" }), set(plank, 1, { step_id: 11 })];
+  const sets = [
+    { step_id: 10, set_number: 1, side: "left", status: "done" },
+    { step_id: 10, set_number: 1, side: "right", status: "skipped" },
+    { step_id: 11, set_number: 1, side: null, status: "done" },
+  ];
+
+  assert.deepEqual(loggedFromServer(items, sets), { 0: "done", 1: "skipped", 4: "done" });
+  assert.deepEqual(loggedFromServer(items), {});
+});
+
+test("picks up at the first exercise after the last set logged", () => {
+  const items = [set(squat, 1), rest(1), set(squat, 2), set(plank, 1)];
+
+  assert.equal(pickUpIndex(items, { 0: "done" }), 2);
+  assert.equal(pickUpIndex(items, { 0: "done", 2: "skipped" }), 3);
+  assert.equal(pickUpIndex(items, {}), 0);
+  assert.equal(pickUpIndex(items, { 3: "done" }), 0);
+});
+
+test("finds where the current part ends", () => {
+  const warm = { id: 1, kind: "warmup" };
+  const main = { id: 2, kind: "workout" };
+  const items = [{ workout: warm }, { workout: warm }, { workout: main }, { workout: main }];
+
+  assert.equal(partEnd(items, 0), 2);
+  assert.equal(partEnd(items, 1), 2);
+  assert.equal(partEnd(items, 2), 4);
+});
+
+test("labels the set only when a block has more than one round", () => {
+  assert.equal(setLabel(set(squat, 2)), "Set 2 of 2");
+  assert.equal(setLabel({ block: { round: 1, rounds: 1 } }), "");
+});
+
+test("estimates the minutes left the way the server estimates a workout", () => {
+  const timed = { type: "exercise", mode: "timed", seconds: 45, side: "left", block: { round: 1, rounds: 1 } };
+  const items = [set(squat, 1, { tempo: "3010" }), rest(1), timed];
+
+  // 8 reps at 4 s + 10 s setup, 60 s rest, 45 s + 5 s setup for one side
+  assert.equal(minutesLeft(items, 0), Math.ceil((42 + 60 + 50) / 60));
+  assert.equal(minutesLeft(items, 2), 1);
+  assert.equal(minutesLeft(items, 3), 0);
+  assert.equal(minutesLeft([set(squat, 1, { tempo: null, reps: 10 })], 0), 1);
+});
+
+test("writes a tempo out", () => {
+  assert.equal(tempoText("2111"), "2 s down · 1 s pause · 1 s up · 1 s at the top");
+  assert.equal(tempoText("3010"), "3 s down · 1 s up");
+  assert.equal(tempoText("2020"), "2 s down · 2 s up");
+  assert.equal(tempoText("31X0"), "3 s down · 1 s pause · up fast");
+  assert.equal(tempoText("301"), "3 s down · 1 s up");
+  assert.equal(tempoText("slow"), "tempo slow");
+  assert.equal(tempoText(null), "");
+});
+
+test("sums up a finished run from the sets logged", () => {
+  const swapped = swapExercise([set(deadlift, 1)], 0, { ...plank, weight: null })[0];
+  const items = [set(squat, 1), rest(1), set(squat, 2), swapped, set(plank, 1)];
+  const run = { items, logged: { 0: "done", 2: "skipped", 3: "done" } };
+
+  assert.deepEqual(finishSummary(run), { exercises: 3, done: 2, sets: 2, planned: 4, skipped: 1, swaps: 1 });
+});
+
+test("a swap holds as many weights as the exercise swapped in", () => {
+  const [pair] = swapExercise([set(squat, 1)], 0, { ...deadlift, weights_held: 2, weight: { value: 20, unit: "lb" }, allowed_weights: [10, 20] });
+  const [bodyweight] = swapExercise([set(squat, 1)], 0, { ...plank, equipment: [], weight: null });
+
+  assert.equal(pair.weights_held, 2);
+  assert.equal(bodyweight.weights_held, null);
+});
+
+test("says what equipment to use only when it changes from the exercise before", () => {
+  const items = [set(squat, 1), rest(1), set(squat, 2), set(plank, 1, { equipment: [] }), set(deadlift, 1, { equipment: ["kettlebell"] })];
+
+  assert.equal(equipmentChanges(items, 0), true);
+  assert.equal(equipmentChanges(items, 2), false);
+  assert.equal(equipmentChanges(items, 3), true);
+  assert.equal(equipmentChanges(items, 4), true);
+});

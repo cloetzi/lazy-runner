@@ -1,0 +1,87 @@
+# An example program a user can import (Settings, or MCP's import_example):
+# its workouts, their blocks (exercises done together) and steps. Exercises
+# and equipment are named by their slug in db/seeds. A weight for dumbbells is
+# one dumbbell's; on import it snaps to the nearest weight the user owns of
+# that gear, or is left out when they own none. Each step needs either reps
+# or seconds; a step with neither shows its note as the target and waits for
+# Done. The file name is the example's slug.
+
+name: Home strength
+description: Two 25-minute sessions for the home gear, alternating. Knee-protecting leg strength for running and ski season, plus core and upper body. Each session starts with its own warm-up block.
+workouts:
+  - slug: home-strength-a
+    kind: workout
+    title: Session A
+    subtitle: Knees and pull
+    blocks:
+      - label: Warm-up
+        steps:
+          - { exercise: glute-bridge-single-leg-lift, reps: 16 }
+          - { exercise: side-plank-knee-leg-raise, reps: 8, per_side: true }
+          - { exercise: w-raise-hinge, reps: 12 }
+          - { exercise: scapular-pull-hangboard, reps: 6, note: "Toes on a chair" }
+      - label: A
+        rounds: 3
+        rest_seconds: 60
+        steps:
+          - { exercise: goblet-squat, reps: 8, tempo: "3111", weight: 40, unit: lb }
+          - { exercise: dead-hang, seconds: 20, note: "Toes on a chair as needed" }
+      - label: B
+        rounds: 2
+        rest_seconds: 60
+        steps:
+          - { exercise: lateral-step-down, reps: 8, per_side: true }
+          - { exercise: single-leg-deadlift, reps: 8, per_side: true, weight: 10, unit: lb }
+          - { exercise: two-arm-row, reps: 12, weight: 20, unit: lb }
+      - label: C
+        rounds: 2
+        rest_seconds: 30
+        steps:
+          - { exercise: swiss-ball-hamstring-curl, reps: 10 }
+          - { exercise: single-leg-calf-raise, reps: 12, per_side: true }
+          - { exercise: side-plank, seconds: 25, per_side: true }
+
+  - slug: home-strength-b
+    kind: workout
+    title: Session B
+    subtitle: Hinge, press and ski legs
+    blocks:
+      - label: Warm-up
+        steps:
+          - { exercise: dead-bug, reps: 10 }
+          - { exercise: open-books, reps: 8, per_side: true }
+          - { exercise: wall-angels-wall-sit, reps: 10 }
+          - { exercise: half-kneel-quad-stretch, seconds: 20, per_side: true }
+      - label: A
+        rounds: 3
+        rest_seconds: 60
+        steps:
+          - { exercise: straight-leg-deadlift, reps: 10, weight: 20, unit: lb }
+          - { exercise: push-up, reps: 8, note: "8 to 10, knees down if form slips" }
+      - label: B
+        rounds: 2
+        rest_seconds: 60
+        steps:
+          - { exercise: rear-foot-elevated-split-squat, reps: 8, per_side: true, weight: 10, unit: lb }
+          - { exercise: lateral-lunge, reps: 8, per_side: true }
+          - { exercise: half-kneeling-press, reps: 8, per_side: true, weight: 10, unit: lb }
+      - label: C
+        rounds: 2
+        rest_seconds: 30
+        steps:
+          - { exercise: wall-sit, seconds: 40 }
+          - { exercise: stability-ball-rollout, reps: 8 }
+          - { exercise: dead-hang, seconds: 15, note: "Toes on a chair as needed" }
+
+  - slug: home-strength-cooldown
+    kind: cooldown
+    title: Cool-down
+    subtitle: Five stretches, 30 seconds each
+    blocks:
+      - label: A
+        steps:
+          - { exercise: quad-stretch-bench, seconds: 30, per_side: true }
+          - { exercise: seated-hamstring-stretch, seconds: 30, per_side: true }
+          - { exercise: pigeon-stretch, seconds: 30, per_side: true }
+          - { exercise: calf-stretch, seconds: 30, per_side: true }
+          - { exercise: chest-stretch-wall, seconds: 30, per_side: true }

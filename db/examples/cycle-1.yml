@@ -1,0 +1,104 @@
+# An example program a user can import (Settings, or MCP's import_example):
+# its workouts, their blocks (exercises done together) and steps. Exercises
+# and equipment are named by their slug in db/seeds. A weight for dumbbells is
+# one dumbbell's; on import it snaps to the nearest weight the user owns of
+# that gear, or is left out when they own none. Each step needs either reps
+# or seconds; a step with neither shows its note as the target and waits for
+# Done. The file name is the example's slug.
+
+name: Cycle 1
+description: General strength for runners, two alternating workouts with a shared warm-up and cool-down.
+workouts:
+  - slug: cycle-1-warmup
+    kind: warmup
+    title: Warm-up
+    subtitle: Stretches and activation circuits
+    blocks:
+      - label: A
+        steps:
+          - { exercise: half-kneel-quad-stretch, seconds: 20, per_side: true }
+          - { exercise: pigeon-stretch, seconds: 20, per_side: true }
+          - { exercise: chest-stretch-wall, seconds: 20, per_side: true }
+          - { exercise: hamstring-stretch-wall, seconds: 20, per_side: true }
+          - { exercise: calf-stretch, seconds: 20, per_side: true, note: "Knee straight, then bent" }
+      - label: B
+        steps:
+          - { exercise: side-plank-knee-leg-raise, reps: 8, per_side: true }
+          - { exercise: open-books, reps: 10, per_side: true }
+          - { exercise: glute-bridge-single-leg-lift, reps: 16 }
+          - { exercise: side-plank, seconds: 45, per_side: true }
+      - label: C
+        steps:
+          - { exercise: wall-angels-wall-sit, reps: 10 }
+          - { exercise: w-raise-hinge, reps: 15 }
+          - { exercise: t-raise-hinge, reps: 15 }
+
+  - slug: cycle-1-workout-1
+    kind: workout
+    title: Workout 1
+    subtitle: Big movements, general strength
+    blocks:
+      - label: A
+        rounds: 3
+        rest_seconds: 60
+        steps:
+          - { exercise: goblet-squat, reps: 8, tempo: "2111", weight: 40, unit: lb }
+          - { exercise: straight-leg-deadlift, reps: 8, weight: 40, unit: lb, equipment: [kettlebell], weights_held: 1 }
+      - label: B
+        rounds: 2
+        rest_seconds: 60
+        steps:
+          # Placeholder from the source program; any core exercise works here.
+          - { exercise: dead-bug, reps: 10 }
+          - { exercise: hamstring-bridge-bench, reps: 15 }
+          - { exercise: single-leg-deadlift, reps: 10, per_side: true, weight: 10, unit: lb }
+      - label: C
+        rounds: 2
+        rest_seconds: 60
+        steps:
+          - { exercise: single-arm-single-leg-row, reps: 10, per_side: true, weight: 10, unit: lb }
+          - { exercise: reverse-fly, reps: 12, weight: 10, unit: lb }
+          - { exercise: glute-bridge-pullover, reps: 12, weight: 10, unit: lb }
+
+  - slug: cycle-1-workout-2
+    kind: workout
+    title: Workout 2
+    subtitle: Re-establish the big movements
+    blocks:
+      - label: A
+        rounds: 3
+        rest_seconds: 60
+        steps:
+          - { exercise: straight-leg-deadlift, reps: 12, weight: 40, unit: lb, equipment: [kettlebell], weights_held: 1 }
+          - { exercise: push-up, reps: 10 }
+      - label: B
+        rounds: 2
+        rest_seconds: 60
+        steps:
+          # The source lists 12 reps; run here as 12 per leg.
+          - { exercise: rear-foot-elevated-split-squat, reps: 12, per_side: true, weight: 10, unit: lb, note: "10 lb each hand" }
+          - { exercise: two-arm-row, reps: 12, weight: 10, unit: lb, note: "10 lb each hand" }
+          - { exercise: curtsy-lunge, reps: 12, per_side: true, weight: 10, unit: lb }
+      - label: C
+        rounds: 2
+        rest_seconds: 60
+        steps:
+          - { exercise: swiss-ball-hamstring-curl, reps: 10 }
+          - { exercise: plank, seconds: 60 }
+          - { exercise: swiss-ball-single-leg-bridge, seconds: 20, per_side: true }
+
+  - slug: cycle-1-cooldown
+    kind: cooldown
+    title: Cool-down
+    subtitle: Eight stretches, 30 seconds each
+    blocks:
+      - label: A
+        steps:
+          - { exercise: quad-stretch-bench, seconds: 30, per_side: true }
+          - { exercise: seated-hamstring-stretch, seconds: 30, per_side: true }
+          - { exercise: pigeon-stretch, seconds: 30, per_side: true }
+          - { exercise: glute-hug-stretch, seconds: 30, per_side: true }
+          - { exercise: back-shoulder-rotation, seconds: 30, per_side: true }
+          - { exercise: frog-groin-stretch, seconds: 30 }
+          - { exercise: chest-stretch-wall, seconds: 30, per_side: true }
+          - { exercise: overhead-triceps-stretch, seconds: 30, per_side: true }

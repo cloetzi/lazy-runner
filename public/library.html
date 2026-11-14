@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#f6f5f2" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#111418" media="(prefers-color-scheme: dark)">
+  <title>Exercises · The Lazy Runner</title>
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="icon" href="/icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+  <meta name="apple-mobile-web-app-title" content="Lazy Runner">
+  <link rel="stylesheet" href="/css/app.css">
+  <script type="module" src="/js/pwa.js"></script>
+  <script type="module" src="/js/library.js"></script>
+</head>
+<body>
+  <main class="view library">
+    <header class="brand">
+      <h1>Exercises</h1>
+      <p class="tagline" id="library-count">Loading…</p>
+    </header>
+
+    <div class="library-controls">
+      <input type="search" id="library-search" placeholder="Search by name or cue" aria-label="Search exercises" autocomplete="off">
+      <div class="segmented" role="group" aria-label="Exercises">
+        <button data-owned="true">What I own</button>
+        <button data-owned="false">Everything</button>
+      </div>
+      <div class="segmented wraps" role="group" aria-label="Body area" id="library-areas"></div>
+      <select id="library-equipment" aria-label="Equipment">
+        <option value="">Any equipment</option>
+      </select>
+    </div>
+
+    <!-- Animation review (library.html?review): either side, half speed, and
+         what is still to draw. -->
+    <div class="library-controls" id="review-controls" hidden>
+      <div class="segmented" role="group" aria-label="Side">
+        <button data-side="left">Left side</button>
+        <button data-side="right">Right side</button>
+      </div>
+      <div class="segmented" role="group" aria-label="Speed">
+        <button data-speed="1">1×</button>
+        <button data-speed="0.5">½×</button>
+      </div>
+    </div>
+
+    <section id="animated"></section>
+    <section id="todo"></section>
+    <p class="library-empty" id="library-empty" hidden>
+      Nothing matches. <button class="secondary small" id="library-clear">Clear the search and filters</button>
+    </p>
+  </main>
+</body>
+</html>

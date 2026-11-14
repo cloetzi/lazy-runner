@@ -1,0 +1,10 @@
+/storage/*
+!/storage/.keep
+/log/*
+!/log/.keep
+/tmp/
+/vendor/bundle/
+.bundle/
+/node_modules/
+/.claude/settings.local.json
+/.claude/worktrees/
