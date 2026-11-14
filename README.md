@@ -82,7 +82,8 @@ session offline, syncing when the connection returns.
   always wins over the seed value, in every workout that uses the exercise;
   reps and time are not remembered, they stay with each workout's step. After
   each session the app suggests one step up or down based on your feedback and
-  missed reps (a skipped set never counts as missed), also for an exercise you
+  missed reps (a skipped set never counts as missed, and one rep short of the
+  target still counts as made), also for an exercise you
   swapped in; it never changes weights on its own.
 - **Finish:** a short summary, optional RPE and a one-tap too easy / right / too hard.
 - **History:** a simple list, a weekly count, and weight and reps over time per exercise.

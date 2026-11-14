@@ -16,10 +16,12 @@ weight_steps:
 # Next-time suggestion from the finish feedback. One step up when every set was
 # done at target reps and the session felt like `up_feedback`; one step down when
 # it felt like `down_feedback` or reps were missed. Sets up to
-# `missed_reps_tolerance` reps short of the target still count as made. A
-# skipped set never means "down"; with `skip_blocks_up` it rules out "up".
+# `missed_reps_tolerance` reps short of the target still count as made: with
+# fixed weights far apart (10, 20, 40 lb), one step down halves the weight, so
+# one rep short is not enough for it. A skipped set never means "down"; with
+# `skip_blocks_up` it rules out "up".
 suggestions:
   up_feedback: [too_easy]
   down_feedback: [too_hard]
-  missed_reps_tolerance: 0
+  missed_reps_tolerance: 1
   skip_blocks_up: true

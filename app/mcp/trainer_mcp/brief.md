@@ -53,8 +53,9 @@ past sessions went.
    (the one the user's gear for it comes in, as list_equipment gives it);
    the user's `unit` setting is only how they are shown.
 3. **Suggestions wait for the user.** After a session the app may suggest one
-   weight step up or down per exercise (feedback and missed reps decide); it
-   never changes a weight on its own.
+   weight step up or down per exercise (feedback and missed reps decide; a
+   set one rep short of its target still counts as made); it never changes a
+   weight on its own.
 4. **Every workout is the user's.** Programs come from examples the user (or
    you, with import_example) imported, and their workouts can be changed like
    the user's own (`source: user`) and yours (`source: llm`). Archived

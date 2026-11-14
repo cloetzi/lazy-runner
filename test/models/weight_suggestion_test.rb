@@ -79,6 +79,24 @@ describe WeightSuggestion do
     _(suggestion.reason).must_equal "Missed reps at 40 lb"
   end
 
+  def one_rep_short
+    log_all(session, "goblet-squat")
+    short = SetLog.where(session:).last
+    short.update(reps: short.target_reps - 1)
+  end
+
+  it "does not step down for a set one rep short of its target" do
+    one_rep_short
+
+    _(finish(session, "right")).must_be_empty
+  end
+
+  it "counts a set one rep short of its target as made when it felt too easy" do
+    one_rep_short
+
+    _(suggestion_for("goblet-squat", finish(session, "too_easy")).direction).must_equal "up"
+  end
+
   it "judges missed reps against the target the set was logged with" do
     log_all(session, "goblet-squat")
     target = SetLog.where(session:).first.target_reps
