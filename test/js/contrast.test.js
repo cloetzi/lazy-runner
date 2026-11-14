@@ -35,9 +35,25 @@ const pairs = [
   ["--text", "--surface", 4.5, "body text"],
   ["--control-border", "--surface", 3, "secondary button and input outlines on cards"],
   ["--control-border", "--bg", 3, "control outlines on the page"],
-  ["--figure-far", "--surface", 3, "far limbs of the figure"],
+  ["--figure-far", "--surface", 3, "far limbs of the figure on cards"],
+  ["--figure-far", "--bg", 3, "far limbs of the figure in the player"],
+  ["--accent-far", "--surface", 3, "far side of a moving limb on cards"],
+  ["--accent-far", "--bg", 3, "far side of a moving limb in the player"],
+  ["--prop", "--surface", 3, "bench, ball, wall and step on cards"],
+  ["--prop", "--bg", 3, "bench, ball, wall and step in the player"],
+  ["--text", "--bg", 4.5, "the player's count, paused or not"],
   ["--focus", "--surface", 3, "focus ring on cards"],
   ["--focus", "--bg", 3, "focus ring on the page"],
+  ["--rest", "--bg", 3, "pause bars on the rest dial"],
+];
+
+// Parts of the figure drawn over each other must stay apart. The accent
+// limbs differ from the greys by hue as well, so they are left out.
+const apart = [
+  ["--accent-far", "--accent-bright", "the near and far side of a moving limb"],
+  ["--figure-far", "--prop", "a far limb in front of a bench or ball"],
+  ["--figure", "--prop", "a near limb on a bench or ball"],
+  ["--figure-far", "--figure", "near and far limbs"],
 ];
 
 for (const [scheme, palette] of [["light", light], ["dark", dark]]) {
@@ -46,6 +62,16 @@ for (const [scheme, palette] of [["light", light], ["dark", dark]]) {
       assert.ok(palette[fg] && palette[bg], `missing ${fg} or ${bg}`);
       const r = ratio(palette[fg], palette[bg]);
       assert.ok(r >= min, `${palette[fg]} on ${palette[bg]} is ${r.toFixed(2)}:1`);
+    });
+  }
+}
+
+for (const [scheme, palette] of [["light", light], ["dark", dark]]) {
+  for (const [a, b, use] of apart) {
+    test(`${scheme}: ${a} and ${b} stay 1.5:1 apart (${use})`, () => {
+      assert.ok(palette[a] && palette[b], `missing ${a} or ${b}`);
+      const r = ratio(palette[a], palette[b]);
+      assert.ok(r >= 1.5, `${palette[a]} and ${palette[b]} are ${r.toFixed(2)}:1`);
     });
   }
 }

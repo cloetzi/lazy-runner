@@ -23,8 +23,9 @@
   --control-border: #8f8a80;  /* outlines that mark a control: 3:1 or more */
   --focus: #1f6feb;
   --figure: #2b2f36;
-  --figure-far: #8a8f96;
-  --prop: #c9c5bc;
+  --figure-far: #80858c;      /* far limbs: 3:1 on page and card */
+  --accent-far: #a5482a;      /* the far side of a moving limb: 3:1 on page and card, apart from the near side */
+  --prop: #6b665e;            /* bench, ball, wall, step: 3:1, and apart from the far limbs */
   --glow: rgb(228 87 46 / 0.4);
   --scrim: rgb(0 0 0 / 0.45);
 
@@ -60,7 +61,7 @@
 
   --sidebar: 15rem;
   --measure: 44rem;  /* reading pages: Today, a workout, history */
-  --wide: 72rem;     /* grids: Workouts, Exercises */
+  --wide: 72rem;     /* grids beside the sidebar: Workouts, Exercises, Calendar */
 }
 
 @media (prefers-color-scheme: dark) {
@@ -81,7 +82,8 @@
     --focus: #79b8ff;
     --figure: #e9e8e4;
     --figure-far: #6a717b;
-    --prop: #3b424c;
+    --accent-far: #b0613f;
+    --prop: #9c9486;
     --glow: rgb(255 122 80 / 0.45);
     --shadow-1: 0 0.5rem 1.5rem rgb(0 0 0 / 0.6);
   }
@@ -118,6 +120,9 @@ h1, h2, h3 { line-height: var(--leading-tight); }
 }
 
 :focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+
+/* The app's muted colour, not the browser's lighter grey. */
+::placeholder { color: var(--muted); opacity: 1; }
 
 .view {
   min-height: 100dvh;
@@ -380,6 +385,9 @@ body[data-focus] .more-sheet, body[data-focus] .scrim { display: none !important
   body.with-nav:not([data-focus]) { padding-left: var(--sidebar); }
   /* Content starts at the same x on every page, a gutter from the sidebar. */
   body.with-nav:not([data-focus]) .view { margin: 0; padding-left: var(--space-6); padding-right: var(--space-6); }
+  /* Grids widen only beside the sidebar; below it every page keeps the
+     measure, so a page title starts at the same x on every tab. */
+  body.with-nav:not([data-focus]) :is(.calendar, .library, #workouts) { max-width: var(--wide); }
   #home { max-width: var(--wide); display: grid; grid-template-columns: minmax(0, var(--measure)) minmax(14rem, 18rem); align-items: start; }
   #home > * { grid-column: 1 / -1; }
   #home > #today, #home > #today-day { grid-column: 1; }
@@ -479,7 +487,6 @@ button.step-name:hover .icon { color: var(--text); }
    selected day beside it on wide screens. Session marks: done filled,
    planned outlined, up next in the accent colour, missed dashed, skipped
    struck through. */
-.calendar { max-width: var(--wide); }
 .calendar-bar { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-3); }
 .calendar-nav { display: flex; align-items: center; gap: var(--space-1); flex: 1 1 auto; }
 .calendar-range { margin: 0; font-size: var(--text-lg); min-width: 0; text-align: center; flex: 1 1 auto; }
@@ -757,7 +764,6 @@ button.link.danger { color: var(--danger); align-self: flex-start; padding: 0; }
 .picker-row .row-meta { white-space: normal; }
 
 /* Exercises (library.html) */
-.library, #workouts { max-width: var(--wide); }
 .library h2 { margin: var(--space-2) 0 var(--space-4); }
 .library-controls { display: flex; flex-wrap: wrap; align-items: flex-start; gap: var(--space-3); margin-bottom: var(--space-4); }
 .library-controls input, .library-controls select {
@@ -819,7 +825,6 @@ button.link.danger { color: var(--danger); align-self: flex-start; padding: 0; }
 .stage-links { display: flex; flex-wrap: wrap; justify-content: center; }
 
 body.resting .target, body.resting .phase { color: var(--rest); }
-body.paused .target { opacity: 0.4; }
 
 /* Make room for the figure in the player so the controls stay on screen. */
 .stage:has(.figure-box:not([hidden])) .target { font-size: min(var(--display-1-compact), 10dvh); margin: var(--space-1) 0; }
@@ -870,7 +875,7 @@ body.paused .target { opacity: 0.4; }
 
 .figure-box { width: 100%; max-width: 28rem; max-height: min(18rem, 28dvh); margin: 0 auto; overflow: clip; }
 .figure-box .figure { height: auto; }
-.figure .limb.far.accent { stroke: var(--accent-bright); opacity: 0.55; }
+.figure .limb.far.accent { stroke: var(--accent-far); }
 .figure circle.glow { fill: var(--glow); stroke: none; }
 .figure circle.outline { fill: var(--figure-bg, var(--bg)); stroke: none; }
 .card .figure { --figure-bg: var(--surface); }
@@ -883,7 +888,8 @@ body.paused .target { opacity: 0.4; }
 .rest-dial .arc { stroke: var(--rest); stroke-linecap: round; stroke-dasharray: 1; transform: rotate(-90deg); transform-origin: center; transition: stroke-dashoffset 100ms linear; }
 .rest-dial .core { fill: var(--rest); stroke: none; opacity: 0.18; transform-origin: center; animation: breathe 8s ease-in-out infinite; }
 .rest-dial .pause-bars { fill: var(--rest); display: none; }
-body.paused .rest-dial { opacity: 0.4; }
+body.paused .rest-dial .track, body.paused .rest-dial .arc { opacity: 0.4; }
+body.paused .rest-dial .core { opacity: 0.07; }
 body.paused .rest-dial .core { animation-play-state: paused; }
 body.paused .rest-dial .pause-bars { display: inline; }
 @keyframes breathe { from, to { transform: scale(0.82); } 50% { transform: scale(1); } }
