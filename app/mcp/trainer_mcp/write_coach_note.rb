@@ -14,7 +14,7 @@ module TrainerMcp
         kind: { type: "string", enum: CoachNote::KINDS },
         title: { type: "string", description: "A short headline; needed for a concern." },
         body: { type: "string", description: "The note, a few plain sentences." },
-        date: { type: "string", format: "date", description: "The day it is about, YYYY-MM-DD." },
+        date: { type: "string", format: "date", description: "The day it is about, YYYY-MM-DD. Not for what a planned session or run is for: that goes in its own note." },
         activity_id: { type: "integer", description: "The activity it is about." },
         session_id: { type: "integer", description: "The session it is about, from list_sessions." },
         author_name: { type: "string", description: "The name you sign with, such as Trainer agent." }

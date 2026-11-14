@@ -995,6 +995,20 @@ describe "MCP server" do
       _(listed["counts"]).must_equal("missed" => 2, "done" => 1, "tentative" => 1)
     end
 
+    it "looks a week back and three weeks ahead without dates, so a one-off planned for next week shows" do
+      Routine.plan!({ sport: "run", weekdays: [], title: "Before the week back" }, today: Date.new(2026, 11, 3))
+      Routine.plan!({ sport: "run", weekdays: [], title: "A week back" }, today: Date.new(2026, 11, 4))
+      call_tool("plan_routine", sport: "run", weekdays: [], starts_on: "2026-11-17", title: "Tempo run")
+      call_tool("plan_routine", sport: "run", weekdays: [], starts_on: "2026-12-01", title: "Last day ahead")
+      call_tool("plan_routine", sport: "run", weekdays: [], starts_on: "2026-12-02", title: "Past the range")
+      listed = call_tool("list_routines")
+
+      _(listed.values_at("from", "to")).must_equal %w[2026-11-04 2026-12-01]
+      _(listed["routines"].map { it["title"] }).must_equal ["A week back", "Tempo run", "Last day ahead"]
+      _(listed["days"].map { it.values_at("on", "state") }).must_equal [%w[2026-11-04 missed], %w[2026-11-17 tentative], %w[2026-12-01 tentative]]
+      _(call_tool("list_routines", to: "2026-11-11").values_at("from", "to")).must_equal %w[2026-10-15 2026-11-11]
+    end
+
     it "changes and ends only the routines it planned" do
       mine = Routine.plan!({ sport: "run", weekdays: [3] })
       _(_ { call_tool("update_routine", routine_id: mine.id, weekdays: [4]) }.must_raise(McpToolError).message).must_include "is the user's"
@@ -1060,6 +1074,20 @@ describe "MCP server" do
       _(board.slice("today", "weekday")).must_equal("today" => "2026-11-04", "weekday" => "Wednesday")
       _(board["week"].slice("from", "to")).must_equal("from" => "2026-11-02", "to" => "2026-11-08")
       _(board["week"]["activities"].map { it["id"] }).must_equal [run.id]
+    end
+
+    it "shows this week's routine days on the board, the user's and the agent's" do
+      runs = Routine.plan!({ sport: "run", weekdays: [2, 6], title: "Easy run" }, today: Date.new(2026, 11, 2))
+      Activity.log!({ date: "2026-11-03", sport: "run" })
+      tempo = Routine.plan!({ sport: "run", weekdays: [], starts_on: "2026-11-05", title: "Tempo" }, created_by: "llm")
+      Routine.plan!({ sport: "run", weekdays: [], starts_on: "2026-11-10" }, created_by: "llm")
+
+      week = call_tool("get_coach_board")["week"]
+
+      _(week["routines"].map { it.values_at("id", "title", "created_by") }).must_equal [[runs.id, "Easy run", "manual"], [tempo.id, "Tempo", "llm"]]
+      _(week["routine_days"].map { it.values_at("routine_id", "on", "state") }).must_equal [
+        [runs.id, "2026-11-03", "done"], [tempo.id, "2026-11-05", "tentative"], [runs.id, "2026-11-07", "tentative"]
+      ]
     end
 
     it "writes notes as the agent, about the user's own activities only" do

@@ -29,6 +29,9 @@ class CoachBoard
 
   def week_sessions = Session.summarized.where(date: week).in_order.all
   def week_activities = Activity.where(date: week).in_order.all
+  # The routines with days this week, and those days, read against the
+  # board's today.
+  def week_routines = RoutineCalendar.new(week, today: @today)
   def week_notes = notes.dated(week).all
 
   # The journal: every note but the current status and focus and the open

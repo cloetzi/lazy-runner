@@ -102,8 +102,8 @@ module TrainerMcp
     end
 
     # A date range as the API reads one (see DateRange).
-    def self.days(from, to, ahead: false)
-      DateRange.resolve(from, to, ahead:)
+    def self.days(from, to, back: nil)
+      DateRange.resolve(from, to, back:)
     rescue DateRange::Invalid => error
       raise Problem, error.message
     end

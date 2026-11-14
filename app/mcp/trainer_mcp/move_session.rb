@@ -11,7 +11,7 @@ module TrainerMcp
         session_id: { type: "integer", description: "The session, from list_sessions." },
         date: { type: "string", description: "Its new day, YYYY-MM-DD, today or later." },
         position: { type: "integer", minimum: 1, description: "Its place on the day, 1 first." },
-        note: { type: %w[string null], description: "Replaces its note; empty or null clears it." }
+        note: { type: %w[string null], description: "Replaces its note; empty or null clears it. On a session you planned, keep what the note says it is for and add why it moved, rather than writing a coach note; leave the note of one the user planned as it is." }
       },
       required: %w[session_id]
     )

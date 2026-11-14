@@ -19,7 +19,7 @@ module TrainerMcp
 
     def self.answer(from: nil, to: nil, status: nil)
       statuses = Session.statuses(status)
-      range = days(from, to, ahead: statuses == ["planned"])
+      range = days(from, to, back: (0 if statuses == ["planned"]))
       sessions = Session.eager(:completion, :workout).where(date: range).in_order
       sessions = sessions.with_status(statuses) if statuses
       sessions = sessions.all

@@ -31,14 +31,15 @@ module DateRange
   end
 
   # The days from `from` to `to` (Dates or YYYY-MM-DD, blank when left out).
-  # Neither given: the 28 days up to today, or from today on when `ahead`.
-  # One given: 28 days on from `from`, or back from `to`. Future dates are
-  # fine; a range runs at most 366 days.
-  def self.resolve(from, to, ahead: false, today: Time.zone.today)
+  # Neither given: 28 days from `back` days before today, so the 28 days up
+  # to today by default and from today on with `back: 0`. One given: 28 days
+  # on from `from`, or back from `to`. Future dates are fine; a range runs at
+  # most 366 days.
+  def self.resolve(from, to, back: nil, today: Time.zone.today)
     span = DAYS - 1
     to = date(to, :to) if to.present?
     from = from.present? ? date(from, :from) : to&.-(span)
-    from ||= ahead ? today : today - span
+    from ||= today - (back || span)
     to ||= from + span
     raise Invalid.new(:from, "must not be after to") if from > to
     raise Invalid.new(:to, "must be within #{MAX_DAYS} days of from", "a range is at most #{MAX_DAYS} days") if (to - from).to_i >= MAX_DAYS

@@ -87,20 +87,33 @@ past sessions went.
    other sport as routines (plan_routine); they stay tentative until the user
    confirms a day. Change or end only the routines you planned; for one of
    theirs, suggest the change. Never confirm, skip or move a day: logging an
-   activity is what marks one done.
+   activity is what marks one done. A weekly routine holds only what is true
+   every week ("Easy run, 40 minutes"), since its minutes, distance and note
+   show on every one of its days. A run whose figures change from week to
+   week, such as a long run that grows, is a one-off for each day with that
+   day's figures, not a weekly routine edited each week. Don't put a one-off
+   on a day a weekly routine of the same sport covers: end your weekly
+   routine first, or suggest that for one of theirs.
 11. **Keep the Coach tab current.** Status says where things stand, focus what
    to work on, concerns what to watch. Judge from the raw numbers and the
    notes, since the app computes nothing. Keep it short: one note per
    thing. To correct or add to a note of yours, update it rather than writing
    it again, and delete yours that went stale. The person's notes are theirs;
-   when the person's note and yours disagree, theirs wins.
+   when the person's note and yours disagree, theirs wins. Don't write dated
+   notes about a day's session or run ("Tempo today..."): what it is for goes
+   in the session's or one-off's own note, which moves with it, while a dated
+   note is left behind when the day changes. When you move a session you
+   planned, keep what its note says it is for and add why it moved
+   (move_session's `note` replaces the whole note); when you move or remove
+   one of theirs, leave their note and tell them why in your answer.
 
 ## Working with this server
 
 A good start: get_coach_board (the goals, status, focus, concerns and this
-week), list_equipment (what is at hand), training_summary (the last
+week, routine days included), list_equipment (what is at hand), training_summary (the last
 four weeks, with remembered weights and pending suggestions), list_activities
-(the running and other sport), list_routines (the running they plan),
+(the running and other sport), list_routines (the running
+planned past this week, from a week back to three weeks ahead),
 list_sessions (what is planned), list_workouts and get_workout (what exists), then
 search_exercises and get_exercise to build from. With no workouts yet,
 list_examples has example programs to import_example as a start.

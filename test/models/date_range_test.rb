@@ -4,14 +4,19 @@ require "test_helper"
 describe DateRange do
   let(:today) { Date.new(2026, 10, 20) }
 
-  def resolve(from = nil, to = nil, ahead: false)
-    range = DateRange.resolve(from, to, ahead:, today:)
+  def resolve(from = nil, to = nil, **defaults)
+    range = DateRange.resolve(from, to, **defaults, today:)
     [range.begin.iso8601, range.end.iso8601]
   end
 
   it "runs the 28 days up to today, or from today on when looking ahead" do
     _(resolve).must_equal %w[2026-09-23 2026-10-20]
-    _(resolve(ahead: true)).must_equal %w[2026-10-20 2026-11-16]
+    _(resolve(back: 0)).must_equal %w[2026-10-20 2026-11-16]
+  end
+
+  it "starts a range without dates some days back when asked" do
+    _(resolve(back: 7)).must_equal %w[2026-10-13 2026-11-09]
+    _(resolve("2026-11-02", back: 7)).must_equal %w[2026-11-02 2026-11-29]
   end
 
   it "runs 28 days on from a first day, or back from a last one" do

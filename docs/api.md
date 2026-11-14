@@ -203,7 +203,7 @@ change reaches every future session of it.
 | `training_summary` | Sessions in a date range (28 days by default) with how they felt and what was done per exercise, weekly counts, remembered weights, pending suggestions |
 | `list_sessions` | The calendar over a date range (as `GET /api/sessions`), each session with its workout, minutes and completion |
 | `list_activities` | Activities over a date range (as `GET /api/activities`), with the user's distance unit |
-| `list_routines` | Routines with days in a date range, the days with their state (tentative, confirmed, done, skipped, missed) and raw counts per state |
+| `list_routines` | Routines with days in a date range (by default the 7 days before today and the 21 from today on), the days with their state (tentative, confirmed, done, skipped, missed) and raw counts per state |
 | `list_examples` | The example programs (as `GET /api/examples`) |
 | `create_workout` | A new workout with its whole structure (as `POST /api/workouts`), marked `source: llm`; steps name exercises by slug; `warnings` name steps with gear or a weight the user doesn't own |
 | `import_example` | An example program into the user's (as `POST /api/examples/:slug/import`), marked `source: llm` |
@@ -219,7 +219,7 @@ change reaches every future session of it.
 | `plan_routine` | A weekly or one-off routine for a sport or a workout, always tentative, marked `created_by: llm`; distance in metres or with a unit |
 | `update_routine` | A routine the assistant planned (as `PATCH /api/routines/:id`, so a reschedule with days gone by starts a new one) |
 | `end_routine` | Ends a routine the assistant planned from today on, or deletes one without days gone by |
-| `get_coach_board` | Goals (active, proposed, dismissed), the current status and focus, open concerns, the latest notes and this week |
+| `get_coach_board` | Goals (active, proposed, dismissed), the current status and focus, open concerns, the latest notes and this week, routine days included |
 | `list_coach_notes` | Every note, newest first, by kind, author or day, paged with `before` |
 | `write_coach_note` | A status, focus, concern or note, marked `author_kind: llm`; the same note again isn't written twice, and an agent writes at most 20 a day |
 | `update_coach_note` | Changes a note an agent wrote; the person's are theirs |

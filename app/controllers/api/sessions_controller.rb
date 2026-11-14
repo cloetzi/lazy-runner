@@ -15,7 +15,7 @@ module Api
     # @response 400 #/components/responses/BadRequest
     def index
       statuses = status_filter
-      days = DateRange.resolve(params[:from], params[:to], ahead: statuses == ["planned"])
+      days = DateRange.resolve(params[:from], params[:to], back: (0 if statuses == ["planned"]))
       sessions = Session.summarized.where(date: days).in_order
       sessions = sessions.with_status(statuses) if statuses
       render json: sessions.all
