@@ -2,7 +2,7 @@ import { createOutbox } from "./outbox.js";
 import { pageAccount, syncNote } from "./account.js";
 import { mountNav } from "./nav.js";
 import { getJson, sendChange, STALE_NOTE } from "./api.js";
-import { escape, icon } from "./html.js";
+import { escape, icon, authorLine } from "./html.js";
 import {
   addDays, addMonths, weekOf, monthWeeks, rangeFor, dayName, shortDay, longDay, weekLabel, monthLabel, localToday, isDate,
   byDay, upNext, markFor, movable, plannable, STATUS_LABELS,
@@ -10,7 +10,7 @@ import {
 } from "./calendar.js";
 import { openPlanSheet, openSessionSheet, openAddSheet, openLogActivitySheet, activityRow, editActivity, noteRow } from "./calendar-sheets.js";
 import { openNoteSheet, aboutChoices } from "./coach-sheets.js";
-import { notesByDay, knownCoaches, noteRequest, changeNoteRequest, deleteNoteRequest } from "./coach.js";
+import { notesByDay, knownCoaches, noteRequest, changeNoteRequest, deleteNoteRequest, plannedBy, agentName } from "./coach.js";
 import {
   withQueuedActivities, removedActivityIds, byDay as activitiesByDay, sportIcon, activityTitle, activityKey, preferredDistanceUnit, adoptServerDistanceUnit,
   logRequest,
@@ -189,7 +189,7 @@ function dayCard(date, sessions, activities, next, { heading = "h3", notes = [],
         ${plan}
       </header>
       ${sessions.length || activities.length || routineDays.length
-        ? `<ul class="list day-sessions">${sessions.map((s) => sessionRow(s, next)).join("")}${routineDays.map((d) => routineRow(d, routineOf(d), distanceUnit(), "data-routine-day")).join("")}${activities.map((a) => activityRow(a, distanceUnit(), "data-activity", fulfils.get(String(activityKey(a))))).join("")}${notes.map((n) => noteRow(n, "data-note")).join("")}</ul>`
+        ? `<ul class="list day-sessions">${sessions.map((s) => sessionRow(s, next)).join("")}${routineDays.map((d) => routineRow(d, routineOf(d), distanceUnit(), "data-routine-day", state.today)).join("")}${activities.map((a) => activityRow(a, distanceUnit(), "data-activity", fulfils.get(String(activityKey(a))))).join("")}${notes.map((n) => noteRow(n, "data-note")).join("")}</ul>`
         : `${notes.length ? `<ul class="list day-sessions">${notes.map((n) => noteRow(n, "data-note")).join("")}</ul>` : ""}<p class="rest muted">Rest</p>`}
     </section>`;
 }
@@ -209,6 +209,7 @@ function sessionRow(session, next) {
           <span class="row-title${mark === "skipped" ? " struck" : ""}">${escape(session.workout.title)}</span>
           <span class="row-meta">${meta}</span>
           ${session.note ? `<span class="row-note">${escape(session.note)}</span>` : ""}
+          ${authorLine(plannedBy(session, state.today))}
         </span>
       </button>
       ${mark === "missed" ? `<button class="secondary small" data-do-today="${escape(keyOf(session))}">Do today</button>` : ""}
@@ -228,9 +229,10 @@ function monthView({ days, activityDays, noteDays, routineDayMap, fulfils, next 
     const routineDays = routineDayMap[date] ?? [];
     const classes = ["month-day", date.slice(0, 7) !== month && "outside", date === state.today && "today",
       date === state.focus && "selected", date < state.today && "past"].filter(Boolean).join(" ");
+    const by = (item) => (item?.created_by === "llm" ? `, by ${agentName(item)}` : "");
     const items = [
-      ...sessions.map((s) => `${s.workout.title}, ${STATUS_LABELS[markFor(s, state.today, next)].toLowerCase()}`),
-      ...routineDays.map((d) => `${routineTitle(routineOf(d) ?? {})}, ${ROUTINE_LABELS[d.state].toLowerCase()}`),
+      ...sessions.map((s) => `${s.workout.title}, ${STATUS_LABELS[markFor(s, state.today, next)].toLowerCase()}${by(s)}`),
+      ...routineDays.map((d) => `${routineTitle(routineOf(d) ?? {})}, ${ROUTINE_LABELS[d.state].toLowerCase()}${by(routineOf(d))}`),
       ...activities.map(activityTitle),
       ...notes.map((n) => `note: ${n.title ?? n.body}`),
     ];
@@ -240,7 +242,7 @@ function monthView({ days, activityDays, noteDays, routineDayMap, fulfils, next 
         <button class="month-date" data-select="${date}" aria-label="${escape(label)}" aria-pressed="${date === state.focus}">${Number(date.slice(8))}</button>
         <ul class="chips">${sessions.map((s) => {
           const mark = markFor(s, state.today, next);
-          return `<li class="chip${mark === "skipped" ? " struck" : ""}" data-key="${escape(keyOf(s))}"${movable(s) ? ` draggable="true"` : ""}><span class="mark ${mark}" aria-hidden="true"></span>${escape(s.workout.title)}</li>`;
+          return `<li class="chip${mark === "skipped" ? " struck" : ""}${s.created_by === "llm" ? " by-agent" : ""}" data-key="${escape(keyOf(s))}"${movable(s) ? ` draggable="true"` : ""}><span class="mark ${mark}" aria-hidden="true"></span>${escape(s.workout.title)}</li>`;
         }).join("")}${routineDays.map((d) => routineChip(d, routineOf(d))).join("")}${activities.map((a) => `<li class="chip activity-chip"><span class="sport-tile tiny" aria-hidden="true">${icon(sportIcon(a.sport))}</span>${escape(activityTitle(a))}</li>`).join("")}${notes.length ? `<li class="chip note-chip">${notes.length === 1 ? "1 note" : `${notes.length} notes`}</li>` : ""}</ul>
       </div>`;
   }).join("");

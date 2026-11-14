@@ -14,6 +14,7 @@
 # made in the app is known by its `client_ref`, so a retried create finds it.
 class Activity < Record
   per_user
+  include AgentSigned
 
   # What a client may send for an activity.
   FIELDS = %i[date started_at sport title moving_seconds elapsed_seconds distance_m climb_m avg_hr max_hr rpe note source external_id routine_id routine_date].freeze
@@ -170,7 +171,7 @@ class Activity < Record
     {
       id:, date: date.iso8601, started_at:, sport:, title:,
       moving_seconds:, elapsed_seconds:, distance_m:, climb_m:, avg_hr:, max_hr:,
-      rpe:, note:, source:, external_id:, client_ref:, created_by:,
+      rpe:, note:, source:, external_id:, client_ref:, created_by:, agent_name:,
       routine_id:, routine_date: routine_date&.iso8601, created_at:, updated_at:
     }
   end

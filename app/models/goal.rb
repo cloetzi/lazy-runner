@@ -27,6 +27,7 @@ class Goal < Record
   class NotProposed < StandardError; end
 
   per_user
+  include AgentSigned
   many_to_one :replaces, class: self
 
   dataset_module do
@@ -131,7 +132,7 @@ class Goal < Record
   def as_json(*)
     {
       id:, title:, why:, target_date: target_date&.iso8601, status:, position: (position if active?),
-      created_by:, proposed_reason:, replaces_id:, decided_at:, created_at:, updated_at:
+      created_by:, agent_name:, proposed_reason:, replaces_id:, decided_at:, created_at:, updated_at:
     }
   end
 

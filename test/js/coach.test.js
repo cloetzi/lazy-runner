@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
-  authorLabel, authorInitials, knownCoaches, weekDays, notesByDay, noteFields, goalFields,
+  authorLabel, authorBadge, agentName, plannedBy, writtenDay, knownCoaches, weekDays, notesByDay, noteFields, goalFields,
   noteRequest, changeNoteRequest, resolveRequest, reopenRequest, deleteNoteRequest,
   addGoalRequest, changeGoalRequest, acceptRequest, dismissRequest, movedPosition,
 } from "../../public/js/coach.js";
@@ -11,13 +11,44 @@ const note = (fields = {}) => ({ id: 1, kind: "note", title: null, body: "Easy w
 test("names who wrote a note: you, the coach, or the agent", () => {
   assert.equal(authorLabel(note()), "You");
   assert.equal(authorLabel(note({ author_kind: "human", author_name: "Mara" })), "Mara");
-  assert.equal(authorLabel(note({ author_kind: "llm" })), "Trainer agent");
+  assert.equal(authorLabel(note({ author_kind: "llm" })), "Coach agent");
   assert.equal(authorLabel(note({ author_kind: "llm", author_name: "Claude" })), "Claude");
-  assert.equal(authorInitials(note()), "ME");
-  assert.equal(authorInitials(note({ author_kind: "llm" })), "AI");
-  assert.equal(authorInitials(note({ author_kind: "human", author_name: "Mara van Keller" })), "MK");
-  assert.equal(authorInitials(note({ author_kind: "human", author_name: "Mara" })), "MA");
 });
+
+test("badges a note with a person, the agent's icon, or a named coach's initials", () => {
+  assert.deepEqual(authorBadge(note()), { icon: "person" });
+  assert.deepEqual(authorBadge(note({ author_kind: "llm", author_name: "Claude" })), { icon: "agent" });
+  assert.deepEqual(authorBadge(note({ author_kind: "human", author_name: "Mara van Keller" })), { initials: "MK" });
+  assert.deepEqual(authorBadge(note({ author_kind: "human", author_name: "Mara" })), { initials: "MA" });
+  assert.deepEqual(authorBadge(note({ author_kind: "human", author_name: "Dana (physio)" })), { initials: "DP" });
+  assert.deepEqual(authorBadge(note({ author_kind: "human", author_name: "(?)" })), { initials: "?" });
+  assert.deepEqual(authorBadge(note({ author_kind: "human", author_name: "दीपा शर्मा" })), { initials: "दीश" });
+  assert.deepEqual(authorBadge(note({ author_kind: "human", author_name: "Émile" })), { initials: "ÉM" });
+});
+
+test("names the agent by what it wrote, else Coach agent", () => {
+  assert.equal(agentName({ agent_name: "Claude" }), "Claude");
+  assert.equal(agentName({ agent_name: null }), "Coach agent");
+});
+
+test("says when something was written: today, yesterday or the day", () => {
+  const today = "2026-11-14";
+  assert.equal(writtenDay(`${today}T12:00:00`, today), "today");
+  assert.equal(writtenDay("2026-11-13T12:00:00", today), "yesterday");
+  assert.equal(writtenDay("2026-11-02T12:00:00", today), "Nov 2");
+  assert.equal(writtenDay("2025-11-02T12:00:00", today), "Nov 2, 2025");
+});
+
+test("marks what someone else planned, and leaves yours unmarked", () => {
+  const today = "2026-11-14";
+  assert.equal(plannedBy({ created_by: "manual", created_at: `${today}T08:00:00` }, today), null);
+  assert.equal(plannedBy({ created_by: "seed" }, today), null);
+  assert.equal(plannedBy({ created_by: "llm", agent_name: "Claude", created_at: `${today}T08:00:00` }, today), "Claude · planned today");
+  assert.equal(plannedBy({ created_by: "llm", agent_name: null, created_at: "2026-11-10T08:00:00" }, today), "Coach agent · planned Nov 10");
+  assert.equal(plannedBy({ created_by: "llm", agent_name: "Claude", created_at: `${today}T08:00:00`, routine_id: 3 }, today), "Planned by Claude");
+  assert.equal(plannedBy(null, today), null);
+});
+
 
 test("lists the coaches named so far, latest first, once each", () => {
   const notes = [

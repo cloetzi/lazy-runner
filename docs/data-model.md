@@ -153,6 +153,7 @@ erDiagram
         int position "order within the day, 1 first"
         string status "planned | in_progress | done | skipped; missed is derived"
         string created_by "seed | manual | llm"
+        string agent_name "the agent's API token name, when llm"
         text note "the planner's reason for it"
         datetime started_at
         json part_kinds "the parts it runs: warmup, workout, cooldown"
@@ -228,6 +229,7 @@ erDiagram
         string external_id "its id at the source"
         string client_ref UK "per user"
         string created_by "manual | llm"
+        string agent_name "the agent's API token name, when llm"
         int routine_id FK "a sport routine's day it was linked to by hand"
         date routine_date "that day, unique with the routine"
     }
@@ -245,6 +247,7 @@ erDiagram
         string effort "easy | moderate | hard"
         text note
         string created_by "manual | llm"
+        string agent_name "the agent's API token name, when llm"
     }
     routine_days {
         int id PK
@@ -262,6 +265,7 @@ erDiagram
         string status "active | achieved | dropped | proposed | dismissed"
         int position "an active goal's place, 1 first"
         string created_by "user | llm (proposed)"
+        string agent_name "the agent's API token name, when llm"
         text proposed_reason "an agent's reason"
         int replaces_id FK "the goal a proposal would change"
         datetime decided_at
@@ -273,7 +277,7 @@ erDiagram
         string title
         text body
         string author_kind "user | human | llm"
-        string author_name "a human coach's name"
+        string author_name "a human coach's name, or the agent's API token name"
         date date "the day it is about"
         int activity_id FK "set null when deleted"
         int session_id FK "set null when deleted"
@@ -413,6 +417,11 @@ erDiagram
   session, or a done session of its workout that day. One activity fulfils one
   day. Nothing fulfilling it, it reads as `missed` once its day has gone by. A
   moved day keeps its move when it is skipped or made tentative again.
+- **An agent is named by its token.** What an agent writes over MCP
+  (`created_by: llm`, or a note's `author_kind: llm`) carries the name of
+  the API token it connected with (`agent_name`, a note's `author_name`), so
+  the app shows one name for it everywhere; rows written before that have
+  none and show a default.
 - **Distances are metres.** `distance_m` and `climb_m` are whole metres;
   `settings.distance_unit` (km or mi) only changes how they are shown.
 - **Constraints live in the database too:** check constraints on `steps`,

@@ -1,11 +1,11 @@
-import { escape, icon } from "./html.js";
+import { escape, icon, authorLine } from "./html.js";
 import { longDay, weekdayDay, moveChoices, movable, shownStatus, STATUS_LABELS } from "./calendar.js";
 import {
   KNOWN_SPORTS, sportIcon, sportLabel, activityTitle, activityFacts, activityKey, formatDistance, formatClimb, formatDuration,
-  distanceInMetres, climbInMetres, durationInSeconds, changeRequest, deleteRequest,
+  distanceInMetres, climbInMetres, durationInSeconds, changeRequest, deleteRequest, activityOrigin, sourceLabel,
 } from "./activities.js";
 import { RPE_ANCHORS } from "./player.js";
-import { KIND_LABELS, authorLabel } from "./coach.js";
+import { KIND_LABELS, authorLabel, plannedBy } from "./coach.js";
 
 // The calendar's sheets, used by the Calendar page and by Today: planning a
 // workout on a day, a session's own sheet to move, skip or remove it, and
@@ -78,6 +78,7 @@ export function openSessionSheet({ session, today, on }) {
       </header>
       <p class="muted">${facts.map(escape).join(" · ")}</p>
       ${session.note ? `<p class="planner-note">${escape(session.note)}</p>` : ""}
+      ${authorLine(plannedBy(session, today), "p")}
       ${status === "missed" ? `<button class="primary" value="today">Do today</button>` : ""}
       ${can ? `
         <h3 id="move-label">Move to</h3>
@@ -149,7 +150,7 @@ export function activityRow(activity, unit, attribute, fulfils = null) {
 // (which queues it in the outbox). `today` is the device's.
 export function editActivity({ activity, unit, today, send }) {
   openActivitySheet({
-    activity, unit,
+    activity, unit, today,
     on: {
       onRpe: (rpe) => send(changeRequest(activity, { rpe }, today)),
       onNote: (note) => { if (note !== (activity.note ?? "")) send(changeRequest(activity, { note: note || null }, today)); },
@@ -288,7 +289,7 @@ export function openLogActivitySheet({ date, unit, onLog, sport = "", about = ""
 
 // An activity's sheet: its numbers as they were sent, how hard it was, a
 // note, and Delete. `on` holds onRpe(rpe or null), onNote(text) and onDelete().
-export function openActivitySheet({ activity, unit, on }) {
+export function openActivitySheet({ activity, unit, today, on }) {
   const dialog = sheet("activity-sheet");
   const facts = [
     ["Distance", formatDistance(activity.distance_m, unit)],
@@ -298,8 +299,9 @@ export function openActivitySheet({ activity, unit, on }) {
     ["Avg heart rate", activity.avg_hr == null ? "" : `${activity.avg_hr} bpm`],
     ["Max heart rate", activity.max_hr == null ? "" : `${activity.max_hr} bpm`],
     ["Started", activity.started_at ? new Date(activity.started_at).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" }) : ""],
-    ["From", activity.source ?? ""],
   ].filter(([, value]) => value);
+  // One not on the server yet is yours; one with a change queued still says where it came from.
+  const origin = activity.id == null ? "" : activityOrigin(activity, today);
   const offScale = activity.rpe != null && !RPE_ANCHORS.some((a) => a.rpe === activity.rpe);
   dialog.innerHTML = `
     <form method="dialog" class="howto activity-sheet" novalidate>
@@ -310,6 +312,7 @@ export function openActivitySheet({ activity, unit, on }) {
       <p class="muted">${[longDay(activity.date), activity.title ? sportLabel(activity.sport) : "", activity.pending ? "not synced yet" : ""].filter(Boolean).map(escape).join(" · ")}</p>
       ${facts.length ? `<dl class="activity-facts">${facts.map(([name, value]) => `<div><dt>${escape(name)}</dt><dd>${escape(value)}</dd></div>`).join("")}</dl>`
         : `<p class="muted">No numbers were sent with it.</p>`}
+      ${activity.created_by === "llm" ? authorLine(origin, "p") : origin ? `<p class="muted small-print">${escape(origin)}</p>` : ""}
       <h3>How hard was it?${offScale ? ` <span class="muted">RPE ${activity.rpe}</span>` : ""}</h3>
       <div class="rpe segmented" role="group" aria-label="How hard it was">
         ${RPE_ANCHORS.map((a) => `<button type="button" data-rpe="${a.rpe}" aria-pressed="${a.rpe === activity.rpe}">${escape(a.label)}</button>`).join("")}
@@ -336,7 +339,7 @@ export function openActivitySheet({ activity, unit, on }) {
     const answer = dialog.returnValue;
     if (answer === "note") on.onNote(form.elements.note.value.trim());
     if (answer === "delete" && confirm(activity.source
-      ? `Delete ${activityTitle(activity)}? It comes back if ${activity.source} sends it again.`
+      ? `Delete ${activityTitle(activity)}? It comes back if ${sourceLabel(activity.source)} sends it again.`
       : `Delete ${activityTitle(activity)}?`)) on.onDelete();
   };
   dialog.returnValue = "";

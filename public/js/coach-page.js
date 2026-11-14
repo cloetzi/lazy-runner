@@ -4,7 +4,7 @@ import { escape, icon } from "./html.js";
 import { localToday, dayName, shortDay, longDay, STATUS_LABELS, shownStatus } from "./calendar.js";
 import { activityTitle, activityFacts, sportIcon, preferredDistanceUnit } from "./activities.js";
 import {
-  authorLabel, authorInitials, writtenOn, knownCoaches, weekDays, KIND_LABELS,
+  authorLabel, authorBadge, writtenOn, knownCoaches, weekDays, KIND_LABELS,
   noteRequest, changeNoteRequest, resolveRequest, deleteNoteRequest,
   addGoalRequest, changeGoalRequest, deleteGoalRequest, acceptRequest, dismissRequest, movedPosition,
 } from "./coach.js";
@@ -87,7 +87,8 @@ function render() {
 }
 
 function author(note) {
-  return `<span class="author"><span class="author-badge ${note.author_kind}" aria-hidden="true">${escape(authorInitials(note))}</span>` +
+  const badge = authorBadge(note);
+  return `<span class="author"><span class="author-badge ${note.author_kind}" aria-hidden="true">${badge.icon ? icon(badge.icon) : escape(badge.initials)}</span>` +
     `<strong>${escape(authorLabel(note))}</strong><span class="muted"> · ${escape(writtenOn(note))}</span></span>`;
 }
 
@@ -123,7 +124,7 @@ function goalsCard({ goals, proposals }) {
       ${p.replaces_id && byId.get(p.replaces_id) ? `<p class="muted small-print">Instead of “${escape(byId.get(p.replaces_id).title)}”</p>` : ""}
       ${p.proposed_reason ? `<p>${escape(p.proposed_reason)}</p>` : ""}
       ${p.why || p.target_date ? `<p class="muted small-print">${[p.target_date && `By ${shortDay(p.target_date)}`, p.why].filter(Boolean).map(escape).join(" · ")}</p>` : ""}
-      ${author({ author_kind: "llm", author_name: null, created_at: p.created_at })}
+      ${author({ author_kind: "llm", author_name: p.agent_name, created_at: p.created_at })}
       <div class="proposal-actions">
         <button class="primary small" data-accept="${p.id}">Accept</button>
         <button class="secondary small" data-dismiss="${p.id}">Dismiss</button>
@@ -135,7 +136,7 @@ function goalsCard({ goals, proposals }) {
       ${list}
       ${proposed}
       ${pastGoals()}
-      <p class="muted small-print">Only you change goals; the agent can propose one.</p>
+      <p class="muted small-print">Only you change goals; your coach agent can propose one.</p>
     </section>`;
 }
 
@@ -165,7 +166,7 @@ function currentCard(kind, note) {
       <p class="current-body">${escape(note.body)}</p>
       <p class="note-by">${author(note)}${note.replaces ? `<span class="muted"> · replaces ${escape(writtenOn(note.replaces))}</span>` : ""}</p>
       <div class="entry-actions">${editButton(note)}</div>`
-    : `<p class="muted">${kind === "status" ? "Where things stand: written by you, your coach or the agent." : "What to work on next."}</p>`;
+    : `<p class="muted">${kind === "status" ? "Where things stand: written by you, your coach or your coach agent." : "What to work on next."}</p>`;
   return `
     <section class="card coach-card" aria-labelledby="${kind}-title">
       <header class="coach-card-head"><h2 id="${kind}-title">${title}</h2><button class="secondary small" data-write="${kind}">${note ? "Update" : "Write"}</button></header>
@@ -226,7 +227,7 @@ function notesCard({ notes }) {
   return `
     <section class="card coach-card" aria-labelledby="notes-title">
       <header class="coach-card-head"><h2 id="notes-title">Notes</h2><button class="primary small" data-write="note">Write a note</button></header>
-      ${all.length ? `<ul class="coach-entries">${all.map((n) => noteItem(n)).join("")}</ul>` : `<p class="muted">Notes from you, your coach and the agent show here.</p>`}
+      ${all.length ? `<ul class="coach-entries">${all.map((n) => noteItem(n)).join("")}</ul>` : `<p class="muted">Notes from you, your coach and your coach agent show here.</p>`}
       ${more ? `<button class="secondary small" data-older>Older notes</button>` : ""}
     </section>`;
 }

@@ -7,6 +7,8 @@
 // nothing is worked out from them here either, beyond the units shown.
 
 import SPORTS from "./sports.json" with { type: "json" };
+import { agentName, writtenDay } from "./coach.js";
+import { localToday } from "./calendar.js";
 
 export const DISTANCE_UNITS = ["km", "mi"];
 const DISTANCE_KEY = "distanceUnit";
@@ -272,4 +274,22 @@ export function adoptServerDistanceUnit(storage, unit, { queued = [], stale = fa
   if (stale || !DISTANCE_UNITS.includes(unit) || changing) return preferredDistanceUnit(storage);
   setPreferredDistanceUnit(storage, unit);
   return unit;
+}
+
+// Where an activity came from: "From Garmin · copied by Coach agent, Nov 14",
+// "From Garmin" for one a script sent, "Logged by Coach agent" for one an
+// agent wrote down, or "Logged by you".
+export function activityOrigin(activity, today = localToday()) {
+  const when = activity.created_at ? `, ${writtenDay(activity.created_at, today)}` : "";
+  const source = activity.source ? `From ${sourceLabel(activity.source)}` : null;
+  if (activity.created_by === "llm") return source ? `${source} · copied by ${agentName(activity)}${when}` : `Logged by ${agentName(activity)}${when}`;
+  return source ?? "Logged by you";
+}
+
+// A source as people write it: garmin is Garmin, apple_health Apple Health.
+// One sent with capitals (iPhone) is kept as sent.
+export function sourceLabel(source) {
+  const text = String(source);
+  if (/\p{Lu}/u.test(text)) return text;
+  return text.replace(/_/g, " ").replace(/(^|\s)(\p{L})/gu, (_, gap, letter) => gap + letter.toUpperCase());
 }

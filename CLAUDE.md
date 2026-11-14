@@ -101,7 +101,7 @@ then `BASE_URL=http://localhost:3999 SERVER_LOG=/tmp/e2e.log npm run test:e2e`.
 - `app/mcp/` the MCP server at `/mcp` (`TrainerMcp`, the official `mcp` gem,
   stateless Streamable HTTP): read and write tools for a trainer agent, one
   class each, calling the same model code as the API (what it writes is marked
-  `llm`), and the brief in `trainer_mcp/brief.md`. API tokens only
+  `llm` and signed with the token's name, `Current.agent_name`), and the brief in `trainer_mcp/brief.md`. API tokens only
   (`TrainerMcp::TokenVerifier`); a tool's `answer` that takes `user:` gets
   the token's user, and the models see them as `Current.user` while it runs.
   `MCP_ALLOWED_HOSTS` widens the DNS rebinding guard.

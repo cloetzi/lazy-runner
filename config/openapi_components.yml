@@ -599,13 +599,14 @@ components:
         ended_early: { type: boolean }
     Session:
       type: object
-      required: [id, date, position, status, created_by, note, started_at, client_ref, parts, routine_id, routine_date, workout, sets_done, completion]
+      required: [id, date, position, status, created_by, agent_name, note, started_at, client_ref, parts, routine_id, routine_date, workout, sets_done, completion, created_at]
       properties:
         id: { type: integer }
         date: { type: string, format: date }
         position: { type: integer, description: Its place on the day, 1 first. }
         status: { type: string, enum: [planned, missed, in_progress, done, skipped], description: Missed is a planned session on a day before today. }
         created_by: { type: string, enum: [seed, manual, llm] }
+        agent_name: { type: string, nullable: true, description: "The name of the agent's API token, on what an agent wrote; null otherwise, or written before agents were named." }
         note: { type: string, nullable: true, description: The planner's reason for it. }
         started_at: { type: string, format: date-time, nullable: true }
         client_ref: { type: string, nullable: true }
@@ -615,6 +616,7 @@ components:
         workout: { $ref: "#/components/schemas/WorkoutSummary" }
         sets_done: { type: integer }
         completion: { allOf: [{ $ref: "#/components/schemas/Completion" }], nullable: true }
+        created_at: { type: string, format: date-time }
     SessionWithPlan:
       allOf:
         - $ref: "#/components/schemas/Session"
@@ -748,7 +750,7 @@ components:
                     swapped: { type: boolean }
     Activity:
       type: object
-      required: [id, date, started_at, sport, title, moving_seconds, elapsed_seconds, distance_m, climb_m, avg_hr, max_hr, rpe, note, source, external_id, client_ref, created_by, routine_id, routine_date, created_at, updated_at]
+      required: [id, date, started_at, sport, title, moving_seconds, elapsed_seconds, distance_m, climb_m, avg_hr, max_hr, rpe, note, source, external_id, client_ref, created_by, agent_name, routine_id, routine_date, created_at, updated_at]
       properties:
         id: { type: integer }
         date: { type: string, format: date, description: The sender's own day it started on. }
@@ -767,6 +769,7 @@ components:
         external_id: { type: string, nullable: true, description: Its id at the source. }
         client_ref: { type: string, nullable: true }
         created_by: { type: string, enum: [manual, llm] }
+        agent_name: { type: string, nullable: true, description: "The name of the agent's API token, on what an agent wrote; null otherwise, or written before agents were named." }
         routine_id: { type: integer, nullable: true, description: The sport routine whose day it was linked to by hand. }
         routine_date: { type: string, format: date, nullable: true, description: That routine's day. }
         created_at: { type: string, format: date-time }
@@ -823,7 +826,7 @@ components:
         routine_days: { type: array, description: "Their days that show in the range, by the day they show on.", items: { $ref: "#/components/schemas/RoutineDay" } }
     Routine:
       type: object
-      required: [id, title, sport, workout, weekdays, one_off, starts_on, ends_on, minutes, distance_m, effort, note, created_by, created_at, updated_at]
+      required: [id, title, sport, workout, weekdays, one_off, starts_on, ends_on, minutes, distance_m, effort, note, created_by, agent_name, created_at, updated_at]
       properties:
         id: { type: integer }
         title: { type: string, nullable: true, description: Null when none was given; show the sport or workout instead. }
@@ -838,6 +841,7 @@ components:
         effort: { type: string, enum: [easy, moderate, hard], nullable: true }
         note: { type: string, nullable: true }
         created_by: { type: string, enum: [manual, llm], description: "llm for one an agent planned." }
+        agent_name: { type: string, nullable: true, description: "The name of the agent's API token, on what an agent wrote; null otherwise, or written before agents were named." }
         created_at: { type: string, format: date-time }
         updated_at: { type: string, format: date-time }
     Routines:
@@ -882,7 +886,7 @@ components:
         today: { type: string, format: date }
     Goal:
       type: object
-      required: [id, title, why, target_date, status, position, created_by, proposed_reason, replaces_id, decided_at, created_at, updated_at]
+      required: [id, title, why, target_date, status, position, created_by, agent_name, proposed_reason, replaces_id, decided_at, created_at, updated_at]
       properties:
         id: { type: integer }
         title: { type: string }
@@ -891,6 +895,7 @@ components:
         status: { type: string, enum: [active, achieved, dropped, proposed, dismissed] }
         position: { type: integer, nullable: true, description: "An active goal's place, 1 first; null for the others." }
         created_by: { type: string, enum: [user, llm], description: "llm for a goal an agent proposed." }
+        agent_name: { type: string, nullable: true, description: "The name of the agent's API token, on what an agent wrote; null otherwise, or written before agents were named." }
         proposed_reason: { type: string, nullable: true, description: Why the agent proposed it. }
         replaces_id: { type: integer, nullable: true, description: The goal a proposal would change. }
         decided_at: { type: string, format: date-time, nullable: true, description: "When it was accepted, dismissed, achieved or dropped." }

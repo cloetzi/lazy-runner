@@ -5,7 +5,7 @@ import { pageAccount, signInHref, syncNote } from "./account.js";
 import { stepTargetWeight, sameWeight, sameShownWeight, inUnit, preferredUnit, adoptServerUnit, formatWeight, formatLoad } from "./weights.js";
 import { createFigure } from "./figure-view.js";
 import { openHowto, equipmentNames, loadEquipmentNames, knowsEquipmentNames } from "./howto.js";
-import { escape, icon } from "./html.js";
+import { escape, icon, authorLine } from "./html.js";
 import { offlineToday } from "./offline.js";
 import { blockName, blockSummary, stepSummary, alternatingText, setWeight, includedKinds, framingFor, framePlan, gearList } from "./workout.js";
 import { previousIndex, switchesSides, mainActionLabel, plannedExercise, swapRun, resumeChoice, sessionProgress, endsEarly, loggedFromServer, pickUpIndex, partEnd, setLabel, minutesLeft, tempoText, leadInSeconds, extraSeconds, upNextDetails, equipmentChanges, finishSummary, RPE_ANCHORS } from "./player.js";
@@ -19,6 +19,7 @@ import { weightRequest, skipRequest, startRequest, setRequest, finishRequests, d
 import { createRunStore, restoredTimer } from "./run-store.js";
 import { markFor, longDay, localToday, moveRequest, removeRequest, STATUS_LABELS } from "./calendar.js";
 import { openSessionSheet, openLogActivitySheet, openRpeSheet, activityRow, editActivity } from "./calendar-sheets.js";
+import { plannedBy } from "./coach.js";
 import {
   withQueuedActivities, removedActivityIds, activityKey, preferredDistanceUnit, adoptServerDistanceUnit,
   logRequest, changeRequest, rpeToAsk, readAsked, rememberAsked,
@@ -211,7 +212,7 @@ function renderToday() {
   $("today-date").textContent = new Date(`${state.today.date}T12:00`)
     .toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" });
   renderDay();
-  const note = session?.note ? `<p class="planner-note">${escape(session.note)}</p>` : "";
+  const note = `${session?.note ? `<p class="planner-note">${escape(session.note)}</p>` : ""}${authorLine(plannedBy(session, state.today.date), "p")}`;
 
   if (status === "done" && session.completion?.ended_early) {
     const { exercises, done } = sessionProgress({ items: state.today.plan.items, logged: loggedFromServer(state.today.plan.items, state.today.logged) });
@@ -248,6 +249,7 @@ function renderToday() {
       <h2>${heading}</h2>
       <p>Next on the calendar: <strong>${escape(next.workout.title)}</strong>, ${escape(longDay(next.date))}.</p>
       ${next.note ? `<p class="planner-note">${escape(next.note)}</p>` : ""}
+      ${authorLine(plannedBy(next, state.today.date), "p")}
       ${offlineNote}
       <button class="primary" id="bring-forward">Do it today</button>
       <button class="secondary" id="pick">Pick another</button>` : `
@@ -352,7 +354,7 @@ function renderActivities() {
   section.hidden = false;
   section.innerHTML = `
     ${plans.length ? `<h2>Planned today</h2>
-      <ul class="list day-sessions">${plans.map((d) => routineRow(d, todayRoutine(d), state.distanceUnit, "data-today-routine")).join("")}</ul>` : ""}
+      <ul class="list day-sessions">${plans.map((d) => routineRow(d, todayRoutine(d), state.distanceUnit, "data-today-routine", state.today.date)).join("")}</ul>` : ""}
     ${list.length ? `<h2>Activities today</h2>
       <ul class="list day-sessions">${list.map((a) => activityRow(a, state.distanceUnit, "data-today-activity", fulfils.get(activityKey(a)))).join("")}</ul>` : ""}
     <button class="link" id="log-activity">${icon("plus")}Log an activity</button>`;

@@ -6,26 +6,55 @@
 // dismisses what an agent proposed. Notes are written by the user ("You"), a
 // coach they name, or an agent (over MCP, never from here).
 
-import { weekOf, shortDay, localToday } from "./calendar.js";
+import { weekOf, shortDay, localToday, addDays } from "./calendar.js";
 
 export const KINDS = ["status", "focus", "concern", "note"];
 export const KIND_LABELS = { status: "Status", focus: "Focus", concern: "Concern", note: "Note" };
-export const AGENT_NAME = "Trainer agent";
+// What an agent is called when what it wrote carries no name (written
+// before agents were named after their API token).
+export const AGENT_NAME = "Coach agent";
 
-// "You", the coach's name, or the agent's (its own name, else Trainer agent).
+// "You", the coach's name, or the agent's (its token's name, else Coach agent).
 export function authorLabel(note) {
   if (note.author_kind === "user") return "You";
   if (note.author_kind === "llm") return note.author_name || AGENT_NAME;
   return note.author_name || "Coach";
 }
 
-// Two letters for the author's badge: ME, AI, or a name's initials.
-export function authorInitials(note) {
-  if (note.author_kind === "user") return "ME";
-  if (note.author_kind === "llm") return "AI";
-  const words = (note.author_name ?? "").trim().split(/\s+/).filter(Boolean);
-  const letters = words.length > 1 ? words[0][0] + words.at(-1)[0] : (words[0] ?? "?").slice(0, 2);
-  return letters.toUpperCase();
+// The agent's name on a session, routine, activity or goal it wrote.
+export const agentName = (item) => item.agent_name || AGENT_NAME;
+
+// The author's badge: a person for you, the agent's icon for an agent, and a
+// named coach's initials (letters only, so "Dana (physio)" is DP; ? when
+// the name has none). A letter keeps its accents, and one outside the
+// basic plane stays whole.
+export function authorBadge(note) {
+  if (note.author_kind === "user") return { icon: "person" };
+  if (note.author_kind === "llm") return { icon: "agent" };
+  const words = (note.author_name ?? "").split(/\s+/).map((w) => w.replace(/[^\p{L}\p{M}\p{N}]/gu, "")).filter(Boolean);
+  const first = (word) => word.match(/^[\p{L}\p{N}]\p{M}*/u)?.[0] ?? "";
+  const letters = words.length > 1 ? first(words[0]) + first(words.at(-1)) : (words[0]?.match(/^(?:[\p{L}\p{N}]\p{M}*){1,2}/u)?.[0] ?? "");
+  return { initials: letters ? letters.toUpperCase() : "?" };
+}
+
+// When something was written, as a day on this device: "today",
+// "yesterday", "Nov 3", or "Nov 3, 2025" in another year.
+export function writtenDay(time, today = localToday()) {
+  const day = localDate(time);
+  if (day === today) return "today";
+  if (day === addDays(today, -1)) return "yesterday";
+  return day.slice(0, 4) === today.slice(0, 4) ? shortDay(day) : `${shortDay(day)}, ${day.slice(0, 4)}`;
+}
+
+// Who planned a session or routine, when it was not you: "Coach agent ·
+// planned today". Null for your own, so the mark means someone else put it
+// there.
+// A session made from a routine's day was made when you said you're going,
+// not when the agent planned it, so it names the agent only.
+export function plannedBy(item, today = localToday()) {
+  if (item?.created_by !== "llm") return null;
+  if (!item.created_at || item.routine_id != null) return `Planned by ${agentName(item)}`;
+  return `${agentName(item)} · planned ${writtenDay(item.created_at, today)}`;
 }
 
 // The day a time was in, on this device: "2026-11-03T22:30:00Z" on a phone

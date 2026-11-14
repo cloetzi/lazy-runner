@@ -43,6 +43,7 @@ class Session < Record
   ].freeze
 
   per_user
+  include AgentSigned
   many_to_one :workout, key: %i[user_id workout_id], primary_key: %i[user_id id]
   one_to_many :set_logs, key: %i[user_id session_id], primary_key: %i[user_id id]
   one_to_one :completion
@@ -228,11 +229,11 @@ class Session < Record
   def as_json(options = nil)
     {
       id:, date: date.iso8601, position:, status: shown_status(options&.dig(:today) || today),
-      created_by:, note:, started_at:, client_ref:, parts: part_kinds,
+      created_by:, agent_name:, note:, started_at:, client_ref:, parts: part_kinds,
       routine_id:, routine_date: routine_date&.iso8601,
       workout: workout.summary,
       sets_done: set_logs.count { it.status == "done" },
-      completion: completion&.as_json
+      completion: completion&.as_json, created_at:
     }
   end
 

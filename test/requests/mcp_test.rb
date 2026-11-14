@@ -1093,7 +1093,7 @@ describe "MCP server" do
     it "writes notes as the agent, about the user's own activities only" do
       run, = Activity.log!({ date: "2026-11-03", sport: "run" })
 
-      written = call_tool("write_coach_note", kind: "status", body: "Base block, week 3", author_name: "Trainer agent", activity_id: run.id)
+      written = call_tool("write_coach_note", kind: "status", body: "Base block, week 3", author_name: "Someone else", activity_id: run.id)
 
       _(written.slice("kind", "author_kind", "author_name")).must_equal("kind" => "status", "author_kind" => "llm", "author_name" => "Trainer agent")
       _(written["about"]).must_equal("type" => "activity", "id" => run.id, "label" => "Run")
@@ -1113,6 +1113,31 @@ describe "MCP server" do
       _(_ { call_tool("resolve_concern", note_id: theirs.id, resolution: "Fine") }.must_raise(McpToolError).message).must_include "the person's to resolve"
       _(theirs.refresh.resolved?).must_equal false
       _(_ { call_tool("resolve_concern", note_id: mine["id"], resolution: "Again") }.must_raise(McpToolError).message).must_include "already resolved"
+    end
+
+    it "signs everything it writes with its token's name" do
+      workout_1 = workout("cycle-1-workout-1")
+      call_tool("plan_sessions", sessions: [{ date: "2026-11-05", workout_id: workout_1.id }])
+      call_tool("plan_routine", sport: "run", weekdays: [6], title: "Long run")
+      routine = call_tool("plan_routine", workout_id: workout("cycle-1-workout-2").id, weekdays: [], starts_on: "2026-11-07")["routine"]
+      call_tool("log_activities", activities: [{ date: "2026-11-03", sport: "run", source: "garmin", external_id: "1" }])
+      call_tool("propose_goal", title: "Run a half", reason: "You asked")
+      call_tool("write_coach_note", kind: "note", body: "Easy week")
+
+      # The person says yes to the agent's workout day: the session is still the agent's.
+      Routine.find!(routine["id"]).confirm!(Date.new(2026, 11, 7))
+
+      _(Session.count).must_equal 2
+      [Session, Routine, Activity, Goal].each { _(it.select_map(:agent_name).uniq).must_equal ["Trainer agent"] }
+      _(CoachNote.select_map(:author_name)).must_equal ["Trainer agent"]
+      _(Current.agent_name).must_be_nil
+      _(call_tool("list_sessions", from: "2026-11-01", to: "2026-11-30")["sessions"].map { it["agent_name"] }.uniq).must_equal ["Trainer agent"]
+
+      # The app reads the name wherever it shows what the agent did.
+      get "/api/calendar?from=2026-11-01&to=2026-11-08&today=2026-11-04"
+      %w[sessions activities routines].each { |list| _(json[list].map { it["agent_name"] }.uniq).must_equal ["Trainer agent"] }
+      get "/api/coach"
+      _(json["proposals"].map { it["agent_name"] }).must_equal ["Trainer agent"]
     end
 
     it "only proposes goals, which wait for the user" do
@@ -1136,7 +1161,8 @@ describe "MCP server" do
       _(again["id"]).must_equal first["id"]
       _(again["already_written"]).must_equal true
       _(call_tool("write_coach_note", kind: "note", body: "Easy week", date: "2026-11-06")["id"]).wont_equal first["id"]
-      _(call_tool("write_coach_note", kind: "note", body: "Easy week", date: "2026-11-05", author_name: "Other agent")["id"]).wont_equal first["id"]
+      # The name it signs with is its token's, whatever it sends.
+      _(call_tool("write_coach_note", kind: "note", body: "Easy week", date: "2026-11-05", author_name: "Other agent")["id"]).must_equal first["id"]
       _(TrainerMcp::BRIEF).must_include "at most #{CoachNote::AGENT_DAILY_LIMIT} a day"
       _(TrainerMcp::BRIEF).must_include "up to #{CoachNote::PAGE_LIMIT} at once"
 

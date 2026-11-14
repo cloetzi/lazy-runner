@@ -184,6 +184,16 @@ describe "sessions API" do
       _(json.map { it["date"] }).must_equal ["2026-10-10"]
     end
 
+    it "says who planned each: the agent by its token's name, and when" do
+      Current.set(agent_name: "Coach Claude") { Session.plan_all!([{ workout: workout("cycle-1-workout-1"), date: "2026-11-05" }], created_by: "llm") }
+      create_session(date: "2026-11-06")
+
+      get "/api/sessions?from=2026-11-05&to=2026-11-06"
+
+      _(json.map { it.values_at("created_by", "agent_name") }).must_equal [["llm", "Coach Claude"], ["manual", nil]]
+      _(json.map { it["created_at"] }).must_be :all?
+    end
+
     it "rejects a malformed date" do
       get "/api/sessions?from=yesterday"
 

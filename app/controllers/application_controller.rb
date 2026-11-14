@@ -34,6 +34,9 @@ class ApplicationController < RageController::API
   before_action do
     id = request.env["lazy_runner.user_id"]
     Current.user = id && User.with_pk(id)
+    # Signed in with an API token: its name, for what an agent writes
+    # (`created_by: llm`, Record::AgentSigned).
+    Current.agent_name = request.env["lazy_runner.agent_name"]
   end
 
   # A user given a temporary password (the owner reset theirs) chooses

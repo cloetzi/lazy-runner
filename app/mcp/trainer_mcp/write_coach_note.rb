@@ -1,7 +1,7 @@
 module TrainerMcp
   class WriteCoachNote < CoachTool
     description <<~TEXT.squish
-      Write on the user's Coach tab, as yourself (`author_kind: llm`). `status` is where things stand and `focus`
+      Write on the user's Coach tab, as yourself (`author_kind: llm`, signed with your API token's name). `status` is where things stand and `focus`
       what to work on: each replaces the current one, which stays in the journal. A `concern` is something to watch,
       open until resolved (resolve_concern). A `note` goes in the journal. Tie each to a goal. A note can be about a
       `date`, an `activity_id` or a `session_id`. Write a new note only for something new: to correct or add to one you
@@ -17,7 +17,7 @@ module TrainerMcp
         date: { type: "string", format: "date", description: "The day it is about, YYYY-MM-DD. Not for what a planned session or run is for: that goes in its own note." },
         activity_id: { type: "integer", description: "The activity it is about." },
         session_id: { type: "integer", description: "The session it is about, from list_sessions." },
-        author_name: { type: "string", description: "The name you sign with, such as Trainer agent." }
+        author_name: { type: "string", description: "Ignored: the app signs your notes with your API token's name." }
       },
       required: %w[kind body]
     )
@@ -25,7 +25,9 @@ module TrainerMcp
 
     # Checked and saved in one transaction, so calls sent side by side can't
     # both get past the repeat check or the daily limit.
-    def self.answer(kind:, body:, title: nil, **about)
+    # `author_name` is still taken, so a prompt that names it keeps working,
+    # but the note is signed with the token's name (CoachNote).
+    def self.answer(kind:, body:, title: nil, author_name: nil, **about)
       written = CoachNote.new(kind:, body:, title:, author_kind: "llm", **about)
       CoachNote.db.transaction do
         written.validate! # tidies the text as saving would, to compare it

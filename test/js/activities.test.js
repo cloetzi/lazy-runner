@@ -5,7 +5,7 @@ import {
   formatDistance, formatClimb, formatDuration, activityFacts, distanceInMetres, climbInMetres, durationInSeconds,
   activityPath, logRequest, changeRequest, deleteRequest, withQueuedActivities, inOrder, byDay,
   rpeToAsk, readAsked, rememberAsked,
-  preferredDistanceUnit, setPreferredDistanceUnit, distanceUnitRequest, adoptServerDistanceUnit,
+  preferredDistanceUnit, setPreferredDistanceUnit, distanceUnitRequest, adoptServerDistanceUnit, activityOrigin, sourceLabel,
 } from "../../public/js/activities.js";
 
 function memoryStorage(initial = {}) {
@@ -168,4 +168,17 @@ test("keeps the distance unit apart from the weight unit, and takes the server's
   assert.equal(adoptServerDistanceUnit(storage, "km", { stale: true }), "mi");
   assert.equal(adoptServerDistanceUnit(storage, "km", { queued: [{ method: "PATCH", path: "/api/settings", body: { unit: "kg" } }] }), "km");
   assert.equal(preferredDistanceUnit(storage), "km");
+});
+
+test("says where an activity came from and who copied it", () => {
+  const today = "2026-11-14";
+  const at = `${today}T08:00:00`;
+  assert.equal(activityOrigin({ created_by: "llm", agent_name: "Claude", source: "garmin", created_at: at }, today), "From Garmin · copied by Claude, today");
+  assert.equal(activityOrigin({ created_by: "llm", agent_name: null, source: null, created_at: "2026-11-02T08:00:00" }, today), "Logged by Coach agent, Nov 2");
+  assert.equal(activityOrigin({ created_by: "manual", source: "strava", created_at: at }, today), "From Strava");
+  assert.equal(activityOrigin({ created_by: "manual", source: null, created_at: at }, today), "Logged by you");
+  assert.equal(sourceLabel("apple_health"), "Apple Health");
+  assert.equal(sourceLabel("garmin connect"), "Garmin Connect");
+  assert.equal(sourceLabel("iPhone"), "iPhone");
+  assert.equal(sourceLabel("intervals.icu"), "Intervals.icu");
 });

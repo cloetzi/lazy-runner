@@ -1,6 +1,7 @@
-import { escape, icon } from "./html.js";
+import { escape, icon, authorLine } from "./html.js";
 import { longDay, weekdayDay, weekOf } from "./calendar.js";
 import { KNOWN_SPORTS, sportIcon, sportLabel, formatDistance } from "./activities.js";
+import { plannedBy } from "./coach.js";
 import {
   WEEKDAY_SHORT, EFFORTS, STATE_LABELS, isoWeekday, routineTitle, routineFacts, moveChoices, readRoutine,
 } from "./routines.js";
@@ -24,8 +25,8 @@ function tile(routine, state, size = "") {
 }
 
 // A day of a routine in a day's list. `attribute` names the data attribute a
-// tap is looked up by, holding "<routine id>:<date>".
-export function routineRow(day, routine, unit, attribute) {
+// tap is looked up by, holding "<routine id>:<date>". `today` is the page's.
+export function routineRow(day, routine, unit, attribute, today) {
   const meta = [STATE_LABELS[day.state], ...(routine ? routineFacts(routine, unit).slice(1) : []), day.moved && `moved from ${weekdayDay(day.date)}`]
     .filter(Boolean).map(escape).join(" · ");
   return `
@@ -36,14 +37,15 @@ export function routineRow(day, routine, unit, attribute) {
           <span class="row-title${day.state === "skipped" ? " struck" : ""}">${escape(routine ? routineTitle(routine) : "Routine")}</span>
           <span class="row-meta">${meta}</span>
           ${routine?.note ? `<span class="row-note">${escape(routine.note)}</span>` : ""}
+          ${authorLine(plannedBy(routine, today))}
         </span>
       </button>
     </li>`;
 }
 
-// A day of a routine in the month grid.
+// A day of a routine in the month grid, with a dot when someone else planned it.
 export function routineChip(day, routine) {
-  return `<li class="chip routine-chip ${day.state}${day.state === "skipped" ? " struck" : ""}">${tile(routine, day.state, "tiny")}${escape(routine ? routineTitle(routine) : "Routine")}</li>`;
+  return `<li class="chip routine-chip ${day.state}${day.state === "skipped" ? " struck" : ""}${routine?.created_by === "llm" ? " by-agent" : ""}">${tile(routine, day.state, "tiny")}${escape(routine ? routineTitle(routine) : "Routine")}</li>`;
 }
 
 export const dayKey = (day) => `${day.routine_id}:${day.date}`;
@@ -68,7 +70,7 @@ export function openRoutineDaySheet({ day, routine, unit, today, on }) {
       <p class="muted">${facts.map(escape).join(" · ")}</p>
       <p>${escape(routineFacts(routine, unit).join(" · "))}</p>
       ${routine.note ? `<p class="planner-note">${escape(routine.note)}</p>` : ""}
-      ${routine.created_by === "llm" ? `<p class="muted small-print">Planned by your coach agent.</p>` : ""}
+      ${authorLine(plannedBy(routine, today), "p")}
       <div class="sheet-actions">
         ${day.state === "tentative" ? `<button class="primary" value="confirm">I'm going</button>` : ""}
         ${canLog ? `<button class="${day.state === "tentative" ? "secondary" : "primary"}" value="log">Log it now</button>` : ""}

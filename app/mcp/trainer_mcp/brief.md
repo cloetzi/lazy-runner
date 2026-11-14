@@ -143,6 +143,9 @@ leave out one the user already logged by hand (no `source`) on the same day
 and sport when its start or distance agree, and ask when unsure.
 What you log is marked `created_by: llm`.
 
+What you write is signed with the name of the API token you connected
+with; the app shows that name on your notes, plans and proposals.
+
 To coach: write_coach_note for a status, focus, concern or note (marked
 `author_kind: llm`), at most 20 a day; update_coach_note to change one of
 yours, delete_coach_notes to clear yours out (up to 100 at once);

@@ -141,7 +141,9 @@ as null when it has no value (`nullable`).
   401 with `WWW-Authenticate`. They can't manage the account (devices,
   tokens): that is a 403, so a leaked token can't make itself another. Only
   the `Bearer` scheme counts; another `Authorization` header (a proxy's
-  Basic sign-in) is left to the session.
+  Basic sign-in) is left to the session. What a token writes as an agent
+  (`created_by: llm`, and everything over MCP) carries the token's name as
+  `agent_name`, the name the app shows for the agent.
 - **Writes come from the app.** A POST, PUT, PATCH or DELETE needs
   `Sec-Fetch-Site: same-origin` (or, without it, an `Origin` equal to the
   server's) and a body of `application/json`, else a 403. Browsers send the
@@ -221,7 +223,7 @@ change reaches every future session of it.
 | `end_routine` | Ends a routine the assistant planned from today on, or deletes one without days gone by |
 | `get_coach_board` | Goals (active, proposed, dismissed), the current status and focus, open concerns, the latest notes and this week, routine days included |
 | `list_coach_notes` | Every note, newest first, by kind, author or day, paged with `before` |
-| `write_coach_note` | A status, focus, concern or note, marked `author_kind: llm`; the same note again isn't written twice, and an agent writes at most 20 a day |
+| `write_coach_note` | A status, focus, concern or note, marked `author_kind: llm` and signed with the token's name (`author_name` sent is ignored); the same note again isn't written twice, and an agent writes at most 20 a day |
 | `update_coach_note` | Changes a note an agent wrote; the person's are theirs |
 | `delete_coach_notes` | Deletes up to 100 notes an agent wrote, all or nothing |
 | `resolve_concern` | Resolves a concern an agent raised; the person's are theirs to resolve |

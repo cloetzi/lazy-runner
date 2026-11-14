@@ -87,6 +87,9 @@ class CoachNote < Record
       self[column] = value.strip.presence if value.is_a?(String)
     end
     self.author_name = nil if author_kind == "user"
+    # An agent's note is signed with its API token's name, as everything it
+    # writes is (Record::AgentSigned).
+    self.author_name = Current.agent_name if author_kind == "llm" && new? && Current.agent_name
     # Only a concern is resolved: one changed to another kind is open again,
     # and only a resolved one says how.
     self.resolved_at = nil unless concern?

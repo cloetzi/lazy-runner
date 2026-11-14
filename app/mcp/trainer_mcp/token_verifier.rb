@@ -3,12 +3,13 @@ module TrainerMcp
   # bearer check: the transport answers 401 with WWW-Authenticate without one,
   # and hands the verified token to every tool as `server_context.auth_info`,
   # its subject the user's id. An OAuth flow later (an authorization server
-  # issuing tokens) is a swap of this verifier.
+  # issuing tokens) is a swap of this verifier. The token's name goes along
+  # as the `agent_name` claim: what the agent is called on what it writes.
   class TokenVerifier
     def verify(secret)
       token = ApiToken.authenticate(secret) or raise MCP::Server::OAuth::InvalidTokenError, "Unknown or revoked token"
 
-      MCP::Server::OAuth::AccessToken.new(token: secret, subject: token.user_id.to_s, client_id: token.id.to_s)
+      MCP::Server::OAuth::AccessToken.new(token: secret, subject: token.user_id.to_s, client_id: token.id.to_s, claims: { "agent_name" => token.name })
     end
   end
 end

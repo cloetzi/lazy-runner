@@ -25,7 +25,7 @@ module TrainerMcp
     def self.shown(session, minutes = {})
       compact(
         id: session.id, date: session.date.iso8601, position: session.position, status: session.shown_status,
-        created_by: session.created_by, note: session.note, parts: session.part_kinds,
+        created_by: session.created_by, agent_name: session.agent_name, note: session.note, parts: session.part_kinds,
         workout: session.workout.then { { id: it.id, title: it.title, kind: it.kind, source: it.source, archived: (true if it.archived?) } },
         minutes: minutes[[session.workout_id, session.part_kinds]] ||= session.parts.sum(&:estimated_minutes),
         completion: session.completion&.as_json&.except(:finished_at)

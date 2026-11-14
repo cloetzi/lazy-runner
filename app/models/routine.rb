@@ -27,6 +27,7 @@ class Routine < Record
   class Settled < StandardError; end
 
   per_user
+  include AgentSigned
   json_columns weekdays: []
   many_to_one :workout, key: %i[user_id workout_id], primary_key: %i[user_id id]
   one_to_many :stored_days, class: :RoutineDay
@@ -134,7 +135,7 @@ class Routine < Record
         day.session.today = today
         day.session.update(status: "planned")
       elsif workout_id
-        Session.add!(workout:, date: day.on, status: "planned", created_by:, today:, routine_id: id, routine_date: day.date)
+        Session.add!(workout:, date: day.on, status: "planned", created_by:, agent_name:, today:, routine_id: id, routine_date: day.date)
         stored_days_dataset.where(date: day.date).delete
       else
         store!(day.date, "confirmed", day.on == day.date ? nil : day.on)
@@ -285,7 +286,7 @@ class Routine < Record
     {
       id:, title:, sport:, workout: workout&.summary, weekdays:, one_off: one_off?,
       starts_on: starts_on.iso8601, ends_on: ends_on&.iso8601,
-      minutes:, distance_m:, effort:, note:, created_by:, created_at:, updated_at:
+      minutes:, distance_m:, effort:, note:, created_by:, agent_name:, created_at:, updated_at:
     }
   end
 

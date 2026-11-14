@@ -604,6 +604,8 @@ class AuthApp < Roda
     token = AuthApp.authenticator.authenticate(r.env)
 
     env["lazy_runner.user_id"] = token.subject.to_i
+    # What a script or agent writes with the token carries its name.
+    env["lazy_runner.agent_name"] = token.claims["agent_name"]
     refuse_other_user(r)
   rescue MCP::Server::OAuth::Error => e
     return if path == "/api/me"

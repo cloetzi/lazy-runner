@@ -116,6 +116,17 @@ class Record
     include PerUser if columns.include?(:user_id)
   end
 
+  # What an agent writes (`created_by: llm`) carries its name: the name of
+  # the API token it connected with (Current.agent_name, set for a token's
+  # request or MCP call), so the app shows one name for it everywhere (#247).
+  # A row written without a token has none, and the app shows its default.
+  module AgentSigned
+    def before_create
+      self.agent_name ||= Current.agent_name if created_by == "llm"
+      super
+    end
+  end
+
   module PerUser
     def before_validation
       self.user_id ||= Current.user!.id if new?

@@ -7,6 +7,9 @@ class Current < ActiveSupport::CurrentAttributes
   # What UserEquipment.unit_of reads, loaded once per request (or until the
   # user's gear or settings change): the user's unit and their gear's.
   attribute :gear_units
+  # The name of the API token a request or an MCP tool call came with: what
+  # the agent is called on what it writes (Record::AgentSigned, CoachNote).
+  attribute :agent_name
 
   class Missing < StandardError; end
   # A record saved or deleted while someone else is signed in.

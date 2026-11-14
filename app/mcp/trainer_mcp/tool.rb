@@ -41,11 +41,13 @@ module TrainerMcp
 
     # The tool answers for the user the token belongs to: the models read
     # them as Current.user while it runs, as they do in an API request, and
-    # `answer` gets them as `user:` when it asks for one.
+    # `answer` gets them as `user:` when it asks for one. What it writes is
+    # signed with the token's name (Current.agent_name, from TokenVerifier).
     def self.call(server_context: nil, **arguments)
       user = user_for(server_context)
       arguments = arguments.merge(user:) if answer_takes_user?
-      Current.set(user:) { text(JSON.generate(answer(**arguments))) }
+      agent_name = server_context&.auth_info&.claims&.dig("agent_name")
+      Current.set(user:, agent_name:) { text(JSON.generate(answer(**arguments))) }
     rescue *REFUSALS => error
       text(error.message, error: true)
     rescue Sequel::ValidationFailed => error
