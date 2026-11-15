@@ -243,6 +243,26 @@ function renderToday() {
 
   const offlineNote = offline ? `<p class="muted">Offline: this is the last plan the app saw. What you log syncs later.</p>` : "";
 
+  // Never trained and nothing planned: not a rest day but the first session,
+  // with planning the week as the other way on.
+  // Offline, a finished first session may still be in the outbox; a day
+  // that already holds sessions is the rest-day card's to explain.
+  if (source === "default" && !offline && !state.today.next_planned && !state.today.day?.length && state.today.trained === false) {
+    $("today").innerHTML = `
+      <p class="muted">Your first session</p>
+      <h2>${escape(title)}</h2>
+      ${subtitle ? `<p>${escape(subtitle)}</p>` : ""}
+      ${offlineNote}
+      <ul class="list parts">${parts}</ul>
+      <p class="muted">About ${estimated_minutes} minutes</p>
+      <button class="primary" id="start">Start</button>
+      <a class="button secondary" href="/calendar.html">Plan my week</a>
+      <button class="link" id="pick">Pick another</button>`;
+    $("start").onclick = startSession;
+    $("pick").onclick = () => go("#workouts");
+    return;
+  }
+
   // Nothing on the calendar today: a rest day, which offers to bring the
   // next planned session forward, else the rotation's next workout.
   if (source === "default") {
@@ -436,7 +456,14 @@ async function openWorkouts() {
     const { data: programs, stale } = await getJson(paths.workouts);
     if (programs.length === 0) {
       $("workouts-list").innerHTML = offlineNote(stale) + `
-        <p>No workouts yet. Import an <a href="/settings.html#examples">example program</a>, or build one with New workout.</p>`;
+        <section class="card">
+          <h2>No workouts yet</h2>
+          <p>Start from an example program, or build a workout of your own from the exercise library.</p>
+          <div class="card-actions">
+            <a class="button primary small" href="/settings.html#examples">Example programs</a>
+            <a class="button secondary small" href="${routeHash("edit", "new")}">Build a workout</a>
+          </div>
+        </section>`;
       return;
     }
     $("workouts-list").innerHTML = offlineNote(stale) + programs.map((program) => {
@@ -1472,7 +1499,7 @@ async function openHistory() {
       stale || staleExercises ? STALE_NOTE : ""].filter(Boolean).join(" · ");
     $("history-list").innerHTML = history.sessions.length
       ? history.sessions.map(historyRow).join("")
-      : `<li class="row muted">Nothing in the last four weeks yet.</li>`;
+      : `<li class="row muted">Nothing in the last four weeks yet. <a href="/#today">Go to Today</a> to train.</li>`;
     $("history-exercises").innerHTML = exercises.length
       ? exercises.map(exerciseRow).join("")
       : `<li class="row muted">Exercises show up here once you log a set.</li>`;

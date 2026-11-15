@@ -15,7 +15,9 @@ module Api
     #   and `next_planned` is the first planned after it. `activities` are the
     #   date's activities, in the order they started, and `routine_days` the
     #   days of `routines` that show on it, read with the date as today
-    #   (tentative, confirmed, done or skipped). With nothing to
+    #   (tentative, confirmed, done or skipped). `trained` says whether any
+    #   session was ever done, so a first session can be told apart from a
+    #   rest day. With nothing to
     #   suggest (no main workout yet), it is a 404 with the code
     #   `no_workouts`: import an example program or build a workout first.
     # @param date? {Date} The day, the server's today (TZ) by default. The PWA sends its local date.
@@ -55,6 +57,7 @@ module Api
         # Every session on the day, and the next one planned after it.
         day: summarized.where(date:).in_order.all.map { it.as_json(today: date) },
         next_planned: summarized.where(status: "planned", date: date.next_day..).in_order.first&.as_json(today: date),
+        trained: !Session.where(status: "done").empty?,
         activities: Activity.where(date:).in_order.all,
         **routine_days(date),
         # The sets already logged in the session, so the player can pick up

@@ -5,6 +5,7 @@ import {
   distanceInMetres, climbInMetres, durationInSeconds, changeRequest, deleteRequest, activityOrigin, sourceLabel,
 } from "./activities.js";
 import { RPE_ANCHORS } from "./player.js";
+import { routeHash } from "./routes.js";
 import { KIND_LABELS, authorLabel, plannedBy } from "./coach.js";
 import { weekSummary, summaryLine, watching } from "./week.js";
 
@@ -43,11 +44,16 @@ export function openPlanSheet({ date, workouts, onPlan }) {
               <span class="row-meta">${[`${w.estimated_minutes} min`, w.subtitle].filter(Boolean).map(escape).join(" · ")}</span>
             </span>
           </label>`).join("")}
-      </fieldset>` : `<p>There is no workout to plan yet.</p>`}
+      </fieldset>
       <label class="field"><span>Note <span class="muted">(optional)</span></span>
         <textarea name="note" rows="2" maxlength="500" placeholder="Why this day, such as easy legs before the long run"></textarea>
       </label>
-      <button class="primary" value="plan"${workouts.length ? "" : " disabled"}>Plan</button>
+      <button class="primary" value="plan">Plan</button>` : `
+      <p>Get a workout first: import an example program, or build one of your own.</p>
+      <div class="card-actions">
+        <a class="button primary small" href="/settings.html#examples">Example programs</a>
+        <a class="button secondary small" href="${routeHash("edit", "new")}">Build a workout</a>
+      </div>`}
     </form>`;
   const form = dialog.querySelector("form");
   dialog.onclose = () => {

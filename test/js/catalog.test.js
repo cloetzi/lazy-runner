@@ -58,6 +58,8 @@ test("counts what is shown", () => {
   assert.equal(countLine(28, 28, { owned: true }), "28 with what you own");
   assert.equal(countLine(4, 28, { owned: true, filtered: true }), "4 of 28 with what you own");
   assert.equal(countLine(4, 33, { filtered: true }), "4 of 33 exercises");
+  assert.equal(countLine(22, 22, { owned: true, ownsNothing: true }), "22 that need no gear");
+  assert.equal(countLine(41, 41, { ownsNothing: true }), "41 exercises");
 });
 
 test("says when an exercise was last done and its best set", () => {

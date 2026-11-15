@@ -1019,13 +1019,14 @@ components:
             routine_days: { type: array, description: "Their days this week, read on `today`, as GET /api/calendar gives them.", items: { $ref: "#/components/schemas/RoutineDay" } }
     Today:
       type: object
-      required: [date, source, session, day, next_planned, activities, routines, routine_days, logged, program, workout_id, title, subtitle, estimated_minutes, workouts, plan, weight_steps, unit, distance_unit]
+      required: [date, source, session, day, next_planned, trained, activities, routines, routine_days, logged, program, workout_id, title, subtitle, estimated_minutes, workouts, plan, weight_steps, unit, distance_unit]
       properties:
         date: { type: string, format: date }
         source: { type: string, enum: [session, default, picked], description: "Where the workout comes from: one of the day's sessions, the one up next in the rotation, or `workout_id`." }
         session: { allOf: [{ $ref: "#/components/schemas/Session" }], nullable: true }
         day: { type: array, description: Every session on the date, in order., items: { $ref: "#/components/schemas/Session" } }
         next_planned: { allOf: [{ $ref: "#/components/schemas/Session" }], nullable: true, description: The first session planned after the date. }
+        trained: { type: boolean, description: Whether any session was ever done; false for someone about to train for the first time. }
         activities: { type: array, description: The date's activities, in the order they started., items: { $ref: "#/components/schemas/Activity" } }
         routines: { type: array, description: The routines with a day on the date., items: { $ref: "#/components/schemas/Routine" } }
         routine_days: { type: array, description: "Their days on the date, read against it as today.", items: { $ref: "#/components/schemas/RoutineDay" } }

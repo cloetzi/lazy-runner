@@ -559,13 +559,13 @@ if (hint) {
 }
 render();
 renderAccount();
-loadTokens();
+const tokensLoaded = loadTokens();
 loadIdentities();
+const devicesLoaded = loadDevices();
 // A link to a card (settings.html#examples) is followed before the lists
 // above it fill in; once they have, the card is brought back into view.
 const anchored = location.hash ? document.getElementById(location.hash.slice(1)) : null;
-Promise.allSettled([examples.load(), usersLoaded]).then(() => anchored?.scrollIntoView());
+Promise.allSettled([examples.load(), usersLoaded, tokensLoaded, devicesLoaded]).then(() => anchored?.scrollIntoView());
 outbox?.flush();
 loadUnit();
-loadDevices();
 loadVersion();

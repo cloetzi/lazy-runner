@@ -84,8 +84,24 @@ function render() {
     $("coach-board").innerHTML = state.failed ? "" : `<p class="muted">Loading…</p>`;
     return;
   }
-  $("coach-board").innerHTML = [goalsCard(board), currentCard("status", board.status), currentCard("focus", board.focus),
+  const written = everyNote();
+  state.agentSeen = board.proposals.length > 0 || written.some((note) => note.author_kind === "llm");
+  const empty = !board.goals.length && !board.proposals.length && written.length === 0;
+  $("coach-board").innerHTML = [empty ? introCard() : "", goalsCard(board), currentCard("status", board.status), currentCard("focus", board.focus),
     weekCard(board), concernsCard(board), notesCard(board)].join("");
+}
+
+// Until anything is written: what the page is for, and the two ways in.
+function introCard() {
+  return `
+    <section class="card coach-card coach-intro" aria-labelledby="intro-title">
+      <h2 id="intro-title">Your training notebook</h2>
+      <p>Goals, where things stand, what to work on next and notes along the way. You write here, and so can a coach you work with or an AI assistant you connect. Start with a goal.</p>
+      <div class="card-actions">
+        <button class="primary small" data-add-goal>${icon("plus")}Add a goal</button>
+        <a class="button secondary small" href="/settings.html#api-tokens">Connect an assistant</a>
+      </div>
+    </section>`;
 }
 
 function author(note) {
@@ -138,7 +154,7 @@ function goalsCard({ goals, proposals }) {
       ${list}
       ${proposed}
       ${pastGoals()}
-      <p class="muted small-print">Only you change goals; your coach agent can propose one.</p>
+      ${state.agentSeen ? `<p class="muted small-print">Only you change goals; your coach agent can propose one.</p>` : ""}
     </section>`;
 }
 
@@ -168,7 +184,7 @@ function currentCard(kind, note) {
       <p class="current-body">${escape(note.body)}</p>
       <p class="note-by">${author(note)}${note.replaces ? `<span class="muted"> · replaces ${escape(writtenOn(note.replaces))}</span>` : ""}</p>
       <div class="entry-actions">${editButton(note)}</div>`
-    : `<p class="muted">${kind === "status" ? "Where things stand: written by you, your coach or your coach agent." : "What to work on next."}</p>`;
+    : `<p class="muted">${kind === "status" ? `Where things stand: written by you or your coach${state.agentSeen ? " or your coach agent" : ""}.` : "What to work on next."}</p>`;
   return `
     <section class="card coach-card" aria-labelledby="${kind}-title">
       <header class="coach-card-head"><h2 id="${kind}-title">${title}</h2><button class="secondary small" data-write="${kind}">${note ? "Update" : "Write"}</button></header>
@@ -229,7 +245,7 @@ function notesCard({ notes }) {
   return `
     <section class="card coach-card" aria-labelledby="notes-title">
       <header class="coach-card-head"><h2 id="notes-title">Notes</h2><button class="primary small" data-write="note">Write a note</button></header>
-      ${all.length ? `<ul class="coach-entries">${all.map((n) => noteItem(n)).join("")}</ul>` : `<p class="muted">Notes from you, your coach and your coach agent show here.</p>`}
+      ${all.length ? `<ul class="coach-entries">${all.map((n) => noteItem(n)).join("")}</ul>` : `<p class="muted">Notes from you${state.agentSeen ? ", your coach and your coach agent" : " and your coach"} show here.</p>`}
       ${more ? `<button class="secondary small" data-older>Older notes</button>` : ""}
     </section>`;
 }

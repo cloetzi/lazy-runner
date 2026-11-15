@@ -87,11 +87,15 @@ function render() {
     section("animated", "Animated", animated);
     section("todo", "Still to draw", shown.filter((e) => !e.animation));
   } else {
-    count = countLine(shown.length, pool.length, { owned: settings.owned, filtered });
+    count = countLine(shown.length, pool.length, { owned: settings.owned, filtered, ownsNothing: owned.size === 0 });
     section("animated", "", shown);
     section("todo", "", []);
   }
-  document.getElementById("library-count").textContent = stale ? `${count} · ${STALE_NOTE}` : count;
+  const countLineElement = document.getElementById("library-count");
+  // Nothing owned yet: the way to see the rest, right after the count.
+  const hint = !review && settings.owned && owned.size === 0
+    ? `. <a href="/equipment.html">Tell us what you own</a> to see more.` : "";
+  countLineElement.innerHTML = escape(count) + hint + (stale ? ` · ${escape(STALE_NOTE)}` : "");
   document.getElementById("library-empty").hidden = shown.length > 0;
 
   for (const box of document.querySelectorAll("[data-figure]")) {

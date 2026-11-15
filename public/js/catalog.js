@@ -55,8 +55,10 @@ export function matches(exercise, { query = "", area = "", equipment = "", stand
 
 // The header line: "33 exercises", "28 with what you own", or "4 of 28 …"
 // when a search or filter narrows it.
-export function countLine(shown, total, { owned = false, filtered = false } = {}) {
-  const of = owned ? `${total} with what you own` : `${total} ${total === 1 ? "exercise" : "exercises"}`;
+// "What I own" with nothing owned yet is the exercises that need no gear.
+export function countLine(shown, total, { owned = false, filtered = false, ownsNothing = false } = {}) {
+  const of = owned && ownsNothing ? `${total} that need no gear`
+    : owned ? `${total} with what you own` : `${total} ${total === 1 ? "exercise" : "exercises"}`;
   return filtered ? `${shown} of ${of}` : of;
 }
 

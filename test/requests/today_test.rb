@@ -54,9 +54,13 @@ describe "GET /api/today" do
   end
 
   it "moves on to the next workout once one is done" do
+    get "/api/today"
+    _(json["trained"]).must_equal false
+
     session_on(Date.today - 2)
     get "/api/today"
     _(json["title"]).must_equal "Workout 2"
+    _(json["trained"]).must_equal true
 
     session_on(Date.today - 1, workout: "cycle-1-workout-2")
     get "/api/today"

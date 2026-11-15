@@ -440,7 +440,8 @@ test("sets a goal on the Coach tab, writes a status, and accepts the agent's pro
   const { context, page, errors } = await ownerPage();
 
   await page.goto("/coach.html");
-  await page.locator("[data-add-goal]").click();
+  // A new account's Coach tab explains itself and starts with a goal.
+  await page.locator(".coach-intro").getByRole("button", { name: "Add a goal" }).click();
   const goalSheet = page.locator("#goal-sheet");
   await goalSheet.locator('input[name="title"]').waitFor();
   await accessible(page, "the Coach tab with the goal sheet open");
