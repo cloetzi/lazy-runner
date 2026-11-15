@@ -1021,6 +1021,15 @@ components:
             notes: { type: array, items: { $ref: "#/components/schemas/CoachNote" } }
             routines: { type: array, description: The routines with days this week., items: { $ref: "#/components/schemas/Routine" } }
             routine_days: { type: array, description: "Their days this week, read on `today`, as GET /api/calendar gives them.", items: { $ref: "#/components/schemas/RoutineDay" } }
+    Setup:
+      type: object
+      required: [gear, workouts, planned, assistant, invited]
+      properties:
+        gear: { type: boolean, description: The user owns some gear. }
+        workouts: { type: boolean, description: "The user has a workout, imported or their own." }
+        planned: { type: boolean, description: "A routine still running, or a session planned from today on." }
+        assistant: { type: boolean, description: The user has an API token. }
+        invited: { type: boolean, nullable: true, description: "The owner's: someone else has an account or a pending invite. Null for anyone else." }
     Today:
       type: object
       required: [date, source, session, day, next_planned, trained, activities, routines, routine_days, logged, program, workout_id, title, subtitle, estimated_minutes, workouts, plan, weight_steps, unit, distance_unit]

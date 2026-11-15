@@ -260,5 +260,5 @@ back through the API.
 | Equipment | `GET /equipment`, `PATCH /equipment/:id` |
 | Settings | `GET/PATCH /settings` |
 | Version | `GET /version` (the app's version and commit, shown on Settings, and the frontend release id, for the service worker) |
-| Account | `GET /me`, `GET/DELETE /account/devices`, `DELETE /account/devices/:id`, `GET/POST /account/tokens`, `DELETE /account/tokens/:id`, `GET /account/identities`, `DELETE /account/identities/:id`, `POST /account/welcome`; sign-in under `/auth` (above) |
+| Account | `GET /me`, `GET/DELETE /account/devices`, `DELETE /account/devices/:id`, `GET/POST /account/tokens`, `DELETE /account/tokens/:id`, `GET /account/identities`, `DELETE /account/identities/:id`, `POST /account/welcome`, `GET /account/setup`; sign-in under `/auth` (above) |
 | Users (owner) | `GET /users`, `DELETE /users/:id`, `POST /users/:id/password`, `GET/POST /invites`, `DELETE /invites/:id` |

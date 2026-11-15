@@ -98,6 +98,7 @@ const SHELL = [
   "/js/run-store.js",
   "/js/session-log.js",
   "/js/settings.js",
+  "/js/setup.js",
   "/js/signin.js",
   "/js/skeleton.json",
   "/js/sports.json",

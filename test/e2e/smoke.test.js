@@ -88,18 +88,18 @@ before(async () => {
   await setup.locator('input[name="password"]').fill(OWNER.password);
   await setup.getByRole("button", { name: "Create the account" }).click();
 
-  // A first sign-in shows the welcome screen; every step can be skipped.
+  // A first sign-in shows the welcome screen, which can be skipped whole.
   await page.waitForURL(/\/welcome\.html\?next=%2Fcalendar\.html/);
-  for (const step of [1, 2, 3]) {
-    const current = page.locator("[data-step]:not([hidden])");
-    await current.getByText(`Step ${step} of 3`).waitFor();
-    await current.getByRole("button", { name: "Skip" }).click();
-  }
+  await page.getByText("Step 1 of 4").waitFor();
+  await page.getByRole("button", { name: "Skip set-up" }).click();
   await page.waitForURL(/\/calendar\.html(#.*)?$/);
 
   // A new account has nothing to train: Today points at the example
-  // programs, and importing one on Settings fills the workouts.
+  // programs, with the rest of set-up under it, and importing one on
+  // Settings fills the workouts.
   await page.goto("/");
+  await page.locator("#setup-later").getByRole("link", { name: "Invite someone" }).waitFor();
+  assert.equal(await page.locator("#today-setup").isHidden(), true);
   await page.locator("#setup-examples").click();
   await page.waitForURL(/\/settings\.html#examples$/);
   for (const [slug, name] of [["cycle-1", "Cycle 1"], ["home-strength", "Home strength"]]) {
@@ -107,6 +107,16 @@ before(async () => {
     await page.locator("#examples-done").getByText(`${name} is in your workouts`).waitFor();
     await page.locator("#example-list > li", { hasText: name }).getByText("Imported ✓").waitFor();
   }
+  // What is left of set-up is on Today, until hidden.
+  await page.goto("/");
+  const setupCard = page.locator("#today-setup");
+  await setupCard.getByRole("link", { name: "Tell the app what you own" }).waitFor();
+  await setupCard.getByText("Add it to your Home Screen").waitFor();
+  await accessible(page, "Today with the set-up card");
+  await setupCard.getByRole("button", { name: "Hide" }).click();
+  await page.reload();
+  await page.locator("#today h2").waitFor();
+  assert.equal(await setupCard.isHidden(), true);
   signedIn = await context.storageState();
   await context.close();
 
@@ -554,11 +564,12 @@ test("invites a second user, who is welcomed and sees none of the owner's things
   await accessible(page, "the welcome screen");
   await step().getByRole("button", { name: "kg" }).click();
   await step().locator('[data-value="kg"][aria-pressed="true"]').waitFor();
-  await step().getByRole("button", { name: "Next" }).click();
-  // Back to the unit and on again; gear with no weights yet asks in kg.
+  await step().getByRole("button", { name: "mi" }).click();
+  await step().getByRole("button", { name: "Continue" }).click();
+  // Back to the units and on again; gear with no weights yet asks in kg.
   await step().getByRole("button", { name: "Back" }).click();
   await step().locator('[data-value="kg"][aria-pressed="true"]').waitFor();
-  await step().getByRole("button", { name: "Next" }).click();
+  await step().getByRole("button", { name: "Continue" }).click();
   const kettlebell = step().locator("#welcome-inventory li", { hasText: "Kettlebell" });
   await kettlebell.locator('[data-unit="kg"][aria-pressed="true"]').waitFor();
   await kettlebell.locator('input[data-field="owned"]').check();
@@ -566,20 +577,31 @@ test("invites a second user, who is welcomed and sees none of the owner's things
   await step().locator("#welcome-inventory li", { hasText: "Kettlebell" }).locator('input[data-field="weights"]').fill("35");
   await step().locator("#welcome-inventory li", { hasText: "Kettlebell" }).locator('input[data-field="weights"]').press("Tab");
   await step().locator("#welcome-inventory li", { hasText: "Kettlebell" }).getByText("Saved").waitFor();
-  await step().getByRole("button", { name: "Next" }).click();
+  await step().getByRole("button", { name: "Continue" }).click();
   // What an example holds shows before importing it.
   const homeStrength = step().locator("#welcome-examples > li", { hasText: "Home strength" });
   await homeStrength.getByText("What's in it").click();
   await homeStrength.getByText("Goblet squat").first().waitFor();
   await step().locator('[data-import="home-strength"]').click();
   await step().getByText("Home strength is in your workouts").waitFor();
+  await step().getByRole("button", { name: "Continue" }).click();
+  // Training days: Session A and B take turns on them, every week.
+  await step().getByText("Session A and Session B take turns").waitFor();
+  await accessible(page, "the training days step");
+  for (const day of ["Monday", "Wednesday", "Friday"]) await step().getByRole("checkbox", { name: day }).check();
   await step().getByRole("button", { name: "Done" }).click();
   await page.waitForURL(`${BASE_URL}/`);
+  // Gear, a program and the week: nothing is left to set up.
+  await page.locator("#today h2").waitFor();
+  assert.equal(await page.locator("#today-setup").isHidden(), true);
 
   const friend = await request.newContext({ baseURL: BASE_URL, storageState: await context.storageState() });
   const read = async (path) => (await friend.get(path)).json();
   assert.deepEqual((await read("/api/me")).user, { ...(await read("/api/me")).user, owner: false, welcomed: true });
   assert.equal((await read("/api/settings")).unit, "kg");
+  assert.equal((await read("/api/settings")).distance_unit, "mi");
+  assert.deepEqual((await read("/api/routines")).routines.map((routine) => [routine.workout.title, routine.weekdays]),
+    [["Session A", [1, 5]], ["Session B", [3]]]);
   assert.deepEqual((await read("/api/equipment")).find((item) => item.slug === "kettlebell"), {
     ...(await read("/api/equipment")).find((item) => item.slug === "kettlebell"), owned: true, weights: [35], unit: "kg",
   });

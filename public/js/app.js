@@ -7,6 +7,7 @@ import { createFigure } from "./figure-view.js";
 import { openHowto, equipmentNames, loadEquipmentNames, knowsEquipmentNames } from "./howto.js";
 import { escape, icon, authorLine, busy, showSheet } from "./html.js";
 import { offlineToday } from "./offline.js";
+import { setupRows, setupLeft } from "./setup.js";
 import { blockName, blockSummary, stepSummary, alternatingText, setWeight, includedKinds, framingFor, framePlan, gearList, carrierOf } from "./workout.js";
 import { previousIndex, switchesSides, mainActionLabel, stepAnnouncement, spokenTarget, tapAccepted, holdStatus, unloggedExercises, plannedExercise, swapRun, resumeChoice, sessionProgress, endsEarly, loggedFromServer, pickUpIndex, partEnd, setLabel, minutesLeft, tempoText, leadInSeconds, extraSeconds, upNextDetails, equipmentChanges, finishSummary, RPE_ANCHORS } from "./player.js";
 import { openSwap, prefetchAlternatives } from "./swap.js";
@@ -54,6 +55,8 @@ const outbox = createOutbox({ storage, fetch: (...args) => fetch(...args), locks
 const nav = mountNav("today");
 
 const state = {
+  setup: null, // GET /api/account/setup, for the "Getting set up" card
+  noWorkouts: false, // Today is "Nothing to train yet", with set-up under it
   unit: preferredUnit(storage), // lb or kg, for showing weights
   distanceUnit: preferredDistanceUnit(storage), // km or mi, for showing distances
   framing: savedFraming(), // { warmup: false } leaves the warm-up out
@@ -88,6 +91,7 @@ const state = {
 // picked to train instead).
 async function loadToday(workoutId, sessionId) {
   loadWeek();
+  loadSetup();
   try {
     const { data: today, stale } = await getJson(paths.today({ date: localToday(), workoutId, sessionId }));
     state.unit = adoptServerUnit(storage, today.unit, { queued: outbox.queued(), stale });
@@ -95,7 +99,9 @@ async function loadToday(workoutId, sessionId) {
     // The service worker answered from its cache: the server is out of reach.
     state.today = stale ? offlineToday(today, localToday()) : today;
     state.today.pickedSession = Boolean(sessionId && !workoutId);
+    state.noWorkouts = false;
     renderToday();
+    drawSetup();
     renderActivities();
     if (!stale) askHowHard();
     return true;
@@ -123,9 +129,85 @@ function renderSetup() {
     <div class="card-actions">
       <a class="button primary small" href="/settings.html#examples" id="setup-examples">Example programs</a>
       <a class="button secondary small" href="${routeHash("edit", "new")}">Build a workout</a>
-    </div>`;
+    </div>
+    <div id="setup-later"></div>`;
+  state.noWorkouts = true;
+  // Fetched even with the card hidden: here the rest of set-up is all there is.
+  if (state.setup) drawSetup();
+  else loadSetup();
   // Nothing loaded: a caller waiting to start the session doesn't.
   return false;
+}
+
+// ---------- Getting set up ----------
+
+// Hidden for good on this device once the user says so.
+const SETUP_HIDDEN_KEY = "setup-hidden";
+const setupHidden = () => {
+  try {
+    return Boolean(storage?.getItem(SETUP_HIDDEN_KEY));
+  } catch {
+    return false; // storage blocked: the card shows
+  }
+};
+const installed = () => matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
+
+// What is left of setting up, from the server (setup.js has the rows).
+async function loadSetup() {
+  if (setupHidden() && !state.noWorkouts) return;
+  try {
+    state.setup = (await getJson(`/api/account/setup?today=${localToday()}`)).data;
+  } catch {
+    // Offline and never fetched: no card until it can be.
+  }
+  drawSetup();
+}
+
+const setupList = (rows) => `
+  <ul class="setup-list">${rows.map((row) => `
+    <li class="${row.done ? "done" : ""}">
+      ${row.done ? icon("check", "Done:") : `<span class="setup-dot" aria-hidden="true"></span>`}
+      <span>${row.href && !row.done ? `<a href="${row.href}">${escape(row.label)}</a>` : `<strong>${escape(row.label)}</strong>`}
+        ${row.done ? "" : `<span class="muted">${escape(row.hint)}</span>`}</span>
+    </li>`).join("")}
+  </ul>`;
+
+// With no workout yet, the rest of set-up sits under the "Nothing to train
+// yet" card; after, it is a card of its own above Today's, until all done
+// or hidden.
+function drawSetup() {
+  const card = $("today-setup");
+  const later = state.noWorkouts ? $("setup-later") : null;
+  if (!state.setup) {
+    card.hidden = true;
+    return;
+  }
+  const rows = setupRows(state.setup, { standalone: installed() });
+  if (later) {
+    card.hidden = true;
+    const rest = rows.filter((row) => row.key !== "program" && !row.done);
+    later.innerHTML = rest.length ? `<h3>Then, when you like</h3>${setupList(rest)}` : "";
+    return;
+  }
+  card.hidden = setupHidden() || !setupLeft(rows);
+  if (card.hidden) return;
+  card.innerHTML = `
+    <div class="setup-head">
+      <h2 id="setup-title">Getting set up</h2>
+      <button class="link" type="button" id="setup-hide">Hide</button>
+    </div>
+    ${setupList(rows)}`;
+  $("setup-hide").onclick = () => {
+    try {
+      storage?.setItem(SETUP_HIDDEN_KEY, "1");
+    } catch {
+      // Not kept: hidden until the page loads again.
+    }
+    card.hidden = true;
+    const heading = $("today").querySelector("h2");
+    heading?.setAttribute("tabindex", "-1");
+    heading?.focus();
+  };
 }
 
 // This week at a glance, with the coach's focus and concerns: beside the

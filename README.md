@@ -146,8 +146,9 @@ everyone else from Settings, Users: an invite link works once, for 7 days,
 and the person joining picks their own username and password. There the
 owner also resets a forgotten password to a temporary one, which the user
 changes when they next sign in, and removes a user with their data. A
-first sign-in shows a welcome screen: units, the gear you own and the
-example programs to import.
+first sign-in shows a welcome screen: units, the gear you own, an
+example program to import and the days you train, which go on the
+calendar. What is left to set up stays on Today until it is done.
 
 **Getting back in.** There is no email to reset a password by, so the owner
 resets one from a shell where the app runs, for any user, themselves

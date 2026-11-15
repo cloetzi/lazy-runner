@@ -166,8 +166,10 @@ this week, concerns and notes; `coach-page.js`, sheets in
 out, change the password, signed-in devices; for the owner, users and
 invites), `signin.html` (sign in, set up a fresh install, join with an
 invite, leave a temporary password) and `welcome.html` (a first sign-in:
-units, gear and example programs, each skippable; `/api/me` says
-`welcomed`). `nav.js` draws the navigation from `routes.js`
+units, gear, example programs and training days, which become weekly
+routines; counted as seen once it shows, and `/api/me` says `welcomed`).
+What is left of set-up is Today's "Getting set up" card
+(`/api/account/setup`), until done or hidden. `nav.js` draws the navigation from `routes.js`
 and asks `/api/me` who is signed in, sending a signed-out device to the
 sign-in page. What a device keeps of a user's (the outbox, a running session,
 the unit copy, the service worker's API copies) is theirs: `account.js`
@@ -188,7 +190,8 @@ tick a day off, the routine form and its requests), `coach.js` (who wrote a note
 week as days, the note and goal forms and their requests), `week.js` (how a week adds up: planned against
 done by kind, distance sums), `catalog.js`, `inventory.js`, `figure.js`
 (animation keyframes), `outbox.js`, `session-log.js`, `run-store.js`,
-`offline.js`, `preferences.js`, `routes.js`, `api.js`, `account.js`. The rest (`app.js`,
+`offline.js`, `preferences.js`, `routes.js`, `setup.js` (the set-up card's
+rows, the welcome's week plan), `api.js`, `account.js`. The rest (`app.js`,
 `editor.js`, `library.js`, `figure-view.js`, ...) renders.
 
 ## A session, end to end

@@ -17,7 +17,7 @@ export const ACCOUNT_KEY = "account";
 // What belongs to the signed-in user: the outbox, the running session, the
 // unit copy and when their data was last fetched ahead (see outbox.js,
 // run-store.js, weights.js, offline.js).
-export const USER_KEYS = ["outbox", "run", "unit", AHEAD_KEY];
+export const USER_KEYS = ["outbox", "run", "unit", AHEAD_KEY, "setup-hidden"];
 // The service worker's copies of API answers (sw.js).
 export const DATA_CACHE = "data";
 // Set while the server still has to hear of a sign-out on this device alone.

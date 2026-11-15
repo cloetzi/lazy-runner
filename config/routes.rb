@@ -21,6 +21,7 @@ Rage.routes.draw do
     get "account/identities", to: "identities#index"
     delete "account/identities/:id", to: "identities#destroy"
     post "account/welcome", to: "welcome#create"
+    get "account/setup", to: "welcome#show"
     get "users", to: "users#index"
     delete "users/:id", to: "users#destroy"
     post "users/:id/password", to: "users#reset_password"
