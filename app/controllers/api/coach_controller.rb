@@ -8,7 +8,8 @@ module Api
     #   ten of the journal: every other note, the statuses and focus since
     #   replaced and the concerns resolved included. `week` is Monday to Sunday of `today` (the
     #   sender's own date, within a day of the server's): its sessions,
-    #   activities and dated notes as plain lists, with nothing summed or
+    #   activities, dated notes, and routines with their days (as GET
+    #   /api/calendar gives them), as plain lists, with nothing summed or
     #   scored.
     # @param today? {Date} The sender's own date.
     # @response 200 #/components/schemas/CoachBoard

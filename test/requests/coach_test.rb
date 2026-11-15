@@ -272,6 +272,7 @@ describe "coach API" do
       run, = Activity.log!({ date: "2026-11-02", sport: "run" })
       Activity.log!({ date: "2026-10-31", sport: "run" })
       session = session_on(Date.new(2026, 11, 6), "planned")
+      long_run = Routine.plan!({ sport: "run", weekdays: [7], title: "Long run" }, today: Date.new(2026, 11, 4))
 
       get "/api/coach?today=2026-11-04"
 
@@ -287,6 +288,8 @@ describe "coach API" do
       _(json["week"]["activities"].map { it["id"] }).must_equal [run.id]
       _(json["week"]["sessions"].map { it["id"] }).must_equal [session.id]
       _(json["week"]["notes"].map { it["id"] }).must_equal [journal.id]
+      _(json["week"]["routines"].map { it["id"] }).must_equal [long_run.id]
+      _(json["week"]["routine_days"].map { it.values_at("routine_id", "on", "state") }).must_equal [[long_run.id, "2026-11-08", "tentative"]]
     end
 
     it "says where the journal's next page starts" do

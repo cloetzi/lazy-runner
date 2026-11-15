@@ -18,8 +18,9 @@ import { readSettings } from "./preferences.js";
 import { weightRequest, skipRequest, startRequest, setRequest, finishRequests, discardRequest } from "./session-log.js";
 import { createRunStore, restoredTimer } from "./run-store.js";
 import { markFor, longDay, localToday, moveRequest, removeRequest, STATUS_LABELS } from "./calendar.js";
-import { openSessionSheet, openLogActivitySheet, openRpeSheet, activityRow, editActivity } from "./calendar-sheets.js";
+import { openSessionSheet, openLogActivitySheet, openRpeSheet, activityRow, editActivity, weekSummaryHtml } from "./calendar-sheets.js";
 import { plannedBy } from "./coach.js";
+import { queuedWeek } from "./week.js";
 import {
   withQueuedActivities, removedActivityIds, activityKey, preferredDistanceUnit, adoptServerDistanceUnit,
   logRequest, changeRequest, rpeToAsk, readAsked, rememberAsked,
@@ -72,6 +73,7 @@ const state = {
   figure: null, // { key, view } for the animation on screen
   workout: null, // the workout open in the workout view
   workoutNote: "", // said once under the workout when it opens, such as "Saved."
+  board: null, // GET /api/coach, for the week beside Today
   shownHash: "", // the URL hash of the view on screen, for the editor to return to
   workoutFrom: "home", // the view its back button returns to
   weightSaves: {}, // exercise id -> weight changed in the workout view or on Get ready, not yet queued
@@ -129,21 +131,26 @@ function renderSetup() {
   return false;
 }
 
-// This week at a glance, beside the Today card on wide screens.
+// This week at a glance, with the coach's focus and concerns: beside the
+// Today card on wide screens, under it on narrower ones.
 async function loadWeek() {
   try {
-    const { data: history } = await getJson(`/api/history?days=7&date=${localToday()}`);
-    const done = history.weeks[0]?.done ?? 0;
-    const last = history.sessions.find((session) => session.status === "done");
-    $("week").innerHTML = `
-      <h2>This week</h2>
-      <p class="week-count"><strong>${done}</strong> ${done === 1 ? "session" : "sessions"} done</p>
-      ${last ? `<p class="muted">Last: ${escape(last.workout.title)}, ${escape(shortDate(last.date))}</p>` : ""}
-      <a class="link" href="${routeHash("history")}">See history</a>`;
-    $("week").hidden = false;
+    state.board = (await getJson(`/api/coach?today=${localToday()}`)).data;
   } catch {
-    $("week").hidden = true;
+    state.board = null;
   }
+  renderWeek();
+}
+
+// Drawn again when the day's activities or the distance unit change, with
+// what the outbox holds laid over the server's week.
+function renderWeek() {
+  const { board } = state;
+  $("week").hidden = !board;
+  if (!board) return;
+  $("week").innerHTML = weekSummaryHtml({
+    week: queuedWeek(board.week, outbox.queued(), localToday()), board, unit: state.distanceUnit, heading: "<h2>This week</h2>",
+  });
 }
 
 // Reloads the card, keeping a picked workout or session picked.
@@ -358,6 +365,7 @@ function renderActivities() {
     ${list.length ? `<h2>Activities today</h2>
       <ul class="list day-sessions">${list.map((a) => activityRow(a, state.distanceUnit, "data-today-activity", fulfils.get(activityKey(a)))).join("")}</ul>` : ""}
     <button class="link" id="log-activity">${icon("plus")}Log an activity</button>`;
+  renderWeek();
 }
 
 // A routine day's change goes straight to the server, then Today reads again.

@@ -6,6 +6,7 @@ import {
 } from "./activities.js";
 import { RPE_ANCHORS } from "./player.js";
 import { KIND_LABELS, authorLabel, plannedBy } from "./coach.js";
+import { weekSummary, summaryLine, watching } from "./week.js";
 
 // The calendar's sheets, used by the Calendar page and by Today: planning a
 // workout on a day, a session's own sheet to move, skip or remove it, and
@@ -371,4 +372,25 @@ export function openRpeSheet({ activity, unit, onRpe }) {
   };
   dialog.returnValue = "";
   showSheet(dialog);
+}
+
+// How the week adds up, on Today and over the Calendar's week: planned
+// against done by kind with the distance covered, then, for the current
+// week, the top goal, the coach's focus and what it is watching, with a
+// link to Coach. `week` holds the week's sessions, activities, routines and
+// routine days; `board` is GET /api/coach (or null, not loaded).
+export function weekSummaryHtml({ week, board = null, unit, when = "current", heading = "" }) {
+  const current = when === "current";
+  const lines = weekSummary(week).map((entry) => summaryLine(entry, unit));
+  const goal = current ? board?.goals?.[0] : null;
+  const focus = current ? board?.focus : null;
+  const concerns = current ? watching(board?.concerns) : [];
+  return `
+    ${heading}
+    ${lines.length ? `<ul class="week-kinds">${lines.map((l) => `<li><strong>${escape(l.count)}</strong> ${escape(l.label)}${l.facts.length ? `<span class="muted"> · ${escape(l.facts.join(" · "))}</span>` : ""}</li>`).join("")}</ul>`
+      : `<p class="muted">${{ current: "Nothing planned this week yet.", past: "Nothing that week.", future: "Nothing planned yet." }[when]}</p>`}
+    ${goal ? `<p class="week-goal muted">Goal: ${escape(goal.title)}</p>` : ""}
+    ${focus ? `<p class="week-focus"><strong>Focus</strong> <span class="muted">· ${escape(authorLabel(focus))}</span><br>${escape(focus.body)}</p>` : ""}
+    ${concerns.map((c) => `<p class="week-watching">${icon("info")}<span>Watching: ${escape(c)}</span></p>`).join("")}
+    ${current && board ? `<a class="link" href="/coach.html">Open Coach</a>` : ""}`;
 }

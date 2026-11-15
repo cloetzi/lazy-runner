@@ -8,7 +8,7 @@ import {
   byDay, upNext, markFor, movable, plannable, STATUS_LABELS,
   planRequest, moveRequest, skipSessionRequest, removeRequest, withQueued,
 } from "./calendar.js";
-import { openPlanSheet, openSessionSheet, openAddSheet, openLogActivitySheet, activityRow, editActivity, noteRow } from "./calendar-sheets.js";
+import { openPlanSheet, openSessionSheet, openAddSheet, openLogActivitySheet, activityRow, editActivity, noteRow, weekSummaryHtml } from "./calendar-sheets.js";
 import { openNoteSheet, aboutChoices } from "./coach-sheets.js";
 import { notesByDay, knownCoaches, noteRequest, changeNoteRequest, deleteNoteRequest, plannedBy, agentName } from "./coach.js";
 import {
@@ -60,6 +60,7 @@ const state = {
   routines: [], // the routines with days in the shown range
   routineDays: [], // their days, as the server read them on state.today
   upcoming: [], // planned and under way from today on, for what is up next
+  board: null, // GET /api/coach: the goals, focus and concerns the week header shows
   stale: false,
   failed: null,
   workouts: null, // what the plan sheet offers, loaded on first use
@@ -79,13 +80,15 @@ async function load() {
   const ticket = ++state.load;
   const { from, to } = rangeFor(view(), state.focus);
   try {
-    const [range, upcoming] = await Promise.all([
+    const [range, upcoming, board] = await Promise.all([
       getJson(`/api/calendar?from=${from}&to=${to}&today=${state.today}`),
       // Under way since yesterday counts too: a session stays under way past midnight.
       getJson(`/api/sessions?status=planned,in_progress&from=${addDays(state.today, -1)}`),
+      loadBoard(from, to),
     ]);
     if (ticket !== state.load) return;
     state.loaded = `${from}..${to}`;
+    state.board = board;
     state.sessions = range.data.sessions;
     state.activities = range.data.activities;
     state.notes = range.data.notes ?? [];
@@ -106,6 +109,18 @@ async function load() {
     state.failed = error.message;
   }
   render();
+}
+
+// The coach's side of the week header (goals, focus and concerns), read
+// only for the week holding today, the one that shows it. Without it
+// (offline, not cached) the header shows the counts only.
+async function loadBoard(from, to) {
+  if (view() !== "week" || state.today < from || state.today > to) return state.board;
+  try {
+    return (await getJson(`/api/coach?today=${state.today}`)).data;
+  } catch {
+    return state.board;
+  }
 }
 
 // Distances show in the unit the server keeps (set on any device), with
@@ -187,10 +202,14 @@ function render() {
 // The week opens on today: the days gone by fold to one line each (a tap
 // opens one), and today scrolls up under the bar when the page opens.
 // A day with a missed session stays open, so its Do today is at hand.
-function weekView({ days, activityDays, noteDays, routineDayMap, fulfils, next }) {
+function weekView({ sessions, activities, routineDays, days, activityDays, noteDays, routineDayMap, fulfils, next }) {
   const week = weekOf(state.focus);
   const thisWeek = week.includes(state.today);
-  return `<ol class="week-days">${week.map((date) => {
+  const header = `<section class="card week-summary" aria-label="${escape(thisWeek ? "This week" : weekLabel(state.focus, state.today))}">${weekSummaryHtml({
+    week: { sessions, activities, routineDays, routines: state.routines }, board: state.board, unit: distanceUnit(),
+    when: thisWeek ? "current" : week[0] > state.today ? "future" : "past",
+  })}</section>`;
+  return `${header}<ol class="week-days">${week.map((date) => {
     const parts = [days[date] ?? [], activityDays[date] ?? [], next, { notes: noteDays[date], routineDays: routineDayMap[date], fulfils }];
     const missed = parts[0].some((s) => markFor(s, state.today, next) === "missed");
     const folded = thisWeek && date < state.today && !missed && !state.unfolded.has(date);

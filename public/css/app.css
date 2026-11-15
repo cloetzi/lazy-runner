@@ -454,12 +454,19 @@ body[data-focus] .more-sheet, body[data-focus] .scrim, body[data-focus] .skip-li
 .sync.rejected { display: grid; justify-items: center; gap: var(--space-2); color: var(--accent); }
 .sync.rejected p { margin: 0; }
 
-/* This week (beside Today on wide screens only) */
+/* This week: beside Today on wide screens, under it on narrower ones, and
+   over the Calendar's week (weekSummaryHtml). */
 .week h2 { font-size: var(--text-lg); }
-.week p { margin: 0; }
-.week-count strong { font-size: var(--text-2xl); font-variant-numeric: tabular-nums; }
-.week a.link { padding: 0; align-self: flex-start; }
-@media (max-width: 59.99rem) { #week { display: none; } }
+.week p, .week-summary p { margin: 0; }
+.week a.link, .week-summary a.link { padding: 0; align-self: flex-start; }
+.week-kinds { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-1); }
+.week-kinds strong { font-size: var(--text-xl); font-variant-numeric: tabular-nums; }
+.week-focus { line-height: var(--leading); }
+.week-watching { display: flex; align-items: flex-start; gap: var(--space-2); color: var(--muted); }
+.week-watching .icon { flex: none; color: var(--accent-ink); margin-top: 0.15em; }
+.week-summary { display: grid; gap: var(--space-3); }
+.week-summary + .week-days { margin-top: var(--space-4); }
+body:not(.calendar-month) .week-summary { max-width: var(--measure); }
 
 /* Workouts */
 .workout-list, .program { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-4); }

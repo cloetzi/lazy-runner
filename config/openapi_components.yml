@@ -1008,13 +1008,15 @@ components:
         notes_before: { type: integer, nullable: true, description: "The `before` for GET /api/coach/notes?journal=true to page on; null when these are all." }
         week:
           type: object
-          required: [from, to, sessions, activities, notes]
+          required: [from, to, sessions, activities, notes, routines, routine_days]
           properties:
             from: { type: string, format: date, description: Monday. }
             to: { type: string, format: date, description: Sunday. }
             sessions: { type: array, items: { $ref: "#/components/schemas/Session" } }
             activities: { type: array, items: { $ref: "#/components/schemas/Activity" } }
             notes: { type: array, items: { $ref: "#/components/schemas/CoachNote" } }
+            routines: { type: array, description: The routines with days this week., items: { $ref: "#/components/schemas/Routine" } }
+            routine_days: { type: array, description: "Their days this week, read on `today`, as GET /api/calendar gives them.", items: { $ref: "#/components/schemas/RoutineDay" } }
     Today:
       type: object
       required: [date, source, session, day, next_planned, activities, routines, routine_days, logged, program, workout_id, title, subtitle, estimated_minutes, workouts, plan, weight_steps, unit, distance_unit]

@@ -92,8 +92,8 @@ as null when it has no value (`nullable`).
   `author_name`) or an agent (`llm`, over MCP only). The current status or
   focus is the newest of its kind; deleting it brings the one before back.
   A concern stays open until `PATCH` sends `resolved: true`. `GET /api/coach`
-  is the whole board with this week's sessions and activities as plain
-  lists, nothing summed; `GET /api/coach/notes` pages the journal with
+  is the whole board with this week's sessions, activities, routines and
+  routine days as plain lists, nothing summed; `GET /api/coach/notes` pages the journal with
   `before`.
 - **Weights** come back in the exercise's unit: the one the user's gear for
   it comes in (`unit` in `/api/equipment`, theirs to set). A weight sent in the other

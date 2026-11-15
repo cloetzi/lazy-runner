@@ -95,6 +95,7 @@ const SHELL = [
   "/js/skeleton.json",
   "/js/sports.json",
   "/js/swap.js",
+  "/js/week.js",
   "/js/weights.js",
   "/js/welcome.js",
   "/js/workout.js",

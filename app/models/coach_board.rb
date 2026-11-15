@@ -31,7 +31,7 @@ class CoachBoard
   def week_activities = Activity.where(date: week).in_order.all
   # The routines with days this week, and those days, read against the
   # board's today.
-  def week_routines = RoutineCalendar.new(week, today: @today)
+  def week_routines = @week_routines ||= RoutineCalendar.new(week, today: @today)
   def week_notes = notes.dated(week).all
 
   # The journal: every note but the current status and focus and the open
@@ -64,7 +64,8 @@ class CoachBoard
       notes_before: latest_journal.last,
       week: {
         from: week.begin.iso8601, to: week.end.iso8601,
-        sessions: week_sessions, activities: week_activities, notes: week_notes
+        sessions: week_sessions, activities: week_activities, notes: week_notes,
+        routines: week_routines.routines, routine_days: week_routines.days
       }
     }
   end
