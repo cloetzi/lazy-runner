@@ -46,6 +46,7 @@ describe "accounts and sign-in" do
 
       _(last_response.status).must_equal 403
       _(json["error"]["code"]).must_equal "forbidden"
+      _(json["error"]["fields"]).must_equal({ "setup_code" => [AuthApp::WRONG_SETUP_CODE] })
       _(User.count).must_equal 0
       _(SetupCode.active?).must_equal true
     end

@@ -19,10 +19,13 @@ module Api
     #   They choose a username and password with it (`POST
     #   /api/auth/create-account` with `invite`, the token after
     #   `#invite/`). The token is in the fragment, so no log records it.
+    #   `label`, optional, says who it is for in the owner's list.
+    # @request #/components/schemas/InviteInput
     # @response 201 #/components/schemas/NewInvite
     # @response 403 #/components/responses/Forbidden
+    # @response 422 #/components/responses/Invalid
     def create
-      invite, token = Invite.issue!
+      invite, token = Invite.issue!(label: params[:label])
       render json: { invite: invite.as_json, token:, path: Invite.path(token) }, status: :created
     end
 

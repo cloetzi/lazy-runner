@@ -23,8 +23,8 @@ const storage = (() => {
 const status = document.getElementById("signin-status");
 const next = nextPath(location.search);
 const invite = inviteToken(location.hash);
-const forms = ["signin-form", "setup-form", "join-form", "invite-signed-in", "new-password-form"].map((id) => document.getElementById(id));
-const [signinForm, setupForm, joinForm, signedInCard, newPasswordForm] = forms;
+const forms = ["signin-form", "setup-form", "join-form", "invite-signed-in", "new-password-form", "invite-gone"].map((id) => document.getElementById(id));
+const [signinForm, setupForm, joinForm, signedInCard, newPasswordForm, inviteGone] = forms;
 
 async function enter(user) {
   await adoptAccount(user, { storage, caches: globalThis.caches });
@@ -34,7 +34,8 @@ async function enter(user) {
 function show(form) {
   status.hidden = true;
   for (const other of forms) other.hidden = other !== form;
-  form.querySelector("input:not([type=hidden]), button")?.focus();
+  // The first control shown: a provider's button only where there is one.
+  [...form.querySelectorAll("input:not([type=hidden]), button")].find((control) => control.getClientRects().length)?.focus();
 }
 
 // Signed in: on, unless the password was temporary. `password` is the one
@@ -104,13 +105,16 @@ function offerRetry(message) {
   };
 }
 
-// Signing in (or joining) with the provider: off to its page, and back here.
+// Signing in (or joining) with the provider: off to its page, and back
+// here. It is the common way in where there is one, so it comes first and
+// the password's button steps back.
 function offerOidc(form, provider, body) {
   const block = form.querySelector(".oidc");
   const button = block.querySelector("button");
   const error = form.querySelector(".form-error");
   button.textContent = `${button.dataset.oidc} ${provider}`;
   block.hidden = false;
+  form.querySelector("button[type=submit]").className = "secondary";
   button.onclick = async () => {
     error.hidden = true;
     busy(button);
@@ -124,11 +128,59 @@ function offerOidc(form, provider, body) {
   };
 }
 
-document.getElementById("invite-sign-out").onclick = async () => {
+// A Show button beside every password field, so a typo on a touch keyboard
+// can be caught before it makes an account no one can get into.
+for (const input of document.querySelectorAll("input[type=password]")) {
+  // Named by its label's title alone, not the button now inside the label
+  // too, and described by the label's hint ("At least 8 characters").
+  const label = input.closest("label");
+  const title = label?.querySelector("span")?.textContent;
+  if (title) input.setAttribute("aria-label", title);
+  const hint = label?.querySelector("span.muted");
+  if (hint) {
+    hint.id ||= `${input.form.id}-${input.name}-hint`;
+    input.setAttribute("aria-describedby", hint.id);
+  }
+  const box = document.createElement("span");
+  box.className = "password-box";
+  input.replaceWith(box);
+  const toggle = document.createElement("button");
+  toggle.type = "button";
+  toggle.className = "link show-password";
+  toggle.innerHTML = `Show<span class="visually-hidden"> password</span>`;
+  toggle.onclick = () => {
+    const shown = input.type === "password";
+    input.type = shown ? "text" : "password";
+    toggle.firstChild.textContent = shown ? "Hide" : "Show";
+  };
+  box.append(input, toggle);
+}
+
+// Whether the invite link still works, asked before the form is filled in.
+// Only a clear no counts: offline or anything else, the form is shown and
+// says so itself if the link is gone.
+async function inviteWorks(token) {
+  try {
+    const response = await send("/api/auth/invite-check", { body: { invite: token } });
+    return response.status !== 404;
+  } catch {
+    return true;
+  }
+}
+
+document.getElementById("invite-gone-sign-in").onclick = () => {
+  history.replaceState(null, "", `${location.pathname}${location.search}`);
+  show(signinForm);
+};
+
+document.getElementById("invite-sign-out").onclick = async (event) => {
+  const button = event.currentTarget;
   const error = signedInCard.querySelector(".form-error");
   error.hidden = true;
+  busy(button);
   const outcome = await signOut({ storage, caches: globalThis.caches });
-  if (outcome === "done") return show(joinForm);
+  busy(button, false);
+  if (outcome === "done") return show((await inviteWorks(invite)) ? joinForm : inviteGone);
   error.textContent = outcome === "refused"
     ? "The server didn't sign you out. Reload the page and try again."
     : "Couldn't reach the server to sign out. Try again when you're online.";
@@ -152,8 +204,9 @@ if (me.user && invite) {
   document.getElementById("invite-signed-in-who").innerHTML = `This device is signed in as <strong>${escape(me.user.username)}</strong>.`;
   show(signedInCard);
 } else if (me.user) await signedIn(me.user);
-else if (invite && me.signedOut && !me.gate) show(joinForm);
+// An install with no owner yet needs setting up, invite link or not.
 else if (me.setupRequired) show(setupForm);
+else if (invite && me.signedOut && !me.gate) show((await inviteWorks(invite)) ? joinForm : inviteGone);
 else if (me.signedOut && !me.gate) {
   show(signinForm);
   if (oidcError) {

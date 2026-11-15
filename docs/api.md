@@ -169,6 +169,7 @@ as null when it has no value (`nullable`).
   | Route | Body | Does |
   |-------|------|------|
   | `POST /api/auth/create-account` | `setup_code` or `invite`, `username`, `password` | Creates the owner on a fresh install with the setup code (403 for a wrong one, 404 once there is an owner), or anyone else's account with an owner's invite (404 when it is used, expired or revoked); signs them in |
+  | `POST /api/auth/invite-check` | `invite` | Whether an invite link still works, before the join form: 204, else 404 with the same message whether it is unknown, used, revoked or expired |
   | `POST /api/auth/login` | `username`, `password` | Signs in; 401 "Wrong username or password" for an unknown user, a wrong password and a locked account alike, in the same time; 409 when signed in already; 429 after 10 tries a minute on one username |
   | `POST /api/auth/logout` | | Signs this device out (`Clear-Site-Data: "cache"`) |
   | `POST /api/auth/change-password` | `password`, `new_password`, `sign_out_others` | Changes the password; signs out every other device, revokes the API tokens and unlinks OIDC sign-ins unless `sign_out_others` is false (always when leaving a temporary password). Without a password yet (signed in only with OIDC), sets one, no `password` needed |

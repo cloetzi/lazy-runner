@@ -95,6 +95,82 @@ describe "users and invites" do
       _(last_response.status).must_equal 404
     end
 
+    it "says who it is for, when the owner labels it" do
+      post_json "/api/invites", label: "  For Sam "
+      _(last_response.status).must_equal 201
+      _(json["invite"]["label"]).must_equal "For Sam"
+      post_json "/api/invites"
+      _(json["invite"]["label"]).must_be_nil
+
+      get "/api/invites"
+      _(json["invites"].map { it["label"] }).must_equal [nil, "For Sam"]
+
+      # Refused, it changes nothing: not even the sweep of expired ones.
+      travel_to(Time.now + 8 * 86_400) do
+        post_json "/api/invites", label: "x" * 61
+        _(last_response.status).must_equal 422
+        _(json["error"]["fields"]).must_equal({ "label" => ["is longer than 60 characters"] })
+      end
+      _(Invite.count).must_equal 2
+    end
+
+    describe "checked before joining" do
+      def check(token)
+        post_json "/api/auth/invite-check", invite: token
+      end
+
+      it "says a pending link works, without using it up" do
+        token = invite!
+        sign_out!
+        check(token)
+
+        _(last_response.status).must_equal 204
+        _(last_response.body).must_equal ""
+        _(last_response.headers["content-type"]).must_be_nil
+        _(Invite.count).must_equal 1
+      end
+
+      it "answers alike for a link that is unknown, used, revoked, expired or malformed" do
+        used = invite!
+        join(used)
+        sign_out!
+        @signed_out = false
+        sign_in(user)
+        revoked = invite!
+        delete "/api/invites/#{json["invite"]["id"]}"
+        expired = invite!
+        sign_out!
+
+        answers = ["A" * 43, used, revoked, "short", nil].map do |token|
+          check(token)
+          [last_response.status, json]
+        end
+        travel_to(Time.now + 7 * 86_400 + 1) do
+          check(expired)
+          answers << [last_response.status, json]
+        end
+
+        _(answers.uniq).must_equal [[404, { "error" => { "code" => "not_found", "message" => AuthApp::INVITE_GONE } }]]
+      end
+
+      it "counts no invite on an install without an owner" do
+        token = invite!
+        User.dataset.delete
+        sign_out!
+        check(token)
+
+        _(last_response.status).must_equal 404
+      end
+
+      it "takes the app's own pages only" do
+        token = invite!
+        sign_out!
+        post "/api/auth/invite-check", JSON.generate(invite: token), "CONTENT_TYPE" => "application/json", "HTTP_SEC_FETCH_SITE" => "cross-site"
+
+        _(last_response.status).must_equal 403
+      end
+    end
+
     it "stays unused when the sign-up fails" do
       token = invite!
       join(token, "no spaces")

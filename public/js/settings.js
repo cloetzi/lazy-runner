@@ -263,6 +263,8 @@ const joined = (time) => {
   return Number.isNaN(date.getTime()) ? "" : `joined ${date.toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" })}`;
 };
 
+const until = (time) => new Date(time).toLocaleDateString(undefined, { day: "numeric", month: "short" });
+
 async function loadUsers() {
   let users;
   let invites;
@@ -288,12 +290,11 @@ async function loadUsers() {
         <button class="secondary small danger" data-remove-user="${user.id}" data-name="${escape(user.username)}">Remove</button>
       </span>`}
     </li>`).join("");
-  const until = (time) => new Date(time).toLocaleDateString(undefined, { day: "numeric", month: "short" });
   $("invite-list").innerHTML = invites.length === 0
     ? `<li class="muted">No invites waiting.</li>`
     : invites.map((invite) => `
     <li>
-      <span class="device-name">Invite link<br><span class="muted">works until ${escape(until(invite.expires_at))}</span></span>
+      <span class="device-name">${invite.label ? `<strong>${escape(invite.label)}</strong>` : "Invite link"}<br><span class="muted">works until ${escape(until(invite.expires_at))}</span></span>
       <button class="secondary small danger" data-revoke-invite="${invite.id}">Revoke</button>
     </li>`).join("");
 }
@@ -330,16 +331,30 @@ $("invite-list").onclick = async (event) => {
   loadUsers();
 };
 
-$("new-invite").onclick = async () => {
+$("new-invite-form").onsubmit = async (event) => {
+  event.preventDefault();
+  const form = event.currentTarget;
   busy($("new-invite"));
-  const json = await ownerSend("/api/invites", { body: {} });
+  const json = await ownerSend("/api/invites", { body: { label: form.elements.label.value.trim() || null } });
   busy($("new-invite"), false);
   if (!json) return;
+  form.reset();
   reveal($("new-invite-link"), new URL(json.path, location.origin).href);
+  $("new-invite-link").dataset.until = until(json.invite.expires_at);
   loadUsers();
 };
 
 $("copy-invite").onclick = () => copyFrom($("new-invite-link"), $("copy-invite"));
+// The system's share sheet, where there is one: straight into a message.
+$("share-invite").hidden = !navigator.share;
+$("share-invite").onclick = async () => {
+  const url = $("new-invite-link").querySelector("input").value;
+  try {
+    await navigator.share({ title: "Join me on The Lazy Runner", text: `Here's your invite. The link works once, until ${$("new-invite-link").dataset.until}.`, url });
+  } catch {
+    // Cancelled, or refused: Copy is still there.
+  }
+};
 $("copy-temporary-password").onclick = () => copyFrom($("temporary-password"), $("copy-temporary-password"));
 
 // The owner's, as this device knows (or, with storage blocked, as the server

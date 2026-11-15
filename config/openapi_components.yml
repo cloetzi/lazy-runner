@@ -70,11 +70,16 @@ components:
         password: { type: string, description: "16 characters in groups of four, shown only this once; the user changes it when they sign in." }
     Invite:
       type: object
-      required: [id, created_at, expires_at]
+      required: [id, label, created_at, expires_at]
       properties:
         id: { type: integer }
+        label: { type: string, nullable: true, description: "Who it is for, as the owner put it." }
         created_at: { type: string, format: date-time }
         expires_at: { type: string, format: date-time, description: 7 days after it was made. }
+    InviteInput:
+      type: object
+      properties:
+        label: { type: string, nullable: true, maxLength: 60, description: "Who it is for, such as \"For Sam\"." }
     Invites:
       type: object
       required: [invites]

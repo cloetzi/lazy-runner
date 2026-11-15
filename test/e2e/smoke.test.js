@@ -537,12 +537,13 @@ test("invites a second user, who is welcomed and sees none of the owner's things
   const owner = await ownerPage();
   await owner.page.goto("/settings.html");
   await owner.page.locator("#user-list").getByText(OWNER.username).waitFor();
+  await owner.page.locator('#new-invite-form input[name="label"]').fill("For a friend");
   await owner.page.locator("#new-invite").click();
   const linkField = owner.page.locator("#new-invite-link input");
   await linkField.waitFor();
   const link = await linkField.inputValue();
   assert.match(link, /\/signin\.html#invite\/[A-Za-z0-9_-]{43}$/);
-  await owner.page.locator("#invite-list").getByText("Invite link").waitFor();
+  await owner.page.locator("#invite-list").getByText("For a friend").waitFor();
 
   // The invite opens on another device, nobody signed in there.
   const context = await browser.newContext({ baseURL: BASE_URL, viewport: { width: 390, height: 844 } });
@@ -555,6 +556,9 @@ test("invites a second user, who is welcomed and sees none of the owner's things
   await accessible(page, "the join form");
   await join.locator('input[name="username"]').fill("e2e-friend");
   await join.locator('input[name="password"]').fill("another long password");
+  // The password can be shown, to check it before it makes the account.
+  await join.getByRole("button", { name: "Show password" }).click();
+  assert.equal(await join.locator('input[name="password"]').getAttribute("type"), "text");
   await join.getByRole("button", { name: "Create my account" }).click();
 
   // Welcome: kilograms, a kettlebell, and one example program.
@@ -624,6 +628,17 @@ test("invites a second user, who is welcomed and sees none of the owner's things
   // The generic weight comes with the kettlebell.
   const owned = (await read("/api/equipment")).filter((item) => item.owned);
   assert.deepEqual(owned.map((item) => [item.slug, item.weights]), [["weight", [35]], ["kettlebell", [35]]]);
+
+  // The used link, opened again on another device, says so before any form.
+  const stranger = await browser.newContext({ baseURL: BASE_URL });
+  const strangerPage = await stranger.newPage();
+  await strangerPage.goto(link);
+  await strangerPage.locator("#invite-gone").getByText("This invite link doesn't work").waitFor();
+  assert.equal(await strangerPage.locator("#join-form").isHidden(), true);
+  await accessible(strangerPage, "a used invite link");
+  await strangerPage.getByRole("button", { name: "I have an account: sign in" }).click();
+  await strangerPage.locator("#signin-form").getByText("Forgot it?").waitFor();
+  await stranger.close();
 
   // Only the owner manages users; the owner now sees them, the invite used.
   await page.goto("/settings.html");

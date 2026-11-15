@@ -29,6 +29,10 @@
 
     <form class="card form" id="signin-form" hidden>
       <h2>Sign in</h2>
+      <div class="oidc" hidden>
+        <button class="primary" type="button" data-oidc="Sign in with">Sign in with single sign-on</button>
+        <p class="muted oidc-or">or with a password</p>
+      </div>
       <label class="form-field">
         <span>Username</span>
         <input name="username" autocomplete="username" autocapitalize="none" spellcheck="false" required>
@@ -39,15 +43,13 @@
       </label>
       <p class="form-error" role="alert" hidden></p>
       <button class="primary" type="submit">Sign in</button>
-      <div class="oidc" hidden>
-        <p class="muted oidc-or">or</p>
-        <button class="secondary" type="button" data-oidc="Sign in with">Sign in with single sign-on</button>
-      </div>
+      <p class="muted small-print">Forgot it? The person who runs this install can reset it to a temporary one for you.</p>
     </form>
 
     <form class="card form" id="setup-form" hidden>
       <h2>Create the owner account</h2>
-      <p class="muted">This install has no accounts yet. The setup code is in the server's log, printed when it started.</p>
+      <p class="muted">This install has no accounts yet. The setup code is in the server's log, printed when it started; a restart prints a new one. With Docker:</p>
+      <p><code class="command">docker logs &lt;container&gt; 2&gt;&amp;1 | grep "setup code"</code></p>
       <label class="form-field">
         <span>Setup code</span>
         <input name="setup_code" autocomplete="off" autocapitalize="characters" spellcheck="false" required>
@@ -68,7 +70,11 @@
 
     <form class="card form" id="join-form" hidden>
       <h2>Join The Lazy Runner</h2>
-      <p class="muted">You were invited. Choose a username and a password to sign in with. The link works once.</p>
+      <p class="muted">You were invited. Choose a username and a password to sign in with; the link works once. Then a few quick questions, and you can start.</p>
+      <div class="oidc" hidden>
+        <button class="primary" type="button" data-oidc="Join with">Join with single sign-on</button>
+        <p class="muted oidc-or">or with a password</p>
+      </div>
       <label class="form-field">
         <span>Username</span>
         <input name="username" autocomplete="username" autocapitalize="none" spellcheck="false" minlength="3" maxlength="40" pattern="[A-Za-z0-9._\-]+" required>
@@ -81,11 +87,15 @@
       </label>
       <p class="form-error" role="alert" hidden></p>
       <button class="primary" type="submit">Create my account</button>
-      <div class="oidc" hidden>
-        <p class="muted oidc-or">or</p>
-        <button class="secondary" type="button" data-oidc="Join with">Join with single sign-on</button>
-      </div>
     </form>
+
+    <section class="card form" id="invite-gone" hidden>
+      <h2>This invite link doesn't work</h2>
+      <p>It may have expired, been used already, or been revoked. Ask whoever sent it for a new one.</p>
+      <div class="account-actions">
+        <button class="secondary" type="button" id="invite-gone-sign-in">I have an account: sign in</button>
+      </div>
+    </section>
 
     <section class="card form" id="invite-signed-in" hidden>
       <h2>You're signed in already</h2>

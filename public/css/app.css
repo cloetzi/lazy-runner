@@ -1169,6 +1169,16 @@ body:has(#player:not([hidden])) .toast { top: var(--toast-top, calc(max(var(--sp
 
 /* Sign-in and account forms (signin.html, the Account card in Settings). */
 .signin { max-width: 26rem; margin-inline: auto; }
+/* On a tall screen (an iPad upright) the card sits in the middle, not at the top. */
+@media (min-height: 50rem) and (min-width: 40rem) { .signin { justify-content: center; } }
+.password-box { display: flex; align-items: center; gap: var(--space-2); }
+.password-box input { flex: 1; min-width: 0; }
+button.show-password { flex: none; min-height: 2.75rem; min-width: 2.75rem; font-weight: 600; }
+code.command { display: block; padding: var(--space-2) var(--space-3); overflow-x: auto; border-radius: var(--radius-sm); background: var(--bg); font-size: var(--text-sm); }
+@media (max-width: 30rem) {
+  #user-list > li { flex-wrap: wrap; }
+  #user-list .account-actions { flex-basis: 100%; }
+}
 /* The welcome screen (welcome.html): one step at a time. */
 .welcome { max-width: 40rem; margin-inline: auto; }
 .welcome h2:focus { outline: none; }
@@ -1223,7 +1233,7 @@ body:has(#player:not([hidden])) .toast { top: var(--toast-top, calc(max(var(--sp
 .device-list .example-contents li { display: block; }
 .example-contents li span { display: block; font-size: var(--text-sm); }
 .account-actions { display: flex; flex-wrap: wrap; gap: var(--space-2); }
-/* Signing in with the install's OIDC provider, under the password form. */
+/* Signing in with the install's OIDC provider: first, above the password fields. */
 .oidc { display: grid; gap: var(--space-2); }
 .oidc-or { margin: 0; text-align: center; }
 .form-field input.token-secret { font-family: ui-monospace, monospace; font-size: var(--text-sm); }

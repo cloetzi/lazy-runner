@@ -70,6 +70,7 @@ class AuthApp < Roda
   TOKEN_REFUSED = "Manage the account from a signed-in browser, not with an API token".freeze
   USER_MISMATCH = "This change was made by another user, who is no longer signed in here".freeze
   INVITE_GONE = "This invite link has expired, been used or been revoked; ask for a new one".freeze
+  WRONG_SETUP_CODE = "Wrong setup code. It is the newest one in the server's log; a restart prints a new one".freeze
   # Argon2id at the cost real passwords are hashed with: verifying against
   # it takes as long as verifying a real one.
   HASH_COST = (Rage.env.test? ? { t_cost: 1, m_cost: 5, p_cost: 1 } : { t_cost: 2, m_cost: 16, p_cost: 1 }).freeze
@@ -248,14 +249,14 @@ class AuthApp < Roda
         # An invite is an owner's: on an install without one, none counts.
         # One time for the check and its use, so it can't expire in between.
         @invited_at = Time.now
-        throw_error_status(404, "invite", INVITE_GONE) if first || !Invite.pending_token?(invite, now: @invited_at)
+        throw_error_status(404, "invite", INVITE_GONE) unless Invite.usable?(invite, now: @invited_at)
         @invite = invite
       else
         unless first
           set_response_error_status(404)
           throw_error("setup_code", "This install already has an owner; sign in instead")
         end
-        throw_error_status(403, "setup_code", "Wrong setup code") unless SetupCode.match?(param("setup_code"))
+        throw_error_status(403, "setup_code", WRONG_SETUP_CODE) unless SetupCode.match?(param("setup_code"))
       end
 
       account[:owner] = first
@@ -585,7 +586,20 @@ class AuthApp < Roda
     if (me || path.start_with?(PREFIX)) && rodauth.logged_in? && !rodauth.currently_active_session?
       rodauth.clear_session
     end
-    r.on("api", "auth") { r.rodauth }
+    r.on("api", "auth") do
+      # Whether an invite link still works, asked before the join form is
+      # shown: 204, else a 404 that reads the same whether the token is
+      # unknown, used, revoked or expired, as joining with it would. A token
+      # is too long to guess (256 bits) and checking one hashes no
+      # password, so this isn't counted (a total shared by everyone could
+      # be used up to keep invitees out).
+      r.post("invite-check") do
+        halt_json(404, INVITE_GONE) unless Invite.usable?(rodauth.param_or_nil("invite"))
+        response.status = 204
+        request.halt
+      end
+      r.rodauth
+    end
 
     if GUARDED.match?(path) && !PUBLIC.match?(path)
       # /api/me answers for itself: who is signed in, or whether to set up.

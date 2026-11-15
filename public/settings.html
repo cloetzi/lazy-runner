@@ -70,11 +70,20 @@
       <h2>Invites</h2>
       <p class="muted">Someone joins with an invite link, choosing their own username and password. A link works once, for 7 days.</p>
       <ul class="device-list" id="invite-list"></ul>
-      <button class="secondary" type="button" id="new-invite">Make an invite link</button>
+      <form class="form" id="new-invite-form">
+        <label class="form-field">
+          <span>Who is it for? <span class="muted">(optional)</span></span>
+          <input name="label" maxlength="60" placeholder="For Sam" autocomplete="off">
+        </label>
+        <button class="secondary" type="submit" id="new-invite">Make an invite link</button>
+      </form>
       <div class="form" id="new-invite-link" hidden>
         <p><strong>Send this link</strong> to the person joining. It won't be shown again.</p>
         <label class="form-field"><span>Invite link</span><input class="token-secret" readonly></label>
-        <button class="secondary" type="button" id="copy-invite">Copy</button>
+        <div class="account-actions">
+          <button class="secondary" type="button" id="copy-invite">Copy</button>
+          <button class="secondary" type="button" id="share-invite" hidden>Share</button>
+        </div>
       </div>
       <p class="form-error" id="users-error" role="alert" hidden></p>
     </section>

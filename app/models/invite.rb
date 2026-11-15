@@ -10,6 +10,7 @@ class Invite < Record
   DAYS = 7
   # 32 random bytes, base64url.
   LENGTH = 43
+  MAX_LABEL = 60
 
   dataset_module do
     def pending(now = Time.now) = where { expires_at > now }
@@ -17,16 +18,26 @@ class Invite < Record
     def latest_first = order(Sequel.desc(:created_at), Sequel.desc(:id))
   end
 
-  # A new invite: the record, and its token, which is never seen again.
-  # Expired invites go first.
-  def self.issue!(now: Time.now)
-    sweep!(now)
+  # A new invite, with an optional `label` saying who it is for: the
+  # record, and its token, which is never seen again. Expired invites go
+  # first.
+  def self.issue!(label: nil, now: Time.now)
     token = SecureRandom.urlsafe_base64(32)
-    [create(digest: digest(token), expires_at: now + DAYS * 86_400), token]
+    # A refused label leaves the expired ones be.
+    invite = db.transaction do
+      sweep!(now)
+      create(label:, digest: digest(token), expires_at: now + DAYS * 86_400)
+    end
+    [invite, token]
   end
 
   # Whether the token is a pending invite's.
   def self.pending_token?(token, now: Time.now) = !with_token(token, now).empty?
+
+  # Whether someone can join with the token now: a pending invite's, on an
+  # install with an owner (on one without, no invite counts). Joining and
+  # the check before the join form ask the same.
+  def self.usable?(token, now: Time.now) = !User.empty? && pending_token?(token, now:)
 
   # Uses the invite up: true when the token was a pending one. Run inside
   # the transaction that makes the account, so two people can't both join
@@ -45,7 +56,18 @@ class Invite < Record
 
   def self.path(token) = "/signin.html#invite/#{token}"
 
+  def before_validation
+    self.label = label.strip.presence if label.is_a?(String)
+    super
+  end
+
+  def validate
+    super
+    validates_type String, :label, allow_nil: true
+    validates_max_length MAX_LABEL, :label, message: "is longer than #{MAX_LABEL} characters" if label.is_a?(String)
+  end
+
   def as_json(*)
-    { id:, created_at:, expires_at: }
+    { id:, label:, created_at:, expires_at: }
   end
 end

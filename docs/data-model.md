@@ -339,6 +339,7 @@ erDiagram
     invites {
         int id PK
         string digest UK "SHA-256 of the token, shown once"
+        string label "who it is for, as the owner put it; optional"
         datetime expires_at "7 days on; used or revoked, it is deleted"
     }
     account_active_session_keys {
