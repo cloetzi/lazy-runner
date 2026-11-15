@@ -72,13 +72,13 @@
   <main id="ready" class="view" hidden>
     <section class="card">
       <p class="muted">Get ready</p>
-      <h2 id="ready-title"></h2>
+      <h1 id="ready-title"></h1>
       <section class="ready-section" id="ready-need">
-        <h3>You'll need</h3>
+        <h2>You'll need</h2>
         <ul class="list" id="ready-pickup"></ul>
       </section>
       <section class="ready-section" id="ready-weights">
-        <h3>Weights today</h3>
+        <h2>Weights today</h2>
         <ul class="targets" id="ready-targets"></ul>
       </section>
       <button class="primary" id="ready-go">Ready</button>
@@ -107,7 +107,7 @@
       </div>
       <div class="stage-text">
       <p class="phase" id="phase"></p>
-      <h2 class="exercise" id="exercise-name"></h2>
+      <h1 class="exercise" id="exercise-name"></h1>
       <p class="set-label" id="set-label" hidden></p>
       <p class="side" id="side" hidden></p>
       <p class="target" id="target" role="button" tabindex="0" aria-label="Pause or resume the countdown"></p>
@@ -144,9 +144,9 @@
         <button class="secondary small" id="skip-part" hidden></button>
       </div>
       <div class="controls">
-        <button class="secondary" id="prev" aria-label="Previous step"><svg class="icon" aria-hidden="true"><use href="/icons/sprite.svg#chevron-left"/></svg><span class="label">Back</span></button>
+        <button class="secondary" id="prev"><svg class="icon" aria-hidden="true"><use href="/icons/sprite.svg#chevron-left"/></svg><span class="label">Back</span></button>
         <button class="primary" id="main-action">Done</button>
-        <button class="secondary" id="skip" aria-label="Skip step"><span class="label">Skip</span><svg class="icon" aria-hidden="true"><use href="/icons/sprite.svg#chevron-right"/></svg></button>
+        <button class="secondary" id="skip"><span class="label">Skip</span><svg class="icon" aria-hidden="true"><use href="/icons/sprite.svg#chevron-right"/></svg></button>
       </div>
     </footer>
     <dialog id="end-sheet" class="sheet"></dialog>
@@ -156,17 +156,17 @@
     <section class="card" id="finish-form">
       <header class="finish-head">
         <span class="done-badge" id="finish-badge"><svg class="icon" aria-hidden="true"><use href="/icons/sprite.svg#check"/></svg></span>
-        <h2 id="finish-title">Done!</h2>
+        <h1 id="finish-title">Done!</h1>
       </header>
       <dl class="stats" id="finish-stats"></dl>
       <p class="muted" id="summary"></p>
       <div id="changes-box" hidden>
-        <h3>Weights for next time</h3>
+        <h2>Weights for next time</h2>
         <ul class="changes" id="changes"></ul>
       </div>
-      <h3>How hard was it? <span class="muted">(optional)</span></h3>
+      <h2>How hard was it? <span class="muted">(optional)</span></h2>
       <div class="rpe segmented" id="rpe" role="group" aria-label="How hard it was"></div>
-      <h3>The weights felt <span class="muted">(optional)</span></h3>
+      <h2>The weights felt <span class="muted">(optional)</span></h2>
       <div class="feedback segmented" role="group" aria-label="How the weights felt">
         <button data-feedback="too_easy" aria-pressed="false">Too easy</button>
         <button data-feedback="right" aria-pressed="false">Right</button>
@@ -177,7 +177,7 @@
     <section class="card finish-saved" id="finish-done" hidden>
       <header class="finish-head">
         <span class="done-badge"><svg class="icon" aria-hidden="true"><use href="/icons/sprite.svg#check"/></svg></span>
-        <h2>Saved</h2>
+        <h1>Saved</h1>
       </header>
       <p id="finish-result"></p>
       <ul class="targets" id="finish-suggestions"></ul>

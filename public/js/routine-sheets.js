@@ -1,4 +1,4 @@
-import { escape, icon, authorLine } from "./html.js";
+import { escape, icon, authorLine, showSheet } from "./html.js";
 import { longDay, weekdayDay, weekOf } from "./calendar.js";
 import { KNOWN_SPORTS, sportIcon, sportLabel, formatDistance } from "./activities.js";
 import { plannedBy } from "./coach.js";
@@ -130,7 +130,7 @@ export function openRoutineDaySheet({ day, routine, unit, today, on }) {
     if (answer.startsWith("move:")) on.onMove(answer.slice(5));
   };
   dialog.returnValue = "";
-  dialog.showModal();
+  showSheet(dialog);
 }
 
 // Plans a routine, or changes `routine`. A new one starts on `date`: weekly
@@ -251,5 +251,5 @@ export function openRoutineSheet({ routine = null, date, once = false, unit, tod
     }
     dialog.close();
   });
-  dialog.showModal();
+  showSheet(dialog);
 }

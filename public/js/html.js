@@ -23,3 +23,16 @@ export function busy(button, on = true) {
   if (on) button.setAttribute("aria-busy", "true");
   else button.removeAttribute("aria-busy");
 }
+
+// Opens a dialog as a modal sheet, named by its first heading so a screen
+// reader says "How to, dialog" rather than just "dialog".
+export function showSheet(dialog) {
+  const heading = dialog.querySelector("h1, h2, h3");
+  if (heading) {
+    heading.id ||= `${dialog.id || "sheet"}-title`;
+    dialog.setAttribute("aria-labelledby", heading.id);
+  } else {
+    dialog.removeAttribute("aria-labelledby");
+  }
+  dialog.showModal();
+}

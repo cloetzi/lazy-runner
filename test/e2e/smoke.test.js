@@ -8,7 +8,12 @@
 import { test, before, after } from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
+import { createRequire } from "node:module";
 import { chromium, request } from "playwright";
+
+// axe-core, run in the page at a few points along the way: WCAG A and AA
+// plus axe's best practices, so a missing name or a skipped heading fails.
+const axeSource = await readFile(createRequire(import.meta.url).resolve("axe-core/axe.min.js"), "utf8");
 
 const BASE_URL = process.env.BASE_URL ?? "http://localhost:3000";
 const SERVER_LOG = process.env.SERVER_LOG ?? "server.log";
@@ -46,6 +51,17 @@ async function setupCode() {
   const code = [...log.matchAll(/the setup code ([A-Z0-9-]+)/g)].at(-1)?.[1];
   assert.ok(code, `no setup code in ${SERVER_LOG}: start the server on a fresh database, logging there`);
   return code;
+}
+
+// No axe violations on what the page shows now. The count's name is the
+// player's to fix (#245), so it is left out until then.
+async function accessible(page, where) {
+  if (!(await page.evaluate(() => "axe" in window))) await page.evaluate(axeSource);
+  const { violations } = await page.evaluate(() => axe.run({ exclude: [["#target"]] }, {
+    runOnly: ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa", "best-practice"],
+  }));
+  const found = violations.map((v) => `${v.id}: ${v.nodes.map((node) => node.target.join(" ")).join(", ")}`);
+  assert.deepEqual(found, [], `axe on ${where}`);
 }
 
 // Opens a page as the owner, its errors collected.
@@ -129,6 +145,8 @@ test("runs Workout 1, finishes offline and syncs once back online", async () => 
 
   await page.goto(`/#workout/${workout.id}`);
   await page.locator("#workout-start").click();
+  await page.locator("#ready-go").waitFor();
+  await accessible(page, "Get ready");
   await page.locator("#ready-go").click();
 
   // The warm-up comes first; skip the rest of it in one go, which can be undone.
@@ -138,6 +156,7 @@ test("runs Workout 1, finishes offline and syncs once back online", async () => 
   await page.locator("#skip-part").waitFor(); // back in the warm-up
   await page.locator("#skip-part").click();
   await page.locator("#player").getByText("Goblet squat", { exact: true }).waitFor();
+  await accessible(page, "the player");
   await tapMain(page); // goblet squat, set 1
   await page.locator("#player").getByText("Straight-leg deadlift", { exact: true }).waitFor();
   await tapMain(page); // deadlift, set 1
@@ -154,6 +173,7 @@ test("runs Workout 1, finishes offline and syncs once back online", async () => 
   // Every countdown has a visible Pause button that turns into Resume.
   await page.locator("#pause").click();
   await page.locator("#paused-note").waitFor();
+  await accessible(page, "a paused rest");
   assert.equal(await page.locator("#pause").textContent(), "Resume");
   await page.locator("#pause").click();
   await page.locator("#paused-note").waitFor({ state: "hidden" });
@@ -166,7 +186,11 @@ test("runs Workout 1, finishes offline and syncs once back online", async () => 
   await page.locator("#player").getByText("Goblet squat", { exact: true }).waitFor();
   await tapMain(page); // goblet squat, set 2, logged offline
   await page.locator("#quit").click();
+  await page.locator('#end-sheet button[value="finish"]').waitFor();
+  await accessible(page, "the end sheet");
   await page.locator('#end-sheet button[value="finish"]').click();
+  await page.locator('[data-feedback="right"]').waitFor();
+  await accessible(page, "the finish screen");
   await page.locator('[data-feedback="right"]').click();
   await page.locator("#finish-save").click();
   await page.locator("#finish-result").getByText("Saved on this device").waitFor();
@@ -245,6 +269,8 @@ test("logs a run on the calendar, and Today asks how hard an imported one was", 
   });
 
   await page.locator(`[data-add="${today}"]`).click();
+  await page.locator('#add-sheet button[value="activity"]').waitFor();
+  await accessible(page, "the calendar with the add sheet open");
   await page.locator('#add-sheet button[value="activity"]').click();
   const sheet = page.locator("#activity-log-sheet");
   await sheet.locator('input[name="sport"]').fill("Run");
@@ -342,6 +368,7 @@ test("builds a workout of your own in the editor and runs it", async () => {
   await form.locator("select[data-field=warmup]").selectOption("none");
   await form.locator("select[data-field=cooldown]").selectOption("none");
   await addExercise("Dead bug");
+  await accessible(page, "the editor");
   await addExercise("Push-up");
   // Push-ups first: the step's own up button, then fewer reps.
   const pushUp = form.locator(".editor-step", { hasText: "Push-up" });
@@ -380,6 +407,8 @@ test("sets a goal on the Coach tab, writes a status, and accepts the agent's pro
   await page.goto("/coach.html");
   await page.locator("[data-add-goal]").click();
   const goalSheet = page.locator("#goal-sheet");
+  await goalSheet.locator('input[name="title"]').waitFor();
+  await accessible(page, "the Coach tab with the goal sheet open");
   await goalSheet.locator('input[name="title"]').fill("Ski season with quiet knees");
   await goalSheet.getByRole("button", { name: "Save" }).click();
   await page.locator(".goal-list").getByText("Ski season with quiet knees").waitFor();
@@ -420,6 +449,7 @@ test("makes an API token on Settings that an assistant signs in to /mcp with", a
   await page.goto("/settings.html");
   // The About card names the running version: a release, or a dev build.
   await page.locator("#about-version").getByText(/^The Lazy Runner( \d+\.\d+\.\d+|, development build)$/).waitFor();
+  await accessible(page, "Settings");
   await page.locator('#new-token input[name="name"]').fill("Trainer agent");
   await page.locator("#new-token").getByRole("button", { name: "Make a token" }).click();
   await page.waitForFunction(() => document.querySelector("#new-token-secret input").value !== "");
@@ -471,6 +501,8 @@ test("invites a second user, who is welcomed and sees none of the owner's things
   page.on("pageerror", (error) => errors.push(error.message));
   await page.goto(link);
   const join = page.locator("#join-form");
+  await join.waitFor();
+  await accessible(page, "the join form");
   await join.locator('input[name="username"]').fill("e2e-friend");
   await join.locator('input[name="password"]').fill("another long password");
   await join.getByRole("button", { name: "Create my account" }).click();
@@ -478,6 +510,8 @@ test("invites a second user, who is welcomed and sees none of the owner's things
   // Welcome: kilograms, a kettlebell, and one example program.
   await page.waitForURL(/\/welcome\.html$/);
   const step = () => page.locator("[data-step]:not([hidden])");
+  await step().getByRole("button", { name: "kg" }).waitFor();
+  await accessible(page, "the welcome screen");
   await step().getByRole("button", { name: "kg" }).click();
   await step().locator('[data-value="kg"][aria-pressed="true"]').waitFor();
   await step().getByRole("button", { name: "Next" }).click();

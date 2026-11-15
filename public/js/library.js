@@ -104,13 +104,15 @@ function markSelected(selector, selected) {
   for (const button of document.querySelectorAll(selector)) button.setAttribute("aria-pressed", String(selected(button)));
 }
 
+// Cards take the level under the section's title, or under the page's.
 function section(id, title, list) {
   const element = document.getElementById(id);
   element.hidden = list.length === 0;
-  element.innerHTML = `${title ? `<h2>${title}</h2>` : ""}<div class="library-grid">${list.map(card).join("")}</div>`;
+  const level = title ? 3 : 2;
+  element.innerHTML = `${title ? `<h2>${title}</h2>` : ""}<div class="library-grid">${list.map((exercise) => card(exercise, level)).join("")}</div>`;
 }
 
-function card(exercise) {
+function card(exercise, level) {
   const details = [exercise.category, ...equipmentNames(exercise.equipment)];
   if (exercise.unilateral) details.push("per side");
   if (exercise.alternating) details.push("alternating sides");
@@ -120,7 +122,7 @@ function card(exercise) {
       ${exercise.animation
         ? `<div class="figure-box" data-figure="${exercise.id}"></div>`
         : `<div class="figure-box placeholder"><span>No animation yet</span></div>`}
-      <h3>${escape(exercise.name)}</h3>
+      <h${level}>${escape(exercise.name)}</h${level}>
       <p class="muted">${escape(details.join(" · "))}</p>
       ${you.map((line) => `<p class="card-you">${escape(line)}</p>`).join("")}
       <ul class="card-cues">${exercise.cues.map((cue) => `<li>${escape(cue)}</li>`).join("")}</ul>

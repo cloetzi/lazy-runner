@@ -5,7 +5,7 @@ import { pageAccount, signInHref, syncNote } from "./account.js";
 import { stepTargetWeight, sameWeight, sameShownWeight, inUnit, preferredUnit, adoptServerUnit, formatWeight, formatLoad } from "./weights.js";
 import { createFigure } from "./figure-view.js";
 import { openHowto, equipmentNames, loadEquipmentNames, knowsEquipmentNames } from "./howto.js";
-import { escape, icon, authorLine, busy } from "./html.js";
+import { escape, icon, authorLine, busy, showSheet } from "./html.js";
 import { offlineToday } from "./offline.js";
 import { blockName, blockSummary, stepSummary, alternatingText, setWeight, includedKinds, framingFor, framePlan, gearList } from "./workout.js";
 import { previousIndex, switchesSides, mainActionLabel, tapAccepted, holdStatus, unloggedExercises, plannedExercise, swapRun, resumeChoice, sessionProgress, endsEarly, loggedFromServer, pickUpIndex, partEnd, setLabel, minutesLeft, tempoText, leadInSeconds, extraSeconds, upNextDetails, equipmentChanges, finishSummary, RPE_ANCHORS } from "./player.js";
@@ -204,7 +204,7 @@ function renderToday() {
   const toggles = workouts.length > 1 && !["in_progress", "done"].includes(status);
   const parts = workouts.map((w) => {
     const on = kinds.includes(w.kind);
-    const toggle = toggles ? `<input type="checkbox" class="part-toggle" data-part="${w.kind}"${on ? " checked" : ""}${w.kind === "workout" ? " disabled" : ""} aria-label="Include the ${escape(w.title)}">` : "";
+    const toggle = toggles ? `<label class="part-target"><input type="checkbox" class="part-toggle" data-part="${w.kind}"${on ? " checked" : ""}${w.kind === "workout" ? " disabled" : ""} aria-label="Include the ${escape(w.title)}"></label>` : "";
     return `<li class="${[toggles && "part-row", !on && "left-out"].filter(Boolean).join(" ")}">${toggle}<button class="row" data-view="${w.id}">
       <span class="row-text"><span class="row-title">${escape(w.title)}</span><span class="row-meta">${w.estimated_minutes} min</span></span>${icon("chevron-right")}</button></li>`;
   }).join("");
@@ -439,11 +439,11 @@ async function openWorkouts() {
       const frame = program.workouts.filter((w) => w.kind !== "workout");
       return `
         <section class="program">
-          ${programs.length > 1 ? `<h2>${escape(program.name)}</h2>` : ""}
-          <div class="workout-grid">${mains.map(workoutCard).join("")}</div>
+          <h2${programs.length > 1 ? "" : ` class="visually-hidden"`}>${escape(program.name)}</h2>
+          <div class="workout-grid">${mains.map((w) => workoutCard(w, 3)).join("")}</div>
           ${frame.length ? `<h3>Every session</h3>
             <p class="muted">Each workout starts with the warm-up and ends with the cool-down. Leave them out on Today, or start one on its own.</p>
-            <div class="workout-grid">${frame.map(workoutCard).join("")}</div>` : ""}
+            <div class="workout-grid">${frame.map((w) => workoutCard(w, 4)).join("")}</div>` : ""}
         </section>`;
     }).join("");
   } catch (error) {
@@ -451,7 +451,8 @@ async function openWorkouts() {
   }
 }
 
-function workoutCard(workout) {
+// `level`: the card's heading, under the program's (h2) or Every session's (h3).
+function workoutCard(workout, level) {
   const main = workout.kind === "workout";
   const minutes = workout.framed_minutes > workout.estimated_minutes
     ? `${workout.estimated_minutes} min, ${workout.framed_minutes} with warm-up and cool-down`
@@ -464,7 +465,7 @@ function workoutCard(workout) {
   return `
     <article class="card workout-card${workout.up_next ? " up-next" : ""}">
       <a class="workout-link" href="${routeHash("workout", workout.id)}">
-        <h3>${escape(workout.title)}${workout.up_next ? ` <span class="badge">Up next</span>` : ""}</h3>
+        <h${level}>${escape(workout.title)}${workout.up_next ? ` <span class="badge">Up next</span>` : ""}</h${level}>
         ${workout.subtitle ? `<p class="muted">${escape(workout.subtitle)}</p>` : ""}
         <p class="facts">${facts.map((fact) => `<span>${fact}</span>`).join("")}</p>
         <ul class="workout-exercises">${shown.join("")}</ul>
@@ -511,7 +512,7 @@ function renderWorkout() {
   $("workout-subtitle").textContent = [workout.subtitle, `about ${workout.estimated_minutes} min`].filter(Boolean).join(" · ");
   $("workout-blocks").innerHTML = workout.blocks.map((block, b) => `
     <section class="card block">
-      <h3 class="block-head"><span class="block-label">${escape(blockName(block.label))}</span><span class="block-meta">${escape(blockSummary(block))}</span></h3>
+      <h2 class="block-head"><span class="block-label">${escape(blockName(block.label))}</span><span class="block-meta">${escape(blockSummary(block))}</span></h2>
       <ol class="steps">${block.steps.map((step, s) => stepRow(step, `${b}:${s}`)).join("")}</ol>
     </section>`).join("");
   $("workout-start").hidden = false;
@@ -532,7 +533,7 @@ function renderWorkoutOwn() {
     return;
   }
   own.innerHTML = `
-    <h3>Your workout</h3>
+    <h2>Your workout</h2>
     <p class="muted">Change its name, warm-up and cool-down, and its blocks and exercises.</p>
     <div class="card-actions">
       <a class="button secondary small" href="${routeHash("edit", workout.id)}" id="workout-edit">Edit</a>
@@ -1219,7 +1220,7 @@ function quit() {
     if (sheet.returnValue === "discard") return discardRun(state.run);
     if (running) togglePause();
   }, { once: true });
-  sheet.showModal();
+  showSheet(sheet);
 }
 
 function finishEarly(run) {

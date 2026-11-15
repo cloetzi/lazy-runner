@@ -1,4 +1,4 @@
-import { escape, icon, busy } from "./html.js";
+import { escape, icon, busy, showSheet } from "./html.js";
 import { longDay } from "./calendar.js";
 import { KINDS, KIND_LABELS, noteFields, goalFields, authorLabel } from "./coach.js";
 
@@ -66,7 +66,7 @@ function openAgentNoteSheet({ note, onDelete }) {
     error.textContent = problem;
     error.hidden = false;
   });
-  dialog.showModal();
+  showSheet(dialog);
 }
 
 // Writes a note, or edits `note`. `kind` picks the kind a new one starts as;
@@ -160,7 +160,7 @@ export function openNoteSheet({ note = null, kind = "note", date = "", about = [
     author: authorSelect.value, authorName: form.elements.authorName.value,
   }, { editing });
   saveOnSubmit(dialog, form, read, onSave);
-  dialog.showModal();
+  showSheet(dialog);
   if (!editing) form.elements.body.focus();
 }
 
@@ -211,7 +211,7 @@ export function openGoalSheet({ goal = null, onSave, onStatus, onDelete }) {
   saveOnSubmit(dialog, form, () => goalFields({
     title: form.elements.title.value, why: form.elements.why.value, target_date: form.elements.target_date.value,
   }), onSave);
-  dialog.showModal();
+  showSheet(dialog);
   if (!editing) form.elements.title.focus();
 }
 
@@ -233,7 +233,7 @@ export function openResolveSheet({ note, onResolve }) {
     </form>`;
   const form = dialog.querySelector("form");
   saveOnSubmit(dialog, form, () => ({ fields: form.elements.resolution.value, problems: [] }), onResolve);
-  dialog.showModal();
+  showSheet(dialog);
 }
 
 // What a note can be about: the activities and sessions given, newest day first.

@@ -22,7 +22,7 @@
     </header>
 
     <section class="card setting" id="account">
-      <h3>Account</h3>
+      <h2>Account</h2>
       <p id="account-who">Signed in.</p>
       <p class="form-error" id="account-error" role="alert" hidden></p>
       <div class="account-actions">
@@ -59,7 +59,7 @@
     </section>
 
     <section class="card setting" id="users" hidden>
-      <h3>Users</h3>
+      <h2>Users</h2>
       <p class="muted">Everyone here has their own workouts, sessions, gear and settings; the exercise library is shared.</p>
       <ul class="device-list" id="user-list"></ul>
       <div class="form" id="temporary-password" hidden>
@@ -67,7 +67,7 @@
         <label class="form-field"><span>Temporary password</span><input class="token-secret" readonly></label>
         <button class="secondary" type="button" id="copy-temporary-password">Copy</button>
       </div>
-      <h3>Invites</h3>
+      <h2>Invites</h2>
       <p class="muted">Someone joins with an invite link, choosing their own username and password. A link works once, for 7 days.</p>
       <ul class="device-list" id="invite-list"></ul>
       <button class="secondary" type="button" id="new-invite">Make an invite link</button>
@@ -80,7 +80,7 @@
     </section>
 
     <section class="card setting" id="examples">
-      <h3>Example programs</h3>
+      <h2>Example programs</h2>
       <p class="muted">Ready-made programs to start from. An imported one is yours to change. Its weights fit the gear you own, so set that on the <a href="/equipment.html">Equipment</a> page first.</p>
       <ul class="device-list examples" id="example-list"></ul>
       <p class="form-error" id="examples-error" role="alert" hidden></p>
@@ -88,14 +88,14 @@
     </section>
 
     <section class="card setting">
-      <h3>Signed-in devices</h3>
+      <h2>Signed-in devices</h2>
       <p class="muted">Devices stay signed in for 90 days after they were last used.</p>
       <ul class="device-list" id="devices"></ul>
       <button class="secondary" id="sign-out-others" hidden>Sign out the other devices</button>
     </section>
 
     <section class="card setting">
-      <h3>API tokens</h3>
+      <h2>API tokens</h2>
       <p class="muted">For an assistant or a script acting as you. A token has full access to your data; revoke it here when you're done with it.</p>
       <ul class="device-list" id="tokens"></ul>
       <form class="form" id="new-token">
@@ -111,7 +111,7 @@
         <label class="form-field"><span>Your new token</span><input class="token-secret" readonly></label>
         <button class="secondary" type="button" id="copy-token">Copy</button>
       </div>
-      <h3>Connect an assistant</h3>
+      <h2>Connect an assistant</h2>
       <p class="muted">Make a token above, then connect. The MCP server (Streamable HTTP) gives an assistant tools to read your training and plan workouts. Point the client at this address with the token in an <code>Authorization: Bearer &lt;token&gt;</code> header, the same header a script sends to the API.</p>
       <div class="form" id="mcp-url">
         <label class="form-field"><span>MCP server</span><input class="token-secret" readonly></label>
@@ -125,7 +125,7 @@
     </section>
 
     <section class="card setting">
-      <h3 id="units-label">Units</h3>
+      <h2 id="units-label">Units</h2>
       <p class="muted">Weights in workouts and sessions are shown and stepped in this unit, on every device.</p>
       <div class="segmented" role="group" aria-labelledby="units-label" id="units">
         <button data-value="lb">lb</button>
@@ -134,7 +134,7 @@
     </section>
 
     <section class="card setting">
-      <h3 id="distance-label">Distances</h3>
+      <h2 id="distance-label">Distances</h2>
       <p class="muted">Activities on every device show distances in this unit, with climb in metres or feet.</p>
       <div class="segmented" role="group" aria-labelledby="distance-label" id="distance-units">
         <button data-value="km">km</button>
@@ -143,7 +143,7 @@
     </section>
 
     <section class="card setting">
-      <h3 id="ask-rpe-label">Ask how hard it was</h3>
+      <h2 id="ask-rpe-label">Ask how hard it was</h2>
       <p class="muted">When a run or another activity arrives from elsewhere, Today asks once how hard it felt.</p>
       <div class="segmented" role="group" aria-labelledby="ask-rpe-label" data-setting="askRpe">
         <button data-value="true">On</button>
@@ -152,7 +152,7 @@
     </section>
 
     <section class="card setting">
-      <h3 id="sound-label">Beeps</h3>
+      <h2 id="sound-label">Beeps</h2>
       <p class="muted">Counting down the last seconds, at the start and end of a timed set, and when to switch sides.</p>
       <div class="segmented" role="group" aria-labelledby="sound-label" data-setting="sound">
         <button data-value="true">On</button>
@@ -161,7 +161,7 @@
     </section>
 
     <section class="card setting">
-      <h3 id="vibration-label">Vibration</h3>
+      <h2 id="vibration-label">Vibration</h2>
       <p class="muted">The same cues as a buzz, for a phone in your pocket or on mute.</p>
       <div class="segmented" role="group" aria-labelledby="vibration-label" data-setting="vibration">
         <button data-value="true">On</button>
@@ -171,18 +171,18 @@
     </section>
 
     <section class="card setting">
-      <h3 id="lead-in-label">Get into position</h3>
+      <h2 id="lead-in-label">Get into position</h2>
       <p class="muted">Seconds before a timed exercise starts counting. When it needs other gear than the exercise before, you get at least <span id="gear-lead-in"></span> s.</p>
       <div class="segmented" role="group" aria-labelledby="lead-in-label" data-setting="leadIn"></div>
     </section>
 
     <section class="card setting">
-      <h3>API</h3>
+      <h2>API</h2>
       <p class="muted">Everything the app does goes through a JSON API. <a href="/api/openapi">Read its reference</a>, or fetch the <a href="/api/openapi/json">OpenAPI document</a>.</p>
     </section>
 
     <section class="card setting" id="about">
-      <h3>About</h3>
+      <h2>About</h2>
       <p id="about-version">The Lazy Runner</p>
       <p class="muted" id="about-build"></p>
     </section>

@@ -1,7 +1,7 @@
 import { equipmentNames } from "./howto.js";
 import { createFigure } from "./figure-view.js";
 import { formatWeight } from "./weights.js";
-import { escape, icon } from "./html.js";
+import { escape, icon, showSheet } from "./html.js";
 import { getJson } from "./api.js";
 import { shortlist } from "./player.js";
 
@@ -53,7 +53,7 @@ export function openSwap({ planned, current, inSession = new Set(), unit, onPick
     stills.forEach((figure) => figure.destroy());
     onClose?.();
   }, { once: true });
-  dialog.showModal();
+  showSheet(dialog);
 
   loadAlternatives(planned.id).then((found) => {
     const others = found.filter((e) => e.id !== current.id);

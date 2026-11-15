@@ -62,6 +62,7 @@ export function mountNav(current) {
 
   document.body.classList.add("with-nav");
   document.body.insertAdjacentHTML("afterbegin", `
+    <a class="skip-link" id="skip-link">Skip to content</a>
     <header class="topbar">
       <span class="topbar-brand">${icon("mark")}Lazy Runner</span>
       <span class="topbar-title" id="topbar-title" aria-hidden="true"></span>
@@ -73,9 +74,9 @@ export function mountNav(current) {
       <ul class="sidebar-secondary">${links(SIDEBAR_SECONDARY)}</ul>
     </nav>
     <div class="scrim" id="scrim" hidden></div>
-    <ul class="more-sheet" id="more-sheet" hidden>${links(MORE)}</ul>
     <nav class="tabbar" id="tabbar" aria-label="Main">
       ${tabs}
+      <ul class="more-sheet" id="more-sheet" hidden>${links(MORE)}</ul>
       <button class="tab" id="more-button" aria-controls="more-sheet" aria-expanded="false">${icon("more")}<span>More</span></button>
     </nav>`);
 
@@ -89,6 +90,28 @@ export function mountNav(current) {
     sheet.hidden = !open;
     scrim.hidden = !open;
     if (open) sheet.querySelector("a")?.focus();
+  };
+
+  // Past the navigation to the view that shows. It points at that view's
+  // main, but moves focus itself: on the home page the hash is the route.
+  const skip = document.getElementById("skip-link");
+  const shownMain = () => {
+    const main = [...document.querySelectorAll("main")].find((element) => !element.hidden);
+    if (main) main.id ||= "main";
+    return main;
+  };
+  const aimSkip = () => {
+    const main = shownMain();
+    if (main) skip.setAttribute("href", `#${main.id}`);
+  };
+  aimSkip();
+  skip.addEventListener("focus", aimSkip);
+  skip.onclick = (event) => {
+    event.preventDefault();
+    const main = shownMain();
+    if (!main) return;
+    main.setAttribute("tabindex", "-1");
+    main.focus();
   };
 
   button.onclick = () => setOpen(sheet.hidden);

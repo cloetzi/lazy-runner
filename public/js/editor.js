@@ -1,5 +1,5 @@
 import { getJson, errorMessage, send, STALE_NOTE } from "./api.js";
-import { escape, icon, busy } from "./html.js";
+import { escape, icon, busy, showSheet } from "./html.js";
 import { createFigure } from "./figure-view.js";
 import { openHowto, equipmentNames, learnEquipmentNames } from "./howto.js";
 import { formatWeight, sameShownWeight } from "./weights.js";
@@ -501,7 +501,7 @@ function pick(title, onPick, current = null) {
   });
   dialog.addEventListener("close", () => stills.forEach((figure) => figure.destroy()), { once: true });
   draw();
-  dialog.showModal();
+  showSheet(dialog);
   dialog.querySelector("#picker-search").focus();
 }
 

@@ -1,6 +1,6 @@
 import { createFigure } from "./figure-view.js";
 import { getJson } from "./api.js";
-import { escape, icon } from "./html.js";
+import { escape, icon, showSheet } from "./html.js";
 import { tempoText } from "./player.js";
 
 // Display names for equipment slugs, as /api/equipment gives them, with a
@@ -99,5 +99,5 @@ export function openHowto(exercise, { mirror = false, tempo = null, onClose, con
     figure?.destroy();
     onClose?.();
   }, { once: true });
-  dialog.showModal();
+  showSheet(dialog);
 }

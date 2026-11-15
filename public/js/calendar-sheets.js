@@ -1,4 +1,4 @@
-import { escape, icon, authorLine } from "./html.js";
+import { escape, icon, authorLine, showSheet } from "./html.js";
 import { longDay, weekdayDay, moveChoices, movable, shownStatus, STATUS_LABELS } from "./calendar.js";
 import {
   KNOWN_SPORTS, sportIcon, sportLabel, activityTitle, activityFacts, activityKey, formatDistance, formatClimb, formatDuration,
@@ -55,7 +55,7 @@ export function openPlanSheet({ date, workouts, onPlan }) {
     if (workout) onPlan(workout, form.elements.note.value);
   };
   dialog.returnValue = "";
-  dialog.showModal();
+  showSheet(dialog);
 }
 
 // A session's sheet. A planned or missed one can move to a day of its week
@@ -123,7 +123,7 @@ export function openSessionSheet({ session, today, on }) {
     if (answer === "remove") on.onRemove();
   };
   dialog.returnValue = "";
-  dialog.showModal();
+  showSheet(dialog);
 }
 
 // ---------- Activities ----------
@@ -188,7 +188,7 @@ export function openAddSheet({ date, onWorkout, onOnce, onRoutine, onActivity, o
     if (dialog.returnValue === "note") onNote();
   };
   dialog.returnValue = "";
-  dialog.showModal();
+  showSheet(dialog);
 }
 
 // A coach's note under a calendar day: its kind or title, and who wrote it.
@@ -283,7 +283,7 @@ export function openLogActivitySheet({ date, unit, onLog, sport = "", about = ""
     if (problems.length === 0) onLog(fields);
   };
   dialog.returnValue = "";
-  dialog.showModal();
+  showSheet(dialog);
   (sport ? form.elements.time : form.elements.sport).focus();
 }
 
@@ -343,7 +343,7 @@ export function openActivitySheet({ activity, unit, today, on }) {
       : `Delete ${activityTitle(activity)}?`)) on.onDelete();
   };
   dialog.returnValue = "";
-  dialog.showModal();
+  showSheet(dialog);
 }
 
 // Today's question about an activity sent from elsewhere: how hard was it?
@@ -370,5 +370,5 @@ export function openRpeSheet({ activity, unit, onRpe }) {
     if (answer.startsWith("rpe:")) onRpe(Number(answer.slice(4)));
   };
   dialog.returnValue = "";
-  dialog.showModal();
+  showSheet(dialog);
 }

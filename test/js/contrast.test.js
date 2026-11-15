@@ -11,6 +11,11 @@ function tokens(block) {
 }
 const light = tokens(css.slice(0, css.indexOf("@media (prefers-color-scheme: dark)")));
 const dark = { ...light, ...tokens(css.match(/@media \(prefers-color-scheme: dark\) \{[\s\S]*?\n\}/)[0]) };
+// Increase Contrast overrides a few tokens in each scheme.
+const more = (query) => tokens(css.match(new RegExp(`@media ${query.replace(/[()]/g, "\\$&")} \\{[\\s\\S]*?\\n\\}`))[0]);
+const lightMore = { ...light, ...more("(prefers-contrast: more)") };
+// The plain block applies in dark too, under the dark one.
+const darkMore = { ...dark, ...more("(prefers-contrast: more)"), ...more("(prefers-contrast: more) and (prefers-color-scheme: dark)") };
 
 function luminance(hex) {
   const [r, g, b] = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255)
@@ -56,7 +61,8 @@ const apart = [
   ["--figure-far", "--figure", "near and far limbs"],
 ];
 
-for (const [scheme, palette] of [["light", light], ["dark", dark]]) {
+const schemes = [["light", light], ["dark", dark], ["light, more contrast", lightMore], ["dark, more contrast", darkMore]];
+for (const [scheme, palette] of schemes) {
   for (const [fg, bg, min, use] of pairs) {
     test(`${scheme}: ${fg} on ${bg} reaches ${min}:1 (${use})`, () => {
       assert.ok(palette[fg] && palette[bg], `missing ${fg} or ${bg}`);
@@ -66,7 +72,7 @@ for (const [scheme, palette] of [["light", light], ["dark", dark]]) {
   }
 }
 
-for (const [scheme, palette] of [["light", light], ["dark", dark]]) {
+for (const [scheme, palette] of schemes) {
   for (const [a, b, use] of apart) {
     test(`${scheme}: ${a} and ${b} stay 1.5:1 apart (${use})`, () => {
       assert.ok(palette[a] && palette[b], `missing ${a} or ${b}`);
@@ -74,6 +80,16 @@ for (const [scheme, palette] of [["light", light], ["dark", dark]]) {
       assert.ok(r >= 1.5, `${palette[a]} and ${palette[b]} are ${r.toFixed(2)}:1`);
     });
   }
+}
+
+for (const [scheme, base, palette] of [["light", light, lightMore], ["dark", dark, darkMore]]) {
+  test(`${scheme}, more contrast: borders reach 3:1 and muted text 7:1`, () => {
+    assert.notEqual(palette["--border"], base["--border"]);
+    assert.ok(ratio(palette["--border"], palette["--surface"]) >= 3);
+    assert.ok(ratio(palette["--muted"], palette["--surface"]) >= 7);
+    assert.ok(ratio(palette["--muted"], palette["--bg"]) >= 7);
+    assert.ok(ratio(palette["--control-border"], palette["--border"]) >= 1.5, "controls stay apart from card edges");
+  });
 }
 
 for (const page of ["index.html", "calendar.html", "equipment.html", "library.html", "settings.html"]) {

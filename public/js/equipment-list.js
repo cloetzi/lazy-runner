@@ -38,7 +38,7 @@ export function mountEquipment(list, { unitFor = (item) => item.unit } = {}) {
           <div class="weights">
             <label>
               <span class="muted">Weights</span>
-              <input type="text" inputmode="decimal" data-field="weights" value="${escape(formatWeights(item.weights))}"
+              <input type="text" data-field="weights" value="${escape(formatWeights(item.weights))}"
                 placeholder="10, 20" aria-describedby="weights-hint-${item.id}" ${item.owned ? "" : "disabled"}>
             </label>
             <div class="segmented" role="group" aria-label="${escape(item.name)} weights in">
