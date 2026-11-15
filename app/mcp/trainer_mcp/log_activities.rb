@@ -21,7 +21,8 @@ module TrainerMcp
     description <<~TEXT.squish
       Log the user's activities as they happened, one or up to #{Activity::BATCH_LIMIT} in one call, such as a
       backfill from Garmin: send each with its `source` and `external_id`, so sending it again updates it instead of
-      adding a second one (fields sent are written, those left out are kept). What you log is marked
+      adding a second one (fields sent are written, those left out are kept); one the user logged themselves is
+      left as it is (outcome kept). What you log is marked
       `created_by: llm`. Send only numbers the source gave, never estimates; nothing is worked out from them.
       Before a backfill, list_activities the range: one the user logged by hand on the same day and sport is likely
       the same activity when its start or distance agree, so leave it out (or ask); a second one that day is not. The person's RPE and notes are theirs: the app asks for them.
@@ -46,7 +47,7 @@ module TrainerMcp
       # A pair sent twice is one activity, counted once.
       counted = outcomes.uniq { it.first.id }
 
-      { created: counted.count { it.last == :created }, updated: counted.count { it.last == :updated }, activities: logged }
+      { created: counted.count { it.last == :created }, updated: counted.count { it.last == :updated }, kept: counted.count { it.last == :kept }, activities: logged }
     rescue Activity::EntryInvalid => error
       raise Problem, "#{error.message}. Nothing was logged; fix it and send the whole list again."
     end

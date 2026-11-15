@@ -399,7 +399,7 @@ test("a change that keeps failing is parked and the rest is sent", async () => {
   assert.equal(outbox.pending(), 0);
   assert.equal(outbox.waiting(), null);
   assert.deepEqual(outbox.parked(), [{
-    id: "p1", entries: [{ method: "PATCH", path: "/api/settings", body: { unit: "kg" } }], names: [],
+    id: "p1", entries: [{ method: "PATCH", path: "/api/settings", body: { unit: "kg" } }], names: [], dependants: 0,
     status: 500, error: "Something went wrong", at: "2026-11-15T10:00:00Z",
   }]);
   // A reload still has it.
@@ -490,8 +490,115 @@ test("discarding a parked change forgets it", async () => {
 
   outbox.enqueue({ method: "POST", path: "/a" });
   for (let i = 0; i < PARK_AFTER; i++) await outbox.flush();
-  outbox.discardParked("p1");
+  await outbox.discardParked("p1");
   assert.deepEqual(createOutbox({ storage, fetch: server.fetch }).parked(), []);
+});
+
+test("after a discard, the next change that keeps failing is parked in turn", async () => {
+  // /b fails once while /a is parked, then three times more.
+  const server = fakeServer(failing(2 * PARK_AFTER + 1));
+  let n = 0;
+  const outbox = createOutbox({ storage: memoryStorage(), fetch: server.fetch, id: () => `p${++n}` });
+
+  outbox.enqueue({ method: "POST", path: "/a" });
+  outbox.enqueue({ method: "POST", path: "/b" });
+  for (let i = 0; i < PARK_AFTER; i++) await outbox.flush();
+  await outbox.discardParked("p1");
+  for (let i = 0; i < PARK_AFTER; i++) await outbox.flush();
+  assert.deepEqual(outbox.parked().map((g) => g.entries[0].path), ["/b"]);
+  assert.equal(outbox.pending(), 0);
+});
+
+test("discarding a parked change sends what only waited behind it", async () => {
+  const server = fakeServer([...failing(PARK_AFTER), { status: 201, json: {} }, { status: 200, json: { id: 5 } }, { status: 200, json: {} }]);
+  let n = 0;
+  const outbox = createOutbox({ storage: memoryStorage(), fetch: server.fetch, id: () => `p${++n}` });
+
+  // Starting a planned session (its id known) and logging a set for it,
+  // and a new session whose set and finish need its id.
+  outbox.remember("run:a", 7);
+  outbox.enqueue({ method: "PATCH", path: "/api/sessions/{run:a}", body: { status: "in_progress" } });
+  outbox.enqueue({ method: "POST", path: "/api/sessions/{run:a}/sets" });
+  for (let i = 0; i < PARK_AFTER; i++) await outbox.flush();
+  outbox.enqueue({ method: "POST", path: "/api/sessions/{run:a}/complete", saveAs: "complete:a" });
+  outbox.enqueue({ method: "PATCH", path: "/api/completions/{complete:a}" });
+  await outbox.flush();
+  assert.equal(outbox.parked()[0].dependants, 0);
+
+  await outbox.discardParked("p1");
+  assert.deepEqual(outbox.queued().map((e) => e.path), ["/api/sessions/{run:a}/sets", "/api/sessions/{run:a}/complete", "/api/completions/{complete:a}"]);
+  assert.equal(await outbox.flush(), true);
+  assert.deepEqual(server.calls.slice(PARK_AFTER).map((c) => c.path), ["/api/sessions/7/sets", "/api/sessions/7/complete", "/api/completions/5"]);
+  assert.deepEqual(outbox.rejected(), []);
+});
+
+test("discarding a new change drops what needs its id with it", async () => {
+  const server = fakeServer([...failing(PARK_AFTER), "offline"]);
+  let n = 0;
+  const outbox = createOutbox({ storage: memoryStorage(), fetch: server.fetch, id: () => `p${++n}` });
+
+  outbox.enqueue({ method: "POST", path: "/api/sessions", saveAs: "run:a" });
+  outbox.enqueue({ method: "POST", path: "/api/sessions/{run:a}/complete", saveAs: "complete:a" });
+  outbox.enqueue({ method: "PATCH", path: "/api/completions/{complete:a}" });
+  outbox.remember("run:b", 8);
+  outbox.enqueue({ method: "POST", path: "/api/sessions/{run:b}/sets" });
+  for (let i = 0; i < PARK_AFTER; i++) await outbox.flush();
+  assert.equal(outbox.parked()[0].dependants, 2);
+
+  await outbox.discardParked("p1");
+  assert.deepEqual(outbox.queued().map((e) => e.path), ["/api/sessions/{run:b}/sets"]);
+});
+
+test("a change taken into a parked group holds back what builds on it in turn", async () => {
+  const server = fakeServer(failing(PARK_AFTER));
+  const outbox = createOutbox({ storage: memoryStorage(), fetch: server.fetch, id: () => "p1" });
+
+  outbox.enqueue({ method: "POST", path: "/api/sessions", saveAs: "run:a" });
+  for (let i = 0; i < PARK_AFTER; i++) await outbox.flush();
+  outbox.enqueue({ method: "POST", path: "/api/sessions/{run:a}/notes", saveAs: "note:a" });
+  await outbox.flush();
+  outbox.enqueue({ method: "PATCH", path: "/api/notes/{note:a}" });
+  assert.equal(await outbox.flush(), true);
+
+  assert.deepEqual(outbox.parked()[0].entries.map((e) => e.path), ["/api/sessions", "/api/sessions/{run:a}/notes", "/api/notes/{note:a}"]);
+  assert.deepEqual(outbox.rejected(), []);
+});
+
+test("a park that leaves nothing queued doesn't stop the next failing change from being parked", async () => {
+  const server = fakeServer(failing(2 * PARK_AFTER));
+  let n = 0;
+  const outbox = createOutbox({ storage: memoryStorage(), fetch: server.fetch, id: () => `p${++n}` });
+
+  outbox.enqueue({ method: "POST", path: "/a" });
+  for (let i = 0; i < PARK_AFTER; i++) await outbox.flush();
+  outbox.enqueue({ method: "POST", path: "/b" });
+  for (let i = 0; i < PARK_AFTER; i++) await outbox.flush();
+  assert.deepEqual(outbox.parked().map((g) => g.entries[0].path), ["/a", "/b"]);
+});
+
+test("a discard waits for a send under way, so nothing goes twice", async () => {
+  const server = fakeServer([...failing(PARK_AFTER), { status: 200, json: {} }, { status: 200, json: {} }]);
+  let release;
+  const held = new Promise((resolve) => { release = resolve; });
+  const fetch = async (path, options) => {
+    if (path === "/api/other") await held;
+    return server.fetch(path, options);
+  };
+  const outbox = createOutbox({ storage: memoryStorage(), fetch, id: () => "p1" });
+
+  outbox.remember("run:a", 7);
+  outbox.enqueue({ method: "PATCH", path: "/api/sessions/{run:a}" });
+  outbox.enqueue({ method: "POST", path: "/api/sessions/{run:a}/sets" });
+  for (let i = 0; i < PARK_AFTER; i++) await outbox.flush();
+  outbox.enqueue({ method: "PATCH", path: "/api/other" });
+  const flushed = outbox.flush();
+  const discarded = outbox.discardParked("p1");
+  release();
+  await Promise.all([flushed, discarded]);
+  await outbox.flush();
+
+  assert.deepEqual(server.calls.slice(PARK_AFTER).map((c) => c.path), ["/api/other", "/api/sessions/7/sets"]);
+  assert.equal(outbox.pending(), 0);
 });
 
 test("describes queued changes in a few words", () => {

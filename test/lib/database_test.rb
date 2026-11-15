@@ -190,7 +190,28 @@ describe Database do
     _ { db[:workouts].where(id: 1).update(source: "seed") }.must_raise Sequel::CheckConstraintViolation
   end
 
+  it "makes a session the seeds planned the user's, in what a recorded removal would plan again" do
+    db = Database.connect("sqlite:/")
+    Sequel::TimestampMigrator.run(db, Database::MIGRATIONS, target: 20261116000201)
+    now = Time.now
+    user = db[:users].insert(username: "runner", created_at: now, updated_at: now)
+    change = ->(was) { db[:plan_changes].insert(user_id: user, changed_by: "llm", item_kind: "session", action: "removed", was: was, batch: "b", created_at: now, updated_at: now) }
+    seeded = change.('{"workout_id":1,"date":"2026-11-12","created_by":"seed","agent_name":null}')
+    planned = change.('{"workout_id":1,"date":"2026-11-12","created_by":"llm","agent_name":"Coach"}')
+    Database.migrate!(db)
+
+    was = ->(id) { JSON.parse(db[:plan_changes].where(id:).get(:was)) }
+    _(was.(seeded)).must_equal("workout_id" => 1, "date" => "2026-11-12", "created_by" => "manual", "agent_name" => nil)
+    _(was.(planned)["created_by"]).must_equal "llm"
+  end
+
   describe "backups before migrating" do
+    it "names a database with no migrations yet as at 0" do
+      db = Database.connect("sqlite:/")
+      db.create_table(:schema_migrations) { String :filename, primary_key: true }
+      _(Database.last_migration(db)).must_equal "0"
+    end
+
     def backups(dir) = Dir.children(File.join(dir, "backups")).sort
 
     it "copies an existing database aside when migrations are due, and not otherwise" do
@@ -217,7 +238,7 @@ describe Database do
       end
     end
 
-    it "copies a database once per migration it has, keeping the newest few" do
+    it "copies a database once a day per migration it has, keeping the newest few" do
       Dir.mktmpdir do |dir|
         db = Database.connect("sqlite://#{dir}/app.sqlite3").tap { Database.migrate!(it) }
         level = Database.last_migration(db)
@@ -227,12 +248,15 @@ describe Database do
         # Restarting over a failing migration: the copy from before stays the only one.
         _(Database.back_up!(db, at: Time.utc(2026, 11, 15, 9, 1))).must_be_nil
         _(backups(dir)).must_equal ["app-20261115T090000Z-#{level}.sqlite3"]
+        # Put back from that copy and used for days since: copied afresh.
+        Database.back_up!(db, at: Time.utc(2026, 11, 18, 9))
+        _(backups(dir)).must_equal ["app-20261115T090000Z-#{level}.sqlite3", "app-20261118T090000Z-#{level}.sqlite3"]
 
         6.times do |i|
           db[:schema_migrations].insert(filename: "2099010100000#{i}_later.rb")
-          Database.back_up!(db, at: Time.utc(2026, 11, 15, 10, i))
+          Database.back_up!(db, at: Time.utc(2026, 11, 18, 10, i))
         end
-        _(backups(dir)).must_equal (1..5).map { format("app-20261115T10%02d00Z-2099010100000%d.sqlite3", it, it) }
+        _(backups(dir)).must_equal (1..5).map { format("app-20261118T10%02d00Z-2099010100000%d.sqlite3", it, it) }
         db.disconnect
       end
     end

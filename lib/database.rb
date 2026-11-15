@@ -1,5 +1,6 @@
 require "fileutils"
 require "sequel"
+require "time"
 
 # The app's one SQLite file, through Sequel: how it is opened and how its
 # schema is brought up to date. config/initializers/database.rb connects and
@@ -22,6 +23,8 @@ module Database
 
   # Backups taken before migrations, kept per database; the oldest go first.
   KEEP_BACKUPS = 5
+  # How long a copy at a migration stands for the database at that migration.
+  FRESH_BACKUP = 24 * 60 * 60
 
   # A database this code can't bring up to date.
   class Error < StandardError; end
@@ -95,9 +98,11 @@ module Database
   # Copies a database file to backups/ beside it, named by the time and the
   # last migration it has (production-20261115T220000Z-20261115400001.sqlite3),
   # so a migration that goes wrong halfway can be undone by putting the copy
-  # back. A database already copied at that migration isn't copied again, so
-  # a server restarting over a failing migration keeps the copy from before
-  # the upgrade rather than rotating it out. VACUUM INTO writes a consistent
+  # back. A database copied at that migration in the last FRESH_BACKUP isn't
+  # copied again, so a server restarting over a failing migration keeps the
+  # copy from before the upgrade rather than rotating it out; an older copy
+  # at that migration (a database put back from it, and used since) doesn't
+  # stand in for a new one. VACUUM INTO writes a consistent
   # copy without the write-ahead log; it can't run inside a transaction, and
   # boot migrates outside one. The newest KEEP_BACKUPS are kept. A copy that
   # can't be written stops the boot: better no upgrade than one with no way
@@ -108,11 +113,11 @@ module Database
 
     dir = File.join(File.dirname(file), "backups")
     name = File.basename(file).delete_suffix(".sqlite3")
-    pattern = /\A#{Regexp.escape(name)}-\d{8}T\d{6}Z-(\d+)\.sqlite3\z/
+    pattern = /\A#{Regexp.escape(name)}-(\d{8}T\d{6}Z)-(\d+)\.sqlite3\z/
     FileUtils.mkdir_p(dir)
     taken = Dir.children(dir).grep(pattern).sort
     level = last_migration(db)
-    return if taken.any? { it[pattern, 1] == level }
+    return if taken.any? { it[pattern, 2] == level && at - Time.strptime("#{it[pattern, 1]} UTC", "%Y%m%dT%H%M%SZ %Z") < FRESH_BACKUP }
 
     backup = File.join(dir, "#{name}-#{at.strftime("%Y%m%dT%H%M%SZ")}-#{level}.sqlite3")
     begin
@@ -130,7 +135,7 @@ module Database
   # ActiveRecord one lists versions where Sequel lists file names.
   def self.last_migration(db)
     column = db[:schema_migrations].columns.include?(:filename) ? :filename : :version
-    db[:schema_migrations].select_map(column).map(&:to_i).max.to_s
+    (db[:schema_migrations].select_map(column).map(&:to_i).max || 0).to_s
   rescue Sequel::DatabaseError
     "0"
   end

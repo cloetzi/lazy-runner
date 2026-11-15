@@ -286,6 +286,7 @@ class Session < Record
   AGENT_MOVES = { "planned" => %w[in_progress done], "in_progress" => %w[done] }.freeze
 
   def before_save
+    Record.user_only!("only the user skips a session") if new? && Current.agent_name && status == "skipped"
     if !new? && Current.agent_name && column_changed?(:status) && !AGENT_MOVES[initial_value(:status)]&.include?(status)
       Record.user_only!("session #{id} is #{initial_value(:status).tr("_", " ")}: only the user skips a session or takes one back from started, skipped or done")
     end

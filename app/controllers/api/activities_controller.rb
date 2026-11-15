@@ -28,7 +28,8 @@ module Api
     #   else names its `source` and its id there (`external_id`). Sending a pair the user already has updates that
     #   activity: the fields sent are written, the ones left out or sent as
     #   null are kept, and `rpe` and `note` are written only while empty, so
-    #   what the person entered stays. A pair deleted here and sent again
+    #   what the person entered stays. With an API token, a pair the user
+    #   logged themselves is answered as it is, unchanged. A pair deleted here and sent again
     #   comes back. A `client_ref` the server has seen answers with that
     #   activity, unchanged. One activity answers 201 when it is new, 200
     #   when it updated one or its `client_ref` was known. A list is all or nothing: it answers 200

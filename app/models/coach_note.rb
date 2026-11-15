@@ -181,7 +181,7 @@ class CoachNote < Record
   # cascades), so an agent leaves a note the user replied to.
   def before_destroy
     theirs!
-    Record.user_only!("note #{id} has the user's replies; an agent changes it rather than deleting it") unless replies_dataset.empty?
+    Record.user_only!("note #{id} has the user's replies; an agent changes it rather than deleting it") if Current.agent_name && !replies_dataset.empty?
     super
   end
 

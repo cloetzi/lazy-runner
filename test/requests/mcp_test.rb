@@ -951,6 +951,16 @@ describe "MCP server" do
       _(Activity.with_pk(logged["activities"].last["id"]).distance_m).must_equal 21_500
     end
 
+    it "leaves an activity the user logged as it is, and logs the rest" do
+      mine = Activity.log!({ date: "2026-11-03", sport: "run", source: "garmin", external_id: "18234567890", title: "Mine" }).first
+
+      logged = call_tool("log_activities", activities: [garmin_run, { date: "2026-11-01", sport: "ride", distance: 21_500 }])
+
+      _(logged.slice("created", "updated", "kept")).must_equal("created" => 1, "updated" => 0, "kept" => 1)
+      _(logged["activities"].map { it["outcome"] }).must_equal %w[kept created]
+      _(mine.refresh.values.values_at(:title, :created_by)).must_equal ["Mine", "manual"]
+    end
+
     it "updates what it sent again, keeping the person's RPE and note and the fields left out" do
       first = call_tool("log_activities", activities: [garmin_run])["activities"].first
       Activity.with_pk(first["id"]).update(rpe: 6, note: "Heavy legs")

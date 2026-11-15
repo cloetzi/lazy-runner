@@ -175,6 +175,26 @@ export function createOutbox({
     return data.parked.find((group) => (group.names ?? []).some((n) => wanted.includes(n))) ?? null;
   }
 
+  // Splits a parked group into what goes with its first change when that is
+  // discarded (it, and what needs an id one of those would have saved) and
+  // what only waited behind it to keep the order (changes to a record that
+  // exists, such as the sets of a session whose start is parked).
+  function split(group) {
+    const [first, ...rest] = group.entries;
+    const lost = new Set([first.saveAs].filter(Boolean));
+    const drop = [first];
+    const keep = [];
+    for (const entry of rest) {
+      if (names(entry.path).some((n) => lost.has(n))) {
+        drop.push(entry);
+        if (entry.saveAs) lost.add(entry.saveAs);
+      } else {
+        keep.push(entry);
+      }
+    }
+    return { drop, keep };
+  }
+
   // Whether the server answers at all: a 5xx it gives while this succeeds
   // is about the change, not an outage.
   async function reachable() {
@@ -242,6 +262,8 @@ export function createOutbox({
       if (group) {
         data.queue.shift();
         group.entries.push(entry);
+        // What builds on it waits with the group too.
+        group.names = [...new Set([...(group.names ?? []), ...holds(entry)])];
         save();
         continue;
       }
@@ -268,6 +290,12 @@ export function createOutbox({
         keepResult(entry.saveAs, result.json);
         if (result.json?.id != null) data.ids[entry.saveAs] = result.json.id;
       }
+      save();
+    }
+    // Nothing left that a park could be holding up: the next change the
+    // server keeps failing on is parked in its turn.
+    if (data.parking) {
+      data.parking = false;
       save();
     }
     waiting = null;
@@ -307,7 +335,11 @@ export function createOutbox({
     // Changes set aside after repeated server errors, oldest first:
     // { id, entries, status, error, at }, `entries` the change and those
     // that build on it.
-    parked: () => refresh().parked.map((group) => ({ ...group, entries: group.entries.map((e) => ({ ...e })) })),
+    // `dependants` counts the ones after the first that go with it when it is
+    // discarded; the rest are sent then.
+    parked: () => refresh().parked.map((group) => ({
+      ...group, entries: group.entries.map((e) => ({ ...e })), dependants: split(group).drop.length - 1,
+    })),
     // Puts a parked group back at the head of the queue for one more try:
     // another server error parks it again straight away. It waits for a
     // flush under way (here, or in another tab with Web Locks), since one
@@ -329,9 +361,25 @@ export function createOutbox({
     },
     // Whether the change saved under `name` waits among the parked ones.
     isParked: (name) => refresh().parked.some((group) => group.entries.some((e) => e.saveAs === name)),
-    discardParked(groupId) {
-      refresh().parked = data.parked.filter((g) => g.id !== groupId);
-      save();
+    // Drops a parked change with the changes that need an id it would have
+    // saved, and puts the ones that only waited behind it back at the head
+    // of the queue. Changes queued behind it that need its id are rejected
+    // when their turn comes, in the list the user sees. The user has dealt
+    // with it, so the next change the server keeps failing on is parked in
+    // turn rather than holding up the queue.
+    // Waits for a flush under way, as retryParked does, since one takes an
+    // entry off only while it is still at the head.
+    async discardParked(groupId) {
+      while (flushing) await flushing.catch(() => {});
+      const discard = () => {
+        const group = refresh().parked.find((g) => g.id === groupId);
+        if (!group) return;
+        data.parked = data.parked.filter((g) => g !== group);
+        data.queue.unshift(...split(group).keep);
+        data.parking = false;
+        save();
+      };
+      await locked(discard);
     },
   };
   return api;

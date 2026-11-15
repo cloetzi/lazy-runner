@@ -90,6 +90,14 @@ describe "an agent on the REST API" do
       _(ended.refresh.completion.rpe).must_equal 7
     end
 
+    it "can't add a session already skipped" do
+      as_agent(:post, "/api/sessions", { workout_id: workout("cycle-1-workout-1").id, date: "2026-11-11", status: "skipped" })
+
+      _(last_response.status).must_equal 403
+      _(json["error"]["message"]).must_equal "only the user skips a session"
+      _(Session.count).must_equal 0
+    end
+
     it "starts and finishes a planned session, as a script logging one would" do
       planned = session_on("2026-11-11", "planned")
       step = step_for("cycle-1-workout-1", "goblet-squat")
@@ -163,6 +171,18 @@ describe "an agent on the REST API" do
 
     as_agent(:post, "/api/activities", { date: "2026-11-10", sport: "ride", moving_seconds: 3600 })
     _(as_agent(:patch, "/api/activities/#{json["id"]}", { title: "Its own" }).status).must_equal 200
+  end
+
+  it "resends a list over one the user logged, leaving theirs as it is and logging the rest" do
+    synced = { date: "2026-11-10", sport: "run", source: "garmin", external_id: "17" }
+    mine = Activity.log!(synced.merge(title: "Morning run")).first
+
+    as_agent(:post, "/api/activities", { activities: [synced.merge(title: "Renamed"), { date: "2026-11-10", sport: "ride", source: "garmin", external_id: "18" }] })
+
+    _(last_response.status).must_equal 200, last_response.body
+    _(json["activities"].map { it["external_id"] }).must_equal %w[17 18]
+    _(mine.refresh.values.values_at(:title, :created_by)).must_equal ["Morning run", "manual"]
+    _(Activity.where(external_id: "18").get(:created_by)).must_equal "llm"
   end
 
   it "archives a workout the user's routine runs, which ends the routine" do

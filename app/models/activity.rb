@@ -58,8 +58,9 @@ class Activity < Record
   end
 
   # Logs one activity, from a Hash of FIELDS (and `client_ref`), and answers
-  # it with what happened: :created, :updated, or :known for a `client_ref`
-  # seen before (answered unchanged).
+  # it with what happened: :created, :updated, :known for a `client_ref`
+  # seen before, or :kept for the user's own activity that an agent's entry
+  # names (both answered unchanged).
   #
   # An entry whose `source` + `external_id` the user already has updates
   # that activity: the fields it sends are written, the ones it leaves out
@@ -173,6 +174,9 @@ class Activity < Record
       known&.add(created)
       return [created, :created]
     end
+    # The user's own (logged by hand, or by a sync before tokens wrote as
+    # agents): an agent leaves it as it is, and the rest of a list goes on.
+    return [match, :kept] if Current.agent_name && match.created_by != "llm"
 
     match.today = today
     changes = entry.slice(*CHANGEABLE).compact

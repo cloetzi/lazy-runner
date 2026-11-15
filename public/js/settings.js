@@ -122,7 +122,7 @@ function renderUnsent() {
   const parked = outbox?.parked() ?? [];
   $("unsent").hidden = parked.length === 0;
   $("unsent-list").innerHTML = parked.map((group) => {
-    const more = group.entries.length - 1;
+    const more = group.dependants;
     const follows = more > 0 ? ` <span class="muted">and ${more} ${more === 1 ? "change" : "changes"} that build on it</span>` : "";
     const answer = group.status && !group.error?.includes(String(group.status)) ? `${group.error} (${group.status})` : group.error;
     return `
@@ -145,7 +145,7 @@ $("unsent-list").onclick = async (event) => {
     await outbox.retryParked(retry.dataset.retryUnsent).catch(() => {});
   } else if (discard) {
     if (!confirm("Discard this change? It was never saved, and it can't be brought back.")) return;
-    outbox.discardParked(discard.dataset.discardUnsent);
+    await outbox.discardParked(discard.dataset.discardUnsent).catch(() => {});
   } else {
     return;
   }

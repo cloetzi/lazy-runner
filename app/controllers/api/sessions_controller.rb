@@ -39,11 +39,13 @@ module Api
     #   `position` (1 first), moving the ones from there on down. `note` is
     #   the planner's reason for it. A `client_ref` the server has seen
     #   answers with that session again (200, not 201), so a client can retry
-    #   a create whose response it never got.
+    #   a create whose response it never got. Skipping is the user's: with
+    #   an API token, `skipped` answers 403.
     # @request { workout_id: Integer, date?: Date, today?: Date, position?: Integer, status?: [planned, in_progress, skipped], parts?: String, note?: String, created_by?: [manual, llm], client_ref?: String, started_at?: DateTime }
     # @response 201 #/components/schemas/SessionWithPlan
     # @response 200 #/components/schemas/SessionWithPlan
     # @response 400 #/components/responses/BadRequest
+    # @response 403 #/components/responses/Forbidden
     # @response 404 #/components/responses/NotFound
     # @response 422 #/components/responses/Invalid
     def create
