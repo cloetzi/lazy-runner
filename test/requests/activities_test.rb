@@ -180,6 +180,16 @@ describe "activities API" do
     _(json["distance_unit"]).must_equal "mi"
   end
 
+  it "goes on the calendar, with the unit distances are shown in" do
+    activity = logged(date: "2026-11-02")
+    Setting.current.update(distance_unit: "mi")
+
+    get "/api/calendar?from=2026-11-02&to=2026-11-08"
+
+    _(json["activities"].map { it["id"] }).must_equal [activity.id]
+    _(json["distance_unit"]).must_equal "mi"
+  end
+
   describe "another user's" do
     before do
       @someone = create_user("someone")

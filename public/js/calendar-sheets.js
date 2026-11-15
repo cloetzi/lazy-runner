@@ -1,10 +1,11 @@
 import { escape, icon, authorLine, showSheet } from "./html.js";
-import { longDay, weekdayDay, moveChoices, movable, shownStatus, STATUS_LABELS } from "./calendar.js";
+import { longDay, weekdayDay, dayName, moveChoices, movable, shownStatus, STATUS_LABELS } from "./calendar.js";
 import {
   KNOWN_SPORTS, sportIcon, sportLabel, activityTitle, activityFacts, activityKey, formatDistance, formatClimb, formatDuration,
   distanceInMetres, climbInMetres, durationInSeconds, changeRequest, deleteRequest, activityOrigin, sourceLabel,
 } from "./activities.js";
 import { RPE_ANCHORS } from "./player.js";
+import { rpePicker, toggleRpe, pickedRpe } from "./rpe-picker.js";
 import { routeHash } from "./routes.js";
 import { KIND_LABELS, authorLabel, plannedBy, writtenOn, howItFelt } from "./coach.js";
 import { weekSummary, summaryLine, watching } from "./week.js";
@@ -236,13 +237,6 @@ export function noteRow(note, attribute) {
     </li>`;
 }
 
-// RPE anchors as radio buttons for a form, none picked unless `rpe` is one.
-function rpeChoices(name, rpe) {
-  return `<div class="rpe segmented" role="radiogroup" aria-label="How hard it was">
-    ${RPE_ANCHORS.map((a) => `<label><input type="radio" name="${name}" value="${a.rpe}"${a.rpe === rpe ? " checked" : ""}><span>${escape(a.label)}</span></label>`).join("")}
-  </div>`;
-}
-
 // Logs an activity done on `date`: the sport (free text, the known ones
 // suggested; `sport` fills it in), and whatever numbers the person has.
 // `onLog(fields)` gets them in metres and seconds, blanks left out. `about`
@@ -270,7 +264,7 @@ export function openLogActivitySheet({ date, unit, onLog, sport = "", about = ""
         <label class="field"><span>Climb</span><span class="with-unit"><input name="climb" inputmode="numeric" placeholder="0"><span class="muted">${climbUnit}</span></span></label>
       </div>
       <p class="muted small-print" id="activity-time-hint">Time in minutes, or as a watch shows it: 25:13 or 1:05:30.</p>
-      <fieldset class="field"><legend>How hard <span class="muted">(optional)</span></legend>${rpeChoices("rpe", null)}</fieldset>
+      <fieldset class="field"><legend>How hard <span class="muted">(optional)</span></legend>${rpePicker()}</fieldset>
       <label class="field"><span>Note <span class="muted">(optional)</span></span>
         <textarea name="note" rows="2" maxlength="2000"></textarea>
       </label>
@@ -279,6 +273,8 @@ export function openLogActivitySheet({ date, unit, onLog, sport = "", about = ""
     </form>`;
   const form = dialog.querySelector("form");
   const error = form.querySelector(".form-error");
+  // How hard: picked here, read when it is logged.
+  toggleRpe(form.querySelector(".rpe"));
   // Not a submit button, so Enter in a field logs rather than closes.
   form.querySelector("[data-close]").addEventListener("click", () => dialog.close("close"));
   const read = () => {
@@ -288,7 +284,7 @@ export function openLogActivitySheet({ date, unit, onLog, sport = "", about = ""
       moving_seconds: durationInSeconds(time.value),
       distance_m: distanceInMetres(distance.value, unit),
       climb_m: climbInMetres(climb.value, unit),
-      rpe: Number(form.elements.rpe.value) || null,
+      rpe: pickedRpe(form.querySelector(".rpe")),
     };
     const problems = [
       !fields.sport && "Say what you did, such as run.",
@@ -344,9 +340,7 @@ export function openActivitySheet({ activity, unit, today, on, notes = [] }) {
         : `<p class="muted">No numbers were sent with it.</p>`}
       ${activity.created_by === "llm" ? authorLine(origin, "p") : origin ? `<p class="muted small-print">${escape(origin)}</p>` : ""}
       <h3>How hard was it?${offScale ? ` <span class="muted">RPE ${activity.rpe}</span>` : ""}</h3>
-      <div class="rpe segmented" role="group" aria-label="How hard it was">
-        ${RPE_ANCHORS.map((a) => `<button type="button" data-rpe="${a.rpe}" aria-pressed="${a.rpe === activity.rpe}">${escape(a.label)}</button>`).join("")}
-      </div>
+      ${rpePicker({ rpe: activity.rpe })}
       <label class="field"><span>Note</span>
         <textarea name="note" rows="2" maxlength="2000">${escape(activity.note ?? "")}</textarea>
       </label>
@@ -358,14 +352,7 @@ export function openActivitySheet({ activity, unit, today, on, notes = [] }) {
     </form>`;
   const form = dialog.querySelector("form");
   // A tap on the picked one takes it back.
-  form.querySelector(".rpe").addEventListener("click", (event) => {
-    const button = event.target.closest("[data-rpe]");
-    if (!button) return;
-    const rpe = Number(button.dataset.rpe);
-    const chosen = button.getAttribute("aria-pressed") === "true" ? null : rpe;
-    for (const b of form.querySelectorAll("[data-rpe]")) b.setAttribute("aria-pressed", String(Number(b.dataset.rpe) === chosen));
-    on.onRpe(chosen);
-  });
+  toggleRpe(form.querySelector(".rpe"), (rpe) => on.onRpe(rpe));
   dialog.onclose = () => {
     const answer = dialog.returnValue;
     if (answer === "note") on.onNote(form.elements.note.value.trim());
@@ -379,9 +366,10 @@ export function openActivitySheet({ activity, unit, today, on, notes = [] }) {
 
 // Today's question about an activity sent from elsewhere: how hard was it?
 // `onRpe(rpe)` gets the answer; Not now leaves it.
-export function openRpeSheet({ activity, unit, onRpe }) {
+export function openRpeSheet({ activity, unit, onRpe, today = activity.date }) {
   const dialog = sheet("rpe-sheet");
-  const facts = activityFacts(activity, unit);
+  // One from a day before says which ("Yesterday", "Friday").
+  const facts = [activity.date !== today && dayName(activity.date, today), ...activityFacts(activity, unit)].filter(Boolean);
   dialog.innerHTML = `
     <form method="dialog" class="howto">
       <header>
@@ -390,9 +378,7 @@ export function openRpeSheet({ activity, unit, onRpe }) {
       </header>
       <p class="rpe-about"><span class="sport-tile small" aria-hidden="true">${icon(sportIcon(activity.sport))}</span>
         <span><strong>${escape(activityTitle(activity))}</strong>${facts.length ? `<br><span class="muted">${escape(facts.join(" · "))}</span>` : ""}</span></p>
-      <div class="rpe segmented" role="group" aria-label="How hard it was">
-        ${RPE_ANCHORS.map((a) => `<button value="rpe:${a.rpe}">${escape(a.label)}</button>`).join("")}
-      </div>
+      ${rpePicker({ answer: true })}
       <button class="link" value="close">Not now</button>
       <p class="muted">You can turn this question off in Settings.</p>
     </form>`;

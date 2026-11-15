@@ -65,16 +65,44 @@ class Activity < Record
   # that activity: the fields it sends are written, the ones it leaves out
   # (or sends as null) are kept, and `rpe` and `note` only while empty.
   # `today` is the sender's, which `date` may not be after.
-  def self.log!(entry, today: Time.zone.today, created_by: "manual")
+  # `known` is a Known of the activities already looked up, which a list
+  # passes so each entry needn't be looked up on its own.
+  def self.log!(entry, today: Time.zone.today, created_by: "manual", known: nil)
     attempts = 0
     begin
-      db.transaction(savepoint: true) { upsert(fields(entry), today:, created_by:) }
+      db.transaction(savepoint: true) { upsert(fields(entry), today:, created_by:, known:) }
     rescue Sequel::UniqueConstraintViolation
       # A concurrent write of the same pair or client_ref got there first:
-      # the second look finds it.
+      # the second look, at the database, finds it.
       attempts += 1
+      known = nil
       retry if attempts == 1
       raise
+    end
+  end
+
+  # The activities a list of entries names, read in a query or two up front:
+  # by `client_ref`, and by `source` + `external_id`. One logged from the
+  # list is added, so a later entry naming it finds it.
+  class Known
+    def initialize(entries)
+      refs = entries.filter_map { it[:client_ref] if it[:client_ref].is_a?(String) }.uniq
+      pairs = entries.select { it[:source].is_a?(String) && it[:external_id].is_a?(String) }
+      sources = pairs.group_by { it[:source] }.map { |source, list| { source:, external_id: list.map { it[:external_id] }.uniq } }
+      # One object a row, whichever key finds it, so a change made through
+      # one is seen through the other.
+      rows = {}
+      read = ->(dataset) { dataset.all.map { rows[it.id] ||= it } }
+      @by_ref = refs.empty? ? {} : read.(Activity.where(client_ref: refs)).to_h { [it.client_ref, it] }
+      @by_pair = sources.empty? ? {} : read.(Activity.where(Sequel.|(*sources))).to_h { [[it.source, it.external_id], it] }
+    end
+
+    def by_ref(ref) = @by_ref[ref]
+    def by_pair(source, external_id) = @by_pair[[source, external_id]]
+
+    def add(activity)
+      @by_ref[activity.client_ref] = activity if activity.client_ref
+      @by_pair[[activity.source, activity.external_id]] = activity if activity.source && activity.external_id
     end
   end
 
@@ -103,10 +131,11 @@ class Activity < Record
     end
 
     db.transaction do
+      known = Known.new(merged.values.filter_map { it[:entry] unless it[:invalid] })
       logged = merged.transform_values do |item|
         raise EntryInvalid.new(item[:index], { base: ["must be an object"] }, ["must be an object"]) if item[:invalid]
 
-        log!(item[:entry], today:, created_by:)
+        log!(item[:entry], today:, created_by:, known:)
       rescue Sequel::ValidationFailed => error
         raise EntryInvalid.new(item[:index], error.errors.to_h, error.errors.full_messages)
       end
@@ -129,15 +158,21 @@ class Activity < Record
     fields
   end
 
-  def self.upsert(entry, today:, created_by:)
+  def self.upsert(entry, today:, created_by:, known: nil)
     ref = entry[:client_ref]
-    if ref.is_a?(String) && (known = first(client_ref: ref))
-      return [known, :known]
+    if ref.is_a?(String) && (seen = known ? known.by_ref(ref) : first(client_ref: ref))
+      return [seen, :known]
     end
 
     source, external_id = entry.values_at(:source, :external_id)
-    match = first(source:, external_id:) if source.is_a?(String) && external_id.is_a?(String)
-    return [create(**entry.slice(*FIELDS), client_ref: ref, created_by:, today:), :created] unless match
+    if source.is_a?(String) && external_id.is_a?(String)
+      match = known ? known.by_pair(source, external_id) : first(source:, external_id:)
+    end
+    unless match
+      created = create(**entry.slice(*FIELDS), client_ref: ref, created_by:, today:)
+      known&.add(created)
+      return [created, :created]
+    end
 
     match.today = today
     changes = entry.slice(*CHANGEABLE).compact

@@ -19,6 +19,7 @@ module Api
     #   the sessions an agent moved away from a day in the range or removed
     #   from it, not taken back, for the days of this week on (until their
     #   week is over), by the day they left (`from_date`).
+    #   `distance_unit` is the unit distances are shown in (GET /api/settings).
     # @param from? {Date} The first day.
     # @param to? {Date} The last day.
     # @param today? {Date} The device's own date, which routine days read against.
@@ -36,7 +37,9 @@ module Api
         notes: CoachNote.eager(:activity, session: :workout).on_days(days).all,
         routines: routines.routines.map { it.as_json.merge(change: changes.of(it)) },
         routine_days: routines.days,
-        plan_changes: changes.lines
+        plan_changes: changes.lines,
+        # The unit distances are shown in, as GET /api/settings gives it.
+        distance_unit: Setting.current.distance_unit
       }
     end
   end

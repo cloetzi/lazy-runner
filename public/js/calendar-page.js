@@ -97,6 +97,9 @@ async function load() {
     state.notes = range.data.notes ?? [];
     state.routines = range.data.routines ?? [];
     state.routineDays = range.data.routine_days ?? [];
+    // Distances show in the unit the server keeps (set on any device), with
+    // this device's copy until it answers.
+    if (range.data.distance_unit) adoptServerDistanceUnit(storage, range.data.distance_unit, { queued: outbox.queued(), stale: range.stale });
     state.upcoming = upcoming.data;
     state.stale = range.stale || upcoming.stale;
     if ([state.sessions, state.activities, state.notes, state.routineDays, state.upcoming].some((list) => list.length)) {
@@ -123,18 +126,6 @@ async function loadBoard(from, to) {
     return (await getJson(paths.coach(state.today))).data;
   } catch {
     return state.board;
-  }
-}
-
-// Distances show in the unit the server keeps (set on any device), with
-// this device's copy until it answers.
-async function loadDistanceUnit() {
-  try {
-    const { data, stale } = await getJson(paths.settings);
-    const before = preferredDistanceUnit(storage);
-    if (adoptServerDistanceUnit(storage, data.distance_unit, { queued: outbox.queued(), stale }) !== before) render();
-  } catch {
-    // Offline: this device's copy shows.
   }
 }
 
@@ -637,4 +628,3 @@ const asked = location.hash.slice(1);
 goTo(isDate(asked) ? asked : localToday(), { reload: false });
 load();
 sync();
-loadDistanceUnit();

@@ -9,10 +9,10 @@
 import SPORTS from "./sports.json" with { type: "json" };
 import { agentName, writtenDay } from "./coach.js";
 import { localToday } from "./calendar.js";
+import { unitSetting } from "./unit-setting.js";
 
 export const DISTANCE_UNITS = ["km", "mi"];
 const DISTANCE_KEY = "distanceUnit";
-const SETTINGS_PATH = "/api/settings";
 const METRES_PER_MILE = 1609.344;
 const FEET_PER_METRE = 3.28084;
 
@@ -242,39 +242,13 @@ export function rememberAsked(storage, id) {
 
 // ---------- The distance unit ----------
 
-// km or mi, as this device last saw it (the server's copy wins once read).
-export function preferredDistanceUnit(storage) {
-  try {
-    const unit = storage.getItem(DISTANCE_KEY);
-    return DISTANCE_UNITS.includes(unit) ? unit : "km";
-  } catch {
-    return "km";
-  }
-}
-
-export function setPreferredDistanceUnit(storage, unit) {
-  if (!DISTANCE_UNITS.includes(unit)) throw new Error(`unknown distance unit ${unit}`);
-  try {
-    storage.setItem(DISTANCE_KEY, unit);
-  } catch {
-    // Storage blocked: the setting is not kept.
-  }
-}
-
-export function distanceUnitRequest(unit) {
-  if (!DISTANCE_UNITS.includes(unit)) throw new Error(`unknown distance unit ${unit}`);
-  return { method: "PATCH", path: SETTINGS_PATH, body: { distance_unit: unit } };
-}
-
-// The unit to show once the server has answered with its own: kept as this
-// device's copy, unless a change made here is still queued, or the answer is
-// an offline copy that may predate it.
-export function adoptServerDistanceUnit(storage, unit, { queued = [], stale = false } = {}) {
-  const changing = queued.some((entry) => entry.path === SETTINGS_PATH && entry.body && "distance_unit" in entry.body);
-  if (stale || !DISTANCE_UNITS.includes(unit) || changing) return preferredDistanceUnit(storage);
-  setPreferredDistanceUnit(storage, unit);
-  return unit;
-}
+// km or mi (unit-setting.js), as this device last saw it; the server's
+// copy wins once read.
+const distanceUnit = unitSetting({ field: "distance_unit", units: DISTANCE_UNITS, key: DISTANCE_KEY });
+export const preferredDistanceUnit = distanceUnit.preferred;
+export const setPreferredDistanceUnit = distanceUnit.set;
+export const distanceUnitRequest = distanceUnit.request;
+export const adoptServerDistanceUnit = distanceUnit.adopt;
 
 // Where an activity came from: "From Garmin · copied by Coach agent, Nov 14",
 // "From Garmin" for one a script sent, "Logged by Coach agent" for one an

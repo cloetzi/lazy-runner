@@ -9,12 +9,13 @@
 // in. The lb or kg setting only changes how they are shown: the stepper steps
 // the weight in its own unit and the result is shown converted.
 
+import { unitSetting } from "./unit-setting.js";
+
 const UNITS = ["lb", "kg"];
 const KG_PER_LB = 0.45359237;
 // A converted weight is rounded to this, so 40 lb shows as 18 kg.
 const CONVERTED_TO_NEAREST = 0.5;
 const UNIT_KEY = "unit";
-const SETTINGS_PATH = "/api/settings";
 
 // Owned weights closer than this count as the weight itself.
 const SAME_WEIGHT = 0.01;
@@ -101,25 +102,13 @@ function round(value) {
   return Math.round(value * 100) / 100;
 }
 
-// The setting is kept on the server; this device keeps a copy for when it is
-// offline, lb until anything is known.
-export function preferredUnit(storage) {
-  try {
-    const unit = storage.getItem(UNIT_KEY);
-    return UNITS.includes(unit) ? unit : "lb";
-  } catch {
-    return "lb";
-  }
-}
-
-export function setPreferredUnit(storage, unit) {
-  if (!UNITS.includes(unit)) throw new Error(`unknown unit ${unit}`);
-  try {
-    storage.setItem(UNIT_KEY, unit);
-  } catch {
-    // Storage blocked: the setting is not kept.
-  }
-}
+// The lb/kg setting (unit-setting.js): kept on the server, with this
+// device's copy for when it is offline, lb until anything is known.
+const weightUnit = unitSetting({ field: "unit", units: UNITS, key: UNIT_KEY });
+export const preferredUnit = weightUnit.preferred;
+export const setPreferredUnit = weightUnit.set;
+export const unitRequest = weightUnit.request;
+export const adoptServerUnit = weightUnit.adopt;
 
 // A weight the way it is picked up: "2 × 20 lb" for a pair, "1 × 40 lb"
 // for one, never a bare total.
@@ -128,17 +117,3 @@ export function formatLoad(weight, held, unit) {
   return `${held ?? 1} × ${formatWeight(weight, unit)}`;
 }
 
-// Changing the unit on the server, sent through the outbox.
-export function unitRequest(unit) {
-  if (!UNITS.includes(unit)) throw new Error(`unknown unit ${unit}`);
-  return { method: "PATCH", path: SETTINGS_PATH, body: { unit } };
-}
-
-// The unit to show once the server has answered with its own: kept as this
-// device's copy, unless a change made here is still queued to be sent, or the
-// answer is an offline copy that may predate it.
-export function adoptServerUnit(storage, unit, { queued = [], stale = false } = {}) {
-  if (stale || !UNITS.includes(unit) || queued.some((entry) => entry.path === SETTINGS_PATH && entry.body && "unit" in entry.body)) return preferredUnit(storage);
-  setPreferredUnit(storage, unit);
-  return unit;
-}

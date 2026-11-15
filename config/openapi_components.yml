@@ -821,8 +821,9 @@ components:
         - $ref: "#/components/schemas/ActivityBatch"
     Calendar:
       type: object
-      required: [sessions, activities, notes, routines, routine_days, plan_changes]
+      required: [sessions, activities, notes, routines, routine_days, plan_changes, distance_unit]
       properties:
+        distance_unit: { $ref: "#/components/schemas/DistanceUnit" }
         sessions:
           type: array
           items:

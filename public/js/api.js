@@ -104,6 +104,9 @@ export const paths = {
   // session stays under way past midnight.
   upcoming: (today) => `/api/sessions?status=planned,in_progress&from=${addDays(today, -1)}`,
   coach: (today) => `/api/coach?today=${today}`,
+  // The days before `today` whose activities Today may still ask about,
+  // as one sent the next morning wasn't asked about on its own day.
+  recentActivities: (today, days = 3) => `/api/activities?from=${addDays(today, -days)}&to=${addDays(today, -1)}`,
 };
 
 // The sentence an API error carries: every error is

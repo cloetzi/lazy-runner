@@ -9,7 +9,8 @@ import { escape, icon, authorLine, busy, showSheet } from "./html.js";
 import { offlineToday } from "./offline.js";
 import { setupRows, setupLeft } from "./setup.js";
 import { blockName, blockSummary, stepSummary, alternatingText, setWeight, includedKinds, framingFor, framePlan, gearList, carrierOf } from "./workout.js";
-import { previousIndex, switchesSides, mainActionLabel, stepAnnouncement, spokenTarget, tapAccepted, holdStatus, unloggedExercises, plannedExercise, swapRun, resumeChoice, sessionProgress, endsEarly, loggedFromServer, pickUpIndex, partEnd, setLabel, minutesLeft, tempoText, leadInSeconds, extraSeconds, upNextDetails, equipmentChanges, finishSummary, RPE_ANCHORS } from "./player.js";
+import { previousIndex, switchesSides, mainActionLabel, stepAnnouncement, spokenTarget, tapAccepted, holdStatus, unloggedExercises, plannedExercise, swapRun, resumeChoice, sessionProgress, endsEarly, loggedFromServer, pickUpIndex, partEnd, setLabel, minutesLeft, tempoText, leadInSeconds, extraSeconds, upNextDetails, equipmentChanges, finishSummary } from "./player.js";
+import { rpeOptions, toggleRpe } from "./rpe-picker.js";
 import { openSwap, prefetchAlternatives } from "./swap.js";
 import { mountNav } from "./nav.js";
 import { parseRoute, routeHash, pageFor, isSessionView } from "./routes.js";
@@ -77,6 +78,9 @@ const state = {
   workout: null, // the workout open in the workout view
   workoutNote: "", // said once under the workout when it opens, such as "Saved."
   board: null, // GET /api/coach, for the week beside Today
+  setupAsk: 0, // the latest read of a new user's day, so an older answer is dropped
+  askedHowHard: false, // Today's how-hard question was asked on this visit
+  readRecent: null, // the date whose days before were read for it
   shownHash: "", // the URL hash of the view on screen, for the editor to return to
   workoutFrom: "home", // the view its back button returns to
   weightSaves: {}, // exercise id -> weight changed in the workout view or on Get ready, not yet queued
@@ -110,6 +114,8 @@ async function loadToday(workoutId, sessionId) {
     // fall back to the day's own card.
     if (sessionId && !workoutId) return loadToday();
     if (error.code === "no_workouts") return renderSetup();
+    // A new user's day read before this doesn't draw under the error.
+    state.setupAsk += 1;
     $("today").innerHTML = `<p>${escape(loadProblem("today's session", error, { hint: false }))}</p>
       <button class="secondary" id="retry">Try again</button>`;
     $("retry").onclick = () => loadToday(workoutId, sessionId);
@@ -120,7 +126,12 @@ async function loadToday(workoutId, sessionId) {
 // A new user's Today: nothing to train until they import an example program
 // or build a workout.
 function renderSetup() {
-  state.today = null;
+  // The day read before stays on screen, and in hand, until the new read
+  // answers; another day's (or a card's) goes.
+  if (!state.today?.setup || state.today.date !== localToday()) {
+    state.today = null;
+    $("today-activities").hidden = true;
+  }
   $("today-date").textContent = "";
   $("today-day").hidden = true;
   $("today").innerHTML = `
@@ -135,6 +146,7 @@ function renderSetup() {
   // Fetched even with the card hidden: here the rest of set-up is all there is.
   if (state.setup) drawSetup();
   else loadSetup();
+  loadSetupDay();
   // Nothing loaded: a caller waiting to start the session doesn't.
   return false;
 }
@@ -208,6 +220,25 @@ function drawSetup() {
     heading?.setAttribute("tabindex", "-1");
     heading?.focus();
   };
+}
+
+// What else is on a new user's day, under the setup card: the runs planned,
+// the activities done, a way to log one, and the question of how hard one
+// sent from elsewhere was. `setup` marks a Today with no card.
+async function loadSetupDay() {
+  const date = localToday();
+  const ask = ++state.setupAsk;
+  try {
+    const { data, stale } = await getJson(paths.calendar({ from: date, to: date, today: date }));
+    // Read again since, or a workout made meanwhile brought the card back.
+    if (ask !== state.setupAsk || (state.today && !state.today.setup) || localToday() !== date) return;
+    state.distanceUnit = adoptServerDistanceUnit(storage, data.distance_unit, { queued: outbox.queued(), stale });
+    state.today = { date, setup: true, activities: data.activities, routines: data.routines, routine_days: data.routine_days };
+    renderActivities();
+    if (!stale) askHowHard();
+  } catch {
+    // The setup card alone.
+  }
 }
 
 // This week at a glance, with the coach's focus and concerns: beside the
@@ -497,7 +528,7 @@ function openTodayRoutine(key) {
 // from the server once it has it.
 async function sendActivity(request) {
   outbox.enqueue(request);
-  renderActivities();
+  if (state.today) renderActivities();
   if (await sync()) reloadToday();
 }
 
@@ -515,15 +546,34 @@ function openTodayActivity(key) {
 }
 
 // Asks once how hard a new activity from elsewhere was, unless that is
-// turned off on Settings, and only on Today with nothing else open.
-function askHowHard() {
-  if ($("home").hidden || state.run || document.querySelector("dialog[open]")) return;
-  const activity = rpeToAsk(todayActivities(), { asked: readAsked(storage), enabled: readSettings(storage).askRpe });
+// turned off on Settings, and only on Today with nothing else open: one of
+// the day's, or of the few days before (sent the morning after, say). One
+// question a visit: answering doesn't open the next one.
+async function askHowHard() {
+  const free = () => !$("home").hidden && !state.run && !document.querySelector("dialog[open]") && !state.askedHowHard;
+  const enabled = readSettings(storage).askRpe;
+  if (!free() || !enabled) return;
+  const date = state.today.date;
+  // The day's own first; the days before are read only when none is left.
+  let activity = rpeToAsk(todayActivities(), { asked: readAsked(storage), enabled });
+  // The days before are read once a visit.
+  if (!activity && state.readRecent !== date) {
+    state.readRecent = date;
+    try {
+      const { data, stale } = await getJson(paths.recentActivities(date));
+      // Today may have moved on, or asked, while the days before were read.
+      if (stale || !free() || state.today?.date !== date) return;
+      activity = rpeToAsk(withQueuedActivities(data, outbox.queued()), { asked: readAsked(storage), enabled });
+    } catch {
+      return;
+    }
+  }
   if (!activity) return;
+  state.askedHowHard = true;
   rememberAsked(storage, activity.id);
   openRpeSheet({
-    activity, unit: state.distanceUnit,
-    onRpe: (rpe) => sendActivity(changeRequest(activity, { rpe }, state.today.date)),
+    activity, unit: state.distanceUnit, today: date,
+    onRpe: (rpe) => sendActivity(changeRequest(activity, { rpe }, date)),
   });
 }
 
@@ -1512,8 +1562,7 @@ function renderChanges() {
 
 // Both answers are picked first and saved together, so a mis-tap can be fixed.
 function renderFeedback() {
-  $("rpe").innerHTML = RPE_ANCHORS.map(({ rpe, label }) =>
-    `<button aria-pressed="${state.rpe === rpe}" data-rpe="${rpe}">${label}</button>`).join("");
+  $("rpe").innerHTML = rpeOptions({ rpe: state.rpe });
   document.querySelectorAll("[data-feedback]").forEach((button) => {
     button.setAttribute("aria-pressed", String(button.dataset.feedback === state.feedback));
   });
@@ -2012,12 +2061,10 @@ $("changes").onclick = (event) => {
   saveRun();
   renderChanges();
 };
-$("rpe").onclick = (event) => {
-  const n = Number(event.target.closest("button")?.dataset.rpe);
-  if (!n) return;
-  state.rpe = state.rpe === n ? null : n;
+toggleRpe($("rpe"), (rpe) => {
+  state.rpe = rpe;
   renderFeedback();
-};
+});
 document.querySelectorAll("[data-feedback]").forEach((button) => {
   button.onclick = () => {
     state.feedback = state.feedback === button.dataset.feedback ? null : button.dataset.feedback;
