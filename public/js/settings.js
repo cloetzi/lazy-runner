@@ -8,6 +8,7 @@ import { getJson, paths, send, errorMessage } from "./api.js";
 import { escape, busy } from "./html.js";
 import { mountNav } from "./nav.js";
 import { mountExamples } from "./example-list.js";
+import { testSound } from "./beeper.js";
 import { installHint } from "./pwa.js";
 
 // The Settings page: each choice is a segmented control, saved as soon as it
@@ -86,6 +87,11 @@ async function loadUnit() {
     // Offline: the copy on this device shows.
   }
 }
+
+// A tick and the start beep, to check the volume and mute before a workout.
+document.getElementById("test-sound").onclick = async () => {
+  document.getElementById("test-sound-note").hidden = await testSound();
+};
 
 for (const group of document.querySelectorAll("[data-setting]")) {
   group.onclick = (event) => {

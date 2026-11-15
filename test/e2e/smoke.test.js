@@ -500,6 +500,11 @@ test("makes an API token on Settings that an assistant signs in to /mcp with", a
   // The About card names the running version: a release, or a dev build.
   await page.locator("#about-version").getByText(/^The Lazy Runner( \d+\.\d+\.\d+|, development build)$/).waitFor();
   await accessible(page, "Settings");
+  // Test sound plays where the browser has audio, and says so where not.
+  await page.getByRole("button", { name: "Test sound" }).click();
+  await page.waitForTimeout(200);
+  assert.equal(await page.locator("#test-sound-note").isHidden(), true);
+  assert.deepEqual(errors, []);
   await page.locator('#new-token input[name="name"]').fill("Trainer agent");
   await page.locator("#new-token").getByRole("button", { name: "Make a token" }).click();
   await page.waitForFunction(() => document.querySelector("#new-token-secret input").value !== "");
