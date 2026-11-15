@@ -149,4 +149,72 @@ describe "plan changes API" do
       _(json["plan_changes"]).must_equal []
     end
   end
+
+  describe "workout edits and remembered weights (#290)" do
+    let(:squat) { exercise("goblet-squat") }
+
+    def blocks
+      get "/api/workouts/#{strength.id}"
+      json["blocks"]
+    end
+
+    def edit_as_agent
+      sent = blocks
+      sent.first["rounds"] += 1
+      as_agent(:put, "/api/workouts/#{strength.id}", blocks: sent)
+      sent.first["rounds"]
+    end
+
+    it "shows an agent's edit on the workout and on Get ready until it is trained, and changes it back" do
+      rounds = edit_as_agent
+
+      get "/api/workouts/#{strength.id}", today: "2026-11-11"
+      shown = json["changes"]
+      _(shown.map { it.values_at("item_kind", "action", "changed_by", "workout_id", "undoable") }).must_equal [["workout", "changed", "llm", strength.id, true]]
+      _(shown.first["summary"]).must_equal "#{rounds} rounds in block #{json["blocks"].first["label"]} (was #{rounds - 1})"
+      get "/api/today", workout_id: strength.id, date: "2026-11-11"
+      _(json["changes"].map { it["id"] }).must_equal [shown.first["id"]]
+
+      post_json "/api/plan_changes/#{shown.first["id"]}/undo", today: "2026-11-11"
+
+      _(last_response.status).must_equal 200, last_response.body
+      _(json["change"].values_at("item_kind", "changed_by", "undoes_id")).must_equal ["workout", "manual", shown.first["id"]]
+      _(blocks.first["rounds"]).must_equal rounds - 1
+      get "/api/workouts/#{strength.id}"
+      _(json["changes"]).must_equal []
+    end
+
+    it "shows a weight an agent set on Get ready, not the user's own, and takes it back" do
+      put_json "/api/exercises/#{squat.id}/weight", value: 20
+      get "/api/today", workout_id: strength.id, date: "2026-11-11"
+      _(json["changes"]).must_equal []
+
+      as_agent(:put, "/api/exercises/#{squat.id}/weight", value: 25)
+      get "/api/today", workout_id: strength.id, date: "2026-11-11"
+      set = json["changes"].first
+      _(set.values_at("item_kind", "exercise_id", "title", "was", "now", "undoable"))
+        .must_equal ["weight", squat.id, squat.name, { "value" => 20.0, "unit" => "lb" }, { "value" => 25.0, "unit" => "lb" }, true]
+
+      post_json "/api/plan_changes/#{set["id"]}/undo", today: "2026-11-11"
+
+      _(last_response.status).must_equal 200, last_response.body
+      get "/api/exercises/#{squat.id}/weight"
+      _(json.values_at("value", "unit")).must_equal [20.0, "lb"]
+    end
+
+    it "refuses an edit that changed again since, and an archive" do
+      edit_as_agent
+      edited = changes.first
+      patch_json "/api/workouts/#{strength.id}", title: "Mine now"
+      _(last_response.status).must_equal 200
+
+      post_json "/api/plan_changes/#{edited["id"]}/undo"
+      _(last_response.status).must_equal 409
+      _(json["error"]["message"]).must_include "changed again"
+
+      as_agent(:delete, "/api/workouts/#{strength.id}")
+      archived = changes.find { it["action"] == "archived" }
+      _(archived.values_at("item_kind", "workout_id", "undoable")).must_equal ["workout", strength.id, false]
+    end
+  end
 end

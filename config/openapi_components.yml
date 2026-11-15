@@ -422,7 +422,7 @@ components:
       allOf:
         - $ref: "#/components/schemas/WorkoutSummary"
         - type: object
-          required: [program_id, editable, warmup, cooldown, blocks, framed, plan, weight_steps, unit]
+          required: [program_id, editable, warmup, cooldown, blocks, framed, plan, weight_steps, unit, changes]
           properties:
             program_id: { type: integer, nullable: true }
             editable: { type: boolean }
@@ -433,6 +433,7 @@ components:
             plan: { $ref: "#/components/schemas/PlayerPlan" }
             weight_steps: { $ref: "#/components/schemas/WeightSteps" }
             unit: { $ref: "#/components/schemas/Unit" }
+            changes: { type: array, description: "The latest edit an agent made to it, while it stands.", items: { $ref: "#/components/schemas/PlanChange" } }
     StepInput:
       type: object
       description: >-
@@ -867,20 +868,23 @@ components:
         change: { allOf: [{ $ref: "#/components/schemas/PlanChange" }], nullable: true, description: "The latest change an agent made to it, not taken back, while no change of the user's came after it; null if none." }
     PlanChange:
       type: object
-      required: [id, changed_by, agent_name, item_kind, session_id, routine_id, title, action, from_date, to_date, was, now, reason, batch, undoes_id, undone_by_id, undoable, created_at]
+      required: [id, changed_by, agent_name, item_kind, session_id, routine_id, workout_id, exercise_id, title, action, from_date, to_date, was, now, summary, reason, batch, undoes_id, undone_by_id, undoable, created_at]
       properties:
         id: { type: integer }
         changed_by: { type: string, enum: [manual, llm], description: "manual for the user in the app, llm for an agent (a request or MCP call with an API token)." }
         agent_name: { type: string, nullable: true, description: "The name of the agent's API token, when llm." }
-        item_kind: { type: string, enum: [session, routine] }
+        item_kind: { type: string, enum: [session, routine, workout, weight], description: "weight: an exercise's remembered weight." }
         session_id: { type: integer, nullable: true, description: The session; null once it is deleted. }
         routine_id: { type: integer, nullable: true, description: The routine; null once it is deleted. }
+        workout_id: { type: integer, nullable: true, description: The workout changed or archived. }
+        exercise_id: { type: integer, nullable: true, description: The exercise whose remembered weight changed. }
         title: { type: string, nullable: true, description: What the item was called at the time. }
-        action: { type: string, enum: [planned, moved, removed, changed, ended] }
+        action: { type: string, enum: [planned, moved, removed, changed, ended, archived] }
         from_date: { type: string, format: date, nullable: true, description: "The day it left: a session's before a move or removal, the first day a routine change or end reaches." }
         to_date: { type: string, format: date, nullable: true, description: The day it joined. }
-        was: { type: object, nullable: true, additionalProperties: true, description: "The fields it changed, as they were (date, position, note and parts for a session; a routine's fields); a removal's holds what planning it again needs." }
+        was: { type: object, nullable: true, additionalProperties: true, description: "The fields it changed, as they were (date, position, note and parts for a session; a routine's fields); a removal's holds what planning it again needs. A workout's is null (its `summary` says what changed); a weight's holds its value and unit, both null while nothing was remembered." }
         now: { type: object, nullable: true, additionalProperties: true, description: The fields it changed, as they are after it. }
+        summary: { type: string, nullable: true, description: "What a workout edit changed, in a line: \"3 rounds in block B (was 2); Split squat instead of Goblet squat in block A\"." }
         reason: { type: string, nullable: true, description: The reason given with it. }
         batch: { type: string, description: Shared by the changes made in one request or tool call. }
         undoes_id: { type: integer, nullable: true, description: The change this one takes back. }
@@ -1129,7 +1133,7 @@ components:
         invited: { type: boolean, nullable: true, description: "The owner's: someone else has an account or a pending invite. Null for anyone else." }
     Today:
       type: object
-      required: [date, source, session, day, next_planned, trained, activities, routines, routine_days, logged, program, workout_id, title, subtitle, estimated_minutes, workouts, plan, weight_steps, unit, distance_unit]
+      required: [date, source, session, day, next_planned, trained, activities, routines, routine_days, logged, program, workout_id, title, subtitle, estimated_minutes, workouts, plan, changes, weight_steps, unit, distance_unit]
       properties:
         date: { type: string, format: date }
         source: { type: string, enum: [session, default, picked], description: "Where the workout comes from: one of the day's sessions, the one up next in the rotation, or `workout_id`." }
@@ -1173,6 +1177,7 @@ components:
                 properties:
                   included: { type: boolean }
         plan: { $ref: "#/components/schemas/PlayerPlan" }
+        changes: { type: array, description: "The edits an agent made to its parts and the weights it set for their exercises, while they stand and nothing was trained since.", items: { $ref: "#/components/schemas/PlanChange" } }
         weight_steps: { $ref: "#/components/schemas/WeightSteps" }
         unit: { $ref: "#/components/schemas/Unit" }
         distance_unit: { $ref: "#/components/schemas/DistanceUnit" }

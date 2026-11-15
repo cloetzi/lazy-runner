@@ -609,6 +609,25 @@ describe "MCP server" do
         _(SetLog.first(session:).step_id).must_equal squat.id
       end
 
+      it "records the edit with what changed and the reason, which a workout of the user's needs" do
+        theirs = workout("cycle-1-workout-1")
+        sent = call_tool("get_workout", workout_id: theirs.id)["blocks"]
+        sent.first["rounds"] += 1
+        refused = _ { call_tool("update_workout", workout_id: theirs.id, blocks: sent) }.must_raise(McpToolError)
+        _(refused.message).must_include "give a `reason` for the edit"
+        _(PlanChange.where(workout_id: theirs.id).count).must_equal 0
+
+        call_tool("update_workout", workout_id: theirs.id, blocks: sent, reason: "The last two weeks felt easy")
+
+        change = call_tool("list_plan_changes")["changes"].first
+        _(change.slice("item_kind", "action", "workout_id", "title", "by", "agent_name", "reason")).must_equal(
+          "item_kind" => "workout", "action" => "changed", "workout_id" => theirs.id, "title" => theirs.title,
+          "by" => "llm", "agent_name" => "Trainer agent", "reason" => "The last two weeks felt easy"
+        )
+        _(change["summary"]).must_equal "#{sent.first["rounds"]} rounds in block #{sent.first["label"]} (was #{sent.first["rounds"] - 1})"
+        _(change.key?("was")).must_equal false
+      end
+
       it "keeps a step's weights held when sent back as get_workout gave it" do
         copy = call_tool("duplicate_workout", workout_id: workout("cycle-1-workout-1").id)
         held = ->(id) { Workout.find!(id).blocks.flat_map(&:steps).map(&:weights_held) }
@@ -677,10 +696,14 @@ describe "MCP server" do
         _(Workout.find!(built["id"]).frame_choice("warmup")).must_equal "none"
       end
 
-      it "archives a workout of an imported example too" do
+      it "archives a workout of an imported example too, with the reason it needs as the user's" do
         imported = workout("cycle-1-workout-2")
-        _(call_tool("archive_workout", workout_id: imported.id)["archived"]).must_equal true
+        refused = _ { call_tool("archive_workout", workout_id: imported.id) }.must_raise(McpToolError)
+        _(refused.message).must_include "give a `reason` for the archive"
+
+        _(call_tool("archive_workout", workout_id: imported.id, reason: "Replaced by Strength B")["archived"]).must_equal true
         _(imported.refresh.archived?).must_equal true
+        _(PlanChange.where(workout_id: imported.id).select_map(%i[action reason changed_by])).must_equal [["archived", "Replaced by Strength B", "llm"]]
       end
     end
 
@@ -705,6 +728,16 @@ describe "MCP server" do
         ExerciseWeight.first!(exercise_id: squat.id).update(unit: "kg")
         _(call_tool("get_exercise", exercise: "goblet-squat")["remembered_weight"]).must_equal({ "value" => 0.0, "unit" => "lb" })
         _(call_tool("get_workout", workout_id: workout("cycle-1-workout-1").id)["blocks"].first["steps"].first["target"].key?("weight")).must_equal false
+      end
+
+      it "records the weight set with what it was and the reason" do
+        call_tool("set_exercise_weight", exercise: "goblet-squat", value: 25, reason: "You asked for heavier")
+
+        change = call_tool("list_plan_changes")["changes"].first
+        _(change.slice("item_kind", "exercise_id", "title", "by", "reason", "was", "now")).must_equal(
+          "item_kind" => "weight", "exercise_id" => squat.id, "title" => squat.name, "by" => "llm", "reason" => "You asked for heavier",
+          "was" => { "value" => nil, "unit" => nil }, "now" => { "value" => 25.0, "unit" => "lb" }
+        )
       end
 
       it "converts a weight in the other unit and snaps it to one owned" do

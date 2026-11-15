@@ -6,12 +6,18 @@
 // whether it can be taken back now (`undoable`): only the latest change to
 // an item, once, and only into a day that has not gone by. A change of
 // yours is not shown: the mark means someone else changed it.
+//
+// Workout edits and remembered weights are recorded the same way (#290):
+// `item_kind` workout (with a `summary` of what changed) or weight (`was`
+// and `now` the value and unit, both null while nothing was remembered),
+// shown on the workout and on Get ready.
 
 import { weekOf, weekdayDay, shortDay } from "./calendar.js";
 import { agentName, writtenDay } from "./coach.js";
 import { weekdaysLabel } from "./routines.js";
 import { formatDistance, sportLabel } from "./activities.js";
 import { escape, authorLine } from "./html.js";
+import { formatWeight } from "./weights.js";
 
 // "Sat 21" in the week of `near`, else "Sat Nov 21".
 export function dayNear(iso, near) {
@@ -47,14 +53,33 @@ export function fieldChanges(change, unit) {
   return Object.keys(now).filter((key) => describe[key]).map((key) => describe[key](key));
 }
 
+// A remembered weight as a change recorded it, shown in `unit` (lb or kg):
+// "25 lb", "no weight", or "the workout's own" while nothing was remembered.
+export function rememberedText(weight, unit) {
+  if (!weight?.unit) return "the workout's own";
+  return weight.value == null ? "no weight" : formatWeight(weight, unit ?? weight.unit);
+}
+
+// The line a workout or a weight shows for an agent's change: "Coach agent
+// changed this workout · today: 3 rounds in block B (was 2)", "Coach agent
+// set 25 lb · today (was 20 lb)".
+function workoutLine(change, who, when, weightUnit) {
+  if (change.item_kind === "weight") {
+    return `${who} set ${rememberedText(change.now, weightUnit)} · ${when} (was ${rememberedText(change.was, weightUnit)})`;
+  }
+  if (change.action === "archived") return `${who} archived this workout · ${when}`;
+  return `${who} changed this workout · ${when}${change.summary ? `: ${change.summary}` : ""}`;
+}
+
 // The line an item shows for the latest change an agent made to it: "Coach
 // agent moved this from Sat 21 · today", "Coach agent · changed today: 16 km
 // → 18 km". Null when there is none to show: none, or the agent planned it
 // (which "planned by" already says).
-export function changeLine(change, { today, unit = "km" } = {}) {
+export function changeLine(change, { today, unit = "km", weightUnit } = {}) {
   if (!change || change.changed_by !== "llm") return null;
   const who = agentName(change);
   const when = writtenDay(change.created_at, today);
+  if (change.item_kind === "workout" || change.item_kind === "weight") return workoutLine(change, who, when, weightUnit);
   switch (change.action) {
     case "moved":
       return `${who} moved this from ${dayNear(oldDay(change), change.to_date ?? today)} · ${when}`;
@@ -112,6 +137,12 @@ export function dayChangeLines(changes, { from, to } = {}) {
   return days;
 }
 
+// The agent's edits of the workouts in `workoutIds` and the weights it set
+// for `exerciseIds`, from the `changes` the workout or Today gives: what
+// Get ready and the workout page show.
+export const workoutChanges = (changes, workoutIds) => (changes ?? []).filter((c) => c.item_kind === "workout" && workoutIds.includes(c.workout_id));
+export const weightChange = (changes, exerciseId) => (changes ?? []).find((c) => c.item_kind === "weight" && c.exercise_id === exerciseId) ?? null;
+
 // The latest change an agent made to a session, unless one of the user's
 // is still queued for it, which comes after it.
 export const sessionChange = (session) => (session.pending ? null : session.change ?? null);
@@ -147,8 +178,8 @@ export const withoutUndo = (change, stale) => (change && stale ? { ...change, un
 // An item's latest change by an agent, as rows and sheets show it: its line
 // with the agent's icon, then the reason given with it. Null when there is
 // nothing to say, so the caller can show who planned it instead.
-export function changeHtml(change, { today, unit, tag = "span" } = {}) {
-  const line = changeLine(change, { today, unit });
+export function changeHtml(change, { today, unit, weightUnit, tag = "span" } = {}) {
+  const line = changeLine(change, { today, unit, weightUnit });
   if (!line) return null;
   return `${authorLine(line, tag)}${change.reason ? `<${tag} class="change-reason">${escape(change.reason)}</${tag}>` : ""}`;
 }

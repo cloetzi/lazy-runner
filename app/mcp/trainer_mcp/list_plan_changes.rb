@@ -1,7 +1,9 @@
 module TrainerMcp
   class ListPlanChanges < Tool
     description <<~TEXT.squish
-      What changed in the plan, newest first: sessions and routines planned, moved, removed, changed or ended, each
+      What changed in the plan, newest first: sessions and routines planned, moved, removed, changed or ended,
+      workouts edited or archived (`item_kind: workout`, with a `summary` of what changed; get_workout gives the
+      workout as it is now) and remembered weights set (`item_kind: weight`, `was` and `now` the value and unit), each
       with who did it (`manual` the user in the app, `llm` you or another agent, named by `agent_name`), when, the
       days it left (`from_date`) and joined (`to_date`), the fields before (`was`) and after (`now`), the reason given,
       and `undone: true` when the user took it back. Start planning with it: it shows what the user changed since you
@@ -31,10 +33,10 @@ module TrainerMcp
     def self.change(change, lookup)
       compact(
         id: change.id, action: change.action, item_kind: change.item_kind, session_id: change.session_id,
-        routine_id: change.routine_id, title: change.title, by: change.changed_by, agent_name: change.agent_name,
+        routine_id: change.routine_id, workout_id: change.workout_id, exercise_id: change.exercise_id, title: change.title, summary: change.summary, by: change.changed_by, agent_name: change.agent_name,
         at: change.created_at.iso8601, from_date: change.from_date&.iso8601, to_date: change.to_date&.iso8601,
         reason: change.reason, undoes: change.undoes_id, undone: (true if change.undone?(lookup))
-      ).merge({ was: change.was, now: change.now }.compact)
+      ).merge(change.before_and_after.compact)
     end
   end
 end

@@ -2,7 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
   changeLine, undoLabel, undoName, dayChangeLines, dayNear, changeHtml, undoButton, undoRequest,
-  sessionChange, routineChangeOn, changeShownOn, withoutUndo,
+  sessionChange, routineChangeOn, changeShownOn, withoutUndo, workoutChanges, weightChange,
 } from "../../public/js/plan-changes.js";
 
 const today = "2026-11-16"; // a Monday
@@ -129,4 +129,29 @@ test("a copy kept on the device offers no undo", () => {
   assert.equal(withoutUndo(change(), true).undoable, false);
   assert.equal(withoutUndo(change(), false).undoable, true);
   assert.equal(withoutUndo(null, true), null);
+});
+
+test("says what an agent changed in a workout, or the weight it set, with Change it back (#290)", () => {
+  const edit = change({ item_kind: "workout", workout_id: 3, title: "Workout 1", action: "changed", summary: "3 rounds in block B (was 2)", was: {}, now: {} });
+  assert.equal(changeLine(edit, { today }), "Coach agent changed this workout · today: 3 rounds in block B (was 2)");
+  assert.equal(undoLabel(edit), "Change it back");
+  assert.equal(undoName(edit), "Change Workout 1 back");
+  assert.equal(changeLine({ ...edit, action: "archived", undoable: false }, { today }), "Coach agent archived this workout · today");
+
+  const weight = change({ item_kind: "weight", exercise_id: 9, title: "Goblet squat", action: "changed", was: { value: 20, unit: "lb" }, now: { value: 25, unit: "lb" } });
+  assert.equal(changeLine(weight, { today, weightUnit: "lb" }), "Coach agent set 25 lb · today (was 20 lb)");
+  assert.equal(changeLine({ ...weight, was: { value: null, unit: null }, now: { value: null, unit: "lb" } }, { today }), "Coach agent set no weight · today (was the workout's own)");
+  assert.equal(changeLine({ ...weight, changed_by: "manual" }, { today }), null);
+});
+
+test("picks a workout's edits and an exercise's weight from what the workout or Today gives", () => {
+  const changes = [
+    change({ id: 1, item_kind: "workout", workout_id: 3 }),
+    change({ id: 2, item_kind: "workout", workout_id: 4 }),
+    change({ id: 3, item_kind: "weight", exercise_id: 9 }),
+  ];
+  assert.deepEqual(workoutChanges(changes, [3]).map((c) => c.id), [1]);
+  assert.equal(weightChange(changes, 9).id, 3);
+  assert.equal(weightChange(changes, 8), null);
+  assert.deepEqual(workoutChanges(undefined, [3]), []);
 });

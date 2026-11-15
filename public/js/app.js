@@ -31,6 +31,7 @@ import {
 import { openEditor, leaveEditor } from "./editor.js";
 import { draftFrom, setExercise, saveRequest } from "./builder.js";
 import { mountExamples } from "./example-list.js";
+import { changeHtml, undoButton, undoRequest, workoutChanges, weightChange, withoutUndo } from "./plan-changes.js";
 import {
   withActivities, listed, routineTitle, confirmRequest as confirmDayRequest, skipRequest as skipDayRequest,
   moveRequest as moveDayRequest, resetRequest as resetDayRequest, endRequest as endRoutineRequest,
@@ -109,6 +110,7 @@ async function loadToday(workoutId, sessionId) {
     state.distanceUnit = adoptServerDistanceUnit(storage, today.distance_unit, { queued: outbox.queued(), stale });
     // The service worker answered from its cache: the server is out of reach.
     state.today = stale ? offlineToday(today, localToday()) : today;
+    state.todayStale = stale;
     state.today.pickedSession = Boolean(sessionId && !workoutId);
     state.noWorkouts = false;
     renderToday();
@@ -704,6 +706,7 @@ async function openWorkout(id) {
   try {
     const [{ data, stale }] = await Promise.all([getJson(paths.workout(id)), loadEquipmentNames()]);
     state.workout = data;
+    state.workoutStale = stale;
     state.unit = adoptServerUnit(storage, data.unit, { queued: outbox.queued(), stale });
     renderWorkout();
     $("workout-blocks").insertAdjacentHTML("afterbegin", offlineNote(stale));
@@ -719,7 +722,8 @@ function renderWorkout() {
   loaded("workout", workout.id, workout.title);
   $("workout-subtitle").textContent = [workout.subtitle, `about ${workout.estimated_minutes} min`].filter(Boolean).join(" · ");
   const gear = [...new Set(workout.blocks.flatMap((block) => block.steps.flatMap((step) => neededEquipment(step) ?? [])))];
-  $("workout-blocks").innerHTML = (gear.length ? `<div class="workout-gear"><h2 class="visually-hidden">Gear</h2>
+  const changes = workoutChanges(workout.changes, [workout.id]).map((change) => withoutUndo(change, state.workoutStale));
+  $("workout-blocks").innerHTML = agentChangesHtml(changes) + (gear.length ? `<div class="workout-gear"><h2 class="visually-hidden">Gear</h2>
       ${gearChips(gear, { names: equipmentNames, owned: ownedEquipment(), label: "Gear it needs", classes: "equipment-list" })}</div>` : "") +
     workout.blocks.map((block, b) => `
     <section class="card block">
@@ -728,6 +732,33 @@ function renderWorkout() {
     </section>`).join("");
   $("workout-start").hidden = false;
   renderWorkoutOwn();
+}
+
+// An agent's edits of a workout (#290), each with its reason and the button
+// that changes it back: in the workout view and on Get ready.
+function agentChangesHtml(changes) {
+  return changes.map((change) => {
+    const line = changeHtml(change, { today: localToday(), tag: "p" });
+    return line ? `<div class="agent-change">${line}${undoButton(change, change.title)}</div>` : "";
+  }).join("");
+}
+
+// Takes an agent's edit of a workout or a weight back, now (it answers
+// whether it could), then `after()` reads the screen again either way.
+async function takeBack(id, changes, button, after) {
+  const change = (changes ?? []).find((c) => String(c.id) === id);
+  if (!change || state.undoing) return;
+  state.undoing = true;
+  busy(button);
+  try {
+    await saveWeights();
+    const problem = await sendChange(undoRequest(change, localToday()));
+    if (problem) alert(problem);
+    await after(!problem);
+  } finally {
+    state.undoing = false;
+    if (button.isConnected) busy(button, false);
+  }
 }
 
 // At the top of the workout view: Edit, which opens the editor (editor.js),
@@ -1003,7 +1034,9 @@ async function startWorkout(id) {
 
 // ---------- Get ready ----------
 
-function startSession() {
+// `ready`: Get ready even when the session needs nothing to pick up (drawn
+// again after a change was taken back there).
+function startSession({ ready = false } = {}) {
   if (state.parked) return askAboutParked();
   settleDiscard();
   unlock();
@@ -1040,7 +1073,7 @@ function startSession() {
     stage: "ready",
   };
   $("ready-note").textContent = "";
-  if (state.run.equipment.length === 0 && state.run.targets.length === 0) beginPlayer();
+  if (!ready && state.run.equipment.length === 0 && state.run.targets.length === 0) beginPlayer();
   else showReady();
 }
 
@@ -1067,9 +1100,40 @@ function showReady() {
   $("ready-go").textContent = startLabel(run.items[run.index] ?? run.items[0]);
   $("ready-need").hidden = gear.length === 0;
   $("ready-weights").hidden = run.targets.length === 0;
-  $("ready-targets").innerHTML = run.targets.map((t, i) => `<li><span>${escape(t.exercise.name)}</span>
-      ${weightStepper(t.exercise.name, shownLoad(t.weight, t.weights_held), `data-target="${i}"`)}</li>`).join("");
+  const changes = readyChanges();
+  $("ready-changes").innerHTML = agentChangesHtml(workoutChanges(changes, [...new Set(run.items.map((item) => item.workout.id))]));
+  $("ready-targets").innerHTML = run.targets.map((t, i) => {
+    const change = weightChange(changes, t.exercise.id);
+    // In its own unit, the gear's, as the stepper beside it shows it.
+    const line = change && changeHtml(change, { today: localToday(), tag: "p" });
+    return `<li><span>${escape(t.exercise.name)}</span>
+      ${weightStepper(t.exercise.name, shownLoad(t.weight, t.weights_held), `data-target="${i}"`)}
+      ${line ? `<div class="agent-change">${line}${undoButton(change, `${t.exercise.name}'s weight`)}</div>` : ""}</li>`;
+  }).join("");
   show("ready");
+}
+
+// The agent's edits and weights Today gave for this session's workout; none
+// for a session picked up after a reload, until Today is read again.
+// A copy kept on the device can't say what can still be taken back.
+function readyChanges() {
+  if (!state.today || state.today.workout_id !== state.run?.workoutId) return [];
+  return (state.today.changes ?? []).map((change) => withoutUndo(change, state.todayStale));
+}
+
+// Get ready again, as the server now plans the workout after a change was
+// taken back, kept going back where Start was pressed.
+async function reloadReady() {
+  const run = state.run;
+  if (!run || run.stage !== "ready") return;
+  // Read as Today was (the rotation, a picked workout or a picked session).
+  if (!(await reloadToday()) || state.run !== run) return;
+  if (state.today.workout_id !== run.workoutId) return showReady();
+  startSession({ ready: true });
+  if (state.run && state.run !== run) {
+    state.run.from = run.from;
+    saveRun();
+  }
 }
 
 // Swap on Get ready: the first exercise of row `rowIndex` (gear the user
@@ -2377,7 +2441,13 @@ $("ready-pickup").onclick = (event) => {
   if (swap) swapReadyGear(Number(swap.dataset.swapRow));
 };
 
+$("ready-changes").onclick = (event) => {
+  const undo = event.target.closest("button[data-undo]");
+  if (undo) takeBack(undo.dataset.undo, readyChanges(), undo, reloadReady);
+};
 $("ready-targets").onclick = (event) => {
+  const undo = event.target.closest("button[data-undo]");
+  if (undo) return takeBack(undo.dataset.undo, readyChanges(), undo, reloadReady);
   const button = event.target.closest("button");
   if (button?.dataset.weight) stepReadyWeight(Number(button.dataset.target), button.dataset.weight);
 };
@@ -2451,6 +2521,14 @@ document.addEventListener("keydown", (event) => {
   menu.querySelector("summary").focus();
 });
 $("workout-blocks").onclick = (event) => {
+  const undo = event.target.closest("button[data-undo]");
+  if (undo) {
+    const id = state.workout?.id;
+    return takeBack(undo.dataset.undo, state.workout?.changes, undo, (done) => {
+      if (done) state.workoutNote = "Changed back.";
+      return openWorkout(id);
+    });
+  }
   const have = event.target.closest("button[data-have]");
   if (have) {
     return haveGear(have.dataset.have, have, {

@@ -62,3 +62,19 @@ test("marks it seen up to the newest thing shown", () => {
   assert.deepEqual(seenRequest({ latest: at(11) }), { method: "POST", path: "/api/coach/seen", body: { until: at(11) } });
   assert.deepEqual(seenRequest(empty), { method: "POST", path: "/api/coach/seen", body: {} });
 });
+
+test("says what an agent changed in a workout, linking to it, and the weights it set (#290)", () => {
+  const news = {
+    ...empty, latest: at(11),
+    changes: [
+      change({ id: 8, item_kind: "weight", exercise_id: 9, title: "Goblet squat", action: "changed", to_date: null, was: { value: 20, unit: "lb" }, now: { value: 25, unit: "lb" }, undoable: true, created_at: at(11) }),
+      change({ id: 7, item_kind: "workout", workout_id: 3, title: "Workout 1", action: "changed", to_date: null, summary: "3 rounds in block B (was 2)", undoable: true }),
+    ],
+  };
+  const [group] = newsGroups(news, { today, weightUnit: "lb" });
+  assert.deepEqual(group.items.map((item) => [item.text, item.href, item.title, item.undo?.id ?? null]), [
+    ["Changed Workout 1: 3 rounds in block B (was 2)", "/#workout/3", "Workout 1", 7],
+    ["Set Goblet squat to 25 lb (was 20 lb)", null, "Goblet squat's weight", 8],
+  ]);
+  assert.equal(group.items[0].showLabel, "Show Workout 1");
+});

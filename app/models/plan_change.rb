@@ -1,5 +1,6 @@
 # One change to the plan (#258): a session or routine planned, moved,
-# removed, changed or ended, by the user in the app (`manual`) or by an agent
+# removed, changed or ended, a workout changed or archived, or an exercise's
+# remembered weight set (#290), by the user in the app (`manual`) or by an agent
 # (`llm`: a request or MCP call made with an API token, named by it). It says
 # what the item was called, the days it left and joined, the fields it
 # changed (`was` before, `now` after; a removal's `was` holds what putting it
@@ -8,7 +9,11 @@
 #
 # The Session and Routine models write these themselves (`record!`), so a
 # session that leaves because its workout was archived or its routine changed
-# is recorded like any other removal. What happens to a plan rather than what
+# is recorded like any other removal. Workout#revise! and #archive! and
+# ExerciseWeight.remember! do the same: a workout's `was` and `now` are its
+# whole structure (WorkoutChange.snapshot), with a line saying what changed
+# (`summary`); a weight's are its value and unit (both null while nothing is
+# remembered). What happens to a plan rather than what
 # it is (starting, finishing, skipping, a routine day confirmed or made
 # tentative again) is not a change, nor is deleting a finished session.
 #
@@ -18,8 +23,10 @@
 # and only into a day that has not gone by.
 class PlanChange < Record
   BY = %w[manual llm].freeze
-  KINDS = %w[session routine].freeze
-  ACTIONS = %w[planned moved removed changed ended].freeze
+  KINDS = %w[session routine workout weight].freeze
+  ACTIONS = %w[planned moved removed changed ended archived].freeze
+  # The column naming each kind's item.
+  ITEMS = { "session" => :session_id, "routine" => :routine_id, "workout" => :workout_id, "weight" => :exercise_id }.freeze
   # A session's fields a move or change records, by their API names.
   SESSION_FIELDS = { date: :date, position: :position, note: :note, parts: :part_kinds }.freeze
   # What a removed session needs to be planned again.
@@ -35,6 +42,8 @@ class PlanChange < Record
   json_columns was: nil, now: nil
   many_to_one :session
   many_to_one :routine
+  many_to_one :workout
+  many_to_one :exercise
   many_to_one :undoes, class: self
 
   dataset_module do
@@ -46,24 +55,34 @@ class PlanChange < Record
     def made_in(days) = where(created_at: days.begin.beginning_of_day.to_time...(days.end + 1).beginning_of_day.to_time)
   end
 
-  # Records a change to `item` (a Session or a Routine) as made now: by an
-  # agent when the request or tool call came with a token, with the reason
-  # given for it (Current.plan_reason) and in this request's batch. Nothing
-  # while recording is off (`quietly`). An undo's first change of the same
-  # kind is the one that takes the change back.
-  def self.record!(item, action, from_date: nil, to_date: nil, was: nil, now: nil, removed: false)
+  # Records a change to `item` (a Session, a Routine, a Workout, or the
+  # Exercise whose remembered weight changed) as made now: by an agent when
+  # the request or tool call came with a token, with the reason given for it
+  # (Current.plan_reason, unless `reason` is given) and in this request's
+  # batch. Nothing while recording is off (`quietly`). An undo's first change
+  # of the same kind is the one that takes the change back.
+  def self.record!(item, action, from_date: nil, to_date: nil, was: nil, now: nil, removed: false, summary: nil, reason: Current.plan_reason)
     return if Current.plan_quiet
 
-    kind = item.is_a?(Session) ? "session" : "routine"
+    kind = kind_of(item)
     undo = Current.plan_undo
     undoes_id = (undo.delete(:id) if undo && undo[:kind] == kind)
     by = Current.agent_name ? "llm" : "manual"
     create(
       changed_by: by, agent_name: (Current.agent_name if by == "llm"), item_kind: kind,
-      "#{kind}_id": (item.id unless removed), title: title_of(item), action:,
-      from_date:, to_date:, was: json(was), now: json(now), reason: Current.plan_reason,
+      ITEMS.fetch(kind) => (item.id unless removed), title: title_of(item), action:,
+      from_date:, to_date:, was: json(was), now: json(now), summary:, reason:,
       batch: Current.plan_batch ||= SecureRandom.uuid, undoes_id:
     )
+  end
+
+  def self.kind_of(item)
+    case item
+    when Session then "session"
+    when Routine then "routine"
+    when Workout then "workout"
+    when Exercise then "weight"
+    end
   end
 
   # Changes made in the block are not recorded: states such as a routine
@@ -89,6 +108,8 @@ class PlanChange < Record
     case item
     when Session then item.workout&.title
     when Routine then item.title || item.sport&.capitalize || item.workout&.title
+    when Workout then item.title
+    when Exercise then item.name
     end
   end
 
@@ -108,12 +129,17 @@ class PlanChange < Record
       routine_ids = changes.map(&:routine_id).compact.uniq
       latest = Sequel.function(:max, :id).as(:latest)
       @undone_by = read(changes.map(&:id)) { PlanChange.where(undoes_id: it).select_hash(:undoes_id, :id) }
-      @latest_session = read(session_ids) { PlanChange.where(session_id: it).group(:session_id).select_hash(:session_id, latest) }
-      @latest_routine = read(routine_ids) { PlanChange.where(routine_id: it).group(:routine_id).select_hash(:routine_id, latest) }
+      @latest = ITEMS.values.to_h do |column|
+        ids = changes.map(&column).compact.uniq
+        [column, read(ids) { PlanChange.where(column => it).group(column).select_hash(column, latest) }]
+      end
       @sessions = loaded(sessions, session_ids) { Session.where(id: it).as_hash(:id) }
       @routines = loaded(routines, routine_ids) { Routine.where(id: it).as_hash(:id) }
       @routines.each_value { it.today = today }
-      @workouts = read(changes.filter_map { it.was&.dig("workout_id") }.uniq) { Workout.where(id: it).as_hash(:id) }
+      exercise_ids = changes.map(&:exercise_id).compact.uniq
+      @remembered = read(exercise_ids) { ExerciseWeight.where(exercise_id: it).as_hash(:exercise_id) }
+      workout_ids = changes.filter_map { it.was&.dig("workout_id") } + changes.map(&:workout_id).compact
+      @workouts = read(workout_ids.uniq) { Workout.where(id: it).as_hash(:id) }
       # The routine days a removed session confirmed that a session holds again.
       days = changes.filter_map { [it.was["routine_id"], it.was["routine_date"]] if it.action == "removed" && it.was&.dig("routine_id") }
       @held = read(days.map(&:first).uniq) { Session.where(routine_id: it).select_map([:routine_id, :routine_date]).to_set { |id, date| [id, date.iso8601] } }
@@ -125,15 +151,16 @@ class PlanChange < Record
     def session(change) = @sessions[change.session_id]
     def routine(change) = @routines[change.routine_id]
     def workout(id) = @workouts[id]
+    # What is remembered for the exercise now, as a change records it.
+    def remembered(id) = @remembered[id]&.recorded || ExerciseWeight::NOTHING
     def held?(routine_id, date) = @held.include?([routine_id, date])
 
     # Whether no change to its item came after it. A removed session (or a
     # deleted routine) has no item left to change.
     def latest?(change)
-      if change.session_id then @latest_session[change.session_id] == change.id
-      elsif change.routine_id then @latest_routine[change.routine_id] == change.id
-      else true
-      end
+      column = ITEMS.fetch(change.item_kind)
+      item = change[column]
+      item.nil? || @latest[column][item] == change.id
     end
 
     private
@@ -175,6 +202,37 @@ class PlanChange < Record
     def lines = @lines.map { it.as_json(lookup: @lookup) }
   end
 
+  # The changes an agent made to `workouts` and to the remembered weights
+  # of `exercise_ids` that still stand: each item's latest change, while it
+  # is an agent's, not an undo and not taken back, as JSON with whether it
+  # can be taken back. What the workout page and Get ready show. With
+  # `untrained`, only while nothing was trained since: no set logged in a
+  # session of the workout, nor of the exercise.
+  def self.standing(workout_ids: [], exercise_ids: [], today: Time.zone.today, untrained: false)
+    latest = Sequel.function(:max, :id)
+    ids = { workout_id: workout_ids, exercise_id: exercise_ids }.flat_map do |column, items|
+      items.empty? ? [] : where(column => items.uniq).group(column).select_map(latest.as(:latest))
+    end
+    return [] if ids.empty?
+
+    changes = by_agent.not_undone.where(id: ids, undoes_id: nil).order(:id).all
+    changes = changes.reject { it.trained_since? } if untrained
+    lookup = Lookup.new(changes, today:)
+    # A weight that changed since without a record (a session erased) is
+    # no longer the agent's.
+    changes = changes.reject { it.item_kind == "weight" && lookup.remembered(it.exercise_id) != it.now&.transform_keys(&:to_sym) }
+    changes.map { it.as_json(lookup:) }
+  end
+
+  # Whether a set was logged since this change against a step of its
+  # workout (a warm-up's too, run in its main workout's session), or of its
+  # exercise.
+  def trained_since?
+    logged = SetLog.where(Sequel[:created_at] > created_at)
+    logged = workout_id ? logged.where(step_id: Step.where(block_id: Block.where(workout_id:).select(:id)).select(:id)) : logged.where(exercise_id:)
+    !logged.empty?
+  end
+
   def undone?(lookup = Lookup.new([self], today: Time.zone.today)) = !lookup.undone_by(self).nil?
 
   # Why it can't be taken back on `today`, or nil when it can.
@@ -183,9 +241,18 @@ class PlanChange < Record
     return "this change was taken back already" if undone?(lookup)
     return "an undo can't be taken back; change it again instead" if undoes_id
     return planned_problem if action == "planned"
+    return "an archived workout stays archived; duplicate it to train it again" if action == "archived"
+    if item_kind == "workout"
+      problem = workout_problem(lookup)
+      return problem if problem
+    end
     return "it changed again since; only its latest change can be taken back" unless lookup.latest?(self)
 
-    item_kind == "session" ? session_problem(lookup, today) : routine_problem(lookup, today)
+    case item_kind
+    when "session" then session_problem(lookup, today)
+    when "routine" then routine_problem(lookup, today)
+    when "weight" then weight_problem(lookup)
+    end
   end
 
   # Takes the change back on `today`, as the same model code would make the
@@ -206,17 +273,31 @@ class PlanChange < Record
     raise NotUndoable, "this change was taken back already"
   rescue Sequel::ValidationFailed => error
     raise NotUndoable, "it can't be taken back: #{error.errors.full_messages.join(", ")}"
-  rescue Session::Settled, Routine::Settled => error
+  rescue Session::Settled, Routine::Settled, Workout::Running, Workout::ReadOnly => error
     raise NotUndoable, "it can't be taken back: #{error.message}"
+  rescue WorkoutStructure::Invalid => error
+    raise NotUndoable, "it can't be taken back as it was: #{error.message}"
   end
 
   def as_json(options = nil)
     lookup = options&.dig(:lookup) || Lookup.new([self], today: options&.dig(:today) || Time.zone.today)
     {
-      id:, changed_by:, agent_name:, item_kind:, session_id:, routine_id:, title:, action:,
-      from_date: from_date&.iso8601, to_date: to_date&.iso8601, was:, now:, reason:, batch:,
+      id:, changed_by:, agent_name:, item_kind:, session_id:, routine_id:, workout_id:, exercise_id:, title:, action:,
+      from_date: from_date&.iso8601, to_date: to_date&.iso8601, **before_and_after, summary:, reason:, batch:,
       undoes_id:, undone_by_id: lookup.undone_by(self), undoable: undo_problem(lookup).nil?, created_at:
     }
+  end
+
+  def weight_problem(lookup)
+    return "the exercise is gone" unless exercise_id
+    # Changed without a record since (a session erased, its gear relabelled).
+    "the weight changed since; set it on Get ready instead" unless lookup.remembered(exercise_id) == now&.transform_keys(&:to_sym)
+  end
+
+  # The fields before and after, as a list gives them: not a workout's
+  # whole structure, which only undo reads (`summary` says what changed).
+  def before_and_after
+    item_kind == "workout" ? { was: nil, now: nil } : { was:, now: }
   end
 
   def validate
@@ -226,9 +307,9 @@ class PlanChange < Record
     validates_includes KINDS, :item_kind
     validates_includes ACTIONS, :action
     MAX_LENGTHS.each { |column, length| validates_max_length length, column, allow_nil: true, message: "is longer than #{length} characters" }
-    # Another user's session, routine or change is not found, as a lookup
-    # would say.
-    { session_id: Session, routine_id: Routine, undoes_id: PlanChange }.each do |column, model|
+    # Another user's session, routine, workout or change is not found, as a
+    # lookup would say. Exercises are shared.
+    { session_id: Session, routine_id: Routine, workout_id: Workout, exercise_id: Exercise, undoes_id: PlanChange }.each do |column, model|
       next unless (new? || column_changed?(column)) && !self[column].nil?
 
       errors.add(column, "is not found") unless Record.id(self[column]) && !model.where(id: Record.id(self[column])).empty?
@@ -239,6 +320,18 @@ class PlanChange < Record
 
   def planned_problem
     item_kind == "session" ? "take a planned session off the calendar instead" : "end the routine instead"
+  end
+
+  def workout_problem(lookup)
+    workout = lookup.workout(workout_id)
+    return "the workout is gone" unless workout
+    return "the workout is archived" if workout.archived?
+
+    frames = Workout::FRAMES.filter_map { was&.dig(it) }.grep(Integer)
+    return "its warm-up or cool-down then is archived" if frames.any? && Workout.where(id: frames).exclude(archived_at: nil).any?
+
+    running = workout.running_session
+    "#{workout.title} is being trained right now; it can change back once that session is over" if running
   end
 
   def session_problem(lookup, today)
@@ -308,6 +401,14 @@ class PlanChange < Record
       fields = was.transform_keys(&:to_sym)
       fields[:starts_on] = [Date.iso8601(fields[:starts_on]), today].max if fields[:starts_on]
       routine.revise!(fields)
+    in ["workout", "changed"]
+      workout = Workout.find!(workout_id)
+      workout.revise!(WorkoutChange.restorable(was, workout))
+    in ["weight", "changed"]
+      exercise = Exercise.with_pk!(exercise_id)
+      if was["unit"].nil? then ExerciseWeight.forget!(exercise)
+      else ExerciseWeight.remember!(exercise, was["value"] || 0, was["unit"])
+      end
     in ["routine", "ended"]
       fields = was.transform_keys(&:to_sym)
       starts_on = [Date.iso8601(fields[:starts_on]), today].max

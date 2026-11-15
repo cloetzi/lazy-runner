@@ -817,6 +817,16 @@ button.step-name .icon { color: var(--muted); }
 .day-changes li { display: flex; flex-wrap: wrap; align-items: center; column-gap: var(--space-2); }
 .day-changes .quiet { font-size: var(--text-sm); }
 .day-changes .change-reason { flex-basis: 100%; }
+/* An agent's edit of a workout or a remembered weight (#290): the line, the
+   reason and Change it back, on the workout and on Get ready. */
+.agent-change { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-1) var(--space-3); }
+.agent-change > .author-line, .agent-change > .change-reason { flex-basis: 100%; }
+.agent-change > .author-line .icon { align-self: flex-start; margin-top: 0.15em; }
+.workout-blocks > .agent-change, .agent-changes > .agent-change {
+  background: var(--accent-tint); color: var(--text); border-radius: var(--radius-md); padding: var(--space-3) var(--space-4); margin-bottom: var(--space-4);
+}
+.workout-blocks > .agent-change .author-line, .agent-changes .author-line, .agent-changes .change-reason, .workout-blocks > .agent-change .change-reason { color: var(--text); }
+.targets .agent-change { grid-column: 1 / -1; }
 .cal-row[draggable="true"], .chip[draggable="true"] { cursor: grab; }
 .cal-row > .row > .sport-tile { align-self: center; }
 .dragging { opacity: 0.5; }

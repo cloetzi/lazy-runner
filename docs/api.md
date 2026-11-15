@@ -102,15 +102,19 @@ as null when it has no value (`nullable`).
   written before a day, keeping the current status and focus, the open
   concerns and the notes the user replied to.
 - **Plan changes** are recorded by the models (`GET /api/plan_changes`):
-  every session or routine planned, moved, removed, changed or ended, by the
+  every session or routine planned, moved, removed, changed or ended, every
+  workout edited or archived and every remembered weight set (#290), by the
   user (`manual`) or an agent with a token (`llm`), with the fields before
-  and after and the reason given. `POST /api/plan_changes/:id/undo` takes the
+  and after (for a workout a `summary` line instead; the structure before is
+  kept for undo) and the reason given. `POST /api/plan_changes/:id/undo` takes the
   latest change to an item back (409 with why when it can't), recorded as the
   user's change, and only the user takes one back (403 with a token).
   `GET /api/calendar` gives each session and routine the latest
   change an agent made to it (`change`), while the user hasn't changed it
   since, and the sessions it moved away or removed this week on
-  (`plan_changes`).
+  (`plan_changes`). `GET /api/workouts/:id` and `GET /api/today` give the
+  agent's edits and weights that still stand (`changes`; on Today only until
+  the workout or exercise is trained again).
 - **Since you last looked** (`GET /api/coach/news`): what agents did since
   the user last marked it seen (`POST /api/coach/seen` with the `latest` it
   gave, so nothing made meanwhile is lost; only the user marks it): plan
@@ -232,14 +236,14 @@ change reaches every future session of it.
 | `list_sessions` | The calendar over a date range (as `GET /api/sessions`), each session with its workout, minutes and completion |
 | `list_activities` | Activities over a date range (as `GET /api/activities`), with the user's distance unit |
 | `list_routines` | Routines with days in a date range (by default the 7 days before today and the 21 from today on), the days with their state (tentative, confirmed, done, skipped, missed) and raw counts per state |
-| `list_plan_changes` | Changes to the plan since a day (14 days back by default), by the user, an agent or both, each with who, when, the days, the fields before and after, the reason and whether the user took it back |
+| `list_plan_changes` | Changes to the plan, workouts and remembered weights since a day (14 days back by default), by the user, an agent or both, each with who, when, the days, the fields before and after, a workout edit's summary, the reason and whether the user took it back |
 | `list_examples` | The example programs (as `GET /api/examples`) |
 | `create_workout` | A new workout with its whole structure (as `POST /api/workouts`), marked `source: llm`; steps name exercises by slug; `warnings` name steps with gear or a weight the user doesn't own |
 | `import_example` | An example program into the user's (as `POST /api/examples/:slug/import`), marked `source: llm` |
-| `update_workout` | Title, framing and, with `blocks`, the whole structure (as `PATCH` and `PUT /api/workouts/:id`) of a workout of the user's or the assistant's |
+| `update_workout` | Title, framing and, with `blocks`, the whole structure (as `PATCH` and `PUT /api/workouts/:id`) of a workout of the user's or the assistant's, with a `reason` (required for the user's), recorded |
 | `duplicate_workout` | A copy of a workout, marked `source: llm` |
-| `archive_workout` | Archives a workout, taking its sessions from today on off the calendar |
-| `set_exercise_weight` | The remembered weight (as `PUT /api/exercises/:id/weight`), for every workout with the exercise |
+| `archive_workout` | Archives a workout, taking its sessions from today on off the calendar, with a `reason` (required for the user's) |
+| `set_exercise_weight` | The remembered weight (as `PUT /api/exercises/:id/weight`), for every workout with the exercise, with a `reason`, recorded |
 | `update_equipment` | Whether the user owns an item, and its weights and unit (as `PATCH /api/equipment/:id`) |
 | `plan_sessions` | Up to 28 sessions on days from today on, all or nothing, marked `created_by: llm` |
 | `move_session` | A planned or missed session to another day or place, with a `reason` (required for the user's), or a new note on one the assistant planned |

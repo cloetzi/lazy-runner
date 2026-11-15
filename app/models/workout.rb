@@ -112,11 +112,14 @@ class Workout < Record
   # cool-down also leaves the main workouts that pick it (`picked_by`), which
   # run without one from now on; while a session runs it, or a workout that
   # picks it, that raises Running. Returns the sessions taken off.
+  # Recorded as a change to the workout (PlanChange) with the reason given,
+  # while the sessions it takes off say "its workout was archived".
   def archive!
-    PlanChange.because("its workout was archived", over: true) { archive_now }
+    reason = Current.plan_reason
+    PlanChange.because("its workout was archived", over: true) { archive_now(reason) }
   end
 
-  private def archive_now
+  private def archive_now(reason)
     db.transaction do
       if FRAMES.include?(kind)
         archiving = "it can be archived once that session is finished or skipped"
@@ -126,6 +129,7 @@ class Workout < Record
         picked_by.all.each { it.refuse_while_running(archiving) }
       end
       update(archived_at: Time.now)
+      PlanChange.record!(self, "archived", reason:)
       picked_by.update("#{kind}_id": nil, "no_#{kind}": true, updated_at: Time.now) if FRAMES.include?(kind)
       removed = Session.where(workout_id: id, status: "planned", date: Time.zone.today..).in_order.all.each(&:destroy)
       # Its routines end too: their days could never be confirmed.
@@ -217,26 +221,41 @@ class Workout < Record
   # the whole structure (see WorkoutStructure) and is refused while a session
   # runs the workout. All or nothing: raises ReadOnly, Running,
   # Sequel::ValidationFailed or WorkoutStructure::Invalid, changing nothing.
+  # A change to a workout there was is recorded (PlanChange), with the
+  # workout as it was and is, and a line saying what changed.
   def revise!(attrs)
     attrs = attrs.to_h.transform_keys(&:to_s)
     reason = read_only_reason
     raise ReadOnly, reason if reason
 
     db.transaction do
-      self.title = attrs["title"] if attrs.key?("title")
-      self.subtitle = attrs["subtitle"].presence if attrs.key?("subtitle")
-      FRAMES.each { |part| choose_frame(part, attrs[part]) if attrs.key?(part) }
-      structure = WorkoutStructure.new(self, attrs["blocks"]) if attrs.key?("blocks")
-      refuse_while_running if structure || reframed?
-      next save_changes unless structure
-
-      # The workout's own problems and its structure's, reported together.
-      structure.check!
-      save_changes
-      structure.write!
-      validate!(:publish)
+      was = WorkoutChange.snapshot(self) unless new?
+      write(attrs)
+      record_change(was) if was
     end
     self
+  end
+
+  private def write(attrs)
+    self.title = attrs["title"] if attrs.key?("title")
+    self.subtitle = attrs["subtitle"].presence if attrs.key?("subtitle")
+    FRAMES.each { |part| choose_frame(part, attrs[part]) if attrs.key?(part) }
+    structure = WorkoutStructure.new(self, attrs["blocks"]) if attrs.key?("blocks")
+    refuse_while_running if structure || reframed?
+    return save_changes unless structure
+
+    # The workout's own problems and its structure's, reported together.
+    structure.check!
+    save_changes
+    structure.write!
+    validate!(:publish)
+  end
+
+  private def record_change(was)
+    now = WorkoutChange.snapshot(self)
+    return if now == was
+
+    PlanChange.record!(self, "changed", was:, now:, summary: WorkoutChange.summary(was, now))
   end
 
   # Changing what a running session runs would pull its steps from under the

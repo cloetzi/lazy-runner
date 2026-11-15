@@ -205,7 +205,7 @@ function newsCard() {
       <ul class="news-items">${g.items.map((item) => `
         <li>
           <span>${escape(item.text)}</span>
-          ${item.href ? `<a class="link" href="${escape(item.href)}" aria-label="${escape(`Show ${item.title} on the calendar`)}">Show</a>` : ""}
+          ${item.href ? `<a class="link" href="${escape(item.href)}" aria-label="${escape(item.showLabel ?? `Show ${item.title} on the calendar`)}">Show</a>` : ""}
           ${live && item.undo ? undoButton(item.undo, item.title, { classes: "quiet small", disabled: state.busy }) : ""}
         </li>`).join("")}</ul>
     </div>`).join("");

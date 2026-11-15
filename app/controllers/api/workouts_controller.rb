@@ -20,6 +20,9 @@ module Api
     #   `weights_held` are its own, null while it follows its exercise;
     #   `equipment_needed` is what it is done with. Also `source`, `editable`, its
     #   `warmup` / `cooldown` choice and the parts a session runs (`framed`).
+    #   `changes` holds the latest edit an agent made to it, while nothing
+    #   changed it since and it was not taken back, with whether POST
+    #   /api/plan_changes/:id/undo can take it back (`undoable`).
     # @response 200 #/components/schemas/Workout
     # @response 404 #/components/responses/NotFound
     def show
@@ -137,7 +140,8 @@ module Api
 
     # The whole workout, as `show` gives it.
     def show_workout(id, status: :ok)
-      render json: Workout.expanded.find!(id).detail, status:
+      workout = Workout.expanded.find!(id)
+      render json: workout.detail.merge(changes: PlanChange.standing(workout_ids: [workout.id], today: client_today)), status:
     end
 
     # The structure is required; an empty one is for WorkoutStructure to refuse.

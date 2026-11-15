@@ -17,7 +17,9 @@ module Api
     #   days of `routines` that show on it, read with the date as today
     #   (tentative, confirmed, done or skipped). `trained` says whether any
     #   session was ever done, so a first session can be told apart from a
-    #   rest day. With nothing to
+    #   rest day. `changes` are the edits an agent made to its parts and the
+    #   weights it set for their exercises, each item's latest while nothing
+    #   was trained since and it was not taken back. With nothing to
     #   suggest (no main workout yet), it is a 404 with the code
     #   `no_workouts`: import an example program or build a workout first.
     # @param date? {Date} The day, the server's today (TZ) by default. The PWA sends its local date.
@@ -71,6 +73,10 @@ module Api
         # Every part the workout can have, and whether this session runs it.
         workouts: main.framed.map { it.summary.merge(included: parts.map(&:id).include?(it.id)) },
         plan: PlayerPlan.new(parts),
+        changes: PlanChange.standing(
+          workout_ids: parts.map(&:id), exercise_ids: parts.flat_map { |part| part.blocks.flat_map { it.steps.map(&:exercise_id) } },
+          today: date, untrained: true
+        ),
         weight_steps: Coach.weight_steps,
         # The units weights and distances are shown in.
         unit: setting.unit,

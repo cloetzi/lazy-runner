@@ -96,6 +96,14 @@ module TrainerMcp
       workout
     end
 
+    # A workout the user made is edited or archived only with a reason,
+    # which they see with the change.
+    def self.workout_reason!(workout, reason, change)
+      return if workout.source == "llm" || reason.to_s.strip.present?
+
+      raise Problem, "#{workout.title} is the user's workout: give a `reason` for the #{change}, which they see with it"
+    end
+
     # The server's day and its weekday, which answers start with, so the
     # assistant needn't work out what day of the week it is.
     def self.today_and_weekday

@@ -7,7 +7,7 @@
 
 import { shortDay } from "./calendar.js";
 import { AGENT_NAME, writtenDay } from "./coach.js";
-import { dayNear, fieldChanges, undoLabel } from "./plan-changes.js";
+import { dayNear, fieldChanges, undoLabel, rememberedText } from "./plan-changes.js";
 import { sourceLabel } from "./activities.js";
 
 // "an activity", "8 activities".
@@ -31,10 +31,18 @@ const calendarHref = (date) => `/calendar.html#${date}`;
 
 // A change to the plan as a line: what happened, the day to show, and the
 // change when it can be taken back.
-function changeItem(change, today, unit) {
-  const title = change.title || (change.item_kind === "session" ? "a session" : "a routine");
+function changeItem(change, today, unit, weightUnit) {
+  const title = change.title || { session: "a session", routine: "a routine", workout: "a workout", weight: "an exercise" }[change.item_kind];
   const day = (iso) => dayNear(iso, today);
   const item = (text, date) => ({ text, href: date ? calendarHref(date) : null, title, undo: undoLabel(change) ? change : null });
+  if (change.item_kind === "weight") {
+    return { ...item(`Set ${title} to ${rememberedText(change.now, weightUnit)} (was ${rememberedText(change.was, weightUnit)})`, null), title: `${title}'s weight` };
+  }
+  if (change.item_kind === "workout") {
+    const href = change.workout_id ? `/#workout/${change.workout_id}` : null;
+    const text = change.action === "archived" ? `Archived ${title}` : `Changed ${title}${change.summary ? `: ${change.summary}` : ""}`;
+    return { ...item(text, null), href, showLabel: `Show ${title}` };
+  }
   switch (change.action) {
     case "planned":
       return item(`Planned ${title} ${change.item_kind === "routine" ? "from" : "on"} ${day(change.to_date)}`, change.to_date);
@@ -54,11 +62,12 @@ function changeItem(change, today, unit) {
 }
 
 // The news in groups, one per agent, the latest first: { who, when, items },
-// each item { text, href, title, undo } (href and undo may be null). First
+// each item { text, href, title, undo } (href and undo may be null; a
+// workout's href opens it, with `showLabel` naming that). First
 // the plan: planned sessions add up to one line ("Planned 6 sessions, Nov
 // 16 to Dec 3"), then the other changes in the order made. Then the
 // activities copied, then the notes and goals written.
-export function newsGroups(news, { today, unit = "km" } = {}) {
+export function newsGroups(news, { today, unit = "km", weightUnit } = {}) {
   const groups = new Map();
   const group = (name, time) => {
     const who = name || AGENT_NAME;
@@ -81,7 +90,7 @@ export function newsGroups(news, { today, unit = "km" } = {}) {
     }
     for (const change of [...g.plan].reverse()) {
       if (sessions.length > 1 && sessions.includes(change)) continue;
-      const item = changeItem(change, today, unit);
+      const item = changeItem(change, today, unit, weightUnit);
       if (item) items.push(item);
     }
     for (const copied of g.copied) {
