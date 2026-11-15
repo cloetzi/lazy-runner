@@ -1092,11 +1092,12 @@ components:
         resolution: { type: string, nullable: true, description: How it was resolved. }
     CoachBoard:
       type: object
-      required: [today, goals, proposals, status, focus, concerns, notes, notes_before, week]
+      required: [today, goals, proposals, past_goals, status, focus, concerns, notes, notes_before, week]
       properties:
         today: { type: string, format: date }
         goals: { type: array, items: { $ref: "#/components/schemas/Goal" } }
         proposals: { type: array, items: { $ref: "#/components/schemas/Goal" } }
+        past_goals: { type: integer, description: "How many goals were achieved or dropped (GET /api/goals lists them as `past`, with the dismissed proposals)." }
         status: { allOf: [{ $ref: "#/components/schemas/CurrentCoachNote" }], nullable: true }
         focus: { allOf: [{ $ref: "#/components/schemas/CurrentCoachNote" }], nullable: true }
         concerns: { type: array, description: Open concerns, newest first., items: { $ref: "#/components/schemas/CoachNote" } }

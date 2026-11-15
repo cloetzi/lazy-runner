@@ -26,6 +26,8 @@ class CoachBoard
   def proposals = Goal.proposed.order(:id).all
   # Proposals the user turned down, which an agent doesn't propose again.
   def dismissed = Goal.dismissed.order(:id).all
+  # How many goals were achieved or dropped, which the page's Past goals lists.
+  def past_goals = Goal.past.exclude(status: "dismissed").count
 
   def week_sessions = Session.summarized.where(date: week).in_order.all
   def week_activities = Activity.where(date: week).in_order.all
@@ -53,7 +55,7 @@ class CoachBoard
   def as_json(*)
     {
       today: @today.iso8601,
-      goals:, proposals:,
+      goals:, proposals:, past_goals:,
       status: with_replaced("status"),
       focus: with_replaced("focus"),
       concerns: open_concerns,

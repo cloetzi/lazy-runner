@@ -593,7 +593,11 @@ test("sets a goal on the Coach tab, writes a status, and accepts the agent's pro
   assert.equal(proposed.status(), 200);
   await agent.dispose();
   await page.reload();
-  await page.getByText("Proposed: Core twice a week").waitFor();
+  // Waiting, it is one line; Review opens it, saying what Accept does.
+  await page.getByText("1 goal proposal waiting").waitFor();
+  await page.getByRole("button", { name: /Review/ }).click();
+  await page.locator(".proposal").getByText("It becomes goal 2, at the end of your list.").waitFor();
+  await accessible(page, "the Coach tab with a goal proposal open");
   await page.getByRole("button", { name: "Accept" }).click();
   await page.locator(".goal-list").getByText("Core twice a week").waitFor();
   assert.deepEqual((await getJson("/api/goals")).goals.map((g) => g.title), ["Ski season with quiet knees", "Core twice a week"]);

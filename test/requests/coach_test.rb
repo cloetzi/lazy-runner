@@ -342,6 +342,17 @@ describe "coach API" do
       _(json["week"]["routine_days"].map { it.values_at("routine_id", "on", "state") }).must_equal [[long_run.id, "2026-11-08", "tentative"]]
     end
 
+    it "counts the goals achieved or dropped, not the dismissed proposals" do
+      Goal.add!(title: "Active")
+      Goal.add!(title: "Done").update(status: "achieved")
+      Goal.add!(title: "Gone").update(status: "dropped")
+      Goal.propose!(title: "Run a 10k", reason: "Racing").dismiss!
+
+      get "/api/coach"
+
+      _(json["past_goals"]).must_equal 2
+    end
+
     it "says where the journal's next page starts" do
       notes = 11.times.map { note("note", "Note #{it}") }
 
@@ -369,8 +380,8 @@ describe "coach API" do
 
       get "/api/coach"
 
-      _(json.slice("goals", "proposals", "status", "focus", "concerns", "notes")).must_equal(
-        "goals" => [], "proposals" => [], "status" => nil, "focus" => nil, "concerns" => [], "notes" => []
+      _(json.slice("goals", "proposals", "past_goals", "status", "focus", "concerns", "notes")).must_equal(
+        "goals" => [], "proposals" => [], "past_goals" => 0, "status" => nil, "focus" => nil, "concerns" => [], "notes" => []
       )
     end
   end

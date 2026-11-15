@@ -63,12 +63,33 @@ test("lists the coaches named so far, latest first, once each", () => {
 test("lays the week out Monday to Sunday with what is on each day", () => {
   const days = weekDays({
     from: "2026-11-02", to: "2026-11-08",
-    sessions: [{ id: 1, date: "2026-11-04" }], activities: [{ id: 2, date: "2026-11-02" }], notes: [note({ date: "2026-11-04" })],
-  });
+    sessions: [{ id: 1, date: "2026-11-04", status: "planned", position: 1 }], activities: [{ id: 2, date: "2026-11-02" }], notes: [note({ date: "2026-11-04" })],
+  }, "2026-11-03");
   assert.deepEqual(days.map((d) => d.date), ["2026-11-02", "2026-11-03", "2026-11-04", "2026-11-05", "2026-11-06", "2026-11-07", "2026-11-08"]);
   assert.equal(days[0].activities.length, 1);
-  assert.equal(days[2].sessions.length, 1);
+  assert.equal(days[2].sessions[0].mark, "next");
   assert.equal(days[2].notes.length, 1);
+  assert.deepEqual(days[1], { date: "2026-11-03", sessions: [], routineDays: [], activities: [], notes: [] });
+});
+
+test("puts the planned runs on the week, and a run that ticked its day off once, as the run", () => {
+  const routines = [{ id: 7, sport: "running", title: "Easy run", weekdays: [1, 3] }];
+  const days = weekDays({
+    from: "2026-11-02", to: "2026-11-08", sessions: [], notes: [],
+    activities: [{ id: 2, date: "2026-11-02", sport: "running" }],
+    routines,
+    routine_days: [
+      { routine_id: 7, on: "2026-11-02", state: "done", activity_id: 2 },
+      { routine_id: 7, on: "2026-11-04", state: "tentative" },
+      { routine_id: 7, on: "2026-11-06", state: "tentative" },
+    ],
+  }, "2026-11-05");
+  assert.deepEqual(days[0].routineDays, []);
+  assert.equal(days[0].activities[0].fulfils.id, 7);
+  // Read on the device's today: Wednesday's has gone by, Friday's is ahead.
+  assert.equal(days[2].routineDays[0].day.state, "missed");
+  assert.equal(days[4].routineDays[0].day.state, "tentative");
+  assert.equal(days[4].routineDays[0].routine.id, 7);
 });
 
 test("puts dated notes under their day, in the order written", () => {

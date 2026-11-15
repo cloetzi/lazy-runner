@@ -1563,6 +1563,15 @@ code.command { display: block; padding: var(--space-2) var(--space-3); overflow-
 
 /* ---- The Coach tab (coach-page.js, coach-sheets.js) ---- */
 .coach-board { display: grid; gap: var(--space-4); max-width: var(--measure); }
+/* Two columns in landscape: what stands now on the left (what is new,
+   status, focus, concerns, goals), what happened by date on the right (the
+   week, the notes). One column elsewhere, the week before the goals. */
+.coach-column { display: grid; gap: var(--space-4); align-content: start; min-width: 0; }
+@media (min-width: 60rem) and (orientation: landscape) {
+  body.with-nav:not([data-focus]) .coach { max-width: var(--wide); }
+  .coach-board { max-width: none; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: start; }
+  .coach-intro { grid-column: 1 / -1; }
+}
 .coach-card p { margin: 0; }
 .coach-card-head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); }
 .coach-card-head .icon { margin-right: var(--space-1); }
@@ -1586,15 +1595,56 @@ code.command { display: block; padding: var(--space-2) var(--space-3); overflow-
 .goal-list .row { flex: 1; min-width: 0; width: auto; padding: var(--space-2) var(--space-2) var(--space-2) 0; align-items: flex-start; }
 .goal-number { font-size: var(--text-md); font-weight: 700; color: var(--muted); min-width: 1.5rem; }
 .goal-why { font-size: var(--text-sm); }
-.goal-order { display: flex; flex-direction: column; flex: none; }
-.goal-order .icon-button { min-height: var(--control-sm); min-width: var(--control-sm); }
-.goal-order .icon-button:disabled { opacity: 0.35; cursor: default; }
 .proposal { display: grid; gap: var(--space-2); padding-top: var(--space-3); border-top: 1px solid var(--border); }
 .proposal-actions, .goal-actions, .entry-actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
 .goal-actions { margin-top: var(--space-3); }
-.coach-week { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-3); }
-.coach-week .week-day { display: grid; gap: var(--space-1); }
-.coach-week .week-day .muted { font-size: var(--text-sm); }
+.goal-order { display: flex; flex: none; gap: var(--space-2); }
+.goal-order .icon-only { width: var(--control-sm); padding: 0; }
+.goal-order .icon-only:disabled { opacity: 0.35; cursor: default; }
+.goal-list.reordering > li + li { border-top: 1px solid var(--border); }
+.goal-tools { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
+.goal-tools > .quiet:first-child { margin-left: calc(-1 * var(--space-3)); }
+.goal-tools .icon { margin-right: var(--space-1); }
+/* Waiting proposals: one line, opened in place by Review. */
+.proposals { display: grid; gap: var(--space-3); padding: 0 var(--space-3); background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-md); }
+.proposals.open { padding-bottom: var(--space-4); }
+.proposals-line { gap: var(--space-3); padding: var(--space-2) 0; background: none; }
+@media (hover: hover) { .proposals button.row:hover { background: none; } }
+.proposals-line .row-meta { white-space: normal; }
+.proposals-toggle {
+  flex: none; display: inline-flex; align-items: center; gap: var(--space-1); min-height: var(--control-sm); padding: 0 var(--space-3);
+  border: 1px solid var(--control-border); border-radius: var(--radius-md); background: var(--surface); font-weight: 600;
+}
+.proposals-toggle .icon { width: 1rem; height: 1rem; }
+.proposal-effects { margin: 0; display: grid; gap: var(--space-1); color: var(--muted); }
+.proposal-effects > div { display: flex; gap: var(--space-2); }
+.proposal-effects dt { flex: none; min-width: 4.25rem; font-weight: 700; color: var(--text); }
+.proposal-effects dd { margin: 0; }
+/* Status and focus: who wrote it and Edit or Delete on one line. */
+.current-foot { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-2); }
+.current-foot .entry-actions { margin-left: auto; }
+/* This week: a line per day, the calendar's marks and tiles, each opening its day. */
+.coach-week { list-style: none; margin: 0 calc(-1 * var(--space-5)); padding: 0; display: grid; }
+.coach-week > li + li { border-top: 1px solid var(--border); }
+.week-line { align-items: flex-start; gap: var(--space-3); min-height: var(--control-md); padding: var(--space-2) var(--space-4) var(--space-2) var(--space-5); }
+@media (hover: hover) { a.row.week-line:hover { background: var(--bg); } }
+.week-date { flex: none; width: 4.25rem; font-weight: 700; line-height: 1.75rem; }
+.week-line.past .week-date { color: var(--muted); }
+.week-line.today .week-date > span { padding: 0.125rem var(--space-2); border-radius: var(--radius-sm); background: var(--accent-tint); color: var(--accent-ink); }
+.week-items { flex: 1; min-width: 0; display: grid; gap: var(--space-1); line-height: 1.75rem; }
+.week-item { display: flex; align-items: flex-start; gap: var(--space-2); min-width: 0; }
+.week-item-text { min-width: 0; line-height: var(--leading); padding-top: 0.125rem; }
+.week-item-title { font-weight: 600; }
+.week-item-facts { display: block; font-size: var(--text-sm); color: var(--muted); line-height: var(--leading-tight); }
+.week-item.struck .week-item-title { text-decoration: line-through; color: var(--muted); }
+.week-item.quiet .week-item-title { font-weight: 400; color: var(--muted); }
+.week-glyph { flex: none; width: 1.75rem; height: 1.75rem; display: inline-grid; place-items: center; }
+.week-glyph .mark { min-height: 0; }
+.week-line > .icon { flex: none; align-self: center; color: var(--muted); }
+@media (max-width: 30rem) {
+  .week-line { gap: var(--space-2); padding-left: var(--space-4); padding-right: var(--space-2); }
+  .week-date { width: 3.75rem; }
+}
 .coach-entries { list-style: none; margin: 0; padding: 0; display: grid; }
 .coach-entry { display: grid; gap: var(--space-2); padding: var(--space-3) 0; }
 .coach-entry + .coach-entry { border-top: 1px solid var(--border); }
@@ -1628,4 +1678,6 @@ code.command { display: block; padding: var(--space-2) var(--space-3); overflow-
   background: var(--bg); border: 1px solid var(--border); color: var(--muted);
 }
 .note-tile .icon { width: 1.25rem; height: 1.25rem; }
+.note-tile.small { width: 1.75rem; height: 1.75rem; border-radius: var(--radius-sm); }
+.note-tile.small .icon { width: 1rem; height: 1rem; }
 .note-chip { color: var(--muted); font-style: italic; }

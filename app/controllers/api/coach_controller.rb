@@ -1,8 +1,9 @@
 module Api
   class CoachController < ApplicationController
     # The Coach tab: goals, status, focus, concerns, notes and this week.
-    # @description `goals` are the active ones in order and `proposals` the
-    #   agent's waiting for the user. `status` and `focus` are the newest of
+    # @description `goals` are the active ones in order, `proposals` the
+    #   agent's waiting for the user and `past_goals` how many were achieved
+    #   or dropped. `status` and `focus` are the newest of
     #   their kind (null when none), each naming the one it `replaces`.
     #   `concerns` are the open ones, newest first, and `notes` the latest
     #   ten of the journal: every other note, the statuses and focus since

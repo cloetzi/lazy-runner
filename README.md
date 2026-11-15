@@ -47,8 +47,9 @@ session offline, syncing when the connection returns.
   or once as a Maybe or Planned. Their days show dashed until you say you're
   going; a logged activity of the same sport ticks the day off, and one that
   didn't happen says so. Move a day, skip a week, or log it right there.
-- **Coach:** your goals anchor a Coach tab with the current status and focus,
-  this week as a plain list, open concerns and a journal of notes. You, a
+- **Coach:** a Coach tab opens on the coach's current reading: what is new,
+  status, focus and open concerns, then this week with the planned runs (a
+  tap opens the day on the calendar), your goals and a journal of notes. You, a
   coach you name, or an agent over MCP write them; only you change goals, and
   an agent's proposed goal waits for you to accept or dismiss it. Notes dated
   to a day show on the calendar.

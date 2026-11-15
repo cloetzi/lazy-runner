@@ -6,7 +6,8 @@
 // dismisses what an agent proposed. Notes are written by the user ("You"), a
 // coach they name, or an agent (over MCP, never from here).
 
-import { weekOf, shortDay, localToday, addDays } from "./calendar.js";
+import { weekOf, shortDay, localToday, addDays, inOrder, upNext, markFor } from "./calendar.js";
+import { withActivities, listed } from "./routines.js";
 import { FEEDBACK } from "./history.js";
 
 export const KINDS = ["status", "focus", "concern", "note"];
@@ -78,13 +79,23 @@ export function knownCoaches(notes) {
   return names;
 }
 
-// The board's week as seven days, Monday first, each with what is on it.
-export function weekDays(week) {
+// The board's week as seven days, Monday first, each with what is on it as
+// the calendar draws it on `today`: the sessions with their mark, the
+// routine days still to show (not planned as a session, not ticked off by a
+// run), the activities with the routine each ticked off, and the notes.
+export function weekDays(week, today) {
+  const routines = week.routines ?? [];
+  const routineOf = (day) => routines.find((r) => r.id === day.routine_id) ?? null;
+  // Read as the Calendar reads them, so the two agree on which run ticked off which day.
+  const routineDays = withActivities(week.routine_days ?? [], routines, week.activities, today);
+  const ticked = new Map(routineDays.filter((d) => d.state === "done" && d.activity_id != null).map((d) => [d.activity_id, routineOf(d)]));
+  const next = upNext(week.sessions, today);
   return weekOf(week.from).map((date) => ({
     date,
-    sessions: week.sessions.filter((s) => s.date === date),
-    activities: week.activities.filter((a) => a.date === date),
-    notes: week.notes.filter((n) => noteDay(n) === date),
+    sessions: inOrder(week.sessions.filter((s) => s.date === date)).map((session) => ({ session, mark: markFor(session, today, next) })),
+    routineDays: listed(routineDays).filter((d) => d.on === date).map((day) => ({ day, routine: routineOf(day) })),
+    activities: week.activities.filter((a) => a.date === date).map((activity) => ({ activity, fulfils: ticked.get(activity.id) ?? null })),
+    notes: week.notes.filter((n) => noteDay(n, week.sessions) === date),
   }));
 }
 

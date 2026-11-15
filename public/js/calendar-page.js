@@ -71,6 +71,7 @@ const state = {
   loaded: null, // the range `sessions` is for, "from..to"
   unfolded: new Set(), // days gone by in this week opened to show in full
   toToday: true, // bring today into view once the week is drawn ("asked": Today was tapped)
+  toDay: null, // the day the page was opened on (Coach's This week), brought into view instead
 };
 
 const rangeKey = () => { const { from, to } = rangeFor(view(), state.focus); return `${from}..${to}`; };
@@ -245,13 +246,16 @@ function foldedDay(date, sessions, activities, next, { notes = [], routineDays =
     </section>`;
 }
 
-// Scrolls today's card up to just under the page's bar, once.
+// Scrolls today's card up to just under the page's bar, once, or the day
+// the page was opened on (`#<date>`).
 // Not when the page opened and the person has scrolled meanwhile (Today
-// asks for it), nor when today already starts on the first screen.
+// asks for it), nor when the day already starts on the first screen.
 function bringTodayIntoView() {
   const asked = state.toToday === "asked";
+  const date = asked ? null : state.toDay;
   state.toToday = false;
-  const day = document.querySelector(".week-days .day.today");
+  state.toDay = null;
+  const day = document.querySelector(date ? `.week-days .day[data-date="${date}"]` : ".week-days .day.today");
   if (!day || (!asked && scrollY > 8)) return;
   const box = day.getBoundingClientRect();
   if (box.top >= 0 && box.top < innerHeight * 0.6) return;
@@ -688,7 +692,13 @@ document.addEventListener("visibilitychange", () => {
   if (document.visibilityState === "visible") sync();
 });
 
+// Opened on a day (Coach's This week links here): that day, unfolded if it
+// has gone by this week, and brought into view.
 const asked = location.hash.slice(1);
+if (isDate(asked) && asked !== localToday()) {
+  if (asked < localToday()) state.unfolded.add(asked);
+  state.toDay = asked;
+}
 goTo(isDate(asked) ? asked : localToday(), { reload: false });
 load();
 sync();
