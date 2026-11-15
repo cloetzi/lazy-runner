@@ -622,7 +622,7 @@ components:
         date: { type: string, format: date }
         position: { type: integer, description: Its place on the day, 1 first. }
         status: { type: string, enum: [planned, missed, in_progress, done, skipped], description: Missed is a planned session on a day before today. }
-        created_by: { type: string, enum: [seed, manual, llm] }
+        created_by: { type: string, enum: [manual, llm] }
         agent_name: { type: string, nullable: true, description: "The name of the agent's API token, on what an agent wrote; null otherwise, or written before agents were named." }
         note: { type: string, nullable: true, description: The planner's reason for it. }
         started_at: { type: string, format: date-time, nullable: true }

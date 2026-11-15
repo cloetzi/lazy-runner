@@ -1,15 +1,20 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { createOutbox } from "../../public/js/outbox.js";
+import { createOutbox, describeChange, PARK_AFTER } from "../../public/js/outbox.js";
 
 function memoryStorage() {
   const items = new Map();
   return { getItem: (k) => items.get(k) ?? null, setItem: (k, v) => items.set(k, v) };
 }
 
-function fakeServer(responses) {
+// `/api/version` answers `version` (200 unless told), apart from `responses`.
+function fakeServer(responses, { version = { status: 200 } } = {}) {
   const calls = [];
   const fetch = async (path, options) => {
+    if (path === "/api/version") {
+      if (version === "offline") throw new TypeError("Failed to fetch");
+      return { ok: version.status < 300, status: version.status, redirected: false, json: async () => ({}) };
+    }
     calls.push({ path, method: options.method, body: options.body && JSON.parse(options.body), user: options.headers?.["X-Lazy-Runner-User"] });
     const next = responses.shift();
     if (next === "offline") throw new TypeError("Failed to fetch");
@@ -370,4 +375,208 @@ test("starts empty once another tab cleared the queue, instead of writing it bac
   outbox.enqueue({ method: "PATCH", path: "/api/settings", body: { unit: "kg" } });
 
   assert.deepEqual(outbox.queued().map((e) => e.path), ["/api/settings"]);
+});
+
+const failing = (n, status = 500) => Array.from({ length: n }, () => ({ status, json: { error: { code: "server_error", message: "Something went wrong" } } }));
+
+test("a change that keeps failing is parked and the rest is sent", async () => {
+  const storage = memoryStorage();
+  const server = fakeServer([...failing(PARK_AFTER), { status: 200, json: {} }, { status: 200, json: {} }]);
+  const outbox = createOutbox({ storage, fetch: server.fetch, now: () => "2026-11-15T10:00:00Z", id: () => "p1" });
+
+  outbox.enqueue({ method: "PATCH", path: "/api/settings", body: { unit: "kg" } });
+  outbox.enqueue({ method: "PATCH", path: "/api/exercises/3/weight", body: { value: 20 } });
+  outbox.enqueue({ method: "POST", path: "/api/activities", body: {} });
+
+  for (let i = 1; i < PARK_AFTER; i++) {
+    assert.equal(await outbox.flush(), false);
+    assert.equal(outbox.pending(), 3);
+  }
+  assert.equal(await outbox.flush(), true);
+  assert.deepEqual(server.calls.map((c) => c.path), [
+    ...Array(PARK_AFTER).fill("/api/settings"), "/api/exercises/3/weight", "/api/activities",
+  ]);
+  assert.equal(outbox.pending(), 0);
+  assert.equal(outbox.waiting(), null);
+  assert.deepEqual(outbox.parked(), [{
+    id: "p1", entries: [{ method: "PATCH", path: "/api/settings", body: { unit: "kg" } }], names: [],
+    status: 500, error: "Something went wrong", at: "2026-11-15T10:00:00Z",
+  }]);
+  // A reload still has it.
+  assert.equal(createOutbox({ storage, fetch: server.fetch }).parked().length, 1);
+});
+
+test("server errors during an outage do not count", async () => {
+  const server = fakeServer(failing(PARK_AFTER + 2, 502), { version: { status: 502 } });
+  const outbox = createOutbox({ storage: memoryStorage(), fetch: server.fetch });
+
+  outbox.enqueue({ method: "POST", path: "/a" });
+  for (let i = 0; i < PARK_AFTER + 2; i++) assert.equal(await outbox.flush(), false);
+  assert.equal(outbox.pending(), 1);
+  assert.deepEqual(outbox.parked(), []);
+  assert.equal(outbox.waiting(), "server");
+});
+
+test("a version check that cannot connect does not count either", async () => {
+  const server = fakeServer(failing(PARK_AFTER), { version: "offline" });
+  const outbox = createOutbox({ storage: memoryStorage(), fetch: server.fetch });
+
+  outbox.enqueue({ method: "POST", path: "/a" });
+  for (let i = 0; i < PARK_AFTER; i++) await outbox.flush();
+  assert.equal(outbox.pending(), 1);
+  assert.deepEqual(outbox.parked(), []);
+});
+
+test("a success in between starts the count again", async () => {
+  const server = fakeServer([...failing(PARK_AFTER - 1), { status: 200, json: {} }, ...failing(PARK_AFTER - 1)]);
+  const outbox = createOutbox({ storage: memoryStorage(), fetch: server.fetch });
+
+  outbox.enqueue({ method: "POST", path: "/a" });
+  for (let i = 1; i < PARK_AFTER; i++) await outbox.flush();
+  assert.equal(await outbox.flush(), true);
+  outbox.enqueue({ method: "POST", path: "/a" });
+  for (let i = 1; i < PARK_AFTER; i++) assert.equal(await outbox.flush(), false);
+  assert.deepEqual(outbox.parked(), []);
+  assert.equal(outbox.pending(), 1);
+});
+
+test("a parked change takes the changes that build on it along, even ones queued later", async () => {
+  const server = fakeServer([...failing(PARK_AFTER), { status: 200, json: {} }]);
+  const outbox = createOutbox({ storage: memoryStorage(), fetch: server.fetch, id: () => "p1" });
+
+  outbox.enqueue({ method: "POST", path: "/api/sessions", saveAs: "run:a", body: { status: "in_progress" } });
+  outbox.enqueue({ method: "POST", path: "/api/sessions/{run:a}/sets", body: { set_number: 1 } });
+  outbox.enqueue({ method: "PATCH", path: "/api/exercises/3/weight", body: { value: 20 } });
+  for (let i = 0; i < PARK_AFTER; i++) await outbox.flush();
+  assert.deepEqual(outbox.parked()[0].entries.map((e) => e.path), ["/api/sessions", "/api/sessions/{run:a}/sets"]);
+
+  outbox.enqueue({ method: "POST", path: "/api/sessions/{run:a}/complete", saveAs: "complete:a" });
+  assert.equal(await outbox.flush(), true);
+  assert.deepEqual(outbox.parked()[0].entries.map((e) => e.path), ["/api/sessions", "/api/sessions/{run:a}/sets", "/api/sessions/{run:a}/complete"]);
+  assert.deepEqual(outbox.rejected(), []);
+  assert.equal(outbox.pending(), 0);
+});
+
+test("retrying a parked change sends it, with what builds on it, first", async () => {
+  const server = fakeServer([...failing(PARK_AFTER), { status: 201, json: { id: 7 } }, { status: 201, json: {} }, { status: 200, json: {} }]);
+  const outbox = createOutbox({ storage: memoryStorage(), fetch: server.fetch, id: () => "p1" });
+
+  outbox.enqueue({ method: "POST", path: "/api/sessions", saveAs: "run:a" });
+  outbox.enqueue({ method: "POST", path: "/api/sessions/{run:a}/sets" });
+  for (let i = 0; i < PARK_AFTER; i++) await outbox.flush();
+  outbox.enqueue({ method: "PATCH", path: "/api/settings" });
+
+  assert.equal(await outbox.retryParked("p1"), true);
+  assert.deepEqual(server.calls.slice(PARK_AFTER).map((c) => c.path), ["/api/sessions", "/api/sessions/7/sets", "/api/settings"]);
+  assert.deepEqual(outbox.parked(), []);
+});
+
+test("a retry that fails again is parked again at once", async () => {
+  const server = fakeServer(failing(PARK_AFTER + 1));
+  let n = 0;
+  const outbox = createOutbox({ storage: memoryStorage(), fetch: server.fetch, id: () => `p${++n}` });
+
+  outbox.enqueue({ method: "POST", path: "/a" });
+  for (let i = 0; i < PARK_AFTER; i++) await outbox.flush();
+  assert.equal(await outbox.retryParked("p1"), true);
+  assert.deepEqual(outbox.parked().map((g) => g.id), ["p2"]);
+  assert.equal(outbox.pending(), 0);
+});
+
+test("discarding a parked change forgets it", async () => {
+  const storage = memoryStorage();
+  const server = fakeServer(failing(PARK_AFTER));
+  const outbox = createOutbox({ storage, fetch: server.fetch, id: () => "p1" });
+
+  outbox.enqueue({ method: "POST", path: "/a" });
+  for (let i = 0; i < PARK_AFTER; i++) await outbox.flush();
+  outbox.discardParked("p1");
+  assert.deepEqual(createOutbox({ storage, fetch: server.fetch }).parked(), []);
+});
+
+test("describes queued changes in a few words", () => {
+  const cases = [
+    [{ method: "POST", path: "/api/sessions/{run:a}/sets" }, "A logged set"],
+    [{ method: "POST", path: "/api/sessions/7/complete" }, "Finishing a workout"],
+    [{ method: "POST", path: "/api/sessions", body: { status: "in_progress" } }, "Starting a workout"],
+    [{ method: "POST", path: "/api/sessions", body: { status: "skipped" } }, "Skipping a workout"],
+    [{ method: "POST", path: "/api/sessions", body: { status: "planned" }, workout: { title: "Legs A" } }, "Planning Legs A"],
+    [{ method: "PATCH", path: "/api/sessions/7", body: { date: "2026-11-16" } }, "Moving a workout"],
+    [{ method: "DELETE", path: "/api/sessions/7?only=planned" }, "Removing a workout"],
+    [{ method: "PATCH", path: "/api/exercises/3/weight", body: {} }, "An exercise's weight"],
+    [{ method: "POST", path: "/api/activities" }, "Logging an activity"],
+    [{ method: "DELETE", path: "/api/activities/4" }, "Removing an activity"],
+    [{ method: "PATCH", path: "/api/settings" }, "A setting"],
+    [{ method: "PUT", path: "/api/other" }, "PUT /api/other"],
+  ];
+  for (const [entry, words] of cases) assert.equal(describeChange(entry), words);
+});
+
+test("after parking one change, another failing waits as for an outage until something goes through", async () => {
+  const server = fakeServer([...failing(PARK_AFTER + 4), { status: 200, json: {} }, ...failing(PARK_AFTER)]);
+  let n = 0;
+  const outbox = createOutbox({ storage: memoryStorage(), fetch: server.fetch, id: () => `p${++n}` });
+
+  outbox.enqueue({ method: "POST", path: "/a" });
+  outbox.enqueue({ method: "POST", path: "/b" });
+  for (let i = 0; i < PARK_AFTER; i++) await outbox.flush();
+  // /a parked; /b fails on the same flush and every one after, but waits.
+  for (let i = 0; i < 3; i++) assert.equal(await outbox.flush(), false);
+  assert.deepEqual(outbox.parked().map((g) => g.entries[0].path), ["/a"]);
+  assert.equal(outbox.pending(), 1);
+  assert.equal(await outbox.flush(), true);
+
+  outbox.enqueue({ method: "POST", path: "/c" });
+  for (let i = 0; i < PARK_AFTER; i++) await outbox.flush();
+  assert.deepEqual(outbox.parked().map((g) => g.entries[0].path), ["/a", "/c"]);
+});
+
+test("a parked change to a named record holds back the later changes to it", async () => {
+  const server = fakeServer([...failing(PARK_AFTER), { status: 200, json: {} }]);
+  const outbox = createOutbox({ storage: memoryStorage(), fetch: server.fetch });
+
+  outbox.remember("run:a", 7);
+  outbox.enqueue({ method: "PATCH", path: "/api/sessions/{run:a}", body: { status: "in_progress" } });
+  outbox.enqueue({ method: "POST", path: "/api/sessions/{run:a}/sets" });
+  outbox.enqueue({ method: "PATCH", path: "/api/settings" });
+  for (let i = 0; i < PARK_AFTER; i++) await outbox.flush();
+  outbox.enqueue({ method: "POST", path: "/api/sessions/{run:a}/complete", saveAs: "complete:a" });
+  await outbox.flush();
+
+  assert.deepEqual(outbox.parked()[0].entries.map((e) => e.path), ["/api/sessions/{run:a}", "/api/sessions/{run:a}/sets", "/api/sessions/{run:a}/complete"]);
+  assert.equal(outbox.isParked("complete:a"), true);
+  assert.deepEqual(server.calls.map((c) => c.path).slice(PARK_AFTER), ["/api/settings"]);
+});
+
+test("a parked set holds back nothing else of its session", async () => {
+  const server = fakeServer([...failing(PARK_AFTER), { status: 200, json: {} }]);
+  const outbox = createOutbox({ storage: memoryStorage(), fetch: server.fetch });
+
+  outbox.remember("run:a", 7);
+  outbox.enqueue({ method: "POST", path: "/api/sessions/{run:a}/sets" });
+  outbox.enqueue({ method: "POST", path: "/api/sessions/{run:a}/complete" });
+  for (let i = 0; i < PARK_AFTER; i++) await outbox.flush();
+  assert.equal(outbox.parked()[0].entries.length, 1);
+  assert.equal(outbox.pending(), 0);
+});
+
+test("a retry waits for a flush under way, so nothing in flight is sent twice", async () => {
+  let release;
+  const gate = new Promise((resolve) => { release = resolve; });
+  const server = fakeServer([...failing(PARK_AFTER), { status: 200, json: {} }, { status: 200, json: {} }]);
+  const fetch = async (path, options) => {
+    if (path === "/slow") { await gate; return server.fetch("/slow", options); }
+    return server.fetch(path, options);
+  };
+  const outbox = createOutbox({ storage: memoryStorage(), fetch, id: () => "p1" });
+
+  outbox.enqueue({ method: "POST", path: "/a" });
+  for (let i = 0; i < PARK_AFTER; i++) await outbox.flush();
+  outbox.enqueue({ method: "DELETE", path: "/slow" });
+  const flushing = outbox.flush();
+  const retried = outbox.retryParked("p1");
+  release();
+  await flushing;
+  assert.equal(await retried, true);
+  assert.deepEqual(server.calls.slice(PARK_AFTER).map((c) => c.path), ["/slow", "/a"]);
 });

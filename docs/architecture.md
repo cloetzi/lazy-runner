@@ -153,7 +153,8 @@ flowchart LR
   transactions and a busy handler that yields to other fibers.
 - **Boot** (`config/initializers/database.rb`): migrates the schema (Sequel
   timestamp migrations, taking over a database ActiveRecord migrated up to
-  0.1.0) and runs `SeedLoader`, which loads equipment and exercises
+  0.1.0; an existing database with migrations due is first copied to
+  `storage/backups/`, the newest five kept) and runs `SeedLoader`, which loads equipment and exercises
   from YAML idempotently, then closes the connection. `TZ` sets the day (`config/initializers/time_zone.rb`).
 
 ## Frontend
@@ -215,6 +216,10 @@ rows, the welcome's week plan), `api.js`, `account.js`. The rest (`app.js`,
    created with a `client_ref`, and later requests name it as `{ref}` until
    the server gives it an id, so sets and the finish can be logged offline.
    Retries are safe: sessions by `client_ref`, sets by their unique key.
+   A change the server keeps failing on (three 5xx answers while
+   `/api/version` answers) is parked with the ones that build on it, so the
+   rest carries on; Today says so, and Settings, Account lists it with Try
+   again and Discard.
 4. `POST /api/sessions/:id/complete` stores the finish (RPE, how the weights
    felt, a note) for the user and the coach agent to go by; the app changes
    no weight from it.

@@ -1,7 +1,7 @@
 import * as countdown from "./countdown.js";
 import { beep, unlock } from "./beeper.js";
 import { createOutbox } from "./outbox.js";
-import { pageAccount, signInHref, syncNote } from "./account.js";
+import { pageAccount, signInHref, syncNote, parkedNote } from "./account.js";
 import { stepTargetWeight, sameWeight, sameShownWeight, inUnit, preferredUnit, adoptServerUnit, formatWeight, formatLoad } from "./weights.js";
 import { createFigure } from "./figure-view.js";
 import { openHowto, equipmentNames, loadEquipmentNames, knowsEquipmentNames, ownedEquipment, equipmentId, comesInWeights, isAnyWeight, markOwned } from "./howto.js";
@@ -1893,6 +1893,10 @@ async function submitFinish() {
       : "Saved on this device. It will sync when the server is reachable.";
     return;
   }
+  if (!result && outbox.isParked(key)) {
+    $("finish-result").textContent = "Saved on this device, but the server kept failing on it. Try it again from Settings, Account.";
+    return;
+  }
   if (!result) {
     $("finish-result").textContent = "The server would not take this session. The reason is on the home screen.";
     return;
@@ -2170,6 +2174,9 @@ function renderSync() {
   const pending = outbox.pending();
   $("sync").hidden = pending === 0;
   $("sync").innerHTML = syncNote(pending, outbox.waiting(), location);
+  const parked = outbox.parked().reduce((n, group) => n + group.entries.length, 0);
+  $("sync-parked").hidden = parked === 0;
+  $("sync-parked").innerHTML = parked === 0 ? "" : parkedNote(parked);
   renderRejected();
 }
 

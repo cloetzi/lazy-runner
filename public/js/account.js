@@ -268,6 +268,14 @@ export function syncNote(pending, waiting, here) {
   return `<a href="${escape(signInHref(here))}">Sign in again</a> to sync ${changes}`;
 }
 
+// The notice on Today while changes are parked (outbox.js), as HTML: they
+// wait in Settings, Account, for a retry or to be discarded.
+export function parkedNote(count) {
+  const changes = count === 1 ? "A change" : `${count} changes`;
+  return `<p>${changes} couldn't be saved: the server kept failing, so ${count === 1 ? "it was" : "they were"} set aside to let the rest through.</p>
+    <a class="button secondary small" href="/settings.html#unsent">Review in Settings</a>`;
+}
+
 // A device as people name it ("Firefox on Android"), from the user agent it
 // signed in with.
 export function deviceName(userAgent) {

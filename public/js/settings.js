@@ -2,7 +2,7 @@ import { preferredUnit, setPreferredUnit, adoptServerUnit, unitRequest } from ".
 import { LEAD_IN_CHOICES, readSettings, writeSetting } from "./preferences.js";
 import { GEAR_LEAD_IN } from "./player.js";
 import { preferredDistanceUnit, setPreferredDistanceUnit, adoptServerDistanceUnit, distanceUnitRequest } from "./activities.js";
-import { createOutbox } from "./outbox.js";
+import { createOutbox, describeChange } from "./outbox.js";
 import { storedAccount, pageAccount, signOut, signOutHere, deviceName, startOidc, oidcOutcome } from "./account.js";
 import { getJson, paths, send, errorMessage } from "./api.js";
 import { escape, busy } from "./html.js";
@@ -114,8 +114,46 @@ function renderAccount(account = storedAccount(storage)) {
   $("account-who").innerHTML = account ? `Signed in as <strong>${escape(account.username)}</strong>.` : "Signed in.";
 }
 
+// ---------- Changes not saved (parked by the outbox) ----------
+
+const savedAt = (iso) => new Date(iso).toLocaleString(undefined, { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" });
+
+function renderUnsent() {
+  const parked = outbox?.parked() ?? [];
+  $("unsent").hidden = parked.length === 0;
+  $("unsent-list").innerHTML = parked.map((group) => {
+    const more = group.entries.length - 1;
+    const follows = more > 0 ? ` <span class="muted">and ${more} ${more === 1 ? "change" : "changes"} that build on it</span>` : "";
+    const answer = group.status && !group.error?.includes(String(group.status)) ? `${group.error} (${group.status})` : group.error;
+    return `
+    <li>
+      <span class="device-name"><strong>${escape(describeChange(group.entries[0]))}</strong>${follows}<br>
+        <span class="muted">${escape(savedAt(group.at))} · The server said: ${escape(answer)}</span></span>
+      <span class="account-actions">
+        <button class="secondary small" data-retry-unsent="${escape(group.id)}">Try again</button>
+        <button class="secondary small danger" data-discard-unsent="${escape(group.id)}">Discard</button>
+      </span>
+    </li>`;
+  }).join("");
+}
+
+$("unsent-list").onclick = async (event) => {
+  const retry = event.target.closest("[data-retry-unsent]");
+  const discard = event.target.closest("[data-discard-unsent]");
+  if (retry) {
+    busy(retry, true);
+    await outbox.retryParked(retry.dataset.retryUnsent).catch(() => {});
+  } else if (discard) {
+    if (!confirm("Discard this change? It was never saved, and it can't be brought back.")) return;
+    outbox.discardParked(discard.dataset.discardUnsent);
+  } else {
+    return;
+  }
+  renderUnsent();
+};
+
 $("sign-out").onclick = async () => {
-  const pending = outbox?.pending() ?? 0;
+  const pending = (outbox?.pending() ?? 0) + (outbox?.parked().reduce((n, group) => n + group.entries.length, 0) ?? 0);
   if (pending > 0) {
     const changes = `${pending} ${pending === 1 ? "change" : "changes"}`;
     if (!confirm(`${changes} on this device haven't synced yet. Signing out deletes them. Sign out anyway?`)) return;
@@ -714,6 +752,7 @@ const settle = () => {
 Promise.allSettled([usersLoaded, tokensLoaded, devicesLoaded]).then(settle);
 // The browser's own jump to the address's element, once the page has loaded, is undone the same way.
 addEventListener("load", () => requestAnimationFrame(settle));
-outbox?.flush();
+renderUnsent();
+outbox?.flush().then(renderUnsent);
 loadUnit();
 loadVersion();

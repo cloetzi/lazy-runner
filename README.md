@@ -147,7 +147,11 @@ docker run -p 3000:3000 -v lazy-runner-data:/app/storage ghcr.io/cloetzi/lazy-ru
 ```
 
 Then open http://localhost:3000 on your phone or computer. The SQLite database
-lives in `/app/storage`; back up that volume. The schema is migrated and the
+lives in `/app/storage`; back up that volume. Before a start migrates an
+existing database, it copies it to `storage/backups/` (named by the time,
+the newest five kept), so a failed upgrade can be undone by stopping the app and
+putting the copy back in place of `storage/production.sqlite3` (removing the
+`-wal` and `-shm` files beside it). The schema is migrated and the
 exercise library and equipment catalogue are loaded on every start. A database from a
 release before 0.1.0 has to run 0.1.0 once first; the server says so at boot.
 

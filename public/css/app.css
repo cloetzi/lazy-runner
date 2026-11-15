@@ -1610,6 +1610,10 @@ code.command { display: block; padding: var(--space-2) var(--space-3); overflow-
 .device-list .example-contents li { display: block; }
 .example-contents li span { display: block; font-size: var(--text-sm); }
 .account-actions { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+/* A parked change (Settings, Account): its actions go under it when the row is narrow. */
+.unsent-list { gap: var(--space-3); }
+.unsent-list li { flex-wrap: wrap; }
+.unsent-list li + li { border-top: 1px solid var(--border); padding-top: var(--space-3); }
 /* Signing in with the install's OIDC provider: first, above the password fields. */
 .oidc { display: grid; gap: var(--space-2); }
 .oidc-or { margin: 0; text-align: center; }

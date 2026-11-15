@@ -47,7 +47,7 @@ module Hashing
       job = nil # nothing of the job (a password, a request) outlives it
       begin
         answer.push(true, work.call)
-      rescue Exception => e # rubocop:disable Lint/RescueException
+      rescue Exception => e # anything at all: the caller re-raises it, the worker carries on
         answer.push(false, e)
       end
       work = answer = nil

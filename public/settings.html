@@ -147,6 +147,13 @@
           <h2 id="account-title">Account</h2>
         </header>
 
+        <!-- Changes the outbox parked after repeated server errors (outbox.js); only while there are some. -->
+        <div class="card setting" id="unsent" hidden>
+          <h3>Changes not saved</h3>
+          <p class="muted">The server kept failing on these, so they were set aside to let your other changes through. They are kept on this device only. Trying again sends a change as it was, over anything changed since.</p>
+          <ul class="device-list unsent-list" id="unsent-list"></ul>
+        </div>
+
         <div class="card setting" id="sign-in">
           <h3>Sign-in</h3>
           <p id="account-who">Signed in.</p>

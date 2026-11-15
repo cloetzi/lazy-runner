@@ -1,3 +1,4 @@
+require "fileutils"
 require "sequel"
 
 # The app's one SQLite file, through Sequel: how it is opened and how its
@@ -18,6 +19,9 @@ module Database
     ],
     "20261025233001_add_calendar_to_sessions.rb" => %w[20261025233001]
   }.freeze
+
+  # Backups taken before migrations, kept per database; the oldest go first.
+  KEEP_BACKUPS = 5
 
   # A database this code can't bring up to date.
   class Error < StandardError; end
@@ -70,11 +74,65 @@ module Database
   end
 
   # Runs the migrations db/migrate holds that the database lacks, after
-  # taking over the bookkeeping of a database ActiveRecord kept.
+  # taking over the bookkeeping of a database ActiveRecord kept. An existing
+  # database with migrations to run is copied aside first (back_up!).
   def self.migrate!(db)
     Sequel.extension :migration
+    back_up!(db) if pending?(db)
     adopt_active_record!(db)
     Sequel::TimestampMigrator.run(db, MIGRATIONS)
+  end
+
+  # Whether a database that has a schema already is due migrations: an
+  # ActiveRecord one always is (its bookkeeping is rewritten).
+  def self.pending?(db)
+    return false unless db.table_exists?(:schema_migrations)
+    return true if db[:schema_migrations].columns == [:version]
+
+    !current?(db)
+  end
+
+  # Copies a database file to backups/ beside it, named by the time and the
+  # last migration it has (production-20261115T220000Z-20261115400001.sqlite3),
+  # so a migration that goes wrong halfway can be undone by putting the copy
+  # back. A database already copied at that migration isn't copied again, so
+  # a server restarting over a failing migration keeps the copy from before
+  # the upgrade rather than rotating it out. VACUUM INTO writes a consistent
+  # copy without the write-ahead log; it can't run inside a transaction, and
+  # boot migrates outside one. The newest KEEP_BACKUPS are kept. A copy that
+  # can't be written stops the boot: better no upgrade than one with no way
+  # back. Nothing for a database in memory.
+  def self.back_up!(db, at: Time.now.utc, keep: KEEP_BACKUPS)
+    file = db.opts[:database].to_s
+    return if file.empty? || file == ":memory:" || !File.exist?(file)
+
+    dir = File.join(File.dirname(file), "backups")
+    name = File.basename(file).delete_suffix(".sqlite3")
+    pattern = /\A#{Regexp.escape(name)}-\d{8}T\d{6}Z-(\d+)\.sqlite3\z/
+    FileUtils.mkdir_p(dir)
+    taken = Dir.children(dir).grep(pattern).sort
+    level = last_migration(db)
+    return if taken.any? { it[pattern, 1] == level }
+
+    backup = File.join(dir, "#{name}-#{at.strftime("%Y%m%dT%H%M%SZ")}-#{level}.sqlite3")
+    begin
+      db.run("VACUUM INTO #{db.literal(backup)}")
+    rescue Sequel::DatabaseError => e
+      FileUtils.rm_f(backup)
+      raise Error, "couldn't copy the database to #{backup} before migrating it (#{e.message}); " \
+                   "make room in #{dir} and start again"
+    end
+    (taken + [File.basename(backup)]).sort.reverse.drop(keep).each { File.delete(File.join(dir, it)) }
+    backup
+  end
+
+  # The version of the last migration a database has, "0" for none; an
+  # ActiveRecord one lists versions where Sequel lists file names.
+  def self.last_migration(db)
+    column = db[:schema_migrations].columns.include?(:filename) ? :filename : :version
+    db[:schema_migrations].select_map(column).map(&:to_i).max.to_s
+  rescue Sequel::DatabaseError
+    "0"
   end
 
   # Whether every migration has run.

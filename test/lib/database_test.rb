@@ -190,6 +190,72 @@ describe Database do
     _ { db[:workouts].where(id: 1).update(source: "seed") }.must_raise Sequel::CheckConstraintViolation
   end
 
+  describe "backups before migrating" do
+    def backups(dir) = Dir.children(File.join(dir, "backups")).sort
+
+    it "copies an existing database aside when migrations are due, and not otherwise" do
+      Dir.mktmpdir do |dir|
+        db = Database.connect("sqlite://#{dir}/app.sqlite3")
+        Database.migrate!(db)
+        _(Dir.exist?(File.join(dir, "backups"))).must_equal false
+
+        Database.migrate!(db)
+        _(Dir.exist?(File.join(dir, "backups"))).must_equal false
+
+        db.disconnect
+        File.delete(*Dir.glob("#{dir}/app.sqlite3*"))
+        db = Database.connect("sqlite://#{dir}/app.sqlite3")
+        Sequel.extension :migration
+        Sequel::TimestampMigrator.run(db, Database::MIGRATIONS, target: Dir.children(Database::MIGRATIONS).sort[-2].to_i)
+        Database.migrate!(db)
+        _(backups(dir).size).must_equal 1
+        _(backups(dir).first).must_match(/\Aapp-\d{8}T\d{6}Z-\d+\.sqlite3\z/)
+        copy = Database.connect("sqlite://#{dir}/backups/#{backups(dir).first}")
+        _(copy[:schema_migrations].count).must_equal Dir.children(Database::MIGRATIONS).size - 1
+        copy.disconnect
+        db.disconnect
+      end
+    end
+
+    it "copies a database once per migration it has, keeping the newest few" do
+      Dir.mktmpdir do |dir|
+        db = Database.connect("sqlite://#{dir}/app.sqlite3").tap { Database.migrate!(it) }
+        level = Database.last_migration(db)
+        File.write(File.join(dir, "backups-not-mine.txt"), "")
+
+        Database.back_up!(db, at: Time.utc(2026, 11, 15, 9))
+        # Restarting over a failing migration: the copy from before stays the only one.
+        _(Database.back_up!(db, at: Time.utc(2026, 11, 15, 9, 1))).must_be_nil
+        _(backups(dir)).must_equal ["app-20261115T090000Z-#{level}.sqlite3"]
+
+        6.times do |i|
+          db[:schema_migrations].insert(filename: "2099010100000#{i}_later.rb")
+          Database.back_up!(db, at: Time.utc(2026, 11, 15, 10, i))
+        end
+        _(backups(dir)).must_equal (1..5).map { format("app-20261115T10%02d00Z-2099010100000%d.sqlite3", it, it) }
+        db.disconnect
+      end
+    end
+
+    it "refuses to migrate when the copy can't be written" do
+      Dir.mktmpdir do |dir|
+        db = Database.connect("sqlite://#{dir}/app.sqlite3").tap { Database.migrate!(it) }
+        File.write(File.join(dir, "backups"), "a file where the folder would go")
+        _(_ { Database.back_up!(db) }.must_raise(SystemCallError))
+        File.delete(File.join(dir, "backups"))
+
+        def db.run(sql, ...) = sql.start_with?("VACUUM") ? raise(Sequel::DatabaseError, "database or disk is full") : super
+        _(_ { Database.back_up!(db) }.must_raise(Database::Error).message).must_match "database or disk is full"
+        _(backups(dir)).must_equal []
+        db.disconnect
+      end
+    end
+
+    it "takes none of a database in memory" do
+      _(Database.back_up!(fresh)).must_be_nil
+    end
+  end
+
   describe "taking over a database ActiveRecord migrated" do
     %w[0.1.0 unreleased].each do |release|
       it "ends with the schema a new one has, from #{release}" do

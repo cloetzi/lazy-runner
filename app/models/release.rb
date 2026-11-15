@@ -4,7 +4,9 @@ require "digest"
 # changes with any change to the frontend and needs no version to bump. The
 # service worker keeps one cache per release and serves a page from one
 # release only (see public/sw.js). The digest is worked out again only when a
-# file is added, removed or touched.
+# file is added, removed or touched, and in production not at all: the files
+# there are the image's, and /api/version (the healthcheck, every page load)
+# would otherwise stat each of them every time.
 module Release
   ROOT = Rage.root.join("public")
 
@@ -12,6 +14,8 @@ module Release
   @id = nil
 
   def self.id
+    return @id if @id && Rage.env.production?
+
     files = Dir.glob("**/*", base: ROOT).sort.select { File.file?(ROOT.join(it)) }
     signature = files.map { |path| [path, File.mtime(ROOT.join(path)), File.size(ROOT.join(path))] }
     return @id if signature == @signature

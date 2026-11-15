@@ -8,7 +8,7 @@ class Session < Record
   STATUSES = %w[planned in_progress done skipped].freeze
   # The statuses a session reads as, missed (derived) included.
   SHOWN_STATUSES = %w[planned missed in_progress done skipped].freeze
-  CREATORS = %w[seed manual llm].freeze
+  CREATORS = %w[manual llm].freeze
   # The most sessions planned in one go, four weeks of one a day.
   PLAN_LIMIT = 28
 

@@ -27,6 +27,14 @@
 // is skipped here when the device's account is someone else's, and sent
 // with its user's id, which the server checks against the session: a 409
 // user_mismatch drops it unseen, as the clearing would have (#205).
+//
+// A server error usually means an outage, and the queue waits for it to end.
+// But a change that hits a bug answers 5xx for good, and would hold up every
+// change behind it. So when the server answers 5xx while it is reachable (a
+// GET /api/version right after succeeds), the head entry gets a strike, and
+// after three it is parked: set aside with the server's answer, together with
+// the queued changes that refer to it, while the rest carries on. The user
+// sees the parked changes in Settings and retries or discards them.
 
 import { errorMessage, send as sendRequest } from "./api.js";
 
@@ -39,8 +47,12 @@ const LATER = new Set([408, 425, 429]);
 const KEEP_REJECTED = 50;
 // Saved responses kept for whichever tab asked for them; the oldest go first.
 const KEEP_RESULTS = 10;
+// Server errors, with the server reachable, before a change is parked.
+export const PARK_AFTER = 3;
 
-const empty = () => ({ queue: [], ids: {}, rejected: [], results: {} });
+// `strikes` counts the server errors of the entry at the head of the queue;
+// `parking` is set from a park until a change goes through (see strike).
+const empty = () => ({ queue: [], ids: {}, rejected: [], results: {}, parked: [], strikes: null, parking: false });
 
 // What to do with a response: { outcome: "sent" | "retry" | "drop", ... }.
 // `waiting` says why a retry waits ("offline", "auth" or "server").
@@ -48,7 +60,8 @@ async function classify(response, entry) {
   if (response.redirected) return { outcome: "retry", waiting: "auth" };
   const json = AUTH.has(response.status) && response.status !== 403 ? undefined : await response.json().catch(() => undefined);
   if (AUTH.has(response.status) && !(response.status === 403 && json?.error?.code)) return { outcome: "retry", waiting: "auth" };
-  if (LATER.has(response.status) || response.status >= 500) return { outcome: "retry", waiting: "server" };
+  if (response.status >= 500) return { outcome: "retry", waiting: "server", status: response.status, error: errorMessage(json, response.status) };
+  if (LATER.has(response.status)) return { outcome: "retry", waiting: "server" };
   if (response.status === 409 && json?.error?.code === "user_mismatch") return { outcome: "discard" };
 
   if (!response.ok) {
@@ -60,7 +73,10 @@ async function classify(response, entry) {
 }
 
 // `locks` is navigator.locks where the browser has it.
-export function createOutbox({ storage, fetch, locks, user = () => null, key = "outbox", now = () => new Date().toISOString() }) {
+export function createOutbox({
+  storage, fetch, locks, user = () => null, key = "outbox", now = () => new Date().toISOString(),
+  id = () => `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`,
+}) {
   const load = () => {
     try {
       return { ...empty(), ...JSON.parse(storage.getItem(key)) };
@@ -111,26 +127,85 @@ export function createOutbox({ storage, fetch, locks, user = () => null, key = "
     data.rejected = data.rejected.slice(-KEEP_REJECTED);
   }
 
+  // Takes the queued requests that refer to one of `held` (a Set of names)
+  // off the queue, and in turn the ones that refer to theirs, adding their
+  // names to `held`. Returns them, oldest first.
+  function takeDependants(held) {
+    const taken = [];
+    data.queue = data.queue.filter((entry) => {
+      if (!names(entry.path).some((n) => held.has(n))) return true;
+      if (entry.saveAs) held.add(entry.saveAs);
+      taken.push(entry);
+      return false;
+    });
+    return taken;
+  }
+
   // Rejects the queued requests that refer to a name that will never get an
   // id, and in turn the ones that refer to theirs.
   function rejectDependants(name, cause) {
-    const lost = new Set([name]);
-    data.queue = data.queue.filter((entry) => {
-      if (!names(entry.path).some((n) => lost.has(n))) return true;
-      if (entry.saveAs) lost.add(entry.saveAs);
-      reject(entry, null, `Not sent: ${cause}`);
-      return false;
-    });
+    for (const entry of takeDependants(new Set([name]))) reject(entry, null, `Not sent: ${cause}`);
   }
 
   // Drops, unseen, the queued requests that refer to a discarded name.
-  function discardDependants(name) {
-    const lost = new Set([name]);
-    data.queue = data.queue.filter((entry) => {
-      if (!names(entry.path).some((n) => lost.has(n))) return true;
-      if (entry.saveAs) lost.add(entry.saveAs);
+  const discardDependants = (name) => takeDependants(new Set([name]));
+
+  // The names a parked change holds back: the id it would save, and the
+  // record it acts on itself when that is named (a planned session started
+  // as `{run:...}`), so the later changes to that record wait with it rather
+  // than overtake it. A change to a part of one (its sets) holds nothing.
+  const holds = (entry) => {
+    const own = /\{([\w:.-]+)\}$/.exec(entry.path.split("?")[0])?.[1];
+    return [entry.saveAs, own].filter(Boolean);
+  };
+
+  // Sets the head entry aside with the queued entries that build on it, in
+  // turn, since they cannot be sent (or not in order) without it.
+  function park(entry, status, error) {
+    const held = new Set(holds(entry));
+    const entries = [entry, ...takeDependants(held)];
+    data.parked.push({ id: id(), entries, names: [...held], status, error, at: now() });
+  }
+
+  // The parked group a queued entry builds on, if any: queued after its
+  // group was parked (a set for a session whose start is parked).
+  function parkedFor(entry) {
+    const wanted = names(entry.path);
+    if (wanted.length === 0) return null;
+    return data.parked.find((group) => (group.names ?? []).some((n) => wanted.includes(n))) ?? null;
+  }
+
+  // Whether the server answers at all: a 5xx it gives while this succeeds
+  // is about the change, not an outage.
+  async function reachable() {
+    try {
+      const response = await sendRequest("/api/version", { method: "GET", fetchFn: fetch });
+      return response.ok && !response.redirected;
+    } catch {
       return false;
-    });
+    }
+  }
+
+  // Counts a server error against the head entry; true once it is parked.
+  // Once one change is parked, no other is until a change goes through: a
+  // second one failing too points at the server (a full disk, a locked
+  // database) rather than at the change, and the queue waits as for an outage.
+  async function strike(entry, result) {
+    if (refresh().parking || !(await reachable())) return false;
+    refresh();
+    if (!same(data.queue[0], entry)) return false;
+    const count = same(data.strikes?.entry, entry) ? data.strikes.count + 1 : 1;
+    if (count < PARK_AFTER) {
+      data.strikes = { entry, count };
+      save();
+      return false;
+    }
+    data.queue.shift();
+    data.strikes = null;
+    park(entry, result.status, result.error);
+    data.parking = true;
+    save();
+    return true;
   }
 
   async function send(entry) {
@@ -163,8 +238,16 @@ export function createOutbox({ storage, fetch, locks, user = () => null, key = "
   async function run() {
     while (refresh().queue.length > 0) {
       const entry = data.queue[0];
+      const group = parkedFor(entry);
+      if (group) {
+        data.queue.shift();
+        group.entries.push(entry);
+        save();
+        continue;
+      }
       const result = await send(entry);
       if (result.outcome === "retry") {
+        if (result.status != null && (await strike(entry, result))) continue;
         waiting = result.waiting;
         return false;
       }
@@ -172,6 +255,8 @@ export function createOutbox({ storage, fetch, locks, user = () => null, key = "
       // or (without Web Locks) sent the same entry and taken it off already.
       refresh();
       if (same(data.queue[0], entry)) data.queue.shift();
+      if (same(data.strikes?.entry, entry)) data.strikes = null;
+      if (result.outcome === "sent") data.parking = false;
       if (result.outcome === "discard") {
         // Someone else's change: gone without a trace, as signing in clears
         // it, and so are the changes that build on it.
@@ -189,9 +274,9 @@ export function createOutbox({ storage, fetch, locks, user = () => null, key = "
     return true;
   }
 
-  const locked = () => (locks ? locks.request(key, run) : run());
+  const locked = (work = run) => (locks ? locks.request(key, work) : work());
 
-  return {
+  const api = {
     enqueue(entry) {
       const owner = user();
       refresh().queue.push(owner == null ? entry : { ...entry, user: owner });
@@ -219,5 +304,63 @@ export function createOutbox({ storage, fetch, locks, user = () => null, key = "
       save();
     },
     result: (name) => refresh().results[name],
+    // Changes set aside after repeated server errors, oldest first:
+    // { id, entries, status, error, at }, `entries` the change and those
+    // that build on it.
+    parked: () => refresh().parked.map((group) => ({ ...group, entries: group.entries.map((e) => ({ ...e })) })),
+    // Puts a parked group back at the head of the queue for one more try:
+    // another server error parks it again straight away. It waits for a
+    // flush under way (here, or in another tab with Web Locks), since one
+    // takes an entry off only while it is still at the head.
+    async retryParked(groupId) {
+      while (flushing) await flushing.catch(() => {});
+      const retry = () => {
+        const group = refresh().parked.find((g) => g.id === groupId);
+        if (!group) return run();
+        data.parked = data.parked.filter((g) => g !== group);
+        data.queue.unshift(...group.entries);
+        data.strikes = { entry: group.entries[0], count: PARK_AFTER - 1 };
+        data.parking = false;
+        save();
+        return run();
+      };
+      flushing = locked(retry).finally(() => { flushing = null; });
+      return flushing;
+    },
+    // Whether the change saved under `name` waits among the parked ones.
+    isParked: (name) => refresh().parked.some((group) => group.entries.some((e) => e.saveAs === name)),
+    discardParked(groupId) {
+      refresh().parked = data.parked.filter((g) => g.id !== groupId);
+      save();
+    },
   };
+  return api;
+}
+
+// What a queued change is, in a few words, for the list of parked changes.
+export function describeChange(entry) {
+  const path = entry.path.split("?")[0];
+  const body = entry.body ?? {};
+  const workout = entry.workout?.title;
+  if (/^\/api\/sessions\/[^/]+\/sets$/.test(path)) return "A logged set";
+  if (/^\/api\/sessions\/[^/]+\/complete$/.test(path)) return "Finishing a workout";
+  if (path === "/api/sessions" && entry.method === "POST") {
+    if (body.status === "skipped") return "Skipping a workout";
+    if (body.status === "in_progress") return "Starting a workout";
+    return workout ? `Planning ${workout}` : "Planning a workout";
+  }
+  if (/^\/api\/sessions\/[^/]+$/.test(path)) {
+    if (entry.method === "DELETE") return "Removing a workout";
+    if (body.status === "skipped") return "Skipping a workout";
+    if (body.status === "in_progress") return "Starting a workout";
+    if (body.date) return "Moving a workout";
+    return "Changing a workout";
+  }
+  if (/^\/api\/exercises\/[^/]+\/weight$/.test(path)) return "An exercise's weight";
+  if (/^\/api\/activities(\/|$)/.test(path)) {
+    if (entry.method === "POST") return "Logging an activity";
+    return entry.method === "DELETE" ? "Removing an activity" : "Changing an activity";
+  }
+  if (path === "/api/settings") return "A setting";
+  return `${entry.method} ${path}`;
 }

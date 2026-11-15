@@ -158,7 +158,7 @@ erDiagram
         date date
         int position "order within the day, 1 first"
         string status "planned | in_progress | done | skipped; missed is derived"
-        string created_by "seed | manual | llm"
+        string created_by "manual | llm"
         string agent_name "the agent's API token name, when llm"
         text note "the planner's reason for it"
         datetime started_at
