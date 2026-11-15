@@ -384,13 +384,54 @@ export function tempoText(tempo) {
   return bits.join(" · ");
 }
 
-// What a finished run did: sets done of those planned, sets skipped and the
-// exercises swapped for another, from the sets logged.
+// The part of the session an item is in: the session's own workout
+// (`workoutId`) is the main one, "workout" whatever its kind, so a stretch
+// routine run on its own is the main workout too; anything else is the kind
+// of the warm-up or cool-down framing it, as the server works it out.
+export function itemPart(item, workoutId) {
+  if (!item.workout) return "workout";
+  return item.workout.id === workoutId ? "workout" : item.workout.kind;
+}
+
+// What a finished run did in its main workout: exercises with a set done of
+// those planned, sets done of those planned and sets skipped, from the sets
+// logged; the exercises swapped for another in it; and `frames`, how far the
+// warm-up and cool-down got ({ part, sets, skipped, planned }, those it
+// ran). A run
+// with no main workout at all counts every item as main.
 export function finishSummary(run) {
-  const exercises = run.items.map((item, i) => [item, i]).filter(([item]) => item.type === "exercise");
-  const count = (status) => exercises.filter(([, i]) => run.logged?.[i] === status).length;
-  const swapped = new Set(exercises.filter(([item, i]) => item.planned && run.logged?.[i] === "done").map(([item]) => plannedExercise(item).id));
-  return { ...sessionProgress(run), planned: exercises.length, skipped: count("skipped"), swaps: swapped.size };
+  const entries = run.items.map((item, i) => [item, i]).filter(([item]) => item.type === "exercise");
+  const partOf = ([item]) => itemPart(item, run.workoutId);
+  const framed = entries.some((entry) => partOf(entry) === "workout");
+  const main = framed ? entries.filter((entry) => partOf(entry) === "workout") : entries;
+  const status = ([, i]) => run.logged?.[i];
+  const swapped = new Set(main.filter(([item, i]) => item.planned && run.logged?.[i] === "done").map(([item]) => plannedExercise(item).id));
+  const frames = framed ? ["warmup", "cooldown"].map((part) => {
+    const of = entries.filter((entry) => partOf(entry) === part);
+    return { part, sets: of.filter((entry) => status(entry) === "done").length, skipped: of.filter((entry) => status(entry) === "skipped").length, planned: of.length };
+  }).filter((frame) => frame.planned > 0) : [];
+  return {
+    exercises: new Set(main.map(([item]) => plannedExercise(item).id)).size,
+    done: new Set(main.filter((entry) => status(entry) === "done").map(([item]) => plannedExercise(item).id)).size,
+    sets: main.filter((entry) => status(entry) === "done").length,
+    planned: main.length,
+    skipped: main.filter((entry) => status(entry) === "skipped").length,
+    swaps: swapped.size,
+    frames,
+  };
+}
+
+const PART_NAMES = { warmup: "Warm-up", cooldown: "Cool-down" };
+
+// How the warm-up and cool-down went, after the main workout's numbers:
+// "Warm-up skipped · cool-down done", "cool-down 4 of 9 sets", or "not
+// reached" for one a session ended early never got to.
+export function framingLine(frames) {
+  return frames.map(({ part, sets, skipped = 0, planned }, i) => {
+    const name = i === 0 ? PART_NAMES[part] : PART_NAMES[part].toLowerCase();
+    if (sets === 0) return `${name} ${skipped > 0 ? "skipped" : "not reached"}`;
+    return sets === planned ? `${name} done` : `${name} ${sets} of ${planned} sets`;
+  }).join(" · ");
 }
 
 // How hard a session felt, as RPE values with words to anchor them.

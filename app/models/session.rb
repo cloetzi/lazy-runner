@@ -230,7 +230,7 @@ class Session < Record
       created_by:, agent_name:, note:, started_at:, client_ref:, parts: part_kinds,
       routine_id:, routine_date: routine_date&.iso8601,
       workout: workout.summary,
-      sets_done: set_logs.count { it.status == "done" },
+      sets_done: set_logs.count { it.status == "done" && it.main? },
       completion: completion&.as_json, created_at:
     }
   end

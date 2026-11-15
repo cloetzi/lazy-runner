@@ -161,14 +161,14 @@ module Api
     #   `side`, so logging it again (after a reload or a retry) updates it. A
     #   set done as a swap names the exercise done in `exercise_id`. The first
     #   set starts a planned session. The player also sends what it showed:
-    #   `planned_exercise_id`, `block_label` and `target`. Those keep a set
+    #   `planned_exercise_id`, `block_label`, `part` and `target`. Those keep a set
     #   whose step the session no longer runs (the workout was edited
     #   elsewhere, or the step's part was left out): it is stored without the
     #   step link, as a set whose step left later is. Without
     #   `planned_exercise_id` such a set is refused (404 for a step that is
     #   gone, 400 for one of a part left out). A step of another workout is
     #   always a 400.
-    # @request { step_id: Integer, set_number: Integer, side?: [left, right], reps?: Integer, seconds?: Integer, weight?: { value: Numeric, unit: [lb, kg] }, status?: [done, skipped], exercise_id?: Integer, planned_exercise_id?: Integer, block_label?: String, target?: { reps?: Integer, seconds?: Integer, weight?: { value: Numeric, unit: [lb, kg] } } }
+    # @request { step_id: Integer, set_number: Integer, side?: [left, right], reps?: Integer, seconds?: Integer, weight?: { value: Numeric, unit: [lb, kg] }, status?: [done, skipped], exercise_id?: Integer, planned_exercise_id?: Integer, block_label?: String, part?: [warmup, workout, cooldown], target?: { reps?: Integer, seconds?: Integer, weight?: { value: Numeric, unit: [lb, kg] } } }
     # @response 201 #/components/schemas/SetLog
     # @response 200 #/components/schemas/SetLog
     # @response 400 #/components/responses/BadRequest
@@ -200,6 +200,8 @@ module Api
         elsif created
           log.record_plan(*shown)
         end
+        # From the step while it exists, else as the player sent it.
+        log.part = step ? SetLog.part_of(session, step) : params[:part].presence if created
         log.update(
           exercise_id: exercise.id,
           reps: params[:reps], seconds: params[:seconds],

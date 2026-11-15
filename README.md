@@ -86,8 +86,13 @@ session offline, syncing when the connection returns.
   app never suggests a weight or changes one from how a session went: you
   change it with the stepper, or your coach agent recommends one from your
   sets and feedback and sets it when you agree.
-- **Finish:** a short summary, optional RPE and a one-tap too easy / right / too hard on the weights, kept for you and your coach agent.
-- **History:** a simple list, a weekly count, and weight and reps over time per exercise.
+- **Finish:** the main workout's numbers with the warm-up and cool-down on a
+  line of their own, optional RPE, a one-tap too easy / right / too hard on
+  the weights and a one-line note, kept for you and your coach agent. Once
+  saved, how the week stands and when the next session is planned.
+- **History:** a simple list, a weekly count, and weight and reps over time
+  per exercise. A past session shows the main workout first, with the
+  warm-up and cool-down folded to a line each.
 - **Equipment:** an inventory of what you have at home, with the weights you
   own for dumbbells and kettlebells. Every exercise names the equipment it
   needs, and the Exercises page can keep to what you own. An exercise that

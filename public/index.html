@@ -180,6 +180,9 @@
         <button data-feedback="right" aria-pressed="false">Right</button>
         <button data-feedback="too_hard" aria-pressed="false">Too hard</button>
       </div>
+      <h2><label for="finish-note">A note</label> <span class="muted">(optional)</span></h2>
+      <input id="finish-note" type="text" maxlength="500" autocomplete="off" enterkeyhint="done" placeholder="How it went, anything that hurt" aria-describedby="finish-note-hint">
+      <p class="muted hint" id="finish-note-hint">Kept with the session; your coach reads it too.</p>
       <button class="primary" id="finish-save">Save</button>
     </section>
     <section class="card finish-saved" id="finish-done" hidden>
@@ -187,7 +190,9 @@
         <span class="done-badge"><svg class="icon" aria-hidden="true"><use href="/icons/sprite.svg#check"/></svg></span>
         <h1>Saved</h1>
       </header>
-      <p id="finish-result"></p>
+      <p class="finish-week" id="finish-week" hidden></p>
+      <p id="finish-next" hidden></p>
+      <p class="muted" id="finish-result"></p>
       <a class="button secondary" id="next-up" hidden></a>
       <button class="secondary" id="home-again">Back to Today</button>
     </section>
@@ -221,6 +226,7 @@
     </header>
     <p class="note" id="session-note" hidden></p>
     <ul class="list" id="session-exercises"></ul>
+    <div id="session-frames"></div>
     <button class="secondary delete" id="session-delete" hidden>Delete this session</button>
   </main>
 </body>

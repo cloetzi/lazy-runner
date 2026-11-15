@@ -618,7 +618,7 @@ components:
         routine_id: { type: integer, nullable: true, description: "The workout routine whose day it was planned for, when the day was confirmed." }
         routine_date: { type: string, format: date, nullable: true, description: "The routine's own day; `date` differs once the session moved." }
         workout: { $ref: "#/components/schemas/WorkoutSummary" }
-        sets_done: { type: integer }
+        sets_done: { type: integer, description: "Sets done in the main workout; the warm-up and cool-down are left out." }
         completion: { allOf: [{ $ref: "#/components/schemas/Completion" }], nullable: true }
         created_at: { type: string, format: date-time }
     SessionWithPlan:
@@ -650,15 +650,16 @@ components:
               type: array
               items:
                 type: object
-                required: [exercise, instead_of, block_label, sets]
+                required: [exercise, instead_of, block_label, part, sets]
                 properties:
                   exercise: { $ref: "#/components/schemas/ExerciseRef" }
                   instead_of: { allOf: [{ $ref: "#/components/schemas/ExerciseRef" }], nullable: true, description: The exercise planned, when this one was a swap. }
                   block_label: { type: string }
+                  part: { type: string, enum: [warmup, workout, cooldown], description: "The main workout, or the warm-up or cool-down framing it. Sets from before parts were kept, whose step has gone, read as workout." }
                   sets: { type: array, items: { $ref: "#/components/schemas/LoggedSet" } }
     SetLog:
       type: object
-      required: [id, session_id, step_id, step_ref, exercise_id, planned_exercise_id, block_label, set_number, side, reps, seconds, weight, status, target]
+      required: [id, session_id, step_id, step_ref, exercise_id, planned_exercise_id, block_label, part, set_number, side, reps, seconds, weight, status, target]
       properties:
         id: { type: integer }
         session_id: { type: integer }
@@ -667,6 +668,7 @@ components:
         exercise_id: { type: integer, description: The exercise done. }
         planned_exercise_id: { type: integer, description: The exercise the step planned. }
         block_label: { type: string }
+        part: { type: string, nullable: true, enum: [warmup, workout, cooldown], description: "The part of the session it was logged in: the session's own workout, or the warm-up or cool-down framing it. Null for an older set whose step had gone." }
         set_number: { type: integer }
         side: { type: string, nullable: true, enum: [left, right] }
         reps: { type: integer, nullable: true }

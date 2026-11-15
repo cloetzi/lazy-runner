@@ -11,7 +11,7 @@
 
 import SPORTS from "./sports.json" with { type: "json" };
 import { sportFamily, formatDistance, withQueuedActivities, removedActivityIds } from "./activities.js";
-import { withQueued } from "./calendar.js";
+import { withQueued, inOrder, shownStatus, dayName } from "./calendar.js";
 import { withActivities } from "./routines.js";
 
 // Each kind's name for one and for several.
@@ -115,3 +115,24 @@ export function summaryLine(entry, unit) {
 
 // The concerns as "Watching" lines: their titles.
 export const watching = (concerns = []) => concerns.map((c) => c.title || c.body);
+
+// The Saved card's lead, once a session is finished: how the week's strength
+// sessions stand ("This week: 2 of 3 strength sessions done", with what else
+// is known of them), or null when the week has none.
+export function strengthWeekLine(week) {
+  const entry = weekSummary(week).find((e) => e.kind === "strength");
+  if (!entry) return null;
+  const total = entry.of ?? entry.done;
+  const count = entry.of != null ? `${entry.done} of ${entry.of}` : String(entry.done);
+  return [`This week: ${count} strength ${total === 1 ? "session" : "sessions"} done`, ...entry.facts].join(" · ");
+}
+
+// When the next workout session of the week is planned ("Next: Workout 2,
+// Thursday"), or null when nothing more is planned this week. A warm-up or
+// cool-down planned on its own is not one.
+export function nextSessionLine(sessions, today) {
+  const next = inOrder(sessions).find((s) => (!s.workout?.kind || s.workout.kind === "workout") && shownStatus(s, today) === "planned");
+  if (!next) return null;
+  const day = next.date === today ? "later today" : dayName(next.date, today);
+  return `Next: ${next.workout.title}, ${day === "Tomorrow" ? "tomorrow" : day}`;
+}

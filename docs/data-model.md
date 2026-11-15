@@ -173,6 +173,7 @@ erDiagram
         int exercise_id FK "done (differs when swapped)"
         int planned_exercise_id FK
         string block_label
+        string part "warmup | workout | cooldown: main or framing"
         int set_number
         string side "left | right | null"
         string status "done | skipped"

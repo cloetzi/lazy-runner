@@ -3,6 +3,8 @@
 // the caller queues them. The session is named by `run.ref` until the server
 // gives it an id, so sets and the finish can be queued while offline.
 
+import { itemPart } from "./player.js";
+
 const sessionPath = (run) => `/api/sessions/{${run.ref}}`;
 
 // Remembers an exercise's weight for next time; null remembers no weight.
@@ -34,14 +36,14 @@ export function startRequest(run, now = new Date()) {
 // One set. `set_number` is the round of its block; `exercise_id` goes only
 // with a swapped exercise (the step names the planned one). A hold ended
 // early logs the seconds held. A skipped set keeps its weight but no reps or
-// seconds. What the plan showed rides along (planned exercise, block and
-// target), so the set is kept even if the workout was edited elsewhere and
+// seconds. What the plan showed rides along (planned exercise, block, part
+// and target), so the set is kept even if the workout was edited elsewhere and
 // its step is gone by the time the set reaches the server.
 export function setRequest(run, item, status, { reps = item.reps, seconds = item.seconds } = {}) {
   const planned = item.planned ?? item;
   const body = {
     step_id: item.step_id, set_number: item.block.round, side: item.side, status, weight: item.weight,
-    planned_exercise_id: planned.exercise.id, block_label: item.block.label,
+    planned_exercise_id: planned.exercise.id, block_label: item.block.label, part: itemPart(item, run.workoutId),
     target: { reps: planned.reps ?? null, seconds: planned.seconds ?? null, weight: planned.weight ?? null },
   };
   if (item.planned) body.exercise_id = item.exercise.id;
@@ -53,7 +55,7 @@ export function setRequest(run, item, status, { reps = item.reps, seconds = item
 // The kept weight changes, then the finish (the server needs no order),
 // timed by the device's clock so a finish synced late keeps its place in the
 // day. Its answer is saved under `key`.
-export function finishRequests(run, { rpe = null, feedback = null, now = new Date() } = {}) {
+export function finishRequests(run, { rpe = null, feedback = null, note = null, now = new Date() } = {}) {
   const key = `complete:${run.id}`;
   const weights = Object.entries(run.weights)
     .filter(([, change]) => change.keep)
@@ -62,6 +64,8 @@ export function finishRequests(run, { rpe = null, feedback = null, now = new Dat
     method: "POST", path: `${sessionPath(run)}/complete`, saveAs: key,
     body: { rpe, feedback, ended_early: !!run.endedEarly, finished_at: now.toISOString() },
   };
+  // A blank note is left out, so finishing again keeps one written before.
+  if (note?.trim()) complete.body.note = note.trim();
   return { key, requests: [...weights, complete] };
 }
 

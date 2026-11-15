@@ -6,6 +6,9 @@
 class SetLog < Record
   STATUSES = %w[done skipped].freeze
   SIDES = %w[left right].freeze
+  # The part of the session it was logged in: the session's own workout, or
+  # the warm-up or cool-down framing it.
+  PARTS = Workout::KINDS
 
   # A user's, as its session is; user_id is kept here too, since history
   # reads sets by exercise across sessions.
@@ -35,6 +38,17 @@ class SetLog < Record
     exercise_id != planned_exercise_id
   end
 
+  # In the main workout rather than its warm-up or cool-down. A set logged
+  # before parts were kept, whose step has gone, counts as main.
+  def main? = part.nil? || part == "workout"
+
+  # The part a step is in for a session: its own workout is the main one
+  # ("workout", whatever that workout's kind), anything else the kind of the
+  # warm-up or cool-down it frames it with.
+  def self.part_of(session, step)
+    step.block.workout_id == session.workout_id ? "workout" : step.block.workout.kind
+  end
+
   # Records what the step asked for, as the player showed it.
   def plan_from(step, target)
     record_plan(step.exercise, step.block.label, target)
@@ -62,7 +76,7 @@ class SetLog < Record
 
   def as_json(*)
     {
-      id:, session_id:, step_id:, step_ref:, exercise_id:, planned_exercise_id:, block_label:, set_number:, side:,
+      id:, session_id:, step_id:, step_ref:, exercise_id:, planned_exercise_id:, block_label:, part:, set_number:, side:,
       reps:, seconds:, weight:, status:, target:
     }
   end
@@ -81,6 +95,7 @@ class SetLog < Record
   def before_validation
     if new?
       plan_from(step, step.target) if step && !planned_exercise_id
+      self.part = self.class.part_of(session, step) if part.nil? && step && session
       self.exercise_id ||= planned_exercise_id
       self.step_ref ||= step_id
     end
@@ -91,6 +106,7 @@ class SetLog < Record
     super
     validates_number :set_number, only_integer: true, greater_than: 0
     validates_includes SIDES, :side, allow_nil: true
+    validates_includes PARTS, :part, allow_nil: true
     validates_includes STATUSES, :status
     validates_includes ExerciseWeight::UNITS, :weight_unit unless weight_value.nil?
     validates_includes ExerciseWeight::UNITS, :target_weight_unit unless target_weight_value.nil?

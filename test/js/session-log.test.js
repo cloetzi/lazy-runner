@@ -39,9 +39,19 @@ test("logs the round as the set number, with the reps done", () => {
     method: "POST", path: "/api/sessions/{session:a1}/sets",
     body: {
       step_id: 10, set_number: 2, side: null, status: "done", weight: { value: 40, unit: "lb" }, reps: 6,
-      planned_exercise_id: 1, block_label: "A", target: { reps: 8, seconds: null, weight: { value: 40, unit: "lb" } },
+      planned_exercise_id: 1, block_label: "A", part: "workout", target: { reps: 8, seconds: null, weight: { value: 40, unit: "lb" } },
     },
   });
+});
+
+test("names the part a set was in: the session's own workout, or its warm-up", () => {
+  const warmup = set({ workout: { id: 7, kind: "warmup", title: "Warm-up" } });
+  const main = set({ workout: { id: 2, kind: "workout", title: "Workout 1" } });
+  const alone = set({ workout: { id: 9, kind: "cooldown", title: "Stretch" } });
+
+  assert.equal(setRequest(run(), warmup, "skipped").body.part, "warmup");
+  assert.equal(setRequest(run(), main, "done").body.part, "workout");
+  assert.equal(setRequest(run({ workoutId: 9 }), alone, "done").body.part, "workout");
 });
 
 test("sends what the plan showed, the planned exercise's for a swap", () => {
@@ -91,6 +101,11 @@ test("sends kept weight changes before the finish, and drops undone ones", () =>
 test("finishes without feedback", () => {
   const { requests } = finishRequests(run(), { now: NOW });
   assert.deepEqual(requests.at(-1).body, { rpe: null, feedback: null, ended_early: false, finished_at: "2026-10-24T07:30:00.000Z" });
+});
+
+test("sends the note trimmed, and leaves a blank one out so an earlier note stays", () => {
+  assert.equal(finishRequests(run(), { note: "  Left knee complained on the step-downs ", now: NOW }).requests.at(-1).body.note, "Left knee complained on the step-downs");
+  assert.equal("note" in finishRequests(run(), { note: "   ", now: NOW }).requests.at(-1).body, false);
 });
 
 test("deletes a discarded session only once the player started it", () => {

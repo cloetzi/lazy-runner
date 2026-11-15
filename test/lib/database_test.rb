@@ -88,6 +88,28 @@ describe Database do
     end
   end
 
+  it "fills in the part of the sets logged before parts were kept, from their steps" do
+    db = Database.connect("sqlite:/")
+    Sequel::TimestampMigrator.run(db, Database::MIGRATIONS, target: 20261115010001)
+    now = Time.now
+    add = ->(table, **values) { db[table].insert(created_at: now, updated_at: now, **values) }
+    user = add.(:users, username: "before")
+    exercise = add.(:exercises, slug: "x", name: "X", category: "strength")
+    steps = %w[workout warmup cooldown].to_h do |kind|
+      workout = add.(:workouts, user_id: user, kind:, title: kind, position: 1)
+      block = add.(:blocks, workout_id: workout, label: "A", position: 1)
+      [kind, [workout, add.(:steps, block_id: block, exercise_id: exercise, position: 1, reps: 8)]]
+    end
+    main = add.(:sessions, user_id: user, workout_id: steps["workout"][0], date: Date.today, position: 1)
+    alone = add.(:sessions, user_id: user, workout_id: steps["cooldown"][0], date: Date.today, position: 2)
+    log = ->(session, step_ref) { add.(:set_logs, user_id: user, session_id: session, step_ref:, exercise_id: exercise, planned_exercise_id: exercise, set_number: 1) }
+    logs = [log.(main, steps["warmup"][1]), log.(main, steps["workout"][1]), log.(main, steps["cooldown"][1]), log.(alone, steps["cooldown"][1]), log.(main, 0)]
+
+    Database.migrate!(db)
+
+    _(logs.map { db[:set_logs].where(id: it).get(:part) }).must_equal ["warmup", "workout", "cooldown", "workout", nil]
+  end
+
   it "migrates a new database with every migration, once" do
     db = fresh
     Database.migrate!(db)

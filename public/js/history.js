@@ -47,6 +47,29 @@ export function exerciseSummary(entry, unit) {
   return { done: done.length ? setsSummary(done, unit) : "", skipped };
 }
 
+// A past session's exercises by part: the main workout first, then the
+// warm-up and the cool-down, each { part, entries, done, total } where
+// `done` counts the exercises with a set done and `total` those logged (one
+// a session ended before is not). Parts with nothing logged are left out; an
+// entry without a part (an older server) is the main workout.
+export function sessionParts(exercises) {
+  return ["workout", "warmup", "cooldown"].map((part) => {
+    const entries = exercises.filter((entry) => (entry.part ?? "workout") === part);
+    const done = entries.filter((entry) => entry.sets.some((set) => set.status === "done")).length;
+    return { part, entries, done, total: entries.length };
+  }).filter(({ entries }) => entries.length > 0);
+}
+
+const PART_NAMES = { workout: "Workout", warmup: "Warm-up", cooldown: "Cool-down" };
+
+// A warm-up or cool-down as one line: "Warm-up: skipped", "Cool-down: 8
+// done", "Cool-down: 3 done, 2 skipped". It counts what was logged only, as a
+// past session doesn't know what an ended-early one never reached.
+export function partLine({ part, done, total }) {
+  if (done === 0) return `${PART_NAMES[part]}: skipped`;
+  return `${PART_NAMES[part]}: ${done} done${total > done ? `, ${total - done} skipped` : ""}`;
+}
+
 // One entry per set number, the left and right sides of it together.
 function collapseSides(sets) {
   const byNumber = new Map();

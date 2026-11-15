@@ -572,13 +572,31 @@ button.step-name .icon { color: var(--muted); }
 .stats dd { margin: 0; font-size: var(--text-2xl); font-weight: 800; font-variant-numeric: tabular-nums; line-height: 1.1; }
 .stats dt { font-size: var(--text-sm); color: var(--muted); }
 #summary { margin: 0; }
+#finish-note {
+  min-height: 2.75rem; padding: var(--space-2) var(--space-3); font: inherit; font-size: var(--text-md);
+  color: var(--text); background: var(--surface); border: 1px solid var(--control-border); border-radius: var(--radius-sm); min-width: 0;
+}
+#finish-note-hint { margin: 0; font-size: var(--text-sm); }
 .finish-saved { margin-block: auto; }
+.finish-week { margin: 0; font-size: var(--text-lg); font-weight: 700; }
+#finish-next, #finish-result { margin: 0; }
 .rpe, .feedback { display: grid; grid-template-columns: repeat(auto-fit, minmax(0, 1fr)); align-self: stretch; }
 .rpe button, .feedback button { min-height: 3rem; padding: 0 var(--space-1); white-space: nowrap; }
 
 /* History */
-.row-title.sets { font-variant-numeric: tabular-nums; }
-.row.skipped .row-title.sets { color: var(--muted); font-weight: 400; }
+.row-title.sets, .row-meta.sets { font-variant-numeric: tabular-nums; }
+/* A past session's warm-up and cool-down, one line each until opened. */
+.session-part { margin-top: var(--space-4); }
+.session-part summary {
+  min-height: 2.75rem; display: flex; align-items: center; gap: var(--space-2); cursor: pointer;
+  font-weight: 600; list-style: none;
+}
+.session-part summary::-webkit-details-marker { display: none; }
+.session-part summary::before { content: "▸"; color: var(--muted); }
+.session-part[open] summary::before { content: "▾"; }
+.session-part .list { margin-top: var(--space-2); }
+.row.skipped .row-title, .row.skipped .row-meta { color: var(--muted); }
+.row.skipped .row-title { font-weight: 400; }
 #session-note { margin: 0; color: var(--muted); font-style: italic; }
 #session-delete { align-self: flex-start; margin-top: var(--space-4); color: var(--danger); }
 

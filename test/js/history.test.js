@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { setsSummary, sessionSummary, exerciseSummary } from "../../public/js/history.js";
+import { setsSummary, sessionSummary, exerciseSummary, sessionParts, partLine } from "../../public/js/history.js";
 
 const lb = (value) => ({ value, unit: "lb" });
 const set = (set_number, reps, weight = null, extra = {}) => ({ set_number, side: null, reps, seconds: null, weight, ...extra });
@@ -64,4 +64,22 @@ test("says when a session was ended early", () => {
 test("reads a hold ended early against its target", () => {
   const hold = (n, seconds) => set(n, null, null, { seconds, target: { seconds: 45 } });
   assert.equal(setsSummary([hold(1, 32), hold(2, 45)]), "32 of 45 s, 45 s");
+});
+
+test("groups a past session by part, the main workout first", () => {
+  const entry = (name, part, status) => ({ exercise: { name }, part, sets: [{ set_number: 1, status }] });
+  const exercises = [
+    entry("Side plank", "warmup", "skipped"), entry("Cat-cow", "warmup", "skipped"),
+    entry("Goblet squat", "workout", "done"), entry("Plank", undefined, "done"),
+    entry("Hamstring stretch", "cooldown", "done"),
+  ];
+
+  const parts = sessionParts(exercises);
+
+  assert.deepEqual(parts.map(({ part, done, total }) => [part, done, total]), [["workout", 2, 2], ["warmup", 0, 2], ["cooldown", 1, 1]]);
+  assert.deepEqual(parts[0].entries.map((e) => e.exercise.name), ["Goblet squat", "Plank"]);
+  assert.equal(partLine(parts[1]), "Warm-up: skipped");
+  assert.equal(partLine(parts[2]), "Cool-down: 1 done");
+  assert.equal(partLine({ part: "cooldown", done: 3, total: 5 }), "Cool-down: 3 done, 2 skipped");
+  assert.deepEqual(sessionParts([]), []);
 });

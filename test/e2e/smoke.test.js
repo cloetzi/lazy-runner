@@ -205,6 +205,7 @@ test("runs Workout 1, finishes offline and syncs once back online", async () => 
   await page.locator('[data-feedback="right"]').waitFor();
   await accessible(page, "the finish screen");
   await page.locator('[data-feedback="right"]').click();
+  await page.locator("#finish-note").fill("Left knee complained on the step-downs");
   await page.locator("#finish-save").click();
   await page.locator("#finish-result").getByText("Saved on this device").waitFor();
 
@@ -219,6 +220,8 @@ test("runs Workout 1, finishes offline and syncs once back online", async () => 
 
   assert.equal(session.completion.ended_early, true);
   assert.equal(session.completion.feedback, "right");
+  assert.equal(session.completion.note, "Left knee complained on the step-downs");
+  assert.equal(session.exercises.find((e) => e.exercise.name === "Goblet squat").part, "workout");
   const done = session.exercises.flatMap((e) => e.sets.filter((s) => s.status === "done").map(() => e.exercise.name));
   assert.deepEqual(done.sort(), ["Goblet squat", "Goblet squat", "Straight-leg deadlift"]);
   assert.deepEqual(errors, []);

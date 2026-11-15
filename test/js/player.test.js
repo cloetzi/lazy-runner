@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { previousIndex, switchesSides, mainActionLabel, stepAnnouncement, spokenTarget, spokenWeight, tapAccepted, TAP_GUARD_MS, holdStatus, MIN_HOLD_SECONDS, unloggedExercises, plannedExercise, swapExercise, swapRun, shortlist, SHORTLIST, resumeChoice, sessionProgress, endsEarly, loggedFromServer, pickUpIndex, partEnd, setLabel, minutesLeft, tempoText, leadInSeconds, GEAR_LEAD_IN, extraSeconds, upNextDetails, equipmentChanges, finishSummary } from "../../public/js/player.js";
+import { previousIndex, switchesSides, mainActionLabel, stepAnnouncement, spokenTarget, spokenWeight, tapAccepted, TAP_GUARD_MS, holdStatus, MIN_HOLD_SECONDS, unloggedExercises, plannedExercise, swapExercise, swapRun, shortlist, SHORTLIST, resumeChoice, sessionProgress, endsEarly, loggedFromServer, pickUpIndex, partEnd, setLabel, minutesLeft, tempoText, leadInSeconds, GEAR_LEAD_IN, extraSeconds, upNextDetails, equipmentChanges, finishSummary, framingLine, itemPart } from "../../public/js/player.js";
 
 const squat = { id: 1, name: "Goblet squat", equipment: ["dumbbell"], default_reps: 8, default_seconds: null };
 const deadlift = { id: 2, name: "Straight-leg deadlift", equipment: ["dumbbell"], default_reps: 12, default_seconds: null };
@@ -352,7 +352,37 @@ test("sums up a finished run from the sets logged", () => {
   const items = [set(squat, 1), rest(1), set(squat, 2), swapped, set(plank, 1)];
   const run = { items, logged: { 0: "done", 2: "skipped", 3: "done" } };
 
-  assert.deepEqual(finishSummary(run), { exercises: 3, done: 2, sets: 2, planned: 4, skipped: 1, swaps: 1 });
+  assert.deepEqual(finishSummary(run), { exercises: 3, done: 2, sets: 2, planned: 4, skipped: 1, swaps: 1, frames: [] });
+});
+
+test("reports the main workout apart from a skipped warm-up and the cool-down done", () => {
+  const warmup = { id: 7, kind: "warmup", title: "Warm-up" };
+  const main = { id: 2, kind: "workout", title: "Workout 1" };
+  const cooldown = { id: 8, kind: "cooldown", title: "Cool-down" };
+  const items = [
+    ...Array.from({ length: 4 }, (_, i) => set(plank, 1, { step_id: 20 + i, workout: warmup })),
+    set(squat, 1, { workout: main }), rest(1), set(squat, 2, { workout: main }), set(deadlift, 1, { workout: main }),
+    set(plank, 1, { step_id: 30, workout: cooldown }), set(plank, 2, { step_id: 30, workout: cooldown }),
+  ];
+  const logged = { 0: "skipped", 1: "skipped", 2: "skipped", 3: "skipped", 4: "done", 6: "done", 7: "done", 8: "done", 9: "done" };
+
+  const summary = finishSummary({ items, logged, workoutId: 2 });
+
+  assert.deepEqual(summary, {
+    exercises: 2, done: 2, sets: 3, planned: 3, skipped: 0, swaps: 0,
+    frames: [{ part: "warmup", sets: 0, skipped: 4, planned: 4 }, { part: "cooldown", sets: 2, skipped: 0, planned: 2 }],
+  });
+  assert.equal(framingLine(summary.frames), "Warm-up skipped · cool-down done");
+  assert.equal(framingLine([{ part: "cooldown", sets: 0, skipped: 0, planned: 9 }]), "Cool-down not reached");
+  assert.equal(framingLine([{ part: "cooldown", sets: 4, planned: 9 }]), "Cool-down 4 of 9 sets");
+});
+
+test("counts a stretch routine run on its own as the main workout", () => {
+  const stretch = { id: 9, kind: "cooldown", title: "Stretch" };
+  const items = [set(plank, 1, { workout: stretch }), set(plank, 2, { workout: stretch })];
+
+  assert.equal(itemPart(items[0], 9), "workout");
+  assert.deepEqual(finishSummary({ items, logged: { 0: "done" }, workoutId: 9 }), { exercises: 1, done: 1, sets: 1, planned: 2, skipped: 0, swaps: 0, frames: [] });
 });
 
 test("a swap holds as many weights as the exercise swapped in", () => {

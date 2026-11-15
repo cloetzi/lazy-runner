@@ -413,6 +413,16 @@ describe "MCP server" do
       _(squat.slice("exercise", "instead_of")).must_equal({ "exercise" => "curtsy-lunge", "instead_of" => "goblet-squat" })
     end
 
+    it "tells the main workout from its warm-up" do
+      session = session_on("2026-10-19", "in_progress")
+      SetLog.create(session:, step: step_for("cycle-1-warmup", "side-plank"), set_number: 1, side: "left", status: "skipped")
+      SetLog.create(session:, step: step_for("cycle-1-workout-1", "goblet-squat"), set_number: 1, reps: 8)
+
+      exercises = call_tool("training_summary", from: "2026-10-19", to: "2026-10-19")["sessions"].first["exercises"]
+
+      _(exercises.map { it.values_at("exercise", "part") }).must_equal [%w[side-plank warmup], %w[goblet-squat workout]]
+    end
+
     it "gives the remembered weights, and no suggestions: changing one is the coach's call" do
       squat = exercise("goblet-squat")
       ExerciseWeight.create(exercise: squat, value: 20, unit: "lb")

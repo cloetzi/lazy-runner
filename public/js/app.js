@@ -9,12 +9,12 @@ import { escape, icon, authorLine, busy, showSheet } from "./html.js";
 import { offlineToday } from "./offline.js";
 import { setupRows, setupLeft } from "./setup.js";
 import { blockName, blockSummary, stepSummary, alternatingText, setWeight, includedKinds, framingFor, framePlan, gearList, carrierOf } from "./workout.js";
-import { previousIndex, switchesSides, mainActionLabel, stepAnnouncement, spokenTarget, tapAccepted, holdStatus, unloggedExercises, plannedExercise, swapRun, resumeChoice, sessionProgress, endsEarly, loggedFromServer, pickUpIndex, partEnd, setLabel, minutesLeft, tempoText, leadInSeconds, extraSeconds, upNextDetails, equipmentChanges, finishSummary } from "./player.js";
+import { previousIndex, switchesSides, mainActionLabel, stepAnnouncement, spokenTarget, tapAccepted, holdStatus, unloggedExercises, plannedExercise, swapRun, resumeChoice, sessionProgress, endsEarly, loggedFromServer, pickUpIndex, partEnd, setLabel, minutesLeft, tempoText, leadInSeconds, extraSeconds, upNextDetails, equipmentChanges, finishSummary, framingLine } from "./player.js";
 import { rpeOptions, toggleRpe } from "./rpe-picker.js";
 import { openSwap, prefetchAlternatives } from "./swap.js";
 import { mountNav } from "./nav.js";
 import { parseRoute, routeHash, pageFor, isSessionView } from "./routes.js";
-import { setsSummary, sessionSummary, exerciseSummary } from "./history.js";
+import { setsSummary, sessionSummary, exerciseSummary, sessionParts, partLine } from "./history.js";
 import { getJson, errorMessage, loadProblem, paths, send, sendChange, STALE_NOTE } from "./api.js";
 import { readSettings } from "./preferences.js";
 import { weightRequest, skipRequest, startRequest, setRequest, finishRequests, discardRequest } from "./session-log.js";
@@ -22,7 +22,7 @@ import { createRunStore, restoredTimer } from "./run-store.js";
 import { markFor, longDay, localToday, moveRequest, removeRequest, STATUS_LABELS } from "./calendar.js";
 import { openSessionSheet, openLogActivitySheet, openRpeSheet, activityRow, editActivity, weekSummaryHtml } from "./calendar-sheets.js";
 import { plannedBy, notesAbout } from "./coach.js";
-import { queuedWeek } from "./week.js";
+import { queuedWeek, strengthWeekLine, nextSessionLine } from "./week.js";
 import {
   withQueuedActivities, removedActivityIds, activityKey, preferredDistanceUnit, adoptServerDistanceUnit,
   logRequest, changeRequest, rpeToAsk, readAsked, rememberAsked,
@@ -1532,7 +1532,8 @@ function showFinish() {
   }
   saveRun();
 
-  const { exercises, done, sets, planned, skipped, swaps } = finishSummary(run);
+  // The main workout's numbers; the warm-up and cool-down get a line of their own.
+  const { exercises, done, sets, planned, skipped, swaps, frames } = finishSummary(run);
   const plural = (n, word) => `${n} ${n === 1 ? word : `${word}s`}`;
   $("finish-title").textContent = run.endedEarly ? `${run.title}: ended early` : `${run.title} done`;
   $("finish-badge").classList.toggle("partial", !!run.endedEarly);
@@ -1541,10 +1542,13 @@ function showFinish() {
     [sets === planned ? sets : `${sets}/${planned}`, "sets"],
     [run.minutes, run.minutes === 1 ? "minute" : "minutes"],
   ].map(([value, label]) => `<div><dt>${label}</dt><dd>${value}</dd></div>`).join("");
-  $("summary").textContent = [skipped && `${skipped} skipped`, swaps && plural(swaps, "swap")].filter(Boolean).join(" · ");
-  $("summary").hidden = !skipped && !swaps;
+  const summary = [skipped && `${skipped} skipped`, swaps && plural(swaps, "swap"), framingLine(frames)].filter(Boolean).join(" · ");
+  $("summary").textContent = summary;
+  $("summary").hidden = !summary;
   renderChanges();
   renderFeedback();
+  // Kept with the run, so a reload keeps it and another run starts blank.
+  $("finish-note").value = run.note ?? "";
   $("finish-form").hidden = false;
   $("finish-done").hidden = true;
   show("finish");
@@ -1571,15 +1575,18 @@ function renderFeedback() {
 async function submitFinish() {
   const feedback = state.feedback;
   const run = state.run;
-  const { key, requests } = finishRequests(run, { rpe: state.rpe, feedback });
+  const { key, requests } = finishRequests(run, { rpe: state.rpe, feedback, note: run.note });
   requests.forEach((request) => outbox.enqueue(request));
   clearRun();
   state.rpe = null;
   state.feedback = null;
+  $("finish-note").value = "";
 
   $("finish-form").hidden = true;
   $("finish-done").hidden = false;
   $("finish-result").textContent = "Saving…";
+  $("finish-week").hidden = true;
+  $("finish-next").hidden = true;
   $("next-up").hidden = true;
 
   const synced = await sync();
@@ -1595,10 +1602,34 @@ async function submitFinish() {
     return;
   }
   $("finish-result").textContent = "See you next time.";
-  showNextUp();
+  showWeekAfterFinish();
 }
 
-// The main workout up next, now that this one is saved.
+// Now that the session is saved, the card leads with the week (how many of
+// its strength sessions are done) and says when the next one is planned.
+// With nothing more planned this week, it links to the program's workout up
+// next instead. Offline, the card does without either.
+async function showWeekAfterFinish() {
+  const today = localToday();
+  try {
+    const { data: board, stale } = await getJson(paths.coach(today));
+    if ($("finish").hidden) return;
+    // A board cached before the finish would count this session as not done.
+    if (stale) return await showNextUp();
+    const week = queuedWeek(board.week, outbox.queued(), today);
+    const lead = strengthWeekLine(week);
+    $("finish-week").textContent = lead ?? "";
+    $("finish-week").hidden = !lead;
+    const next = nextSessionLine(week.sessions, today);
+    $("finish-next").textContent = next ?? "";
+    $("finish-next").hidden = !next;
+    if (!next) await showNextUp();
+  } catch {
+    await showNextUp();
+  }
+}
+
+// The program's main workout up next, as a link.
 async function showNextUp() {
   try {
     const { data: programs } = await getJson(paths.workouts);
@@ -1690,6 +1721,8 @@ async function openSession(id) {
   $("session-note").hidden = true;
   $("session-delete").hidden = true;
   $("session-exercises").innerHTML = `<li class="muted">Loading…</li>`;
+  $("session-exercises").hidden = false;
+  $("session-frames").innerHTML = "";
   try {
     const { data: session, stale } = await getJson(`/api/sessions/${id}`);
     const date = weekdayDate(session.date);
@@ -1697,9 +1730,18 @@ async function openSession(id) {
     $("session-summary").textContent = [date, sessionSummary(session), stale ? STALE_NOTE : ""].filter(Boolean).join(" · ");
     $("session-note").textContent = session.completion?.note ?? "";
     $("session-note").hidden = !session.completion?.note;
+    // The main workout first and open; the warm-up and cool-down folded to a line.
+    const parts = sessionParts(session.exercises);
+    const rows = parts.find((part) => part.part === "workout")?.entries ?? [];
     $("session-exercises").innerHTML = session.exercises.length
-      ? session.exercises.map(sessionExerciseRow).join("")
+      ? rows.map(sessionExerciseRow).join("")
       : `<li class="muted">No sets were logged in this session.</li>`;
+    $("session-exercises").hidden = session.exercises.length > 0 && rows.length === 0;
+    $("session-frames").innerHTML = parts.filter((part) => part.part !== "workout").map((part) => `
+      <details class="session-part">
+        <summary>${escape(partLine(part))}</summary>
+        <ul class="list">${part.entries.map(sessionExerciseRow).join("")}</ul>
+      </details>`).join("");
     Object.assign($("session-delete").dataset, { delete: session.id, label: `${session.workout.title} on ${date}` });
     $("session-delete").hidden = false;
   } catch (error) {
@@ -1713,8 +1755,8 @@ function sessionExerciseRow(entry) {
   if (entry.instead_of) notes.push(`instead of ${entry.instead_of.name}`);
   if (done && skipped) notes.push(`${skipped} skipped`);
   return `<li><button class="row${done ? "" : " skipped"}" data-exercise="${entry.exercise.id}"><span class="row-text">
-    <span class="row-meta">${escape([entry.exercise.name, ...notes].join(" · "))}</span>
-    <span class="row-title sets">${escape(done || "Skipped")}</span></span>${icon("chevron-right")}</button></li>`;
+    <span class="row-title">${escape(entry.exercise.name)}</span>
+    <span class="row-meta sets">${escape([done || "Skipped", ...notes].join(" · "))}</span></span>${icon("chevron-right")}</button></li>`;
 }
 
 // Deleting needs the server, like loading the history does, so it is not
@@ -2072,6 +2114,11 @@ document.querySelectorAll("[data-feedback]").forEach((button) => {
   };
 });
 $("finish-save").onclick = submitFinish;
+$("finish-note").oninput = () => {
+  if (!state.run) return;
+  state.run.note = $("finish-note").value;
+  saveRun();
+};
 $("home-again").onclick = () => { show("home"); loadToday(); };
 
 $("in-progress").onclick = (event) => {
@@ -2083,7 +2130,7 @@ $("history-list").onclick = (event) => {
   const button = event.target.closest("button[data-session]");
   if (button) go(routeHash("session", button.dataset.session));
 };
-$("session-exercises").onclick = (event) => {
+$("session-exercises").onclick = $("session-frames").onclick = (event) => {
   const button = event.target.closest("button[data-exercise]");
   if (button) go(routeHash("exercise-history", button.dataset.exercise));
 };

@@ -61,6 +61,8 @@ describe "GET /api/history" do
     session = session_on("2026-10-19", "in_progress")
     Completion.create(session:, finished_at: Time.now, rpe: 8, feedback: "too_hard")
     SetLog.create(session:, step: step_for("cycle-1-workout-1", "goblet-squat"), set_number: 1, reps: 8)
+    # The warm-up's sets are not the workout's.
+    SetLog.create(session:, step: step_for("cycle-1-warmup", "side-plank"), set_number: 1, side: "left", seconds: 30)
 
     get "/api/history?date=2026-10-19"
 

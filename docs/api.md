@@ -121,8 +121,9 @@ as null when it has no value (`nullable`).
   already logged (200 instead of 201); `complete` keeps fields it leaves out.
   A set sent for a step the session no longer runs (the workout was edited
   on another device while this one ran it offline) is kept from what the
-  player showed (`planned_exercise_id`, `block_label`, `target`), without
-  the step link.
+  player showed (`planned_exercise_id`, `block_label`, `part`, `target`),
+  without the step link. Every set keeps its `part`: `workout` for the
+  session's own workout, `warmup` or `cooldown` for what framed it.
 - **Every workout is the user's**, imported ones included. Deleting one
   archives it, and an archived workout is read-only (403).
 - **A workout's structure is written whole**: `POST /api/workouts` and

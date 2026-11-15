@@ -519,6 +519,18 @@ describe "sessions API" do
 
       _(last_response.status).must_equal 201
       _(json["status"]).must_equal "skipped"
+      _(json["part"]).must_equal "warmup"
+    end
+
+    it "keeps the part each set was in: the session's own workout is the main one" do
+      session = create_session
+      post_json "/api/sessions/#{session.id}/sets", step_id: squat.id, set_number: 1, reps: 8
+      _(json["part"]).must_equal "workout"
+
+      stretch = Workout.first!(example_slug: "cycle-1-cooldown")
+      on_its_own = Session.add!(workout: stretch, date: Date.today, status: "in_progress", started_at: Time.now)
+      post_json "/api/sessions/#{on_its_own.id}/sets", step_id: stretch.blocks.first.steps.first.id, set_number: 1, seconds: 30
+      _(json["part"]).must_equal "workout"
     end
 
     it "logs a swapped set against the exercise done" do
@@ -586,6 +598,7 @@ describe "sessions API" do
         _(json["step_ref"]).must_equal step_id
         _(json["planned_exercise_id"]).must_equal exercise("goblet-squat").id
         _(json["block_label"]).must_equal "Strength"
+        _(json["part"]).must_be_nil
         _(json["target"]).must_equal({ "reps" => 8, "seconds" => nil, "weight" => { "value" => 40.0, "unit" => "lb" } })
 
         post_json "/api/sessions/#{session.id}/sets", step_id:, set_number: 1, reps: 7, **shown
@@ -623,6 +636,18 @@ describe "sessions API" do
         _(json["step_id"]).must_be_nil
         _(json["step_ref"]).must_equal warm_up.id
         _(json["block_label"]).must_equal warm_up.block.label
+        _(json["part"]).must_equal "warmup"
+      end
+
+      it "takes the part the player sent for a step that has gone, and refuses an unknown one" do
+        Step.remove!([gone.id])
+
+        post_json "/api/sessions/#{session.id}/sets", step_id: gone.id, set_number: 1, reps: 8, part: "cooldown", **shown
+        _(json["part"]).must_equal "cooldown"
+
+        post_json "/api/sessions/#{session.id}/sets", step_id: gone.id, set_number: 2, reps: 8, part: "stretch", **shown
+        _(last_response.status).must_equal 422
+        _(json["error"]["fields"].keys).must_equal ["part"]
       end
 
       it "keeps a set whose target weight has no known unit, without the weight" do
@@ -849,6 +874,17 @@ describe "sessions API" do
       _(squat_sets["block_label"]).must_equal squat.block.label
       _(squat_sets["sets"].map { [it["set_number"], it["reps"], it["weight"]["value"]] }).must_equal [[1, 8, 40.0], [2, 7, 40.0]]
       _(json["exercises"].last["sets"].map { it["status"] }).must_equal %w[skipped]
+    end
+
+    it "says which part each exercise was in, an older set whose step has gone reading as the main workout" do
+      session = create_session(status: "in_progress")
+      SetLog.create(session:, step: step_for("cycle-1-warmup", "side-plank"), set_number: 1, side: "left", status: "skipped")
+      SetLog.create(session:, step: squat, set_number: 1, reps: 8)
+      SetLog.create(session:, step_ref: 0, exercise: exercise("plank"), planned_exercise: exercise("plank"), block_label: "Old", set_number: 1, seconds: 30)
+
+      get "/api/sessions/#{session.id}"
+
+      _(json["exercises"].map { [it["exercise"]["slug"], it["part"]] }).must_equal [%w[side-plank warmup], %w[goblet-squat workout], %w[plank workout]]
     end
 
     it "groups a swap under the exercise done and names the one planned" do

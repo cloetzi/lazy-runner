@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { weekSummary, summaryLine, watching } from "../../public/js/week.js";
+import { weekSummary, summaryLine, watching, strengthWeekLine, nextSessionLine } from "../../public/js/week.js";
 
 const session = (status, fields = {}) => ({ status, completion: null, ...fields });
 const run = { id: 1, sport: "run" };
@@ -53,4 +53,31 @@ test("leaves out warm-ups done on their own, and a strength activity on a day a 
     activities: [{ sport: "Strength training", date: "2026-11-10" }, { sport: "gym", date: "2026-11-12" }],
   });
   assert.deepEqual(strength, { kind: "strength", done: 2, of: 3, distance_m: 0, facts: [] });
+});
+
+test("leads the Saved card with the week's strength sessions", () => {
+  const workout = { kind: "workout", title: "Workout 1" };
+  const sessions = [session("done", { date: "2026-11-09", workout }), session("done", { date: "2026-11-11", workout, completion: { ended_early: true } }), session("planned", { date: "2026-11-13", workout })];
+
+  assert.equal(strengthWeekLine({ sessions }), "This week: 1 of 3 strength sessions done · 1 ended early");
+  assert.equal(strengthWeekLine({ sessions: [session("done", { date: "2026-11-09", workout })] }), "This week: 1 strength session done");
+  assert.equal(strengthWeekLine({ sessions: [] }), null);
+});
+
+test("says when the next workout session of the week is planned", () => {
+  const w2 = { kind: "workout", title: "Workout 2" };
+  const stretch = { kind: "cooldown", title: "Stretch" };
+  const sessions = [
+    session("done", { id: 1, date: "2026-11-11", position: 1, workout: { kind: "workout", title: "Workout 1" } }),
+    session("planned", { id: 2, date: "2026-11-12", position: 1, workout: stretch }),
+    session("planned", { id: 3, date: "2026-11-13", position: 1, workout: w2 }),
+  ];
+
+  assert.equal(nextSessionLine(sessions, "2026-11-11"), "Next: Workout 2, Friday");
+  assert.equal(nextSessionLine(sessions, "2026-11-12"), "Next: Workout 2, tomorrow");
+  assert.equal(nextSessionLine(sessions, "2026-11-13"), "Next: Workout 2, later today");
+  assert.equal(nextSessionLine(sessions.slice(0, 2), "2026-11-11"), null);
+  // One under way is not what comes next.
+  const started = session("in_progress", { id: 4, date: "2026-11-11", position: 2, workout: { kind: "workout", title: "Workout 3" } });
+  assert.equal(nextSessionLine([...sessions, started], "2026-11-11"), "Next: Workout 2, Friday");
 });

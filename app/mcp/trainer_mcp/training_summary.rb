@@ -3,7 +3,8 @@ module TrainerMcp
     description <<~TEXT.squish
       What the user trained over a date range (the last 28 days by default): every session, oldest
       first, with its status, workout and how it felt (RPE 1-10, feedback too_easy, right or
-      too_hard, a note, whether it ended early), and per exercise the target and what was done
+      too_hard, a note, whether it ended early), and per exercise its `part` (warmup, workout or
+      cooldown: the main workout or what framed it), the target and what was done
       (sets done and skipped, reps or seconds per set, the weights used; a `per_side` exercise
       counts a set once for both sides and lists reps left then right; `instead_of` names the
       exercise planned when it was swapped). Planned sessions in the range are listed too, and a planned one whose day has gone by reads as missed. `weeks`
@@ -67,7 +68,7 @@ module TrainerMcp
         {
           exercise: logged[:exercise][:slug], name: logged[:exercise][:name],
           instead_of: logged[:instead_of]&.dig(:slug),
-          block: logged[:block_label],
+          block: logged[:block_label], part: logged[:part],
           per_side: (true if per_side),
           target: sets.first[:target],
           sets_done: rounds.(done).size,
