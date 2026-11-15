@@ -95,7 +95,7 @@ export function openNoteSheet({ note = null, kind = "note", date = "", about = [
         <h2>${editing ? "Edit the note" : "Write a note"}</h2>
         <button class="icon-button" type="button" data-close aria-label="Close">${icon("close")}</button>
       </header>
-      <div class="segmented kind-choices" role="radiogroup" aria-label="Kind">
+      <div class="segmented fill" role="radiogroup" aria-label="Kind">
         ${KINDS.map((k) => `<label><input type="radio" name="kind" value="${k}"${k === current.kind ? " checked" : ""}><span>${KIND_LABELS[k]}</span></label>`).join("")}
       </div>
       <p class="muted small-print" data-hint>${escape(HINTS[current.kind])}</p>

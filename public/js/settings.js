@@ -147,7 +147,7 @@ $("change-password-open").onclick = () => {
 let hasPassword = true;
 function renderPasswordForm() {
   const current = passwordForm.elements.password;
-  current.closest(".form-field").hidden = !hasPassword;
+  current.closest(".field").hidden = !hasPassword;
   current.required = hasPassword;
   const label = hasPassword ? "Change password" : "Set a password";
   $("change-password-open").textContent = label;

@@ -33,11 +33,11 @@
         <button class="primary" type="button" data-oidc="Sign in with">Sign in with single sign-on</button>
         <p class="muted oidc-or">or with a password</p>
       </div>
-      <label class="form-field">
+      <label class="field">
         <span>Username</span>
         <input name="username" autocomplete="username" autocapitalize="none" spellcheck="false" required>
       </label>
-      <label class="form-field">
+      <label class="field">
         <span>Password</span>
         <input name="password" type="password" autocomplete="current-password" required>
       </label>
@@ -50,16 +50,16 @@
       <h2>Create the owner account</h2>
       <p class="muted">This install has no accounts yet. The setup code is in the server's log, printed when it started; a restart prints a new one. With Docker:</p>
       <p><code class="command">docker logs &lt;container&gt; 2&gt;&amp;1 | grep "setup code"</code></p>
-      <label class="form-field">
+      <label class="field">
         <span>Setup code</span>
         <input name="setup_code" autocomplete="off" autocapitalize="characters" spellcheck="false" required>
       </label>
-      <label class="form-field">
+      <label class="field">
         <span>Username</span>
         <input name="username" autocomplete="username" autocapitalize="none" spellcheck="false" minlength="3" maxlength="40" pattern="[A-Za-z0-9._\-]+" required>
         <span class="muted">Letters, digits, dots, dashes and underscores.</span>
       </label>
-      <label class="form-field">
+      <label class="field">
         <span>Password</span>
         <input name="password" type="password" autocomplete="new-password" minlength="8" required>
         <span class="muted">At least 8 characters.</span>
@@ -75,12 +75,12 @@
         <button class="primary" type="button" data-oidc="Join with">Join with single sign-on</button>
         <p class="muted oidc-or">or with a password</p>
       </div>
-      <label class="form-field">
+      <label class="field">
         <span>Username</span>
         <input name="username" autocomplete="username" autocapitalize="none" spellcheck="false" minlength="3" maxlength="40" pattern="[A-Za-z0-9._\-]+" required>
         <span class="muted">Letters, digits, dots, dashes and underscores.</span>
       </label>
-      <label class="form-field">
+      <label class="field">
         <span>Password</span>
         <input name="password" type="password" autocomplete="new-password" minlength="8" required>
         <span class="muted">At least 8 characters.</span>
@@ -111,11 +111,11 @@
     <form class="card form" id="new-password-form" hidden>
       <h2>Choose your password</h2>
       <p class="muted">You signed in with a temporary password. Choose your own to carry on; your other devices are signed out.</p>
-      <label class="form-field">
+      <label class="field">
         <span>Temporary password</span>
         <input name="password" type="password" autocomplete="current-password" required>
       </label>
-      <label class="form-field">
+      <label class="field">
         <span>New password</span>
         <input name="new_password" type="password" autocomplete="new-password" minlength="8" required>
         <span class="muted">At least 8 characters.</span>

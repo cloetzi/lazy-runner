@@ -61,9 +61,19 @@ components, pages, player, figure.
 - **Headings**: one `h1` per view (the exercise name in the player), card
   and section titles `h2`, nothing skipped. A sheet opens with `showSheet()`
   (`html.js`), which names it by its heading.
-- **Components**: `.card`, `.list` / `.row`, `.segmented` (pressed state in
-  `aria-pressed`), `.icon-button`, `.badge`, `.tag`. Icons come from
-  `public/icons/sprite.svg` through `icon()` in `public/js/html.js`.
+- **Components**: `.card`, `.list` / `.row`, `.icon-button`, `.badge`,
+  `.tag`. Icons come from `public/icons/sprite.svg` through `icon()` in
+  `public/js/html.js`.
+- **Fields**: every input, select and textarea gets one look from the base
+  styles, so a form needs no CSS of its own. A `.field` wraps the label (or
+  a `.field-label`), the control, a muted hint and a `.form-error`.
+- **Selection, two ways**: one of a few is the `.segmented` control (buttons
+  with `aria-pressed`, or labels around radios), the chosen one raised; it
+  never stretches unless it is `.fill`, and scrolls sideways when it runs
+  out of room. Any of several is a check: a native box in lists, in the text
+  colour, and `.check-chips` (the weekdays) for compact choices, a tint with
+  the accent ink and a tick. Navigation keeps its own current item; solid
+  orange never means chosen.
 - **Taps register once**: every button, row and tab shows it is pressed at
   once (`:active`), hover styles apply only where a pointer hovers, and a
   button waiting on the server is `busy()` (`html.js`). In the player the

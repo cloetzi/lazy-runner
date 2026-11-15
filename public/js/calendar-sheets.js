@@ -121,7 +121,7 @@ export function openSessionSheet({ session, today, on, notes = [], change = null
           <button class="secondary small" type="button" data-later aria-expanded="false">Later</button>
         </div>
         <div class="move-later" hidden>
-          <label>Date <input type="date" name="later" min="${today}"></label>
+          <label class="field">Date <input type="date" name="later" min="${today}"></label>
           <button class="secondary small" type="button" data-move-later>Move</button>
         </div>` : ""}
       <div class="sheet-actions">

@@ -30,11 +30,11 @@
         <button class="secondary" id="change-password-open" aria-expanded="false" aria-controls="change-password">Change password</button>
       </div>
       <form class="form" id="change-password" hidden>
-        <label class="form-field">
+        <label class="field">
           <span>Current password</span>
           <input name="password" type="password" autocomplete="current-password" required>
         </label>
-        <label class="form-field">
+        <label class="field">
           <span>New password</span>
           <input name="new_password" type="password" autocomplete="new-password" minlength="8" required>
           <span class="muted">At least 8 characters.</span>
@@ -64,14 +64,14 @@
       <ul class="device-list" id="user-list"></ul>
       <div class="form" id="temporary-password" hidden>
         <p><strong>Give <span id="temporary-password-who"></span> this temporary password.</strong> They choose their own when they sign in. It won't be shown again.</p>
-        <label class="form-field"><span>Temporary password</span><input class="token-secret" readonly></label>
+        <label class="field"><span>Temporary password</span><input class="token-secret" readonly></label>
         <button class="secondary" type="button" id="copy-temporary-password">Copy</button>
       </div>
       <h2>Invites</h2>
       <p class="muted">Someone joins with an invite link, choosing their own username and password. A link works once, for 7 days.</p>
       <ul class="device-list" id="invite-list"></ul>
       <form class="form" id="new-invite-form">
-        <label class="form-field">
+        <label class="field">
           <span>Who is it for? <span class="muted">(optional)</span></span>
           <input name="label" maxlength="60" placeholder="For Sam" autocomplete="off">
         </label>
@@ -79,7 +79,7 @@
       </form>
       <div class="form" id="new-invite-link" hidden>
         <p><strong>Send this link</strong> to the person joining. It won't be shown again.</p>
-        <label class="form-field"><span>Invite link</span><input class="token-secret" readonly></label>
+        <label class="field"><span>Invite link</span><input class="token-secret" readonly></label>
         <div class="account-actions">
           <button class="secondary" type="button" id="copy-invite">Copy</button>
           <button class="secondary" type="button" id="share-invite" hidden>Share</button>
@@ -100,7 +100,7 @@
       <p class="muted">For an assistant or a script acting as you. A token has full access to your data; revoke it here when you're done with it.</p>
       <ul class="device-list" id="tokens"></ul>
       <form class="form" id="new-token">
-        <label class="form-field">
+        <label class="field">
           <span>Name</span>
           <input name="name" maxlength="60" placeholder="Coach agent" required>
         </label>
@@ -109,17 +109,17 @@
       </form>
       <div class="form" id="new-token-secret" hidden>
         <p><strong>Copy it now:</strong> it won't be shown again.</p>
-        <label class="form-field"><span>Your new token</span><input class="token-secret" readonly></label>
+        <label class="field"><span>Your new token</span><input class="token-secret" readonly></label>
         <button class="secondary" type="button" id="copy-token">Copy</button>
       </div>
       <h2>Connect an assistant</h2>
       <p class="muted">Make a token above, then connect. The MCP server (Streamable HTTP) gives an assistant tools to read your training and plan workouts. Point the client at this address with the token in an <code>Authorization: Bearer &lt;token&gt;</code> header, the same header a script sends to the API.</p>
       <div class="form" id="mcp-url">
-        <label class="form-field"><span>MCP server</span><input class="token-secret" readonly></label>
+        <label class="field"><span>MCP server</span><input class="token-secret" readonly></label>
         <button class="secondary" type="button" id="copy-mcp-url">Copy</button>
       </div>
       <div class="form" id="mcp-command">
-        <label class="form-field"><span>For Claude Code</span><input class="token-secret" readonly></label>
+        <label class="field"><span>For Claude Code</span><input class="token-secret" readonly></label>
         <button class="secondary" type="button" id="copy-mcp-command">Copy</button>
       </div>
       <p class="muted">If the server is reached by a name other than a loopback address, whoever runs it lists that name in <code>MCP_ALLOWED_HOSTS</code>; until then the server refuses MCP requests. The <a id="mcp-docs" href="https://github.com/cloetzi/lazy-runner/blob/main/docs/api.md#mcp-server" target="_blank" rel="noopener">MCP docs</a> list the tools.</p>

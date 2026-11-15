@@ -163,9 +163,9 @@ function details(draft) {
   const main = draft.kind === "workout";
   const general = editor.problems.general;
   const kinds = draft.id == null ? `
-    <div class="editor-field">
-      <span class="editor-field-label" id="edit-kind-label">Kind</span>
-      <div class="segmented" role="group" aria-labelledby="edit-kind-label">
+    <div class="field">
+      <span class="field-label" id="edit-kind-label">Kind</span>
+      <div class="segmented fill" role="group" aria-labelledby="edit-kind-label">
         ${KINDS.map((kind) => `<button type="button" data-act="kind" data-kind="${kind.id}" data-focus="kind:${kind.id}" aria-pressed="${draft.kind === kind.id}">${kind.label}</button>`).join("")}
       </div>
     </div>` : "";
@@ -173,9 +173,9 @@ function details(draft) {
     <section class="card editor-details">
       ${general.length ? problemList(general, "edit-problems") : ""}
       ${kinds}
-      <label class="editor-field"><span class="editor-field-label">Name</span>
+      <label class="field"><span class="field-label">Name</span>
         <input data-field="title" value="${escape(draft.title)}" maxlength="80" autocomplete="off" required></label>
-      <label class="editor-field"><span class="editor-field-label">Description <span class="muted">(optional)</span></span>
+      <label class="field"><span class="field-label">Description <span class="muted">(optional)</span></span>
         <input data-field="subtitle" value="${escape(draft.subtitle)}" maxlength="120" autocomplete="off" placeholder="Legs and core, 25 minutes"></label>
       ${main ? frameSelect("warmup", "Warm-up", draft) + frameSelect("cooldown", "Cool-down", draft) : ""}
     </section>`;
@@ -196,7 +196,7 @@ function frameSelect(kind, label, draft) {
     ? `<option value="${chosen}" selected>${escape(draft.frameTitles?.[kind] ?? label)} (deleted)</option>` : "";
   const options = gone + frames
     .map((frame) => `<option value="${frame.id}"${frame.id === chosen ? " selected" : ""}>${escape(frame.label)}</option>`).join("");
-  return `<label class="editor-field"><span class="editor-field-label">${label}</span>
+  return `<label class="field"><span class="field-label">${label}</span>
     <select data-field="${kind}">${fallback}<option value="none"${none ? " selected" : ""}>None</option>${options}</select></label>`;
 }
 
@@ -254,18 +254,18 @@ function stepPanel(step) {
     : step.mode === "seconds" ? setting(`Time${sides}`, stepper("amount", k, `${step.seconds} s`, `time of ${name}`)) : "";
   return `
     <div class="editor-step-panel">
-      <div class="segmented" role="group" aria-label="What ${name} counts">
+      <div class="segmented fill" role="group" aria-label="What ${name} counts">
         ${MODES.map((mode) => `<button type="button" data-act="mode" data-mode="${mode.id}" data-key="${k}" data-focus="mode-${mode.id}:${k}" aria-pressed="${step.mode === mode.id}">${mode.label}</button>`).join("")}
       </div>
       <div class="editor-settings">${amount}${options ? weightSetting(step, options) : ""}</div>
       ${options ? weightHint(step, options) : ""}
       <div class="editor-settings">
-        <div class="editor-field editor-tempo">
-          <label class="editor-field-label" for="tempo-${k}">Tempo <span class="muted">(optional)</span></label>
+        <div class="field editor-tempo">
+          <label class="field-label" for="tempo-${k}">Tempo <span class="muted">(optional)</span></label>
           <input id="tempo-${k}" data-field="tempo" data-key="${k}" value="${escape(step.tempo)}" inputmode="numeric" maxlength="4" placeholder="3110" autocomplete="off" aria-describedby="tempo-hint-${k}">
           <p class="muted editor-hint" id="tempo-hint-${k}">Seconds down, pause, up, pause</p>
         </div>
-        <label class="editor-field editor-note"><span class="editor-field-label">Note <span class="muted">(optional)</span></span>
+        <label class="field editor-note"><span class="field-label">Note <span class="muted">(optional)</span></span>
           <input data-field="note" data-key="${k}" value="${escape(step.note)}" maxlength="120" autocomplete="off"></label>
       </div>
       <div class="editor-step-actions">
@@ -295,7 +295,7 @@ function weightHint(step, options) {
 }
 
 function setting(label, control) {
-  return `<div class="editor-setting"><span class="editor-field-label">${label}</span>${control}</div>`;
+  return `<div class="editor-setting"><span class="field-label">${label}</span>${control}</div>`;
 }
 
 function stepper(name, key, shown, what) {
@@ -441,7 +441,7 @@ function pick(title, onPick, current = null) {
         <button class="icon-button" aria-label="Close">${icon("close")}</button>
       </header>
       <input type="search" id="picker-search" placeholder="Search exercises" aria-label="Search exercises" value="${escape(pickerFilters.query)}" autocomplete="off">
-      <div class="segmented wraps" role="group" aria-label="Body area">
+      <div class="segmented" role="group" aria-label="Body area">
         ${[{ id: "", label: "All areas" }, ...AREAS].map((area) => `<button type="button" data-area="${area.id}">${escape(area.label)}</button>`).join("")}
       </div>
       <div class="picker-filters">
@@ -449,7 +449,7 @@ function pick(title, onPick, current = null) {
           <option value="">Any equipment</option><option value="${BODYWEIGHT}">No equipment</option>
           ${editor.inventory.filter((item) => used.has(item.slug)).map((item) => `<option value="${escape(item.slug)}">${escape(item.name)}</option>`).join("")}
         </select>
-        <div class="segmented" role="group" aria-label="Which exercises">
+        <div class="segmented fill" role="group" aria-label="Which exercises">
           <button type="button" data-owned="true">What I own</button>
           <button type="button" data-owned="false">Everything</button>
         </div>

@@ -16,7 +16,7 @@ export function rpeOptions({ rpe = null, answer = false } = {}) {
 
 // The picker with its group around it.
 export function rpePicker(options = {}) {
-  return `<div class="rpe segmented" role="group" aria-label="How hard it was">${rpeOptions(options)}</div>`;
+  return `<div class="rpe segmented fill" role="group" aria-label="How hard it was">${rpeOptions(options)}</div>`;
 }
 
 // Makes the toggles in `container` keep at most one pressed, calling

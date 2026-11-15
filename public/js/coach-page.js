@@ -339,7 +339,7 @@ function concernsCard({ concerns }) {
 // The journal: filters, the notes under the one picked, the earlier
 // statuses and focus folded into one line (under All), and Tidy up.
 function notesCard({ notes }) {
-  const filters = `<div class="segmented journal-filters" role="group" aria-label="Show notes">${JOURNAL_FILTERS.map((f) =>
+  const filters = `<div class="segmented fill journal-filters" role="group" aria-label="Show notes">${JOURNAL_FILTERS.map((f) =>
     `<button type="button" data-filter="${f.key}" aria-pressed="${f.key === state.filter}">${escape(f.label)}</button>`).join("")}</div>`;
   // Offline, or not read yet: the board's latest stand in under All.
   const list = state.journal ?? (state.filter === "all" ? notes.filter((n) => n.kind === "note" || n.kind === "concern") : []);

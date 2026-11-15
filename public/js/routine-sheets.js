@@ -99,7 +99,7 @@ export function openRoutineDaySheet({ day, routine, unit, today, on, change = nu
           <button class="secondary small" type="button" data-later aria-expanded="false">Later</button>
         </div>
         <div class="move-later" hidden>
-          <label>Date <input type="date" name="later" min="${today}"></label>
+          <label class="field">Date <input type="date" name="later" min="${today}"></label>
           <button class="secondary small" type="button" data-move-later>Move</button>
         </div>` : ""}
       <div class="sheet-actions">
@@ -168,7 +168,7 @@ export function openRoutineSheet({ routine = null, date, once = false, unit, tod
         <button class="icon-button" type="button" data-close aria-label="Close">${icon("close")}</button>
       </header>
       ${choices?.length ? `
-        <div class="segmented kind-choices" role="radiogroup" aria-label="What">
+        <div class="segmented fill" role="radiogroup" aria-label="What">
           <label><input type="radio" name="what" value="sport"${what === "sport" ? " checked" : ""}><span>Run or other sport</span></label>
           <label><input type="radio" name="what" value="workout"${what === "workout" ? " checked" : ""}><span>Workout</span></label>
         </div>` : `<input type="hidden" name="what" value="sport">`}
@@ -181,13 +181,13 @@ export function openRoutineSheet({ routine = null, date, once = false, unit, tod
       </label>` : ""}
       ${oneOff ? `
         <label class="field"><span>Day</span><input type="date" name="starts_on" min="${today}" value="${startsOn}"></label>
-        ${editing ? "" : `<div class="segmented kind-choices" role="radiogroup" aria-label="How sure">
+        ${editing ? "" : `<div class="segmented fill" role="radiogroup" aria-label="How sure">
           <label><input type="radio" name="sure" value="maybe" checked><span>Maybe</span></label>
           <label><input type="radio" name="sure" value="planned"><span>Planned</span></label>
         </div>
         <p class="muted small-print">Maybe shows it dashed until you say you're going; Planned counts on it.</p>`}` : `
         <fieldset class="field"><legend>Every</legend>
-          <div class="weekday-choices">${WEEKDAY_SHORT.map((name, i) => `<label><input type="checkbox" name="weekday" value="${i + 1}"${weekdays.includes(i + 1) ? " checked" : ""}><span>${name}</span></label>`).join("")}</div>
+          <div class="check-chips weekday-choices">${WEEKDAY_SHORT.map((name, i) => `<label><input type="checkbox" name="weekday" value="${i + 1}"${weekdays.includes(i + 1) ? " checked" : ""}><span>${name}</span></label>`).join("")}</div>
         </fieldset>
         <label class="field"><span>From</span><input type="date" name="starts_on" min="${today}" value="${startsOn}"></label>
         ${editing && routine.starts_on < today ? `<p class="muted small-print">Days gone by stay as they were: a change to the days or the sport starts a new routine today.</p>` : ""}`}
@@ -199,7 +199,7 @@ export function openRoutineSheet({ routine = null, date, once = false, unit, tod
         <label class="field"><span>Distance</span><span class="with-unit"><input name="distance" inputmode="decimal" value="${escape(distance)}" placeholder="0"><span class="muted">${unit}</span></span></label>
       </div>
       <fieldset class="field"><legend>Effort</legend>
-        <div class="segmented kind-choices" role="radiogroup" aria-label="Effort">
+        <div class="segmented fill" role="radiogroup" aria-label="Effort">
           <label><input type="radio" name="effort" value=""${routine?.effort ? "" : " checked"}><span>Any</span></label>
           ${EFFORTS.map((e) => `<label><input type="radio" name="effort" value="${e}"${routine?.effort === e ? " checked" : ""}><span>${e[0].toUpperCase() + e.slice(1)}</span></label>`).join("")}
         </div>
