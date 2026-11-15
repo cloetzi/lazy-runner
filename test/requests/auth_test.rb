@@ -73,7 +73,7 @@ describe "accounts and sign-in" do
 
       _(last_response.status).must_equal 422
       _(json["error"]["code"]).must_equal "invalid"
-      _(json["error"]["fields"].keys).must_equal ["username"]
+      _(json["error"]["fields"]).must_equal({ "username" => ["Use letters, digits, dots, dashes and underscores only"] })
       post_json "/api/auth/create-account", setup_code: code, username: "runner", password: "short"
       _(json["error"]["fields"].keys).must_equal ["password"]
       _(User.count).must_equal 0

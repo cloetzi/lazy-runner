@@ -53,11 +53,10 @@ async function setupCode() {
   return code;
 }
 
-// No axe violations on what the page shows now. The count's name is the
-// player's to fix (#245), so it is left out until then.
+// No axe violations on what the page shows now.
 async function accessible(page, where) {
   if (!(await page.evaluate(() => "axe" in window))) await page.evaluate(axeSource);
-  const { violations } = await page.evaluate(() => axe.run({ exclude: [["#target"]] }, {
+  const { violations } = await page.evaluate(() => axe.run(document, {
     runOnly: ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa", "best-practice"],
   }));
   const found = violations.map((v) => `${v.id}: ${v.nodes.map((node) => node.target.join(" ")).join(", ")}`);
@@ -106,7 +105,7 @@ before(async () => {
   for (const [slug, name] of [["cycle-1", "Cycle 1"], ["home-strength", "Home strength"]]) {
     await page.locator(`#example-list [data-import="${slug}"]`).click();
     await page.locator("#examples-done").getByText(`${name} is in your workouts`).waitFor();
-    await page.locator(`#example-list [data-import="${slug}"]`, { hasText: "Import again" }).waitFor();
+    await page.locator("#example-list > li", { hasText: name }).getByText("Imported ✓").waitFor();
   }
   signedIn = await context.storageState();
   await context.close();

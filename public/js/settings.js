@@ -343,9 +343,10 @@ $("copy-temporary-password").onclick = () => copyFrom($("temporary-password"), $
 
 // The owner's, as this device knows (or, with storage blocked, as the server
 // answers: anyone else gets a 403, which hides the card again).
+let usersLoaded = Promise.resolve();
 if (!storage || storedAccount(storage)?.owner) {
   $("users").hidden = false;
-  loadUsers();
+  usersLoaded = loadUsers();
 }
 
 // ---------- Signing in with the OIDC provider ----------
@@ -553,7 +554,10 @@ render();
 renderAccount();
 loadTokens();
 loadIdentities();
-examples.load();
+// A link to a card (settings.html#examples) is followed before the lists
+// above it fill in; once they have, the card is brought back into view.
+const anchored = location.hash ? document.getElementById(location.hash.slice(1)) : null;
+Promise.allSettled([examples.load(), usersLoaded]).then(() => anchored?.scrollIntoView());
 outbox?.flush();
 loadUnit();
 loadDevices();

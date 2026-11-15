@@ -59,6 +59,13 @@ export async function openEditor(id, { unit, onSaved, cameFrom = "" }) {
       // A new main workout starts framed as the first program's sessions are.
       defaultFrames: Object.fromEntries(["warmup", "cooldown"].map((kind) =>
         [kind, programs.find((p) => p.id)?.workouts.find((w) => w.kind === kind)?.id ?? null])),
+      // Each program's name and whether it has a warm-up and a cool-down,
+      // for the "the program's own" choice.
+      programFrames: new Map(programs.filter((program) => program.id).map((program) => [program.id, {
+        name: program.name,
+        warmup: program.workouts.some((w) => w.kind === "warmup"),
+        cooldown: program.workouts.some((w) => w.kind === "cooldown"),
+      }])),
       stale: [workout, exercises, inventory].some((answer) => answer?.stale),
       openSteps: new Set(),
       problems: NO_PROBLEMS,
@@ -174,7 +181,12 @@ function details(draft) {
 
 function frameSelect(kind, label, draft) {
   const chosen = draft[kind];
-  const fallback = draft.programId ? `<option value=""${chosen == null ? " selected" : ""}>The program's</option>` : "";
+  // The program's own, named: "Home strength's warm-up", or that it has none.
+  const program = editor.programFrames.get(draft.programId);
+  const part = label.toLowerCase();
+  const own = program?.[kind] ? `${program.name}'s ${part}` : `None (${program?.name ?? "the program"} has no ${part})`;
+  const fallback = draft.programId
+    ? `<option value=""${chosen == null ? " selected" : ""}>${escape(own)}</option>` : "";
   const none = chosen === "none" || (chosen == null && !draft.programId);
   const frames = editor.frames.filter((frame) => frame.kind === kind);
   // A chosen one since deleted is no longer listed, but still runs: say so.

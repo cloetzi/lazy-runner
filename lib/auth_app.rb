@@ -199,6 +199,12 @@ class AuthApp < Roda
     login_lockout_error_flash "Wrong username or password"
     lockout_error_status 401
     require_login_error_flash "Sign in to continue"
+    already_an_account_with_this_login_message "That username is taken. Try another."
+    # The reason alone, as a sentence, not "invalid login, " before it.
+    login_does_not_meet_requirements_message do
+      message = login_requirement_message.to_s
+      message.empty? ? "That username can't be used" : message[0].upcase + message[1..]
+    end
     active_sessions_error_flash "This device has been signed out"
 
     # Ten wrong passwords lock the account for 15 minutes, then it unlocks on

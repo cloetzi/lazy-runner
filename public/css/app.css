@@ -17,6 +17,7 @@
   --accent-text: #ffffff;
   --accent-tint: #f6e5e0;     /* quiet accent fill: badge, current nav item */
   --accent-ink: #a83c1b;      /* accent text on --accent-tint */
+  --link: #a83c1b;            /* links in text; starts out as the accent ink */
   --danger: #b42318;
   --rest: #23708f;
   --border: #dedcd6;          /* decorative: card edges, dividers */
@@ -60,7 +61,7 @@
   --shadow-1: 0 0.5rem 1.5rem rgb(0 0 0 / 0.25);
 
   --sidebar: 15rem;
-  --measure: 44rem;  /* reading pages: Today, a workout, history */
+  --measure: 44rem;  /* every page; grids widen to --wide beside the sidebar */
   --wide: 72rem;     /* grids beside the sidebar: Workouts, Exercises, Calendar */
 }
 
@@ -75,6 +76,7 @@
     --accent-text: #111418;
     --accent-tint: #3f2e2c;
     --accent-ink: #ff7a50;
+    --link: #ff7a50;
     --danger: #ff8a80;
     --rest: #5fb3d9;
     --border: #2c323a;
@@ -140,6 +142,9 @@ h1, h2, h3 { line-height: var(--leading-tight); }
 
 :focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
 
+/* Links in text: never the browser's blue. Buttons, tabs and rows set their own. */
+a { color: var(--link); }
+
 /* The app's muted colour, not the browser's lighter grey. */
 ::placeholder { color: var(--muted); opacity: 1; }
 
@@ -189,7 +194,7 @@ button {
   padding: 0 var(--space-4);
 }
 
-button.primary {
+button.primary, a.button.primary {
   background: var(--accent);
   color: var(--accent-text);
   font-weight: 700;
@@ -346,7 +351,7 @@ button[aria-busy="true"]::after {
 .howto h2 { margin: 0; font-size: var(--text-xl); }
 .howto h3 { margin: var(--space-3) 0 0; font-size: var(--text-md); }
 .howto ol, .howto ul { margin: var(--space-1) 0 0; padding-left: var(--space-5); display: grid; gap: var(--space-1); font-size: var(--text-md); }
-.howto a { color: var(--accent); font-weight: 600; }
+.howto a { color: var(--link); font-weight: 600; }
 
 /* App shell (nav.js): a sidebar on wide screens; on narrow ones a top bar
    with the page name and a tab bar in thumb reach, its More sheet holding the
@@ -738,7 +743,9 @@ button.link.danger { color: var(--danger); align-self: flex-start; padding: 0; }
 .setting { gap: var(--space-2); }
 .setting h2, .setting h3, .setting p { margin: 0; }
 .setting h2 { font-size: var(--text-lg); }
-.setting a { color: var(--accent); font-weight: 600; }
+.setting a { color: var(--link); font-weight: 600; }
+/* A link to a card (settings.html#examples) lands below the sticky top bar. */
+.setting { scroll-margin-top: calc(4.5rem + env(safe-area-inset-top)); }
 .inventory-item { flex-wrap: wrap; gap: var(--space-2) var(--space-4); }
 .inventory-item .owned { display: flex; align-items: center; gap: var(--space-3); flex: 1 1 12rem; min-height: 2.75rem; font-size: var(--text-lg); font-weight: 600; }
 .inventory-item .owned input { width: 1.5rem; height: 1.5rem; accent-color: var(--accent); }
@@ -1121,7 +1128,10 @@ body:has(#player:not([hidden])) .toast { top: var(--toast-top, calc(max(var(--sp
 .device-list { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-2); }
 .device-list li { display: flex; gap: var(--space-2); align-items: center; justify-content: space-between; }
 .device-list .device-name { overflow-wrap: anywhere; }
-.device-list.examples > li { display: grid; gap: var(--space-1); }
+.device-list.examples { align-self: stretch; }
+.device-list.examples > li { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-1); }
+.imported-mark { flex: none; color: var(--muted); font-weight: 600; white-space: nowrap; }
+.example-contents button.link { padding: 0; }
 .example-head { display: flex; gap: var(--space-2); align-items: center; justify-content: space-between; }
 .example-contents summary { min-height: 2.75rem; display: flex; align-items: center; cursor: pointer; color: var(--accent); font-weight: 600; }
 .example-contents summary::-webkit-details-marker { display: none; }

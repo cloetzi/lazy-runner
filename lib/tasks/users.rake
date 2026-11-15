@@ -14,7 +14,7 @@ namespace :users do
     SetupCode.consume!
     puts "Created the owner account #{username}."
   rescue Rodauth::InternalRequestError => e
-    abort "Not created: #{e.message}"
+    abort "Not created: #{field_messages(e)}"
   end
 
   desc "List the users, owners first: rake users:list"
@@ -50,6 +50,13 @@ namespace :users do
     TEXT
   rescue Rodauth::InternalRequestError => e
     abort "Not changed: #{e.message}"
+  end
+
+  # "username: That username is taken. Try another.": the API's messages
+  # say what is wrong but not which field, which a shell needs.
+  def field_messages(error)
+    fields = error.field_errors || {}
+    fields.empty? ? error.message : fields.map { |field, message| "#{field}: #{message}" }.join("; ")
   end
 
   # The owner's first password, from PASSWORD for a scripted install, else

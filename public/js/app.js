@@ -124,8 +124,8 @@ function renderSetup() {
     <h2>Nothing to train yet</h2>
     <p>Start from an example program, or build a workout of your own from the exercise library.</p>
     <div class="card-actions">
-      <a class="button primary" href="/settings.html#examples" id="setup-examples">Example programs</a>
-      <a class="button secondary" href="${routeHash("edit", "new")}">Build a workout</a>
+      <a class="button primary small" href="/settings.html#examples" id="setup-examples">Example programs</a>
+      <a class="button secondary small" href="${routeHash("edit", "new")}">Build a workout</a>
     </div>`;
   // Nothing loaded: a caller waiting to start the session doesn't.
   return false;
@@ -1781,7 +1781,7 @@ function openEdit(id, cameFrom) {
     unit: state.unit,
     cameFrom,
     onSaved: (workout, created) => {
-      state.workoutNote = created ? "Created. Start it here, or find it under My workouts." : "Saved.";
+      state.workoutNote = created ? "Created. Start it here, or find it under Workouts." : "Saved.";
     },
   });
 }

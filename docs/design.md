@@ -9,7 +9,8 @@ one sweaty thumb, calm everywhere else.
   and two to four cues, big Done and Skip buttons at the bottom, and a tap on
   the time to pause.
   Navigation hides during a session.
-- **Never a blank state.** Today always offers a workout to start.
+- **Never a dead end.** Today offers a workout to start, or, for an account
+  with none yet, the example programs and the editor.
 - **Light and dark** follow `prefers-color-scheme`; both are checked for every
   change, poses included.
 - **Accessible by test**, not by hope: contrast pairs and theme colours are
@@ -21,13 +22,17 @@ one sweaty thumb, calm everywhere else.
 Everything lives in `public/css/app.css`, in this order: tokens, base,
 components, pages, player, figure.
 
-- **Tokens** (one `:root`, one dark override): colours (`--bg`, `--surface`,
-  `--text`, `--muted`, `--accent` for fills and primary actions,
-  `--accent-ink` / `--accent-tint` for quiet accents, `--rest` for rest
-  screens, `--danger`), type (`--text-xs` to `--text-2xl`, `--display-*` for
+- **Tokens** (one `:root`, one dark override, and an Increase Contrast
+  override for each): colours (`--bg`, `--surface`, `--text`, `--muted`,
+  `--accent` for fills and primary actions, `--accent-ink` / `--accent-tint`
+  for quiet accents, `--link` for links in text, `--rest` for rest screens,
+  `--danger`, and the figure's `--figure*`, `--accent-far` and `--prop`), type (`--text-xs` to `--text-2xl`, `--display-*` for
   the player), spacing (`--space-1` to `--space-6`, 4px base), radii, and
-  widths (`--measure` for reading pages, `--wide` for grids). A new rule uses
-  the nearest token, never a raw value.
+  widths (`--measure` for every page, `--wide` for grids beside the
+  sidebar). A new rule uses the nearest token, never a raw value.
+- **Headings**: one `h1` per view (the exercise name in the player), card
+  and section titles `h2`, nothing skipped. A sheet opens with `showSheet()`
+  (`html.js`), which names it by its heading.
 - **Components**: `.card`, `.list` / `.row`, `.segmented` (pressed state in
   `aria-pressed`), `.icon-button`, `.badge`, `.tag`. Icons come from
   `public/icons/sprite.svg` through `icon()` in `public/js/html.js`.
@@ -40,9 +45,12 @@ components, pages, player, figure.
   in `app.js`), the count carries its unit for a screen reader, and each
   step is said once in a polite live region (`stepAnnouncement` in
   `player.js`, the sentence spoken cues will use).
-- **Layout**: phones get a bottom tab bar (Today, Calendar, Workouts,
-  History) with Exercises, Equipment and Settings under More; from 60rem a
-  sidebar (`nav.js`, `routes.js`).
+- **Layout**: phones and iPads in portrait get a bottom tab bar (Today,
+  Calendar, Coach, Workouts) with History, Exercises, Equipment and Settings
+  under More; from 60rem a sidebar (`nav.js`, `routes.js`). Every page starts
+  at the same left edge.
+- **Accessibility in the smoke test**: `test/e2e/smoke.test.js` runs
+  axe-core (WCAG A and AA, best practices) on the main screens and sheets.
 - **Calendar marks**: done filled, planned outlined, up next filled in
   `--accent`, missed dashed, skipped struck through (`.mark` in `app.css`).
 

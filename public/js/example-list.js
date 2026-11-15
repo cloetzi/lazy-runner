@@ -2,8 +2,9 @@ import { getJson, send, errorMessage } from "./api.js";
 import { escape, busy } from "./html.js";
 
 // The example programs, drawn in a list with an Import button each: on the
-// Settings page and the welcome screen. An imported one says so and offers
-// another copy, after asking.
+// Settings page and the welcome screen. An imported one says "Imported" in
+// the button's place and offers another copy under "What's in it", after
+// asking.
 
 // "2 workouts, 25-30 min": the main workouts and their minutes.
 export function exampleSummary(example) {
@@ -27,7 +28,8 @@ export function mountExamples({ list, error, done }) {
     error.hidden = !message;
   };
 
-  async function load() {
+  // `open`: the slugs whose "What's in it" stays open through a redraw.
+  async function load(open = new Set()) {
     let examples;
     try {
       const { data, stale } = await getJson("/api/examples");
@@ -41,16 +43,18 @@ export function mountExamples({ list, error, done }) {
       <li>
         <div class="example-head">
           <span class="device-name"><strong>${escape(example.name)}</strong><br>
-            <span class="muted">${escape(exampleSummary(example))}${example.imported ? " · imported" : ""}</span></span>
-          <button class="secondary small" data-import="${escape(example.slug)}" data-name="${escape(example.name)}"
-            ${example.imported ? 'data-copy="true"' : ""}>${example.imported ? "Import again" : "Import"}</button>
+            <span class="muted">${escape(exampleSummary(example))}</span></span>
+          ${example.imported
+            ? `<span class="imported-mark">Imported <span aria-hidden="true">✓</span></span>`
+            : `<button class="secondary small" data-import="${escape(example.slug)}" data-name="${escape(example.name)}">Import</button>`}
         </div>
-        <details class="example-contents">
+        <details class="example-contents" data-slug="${escape(example.slug)}"${open.has(example.slug) ? " open" : ""}>
           <summary>What's in it</summary>
           ${example.description ? `<p>${escape(example.description)}</p>` : ""}
           <ul>${example.workouts.map((workout) => `
             <li><strong>${escape(workoutHeading(workout))}</strong>
               <span class="muted">${escape((workout.exercises ?? []).join(", "))}</span></li>`).join("")}</ul>
+          ${example.imported ? `<button class="link" data-import="${escape(example.slug)}" data-name="${escape(example.name)}" data-copy="true">Import another copy</button>` : ""}
         </details>
       </li>`).join("");
   }
@@ -60,6 +64,8 @@ export function mountExamples({ list, error, done }) {
     if (!button) return;
     const copy = button.dataset.copy === "true";
     if (copy && !confirm(`You have ${button.dataset.name} already. Import another copy?`)) return;
+    const open = new Set([...list.querySelectorAll("details[open]")].map((details) => details.dataset.slug));
+    let imported = false;
     showError(null);
     done.hidden = true;
     busy(button);
@@ -69,11 +75,17 @@ export function mountExamples({ list, error, done }) {
       if (!response.ok) return showError(errorMessage(json, response.status));
       done.innerHTML = `${escape(json.name)} is in your <a href="/#workouts">workouts</a>.`;
       done.hidden = false;
+      imported = true;
     } catch {
       showError("Couldn't reach the server. Try again when you're online.");
     } finally {
       busy(button, false);
-      load();
+      // The pressed button goes in the redraw: focus moves to what happened.
+      await load(open);
+      if (imported) {
+        done.setAttribute("tabindex", "-1");
+        done.focus();
+      }
     }
   };
 

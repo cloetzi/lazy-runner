@@ -59,6 +59,24 @@ describe "rake users" do
     end
   end
 
+  describe "making the owner" do
+    before do
+      @signed_out = true
+      User.dataset.delete
+    end
+    after { SetupCode.consume! }
+
+    it "names the field it refuses" do
+      error = nil
+      with_env("USERNAME" => "no spaces", "PASSWORD" => RequestHelpers::TEST_PASSWORD) do
+        _, error = capture_io { _ { Rake::Task["users:create_owner"].invoke }.must_raise SystemExit }
+      end
+
+      _(error).must_include "Not created: username: Use letters, digits, dots, dashes and underscores only"
+      _(User.count).must_equal 0
+    end
+  end
+
   it "lists the users, owners first" do
     create_user("aaron", bare: true)
     _(run_task("users:list").lines.map(&:split)).must_equal [[user.username, "owner"], ["aaron"]]

@@ -32,6 +32,8 @@ const pairs = [
   ["--accent", "--surface", 4.5, "accent text on cards (suggestions, links)"],
   ["--accent", "--bg", 4.5, "accent text on the page"],
   ["--accent-ink", "--accent-tint", 4.5, "badge text"],
+  ["--link", "--surface", 4.5, "links in text on cards"],
+  ["--link", "--bg", 4.5, "links in text on the page"],
   ["--text", "--accent-tint", 4.5, "current sidebar item"],
   ["--rest", "--bg", 4.5, "rest phase label"],
   ["--danger", "--surface", 3, "delete icon on hover"],

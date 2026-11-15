@@ -50,6 +50,16 @@ describe "users and invites" do
       _(Invite.count).must_equal 0
     end
 
+    it "says in plain words when the username is taken, whatever its case" do
+      create_user("newcomer")
+      token = invite!
+      join(token, "NewComer")
+
+      _(last_response.status).must_equal 422
+      _(json["error"]["fields"]).must_equal({ "username" => ["That username is taken. Try another."] })
+      _(Invite.count).must_equal 1
+    end
+
     it "works once" do
       token = invite!
       join(token)
