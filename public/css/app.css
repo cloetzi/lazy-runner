@@ -811,7 +811,7 @@ button.link.danger { color: var(--danger); align-self: flex-start; padding: 0; }
 .setting h2, .setting h3, .setting p { margin: 0; }
 .setting h2 { font-size: var(--text-lg); }
 .setting a { color: var(--link); font-weight: 600; }
-/* A link to a card (settings.html#examples) lands below the sticky top bar. */
+/* A link to a card (settings.html#users) lands below the sticky top bar. */
 .setting { scroll-margin-top: calc(4.5rem + env(safe-area-inset-top)); }
 .inventory-item { flex-wrap: wrap; gap: var(--space-2) var(--space-4); }
 .inventory-item .owned { display: flex; align-items: center; gap: var(--space-3); flex: 1 1 12rem; min-height: 2.75rem; font-size: var(--text-lg); font-weight: 600; }
@@ -863,7 +863,29 @@ button.link.danger { color: var(--danger); align-self: flex-start; padding: 0; }
   background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-md); box-shadow: var(--shadow-1);
 }
 .more-actions-list button { display: flex; align-items: center; gap: var(--space-2); justify-content: flex-start; width: 100%; }
-.new-workout { margin-top: var(--space-3); gap: var(--space-2); }
+.new-workout { gap: var(--space-2); }
+.head-actions { display: flex; flex-wrap: wrap; gap: var(--space-2); margin-top: var(--space-3); }
+
+/* Gear you don't own (gear.js): a dashed outline, a cross and "not yours
+   yet", never colour alone; beside a step or a Get ready row, the ways out. */
+.equipment-list li { display: inline-flex; align-items: center; gap: var(--space-1); }
+.equipment-list li.gear-missing { border-style: dashed; border-color: var(--control-border); }
+.equipment-list .icon, .gear-missing-text .icon { width: 0.9em; height: 0.9em; }
+.gear-note { color: var(--muted); }
+.gear-missing-text { display: inline-flex; align-items: center; gap: var(--space-1); }
+.gear-short { display: grid; gap: var(--space-2); margin-top: var(--space-2); }
+.gear-short p { display: flex; gap: var(--space-2); align-items: baseline; margin: 0; font-weight: 600; }
+.gear-short p .icon { flex: none; align-self: center; }
+.gear-ways { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.gear-ways .small { min-height: 2.75rem; }
+.ready-missing .gear-short { margin: 0; padding: 0 var(--space-4) var(--space-3); }
+.device-list .example-gear { display: flex; }
+.device-list .example-gear li { display: inline-flex; justify-content: flex-start; }
+.workout-gear .equipment-list li { font-size: var(--text-sm); }
+.example-description, .example-fit { margin: 0; }
+.example-fit { font-weight: 600; }
+.example-gear { margin: var(--space-1) 0; }
+.inventory-item .unlocks { margin: 0; flex: 1 1 100%; font-size: var(--text-sm); }
 
 /* Workout editor (editor.js): a card per block, each step a row that opens
    to its settings; Save stays within thumb reach at the bottom. */

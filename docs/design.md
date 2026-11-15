@@ -12,6 +12,9 @@ one sweaty thumb, calm everywhere else.
   its own header (Cancel, the name, Save) so a stray tap can't lose a draft.
 - **Never a dead end.** Today offers a workout to start, or, for an account
   with none yet, the example programs and the editor.
+- **Gear is never told by colour alone.** Gear the user doesn't own has a
+  dashed outline, a cross and "not yours yet" (`gear.js`), with the ways out
+  beside a step that needs it: "I have this" and Swap.
 - **Light and dark** follow `prefers-color-scheme`; both are checked for every
   change, poses included.
 - **Accessible by test**, not by hope: contrast pairs and theme colours are

@@ -53,7 +53,7 @@ export function openPlanSheet({ date, workouts, onPlan }) {
       <button class="primary" value="plan">Plan</button>` : `
       <p>Get a workout first: import an example program, or build one of your own.</p>
       <div class="card-actions">
-        <a class="button primary small" href="/settings.html#examples">Example programs</a>
+        <a class="button primary small" href="/#examples">From an example</a>
         <a class="button secondary small" href="${routeHash("edit", "new")}">Build a workout</a>
       </div>`}
     </form>`;

@@ -87,7 +87,7 @@ function render() {
     section("animated", "Animated", animated);
     section("todo", "Still to draw", shown.filter((e) => !e.animation));
   } else {
-    count = countLine(shown.length, pool.length, { owned: settings.owned, filtered, ownsNothing: owned.size === 0 });
+    count = countLine(shown.length, pool.length, { owned: settings.owned, filtered, ownsNothing: owned.size === 0, more: exercises.length - pool.length });
     section("animated", "", shown);
     section("todo", "", []);
   }
@@ -95,7 +95,8 @@ function render() {
   // Nothing owned yet: the way to see the rest, right after the count.
   const hint = !review && settings.owned && owned.size === 0
     ? `. <a href="/equipment.html">Tell us what you own</a> to see more.` : "";
-  countLineElement.innerHTML = escape(count) + hint + (stale ? ` · ${escape(STALE_NOTE)}` : "");
+  // "your gear" is what Equipment holds: it goes there to change it.
+  countLineElement.innerHTML = escape(count).replace("your gear", `<a href="/equipment.html">your gear</a>`) + hint + (stale ? ` · ${escape(STALE_NOTE)}` : "");
   document.getElementById("library-empty").hidden = shown.length > 0;
 
   for (const box of document.querySelectorAll("[data-figure]")) {

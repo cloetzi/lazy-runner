@@ -22,6 +22,29 @@ describe "example programs API" do
       _(session_a["exercises"]).must_equal session_a["exercises"].uniq
     end
 
+    it "marks the gear the user owns, and counts the exercises that need gear they lack" do
+      owner = user
+      someone = bare_user
+      Current.set(user: someone) { UserEquipment.create(equipment: equipment("dumbbell"), owned: true, weights: [10, 20]) }
+      sign_in(someone)
+      get "/api/examples"
+
+      fit = json.to_h { [it["slug"], it] }
+      _(fit["no-gear"]["missing_exercises"]).must_equal 0
+      _(fit["no-gear"]["gear"].select { it["owned"] == false }).must_be_empty
+      cycle = fit["cycle-1"]
+      _(cycle["missing_exercises"]).must_be :>, 0
+      _(cycle["gear"].find { it["slug"] == "dumbbell" }).must_equal("slug" => "dumbbell", "name" => equipment("dumbbell").name, "owned" => true)
+      _(cycle["gear"].find { it["slug"] == "kettlebell" }["owned"]).must_equal false
+      # Any dumbbell will do for an exercise that needs just a weight.
+      _(cycle["gear"].find { it["slug"] == "weight" }["owned"]).must_equal true
+
+      sign_out!
+      sign_in(owner)
+      get "/api/examples"
+      _(json.map { it["missing_exercises"] }).must_equal [0, 0, 0]
+    end
+
     it "marks what the user imported" do
       get "/api/examples"
 

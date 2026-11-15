@@ -189,6 +189,30 @@ function swapItem(item, alternative) {
   };
 }
 
+// Get ready's weight targets after a swap there: an exercise swapped out
+// loses its line, and one swapped in that takes a weight gets one, from its
+// first item (the weight the swap gave it), carried by its first gear that
+// `carries` (comes in set weights).
+export function swapTargets(targets, items, carries = () => false) {
+  const exercises = items.filter((item) => item.type === "exercise");
+  const ids = new Set(exercises.map((item) => item.exercise.id));
+  const kept = targets.filter((target) => ids.has(target.exercise.id));
+  const listed = new Set(kept.map((target) => target.exercise.id));
+  for (const item of exercises) {
+    if (listed.has(item.exercise.id) || !item.weight_unit) continue;
+    listed.add(item.exercise.id);
+    kept.push({
+      exercise: { id: item.exercise.id, name: item.exercise.name },
+      weight: item.weight, weight_unit: item.weight_unit, weights_held: item.weights_held,
+      allowed_weights: item.allowed_weights, equipment: item.equipment,
+      // A swapped-in exercise is fetched as its own gear: the planned one's carrier doesn't follow it.
+      weight_equipment: item.planned ? (item.equipment ?? []).find(carries) ?? null : item.weight_equipment ?? null,
+      any_weight: item.planned ? null : item.any_weight ?? null,
+    });
+  }
+  return kept;
+}
+
 // What a swap changes, kept so it can be undone.
 function pick(item) {
   const { exercise, mode, reps, seconds, tempo, weight, weight_unit, weights_held, allowed_weights, seed_weight, note, equipment, side } = item;

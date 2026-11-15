@@ -74,8 +74,13 @@ class Example
 
   # What the examples list shows: each workout with its minutes (a main
   # workout's own, without its warm-up and cool-down) and its exercises, the
-  # gear it needs and whether the user has imported it.
-  def as_json(library = Example.library)
+  # gear it needs and whether the user has imported it. `gear` marks each
+  # piece the user owns (`owned`, slugs), and `missing_exercises` counts the
+  # exercises that need gear they don't have, so the best fit can go first.
+  # Lists pass `owned` in, read once for all the examples.
+  def as_json(library = Example.library, owned: Equipment.owned.select_map(:slug))
+    needs = workouts.flat_map { steps_of(it) }.map { [it["exercise"], gear_of(it, library)] }
+    slugs = needs.flat_map(&:last).uniq
     {
       slug:, name:, description:,
       workouts: workouts.map do |w|
@@ -84,7 +89,9 @@ class Example
           exercises: steps_of(w).map { library.exercises.fetch(it["exercise"]).name }.uniq
         }
       end,
-      equipment: workouts.flat_map { |w| steps_of(w) }.flat_map { it["equipment"].presence || library.exercises.fetch(it["exercise"]).equipment_slugs }.uniq,
+      equipment: slugs,
+      gear: slugs.map { { slug: it, name: library.equipment.fetch(it).name, owned: owned.include?(it) } },
+      missing_exercises: needs.reject { |_, gear| (gear - owned).empty? }.map(&:first).uniq.size,
       imported: !imports.empty?
     }
   end
@@ -112,6 +119,9 @@ class Example
   private
 
   def steps_of(workout) = workout.fetch("blocks", []).flat_map { it.fetch("steps", []) }
+
+  # The gear a step needs: its own, else its exercise's.
+  def gear_of(step, library) = step["equipment"].presence || library.exercises.fetch(step["exercise"]).equipment_slugs
 
   def check_step(attrs, where, library)
     unknown = attrs.keys - STEP_KEYS

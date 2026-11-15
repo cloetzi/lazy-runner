@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { previousIndex, switchesSides, mainActionLabel, stepAnnouncement, spokenTarget, spokenWeight, tapAccepted, TAP_GUARD_MS, holdStatus, MIN_HOLD_SECONDS, unloggedExercises, plannedExercise, swapExercise, swapRun, shortlist, SHORTLIST, resumeChoice, sessionProgress, endsEarly, loggedFromServer, pickUpIndex, partEnd, setLabel, minutesLeft, tempoText, leadInSeconds, GEAR_LEAD_IN, extraSeconds, upNextDetails, equipmentChanges, finishSummary, framingLine, itemPart } from "../../public/js/player.js";
+import { previousIndex, switchesSides, mainActionLabel, stepAnnouncement, spokenTarget, spokenWeight, tapAccepted, TAP_GUARD_MS, holdStatus, MIN_HOLD_SECONDS, unloggedExercises, plannedExercise, swapExercise, swapRun, shortlist, SHORTLIST, resumeChoice, sessionProgress, endsEarly, loggedFromServer, pickUpIndex, partEnd, setLabel, minutesLeft, tempoText, leadInSeconds, GEAR_LEAD_IN, extraSeconds, upNextDetails, equipmentChanges, finishSummary, framingLine, itemPart, swapTargets } from "../../public/js/player.js";
 
 const squat = { id: 1, name: "Goblet squat", equipment: ["dumbbell"], default_reps: 8, default_seconds: null };
 const deadlift = { id: 2, name: "Straight-leg deadlift", equipment: ["dumbbell"], default_reps: 12, default_seconds: null };
@@ -441,4 +441,26 @@ test("says a weight in words", () => {
   assert.equal(spokenWeight({ value: 2.5, unit: "kg" }), "2.5 kilograms");
   assert.equal(spokenWeight(null), "");
   assert.equal(spokenWeight({ value: 0, unit: "lb" }), "");
+});
+
+test("Get ready's weights follow a swap made there", () => {
+  const lb = (value) => ({ value, unit: "lb" });
+  const targets = [
+    { exercise: { id: 1, name: "Kettlebell swing" }, weight: lb(40), weight_unit: "lb", equipment: ["kettlebell"], weight_equipment: "kettlebell" },
+    { exercise: { id: 2, name: "Goblet squat" }, weight: lb(20), weight_unit: "lb", equipment: ["dumbbell"], weight_equipment: "dumbbell" },
+  ];
+  const items = [
+    { type: "exercise", exercise: { id: 3, name: "Dumbbell swing" }, planned: { exercise: { id: 1 } }, weight: lb(20), weight_unit: "lb",
+      weights_held: 1, allowed_weights: [10, 20], equipment: ["dumbbell"], weight_equipment: "kettlebell" },
+    { type: "rest" },
+    { type: "exercise", exercise: { id: 2, name: "Goblet squat" }, weight: lb(20), weight_unit: "lb", equipment: ["dumbbell"] },
+    { type: "exercise", exercise: { id: 4, name: "Plank" }, weight: null, weight_unit: null, equipment: [] },
+  ];
+  const after = swapTargets(targets, items, (slug) => slug === "dumbbell");
+  assert.deepEqual(after.map((t) => t.exercise.id), [2, 3]);
+  assert.deepEqual(after[1], {
+    exercise: { id: 3, name: "Dumbbell swing" }, weight: lb(20), weight_unit: "lb", weights_held: 1,
+    allowed_weights: [10, 20], equipment: ["dumbbell"], weight_equipment: "dumbbell", any_weight: null,
+  });
+  assert.equal(swapTargets(targets, items)[1].weight_equipment, null);
 });

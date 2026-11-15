@@ -144,7 +144,9 @@ then `BASE_URL=http://localhost:3999 SERVER_LOG=/tmp/e2e.log npm run test:e2e`.
   editor hide the navigation (`body[data-focus]`). The workout editor
   (`#edit/<id>`, `#edit/new`), with Cancel and Save in its own header, keeps its draft
   in `builder.js` and draws it in `editor.js`, saving the whole structure in
-  one request. Settings live on the Settings page: lb or kg on the server
+  one request. Example programs are imported from Workouts ("From an
+  example", `#examples`, `example-list.js`), and gear the user doesn't own is
+  marked wherever gear is named (`gear.js`). Settings live on the Settings page: lb or kg on the server
   (`/api/settings`, sent through the outbox, with a copy in localStorage),
   and km or mi the same way; beeps, vibration, lead-in and the RPE question
   on the device, read and written by `preferences.js`.

@@ -8,7 +8,7 @@
 export function setupRows(setup, { standalone = false } = {}) {
   const rows = [
     { key: "gear", label: "Tell the app what you own", hint: "Workouts keep to your gear, and programs fit its weights.", href: "/equipment.html", done: setup.gear },
-    { key: "program", label: "Get a program", hint: "Import an example program, or build a workout of your own.", href: "/settings.html#examples", done: setup.workouts },
+    { key: "program", label: "Get a program", hint: "Import an example program, or build a workout of your own.", href: "/#examples", done: setup.workouts },
     { key: "plan", label: "Plan your week", hint: "Put your training days on the Calendar.", href: "/calendar.html", done: setup.planned },
   ];
   if (!standalone) {

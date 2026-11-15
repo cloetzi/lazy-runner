@@ -55,10 +55,12 @@ test("keeps to what is owned when asked", () => {
 test("counts what is shown", () => {
   assert.equal(countLine(33, 33), "33 exercises");
   assert.equal(countLine(1, 1), "1 exercise");
-  assert.equal(countLine(28, 28, { owned: true }), "28 with what you own");
-  assert.equal(countLine(4, 28, { owned: true, filtered: true }), "4 of 28 with what you own");
+  assert.equal(countLine(28, 28, { owned: true }), "28 with your gear");
+  assert.equal(countLine(31, 31, { owned: true, more: 10 }), "31 with your gear, 10 more with other gear");
+  assert.equal(countLine(4, 28, { owned: true, filtered: true, more: 10 }), "4 of 28 with your gear");
   assert.equal(countLine(4, 33, { filtered: true }), "4 of 33 exercises");
   assert.equal(countLine(22, 22, { owned: true, ownsNothing: true }), "22 that need no gear");
+  assert.equal(countLine(22, 22, { owned: true, ownsNothing: true, more: 19 }), "22 that need no gear");
   assert.equal(countLine(41, 41, { ownsNothing: true }), "41 exercises");
 });
 

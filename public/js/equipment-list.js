@@ -12,14 +12,19 @@ import { getJson, paths, loadProblem, errorMessage, send, STALE_NOTE } from "./a
 
 // `unitFor(item)`, if given, is the unit to show (and save weights in) for an
 // item: the welcome screen shows the unit just picked for gear with no
-// weights yet, even before the pick reaches the server.
-export function mountEquipment(list, { unitFor = (item) => item.unit } = {}) {
+// weights yet, even before the pick reaches the server. `describe(item,
+// inventory)`, if given, is a line under the item's name: on the Equipment
+// page, what it unlocks.
+export function mountEquipment(list, { unitFor = (item) => item.unit, describe = () => "" } = {}) {
   // Items whose unit was picked here: shown in their own from then on.
   const picked = new Set();
+  // The inventory as last drawn, for `describe`.
+  let inventory = [];
 
   async function load() {
     try {
       const { data, stale } = await getJson(paths.equipment);
+      inventory = data;
       list.innerHTML = (stale ? `<li class="row muted">${escape(STALE_NOTE)}</li>` : "") + data.filter((item) => !item.any_weight).map(row).join("");
     } catch (error) {
       list.innerHTML = `<li class="row">${escape(loadProblem("the equipment", error))}</li>`;
@@ -29,12 +34,14 @@ export function mountEquipment(list, { unitFor = (item) => item.unit } = {}) {
   function row(item) {
     const weighted = item.weights.length > 0 || item.unit;
     const unit = weighted && (picked.has(item.id) ? item.unit : unitFor(item));
+    const line = describe(item, inventory);
     return `
       <li class="row inventory-item${item.owned ? "" : " not-owned"}" data-id="${item.id}">
         <label class="owned">
           <input type="checkbox" data-field="owned" ${item.owned ? "checked" : ""}>
           <span>${escape(item.name)}</span>
         </label>
+        ${line ? `<p class="unlocks muted">${escape(line)}</p>` : ""}
         ${weighted && item.owned ? weightsHtml(item, unit) : ""}
         <p class="status muted" aria-live="polite"></p>
       </li>`;
@@ -97,6 +104,7 @@ export function mountEquipment(list, { unitFor = (item) => item.unit } = {}) {
       const body = await response.json();
       if (!response.ok) throw new Error(errorMessage(body, response.status));
       if (changes.unit) picked.add(body.id);
+      inventory = inventory.map((entry) => (entry.id === body.id ? body : entry));
       // The list may have been drawn again meanwhile: replace the row as it is now.
       const current = list.querySelector(`[data-id="${body.id}"]`);
       if (!current) return;
@@ -142,5 +150,18 @@ export function mountEquipment(list, { unitFor = (item) => item.unit } = {}) {
     if (element && event.target.dataset.field === "owned") save(element, { owned: event.target.checked }, '[data-field="owned"]');
   });
 
-  return { load };
+  // Draws the list again from what it last loaded: once what `describe`
+  // reads has arrived.
+  const redraw = () => {
+    for (const element of list.querySelectorAll("[data-id]")) {
+      const item = inventory.find((entry) => String(entry.id) === element.dataset.id);
+      const line = item && describe(item, inventory);
+      const shown = element.querySelector(".unlocks");
+      if (shown && line) shown.textContent = line;
+      else if (line) element.querySelector(".owned").insertAdjacentHTML("afterend", `<p class="unlocks muted">${escape(line)}</p>`);
+      else shown?.remove();
+    }
+  };
+
+  return { load, redraw };
 }

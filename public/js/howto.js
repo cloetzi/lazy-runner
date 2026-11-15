@@ -2,6 +2,7 @@ import { createFigure } from "./figure-view.js";
 import { getJson, paths } from "./api.js";
 import { escape, icon, showSheet } from "./html.js";
 import { tempoText } from "./player.js";
+import { ownedSlugs } from "./gear.js";
 
 // Display names for equipment slugs, as /api/equipment gives them, with a
 // copy in localStorage so a screen drawn before they arrive has them too.
@@ -14,7 +15,47 @@ function readNames() {
   try { return JSON.parse(localStorage.getItem(NAMES_KEY)) ?? {}; } catch { return {}; }
 }
 
+// What the user owns, by slug (gear.js), and each item's id, from the same
+// answer; kept for the page only. Null until it arrives: nothing is marked
+// missing meanwhile.
+let owned = null;
+let ids = new Map();
+
+export function ownedEquipment() {
+  return owned;
+}
+
+// Marks `slug` owned on this page, as the server just answered: with gear
+// in set weights, the generic weights come with it.
+export function markOwned(slug) {
+  owned ??= new Set();
+  owned.add(slug);
+  if (weighted.has(slug)) for (const other of generic) owned.add(other);
+}
+
+export function equipmentId(slug) {
+  return ids.get(slug) ?? null;
+}
+
+// Whether the item of `slug` comes in set weights (dumbbells), so ticking it
+// owned still leaves its weights to list.
+let weighted = new Set();
+export function comesInWeights(slug) {
+  return weighted.has(slug);
+}
+
+// Whether `slug` is a generic weight ("Any weight"), which comes with gear
+// in set weights rather than being owned itself.
+let generic = new Set();
+export function isAnyWeight(slug) {
+  return generic.has(slug);
+}
+
 export function learnEquipmentNames(equipment) {
+  owned = ownedSlugs(equipment);
+  ids = new Map(equipment.map((item) => [item.slug, item.id]));
+  weighted = new Set(equipment.filter((item) => item.unit && !item.any_weight).map((item) => item.slug));
+  generic = new Set(equipment.filter((item) => item.any_weight).map((item) => item.slug));
   names = Object.fromEntries(equipment.map((item) => [item.slug, item.name]));
   try { localStorage.setItem(NAMES_KEY, JSON.stringify(names)); } catch { /* names stay in memory */ }
 }
@@ -23,8 +64,10 @@ export function knowsEquipmentNames() {
   return Object.keys(names).length > 0;
 }
 
-// Fetches the names once per page load; never rejects.
-export function loadEquipmentNames(fetchFn = fetch) {
+// Fetches the names once per page load (again with `fresh`, after a change
+// to what is owned); never rejects.
+export function loadEquipmentNames(fetchFn = fetch, { fresh = false } = {}) {
+  if (fresh) loading = null;
   loading ??= getJson(paths.equipment, fetchFn)
     .then(({ data }) => learnEquipmentNames(data))
     .catch(() => { loading = null; });

@@ -2,6 +2,7 @@ import { getJson, loadProblem, errorMessage, paths, send, STALE_NOTE } from "./a
 import { escape, icon, busy, showSheet } from "./html.js";
 import { createFigure } from "./figure-view.js";
 import { openHowto, equipmentNames, learnEquipmentNames } from "./howto.js";
+import { missingGear, ownedSlugs } from "./gear.js";
 import { formatWeight, sameShownWeight } from "./weights.js";
 import { AREAS, BODYWEIGHT, matches, standIns, gearUsed, countLine } from "./catalog.js";
 import { blockName } from "./workout.js";
@@ -458,7 +459,7 @@ function pick(title, onPick, current = null) {
     </form>`;
   dialog.querySelector("#picker-equipment").value = pickerFilters.equipment;
 
-  const owned = new Set(editor.inventory.filter((item) => item.owned).map((item) => item.slug));
+  const owned = ownedSlugs(editor.inventory);
   const names = Object.fromEntries(editor.inventory.map((item) => [item.slug, item.name]));
   let stills = [];
   let shown = [];
@@ -478,12 +479,18 @@ function pick(title, onPick, current = null) {
       if (exercise.animation) stills.push(createFigure(box, exercise.animation, { still: true }));
     }
   };
+  // Gear the user doesn't own is marked in the row: a cross and "not yours yet".
   const pickerRow = (exercise, i) => {
-    const meta = [exercise.category, ...equipmentNames(exercise.equipment), exercise.unilateral ? "per side" : exercise.alternating ? "alternating sides" : ""].filter(Boolean).join(" · ");
+    const missing = new Set(missingGear(exercise.equipment, owned));
+    const gear = (exercise.equipment ?? []).map((slug) => {
+      const [name] = equipmentNames([slug]);
+      return missing.has(slug) ? `<span class="gear-missing-text">${icon("close")}${escape(name)}, not yours yet</span>` : escape(name);
+    });
+    const meta = [escape(exercise.category), ...gear, exercise.unilateral ? "per side" : exercise.alternating ? "alternating sides" : ""].filter(Boolean).join(" · ");
     return `<li class="picker-row">
       <button type="button" class="row" data-pick="${i}">
         <span class="swap-still" data-still="${i}" aria-hidden="true"></span>
-        <span class="row-text"><span class="row-title">${escape(exercise.name)}</span><span class="row-meta">${escape(meta)}</span></span>
+        <span class="row-text"><span class="row-title">${escape(exercise.name)}</span><span class="row-meta">${meta}</span></span>
       </button>
       <button type="button" class="icon-button" data-preview="${i}" aria-label="How to do ${escape(exercise.name)}">${icon("info")}</button>
     </li>`;

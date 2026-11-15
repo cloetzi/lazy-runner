@@ -28,12 +28,13 @@ const WITH_ID = new Set(["workout", "edit", "exercise-history", "session"]);
 // "#edit/3" -> { view: "edit", id: "3" } (the editor; "#edit/new" builds a new one),
 // "#exercise-history/5" -> { view: "exercise-history", id: "5" },
 // "#session/9" -> { view: "session", id: "9" } (a past session),
-// "#running" -> { view: "running" }: a running session's screens.
+// "#running" -> { view: "running" }: a running session's screens,
+// "#examples" -> { view: "examples" }: Workouts with the example programs open.
 // Anything unknown is the home page.
 export function parseRoute(hash) {
   const [view, id] = (hash ?? "").replace(/^#\/?/, "").split("/");
   if (WITH_ID.has(view) && id) return { view, id };
-  if (view === "workouts" || view === "history" || view === "running") return { view };
+  if (view === "workouts" || view === "history" || view === "running" || view === "examples") return { view };
   return { view: "home" };
 }
 

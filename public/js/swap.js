@@ -13,6 +13,11 @@ export function prefetchAlternatives(exerciseIds) {
   for (const id of new Set(exerciseIds)) loadAlternatives(id).catch(() => {});
 }
 
+// Forgets them all: what is owned changed, and with it what can stand in.
+export function forgetAlternatives() {
+  alternatives.clear();
+}
+
 function loadAlternatives(id) {
   if (!alternatives.has(id)) {
     const request = getJson(`/api/exercises/${id}/alternatives`).then(({ data }) => data);
@@ -25,8 +30,13 @@ function loadAlternatives(id) {
 // The swap picker: the planned exercise's alternatives, best match first,
 // in a dialog like the how-to. Exercises the session already has go last,
 // so a swap doesn't double up. `onPick` gets the chosen exercise, or the
-// planned one to undo a swap. Weights are shown in `unit`.
-export function openSwap({ planned, current, inSession = new Set(), unit, onPick, onClose }) {
+// planned one to undo a swap. Weights are shown in `unit`. `note` says what
+// a swap changes and `alreadyIn` tags an exercise of `inSession`: the
+// workout view swaps a step of the workout itself.
+export function openSwap({
+  planned, current, inSession = new Set(), unit, onPick, onClose,
+  note = "For the rest of this session. The program stays as it is.", alreadyIn = "In this session",
+}) {
   const dialog = document.getElementById("swap") ?? document.body.appendChild(Object.assign(document.createElement("dialog"), { id: "swap", className: "sheet" }));
   dialog.innerHTML = `
     <form method="dialog" class="howto">
@@ -34,7 +44,7 @@ export function openSwap({ planned, current, inSession = new Set(), unit, onPick
         <h2>Swap ${escape(current.name)}</h2>
         <button class="icon-button" aria-label="Close">${icon("close")}</button>
       </header>
-      <p class="muted">For the rest of this session. The program stays as it is.</p>
+      <p class="muted">${escape(note)}</p>
       <div class="list" id="swap-list"><p class="muted">Loading…</p></div>
     </form>`;
 
@@ -76,7 +86,7 @@ export function openSwap({ planned, current, inSession = new Set(), unit, onPick
       if (exercise.weight) bits.push(formatWeight(exercise.weight, unit));
       const meta = bits.filter(Boolean).join(" · ");
       const backLabel = exercise.id === planned.id ? "Back to planned: " : "";
-      const tag = exercise.id !== planned.id && inSession.has(exercise.id) ? `<span class="tag">In this session</span>` : "";
+      const tag = exercise.id !== planned.id && inSession.has(exercise.id) ? `<span class="tag">${escape(alreadyIn)}</span>` : "";
       return `<button class="row" data-pick="${i}">
         <span class="swap-still" data-still="${i}" aria-hidden="true"></span>
         <span class="row-text"><span class="row-title">${backLabel}${escape(exercise.name)}${tag}</span>${meta ? `<span class="row-meta">${escape(meta)}</span>` : ""}</span>

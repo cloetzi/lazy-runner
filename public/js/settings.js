@@ -7,7 +7,6 @@ import { storedAccount, pageAccount, signOut, signOutHere, deviceName, startOidc
 import { getJson, paths, send, errorMessage } from "./api.js";
 import { escape, busy } from "./html.js";
 import { mountNav } from "./nav.js";
-import { mountExamples } from "./example-list.js";
 import { testSound } from "./beeper.js";
 import { installHint } from "./pwa.js";
 
@@ -455,10 +454,6 @@ $("identity-list").onclick = async (event) => {
   loadIdentities();
 };
 
-// ---------- Example programs ----------
-
-const examples = mountExamples({ list: $("example-list"), error: $("examples-error"), done: $("examples-done") });
-
 // ---------- API tokens ----------
 
 async function loadTokens() {
@@ -583,10 +578,10 @@ renderAccount();
 const tokensLoaded = loadTokens();
 loadIdentities();
 const devicesLoaded = loadDevices();
-// A link to a card (settings.html#examples) is followed before the lists
+// A link to a card (settings.html#users) is followed before the lists
 // above it fill in; once they have, the card is brought back into view.
 const anchored = location.hash ? document.getElementById(location.hash.slice(1)) : null;
-Promise.allSettled([examples.load(), usersLoaded, tokensLoaded, devicesLoaded]).then(() => anchored?.scrollIntoView());
+Promise.allSettled([usersLoaded, tokensLoaded, devicesLoaded]).then(() => anchored?.scrollIntoView());
 outbox?.flush();
 loadUnit();
 loadVersion();

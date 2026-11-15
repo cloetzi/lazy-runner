@@ -1,10 +1,12 @@
 import { getJson, send, errorMessage } from "./api.js";
 import { escape, busy } from "./html.js";
+import { byFit, fitLine, gearChips } from "./gear.js";
 
-// The example programs, drawn in a list with an Import button each: on the
-// Settings page and the welcome screen. An imported one says "Imported" in
-// the button's place and offers another copy under "What's in it", after
-// asking.
+// The example programs, drawn in a list with an Import button each: in the
+// Workouts page's "From an example" sheet and on the welcome screen. Best
+// fit first: each says how it fits the gear the user owns and lists that
+// gear, a missing piece marked. An imported one says "Imported" in the
+// button's place and offers another copy under "What's in it", after asking.
 
 // "2 workouts, 25-30 min": the main workouts and their minutes.
 export function exampleSummary(example) {
@@ -21,8 +23,21 @@ export function workoutHeading(workout) {
   return workout.kind === "workout" ? `${title} · ${workout.estimated_minutes} min` : title;
 }
 
+// The gear an example needs, each piece marked as owned (a tick) or not
+// ("not yours yet", with a cross): never told by colour alone.
+export function gearLine(example) {
+  const gear = example.gear ?? [];
+  return gearChips(gear.map((piece) => piece.slug), {
+    names: () => gear.map((piece) => piece.name),
+    owned: new Set(gear.filter((piece) => piece.owned).map((piece) => piece.slug)),
+    label: "Gear it needs", classes: "equipment-list small example-gear", tick: true,
+  });
+}
+
 // `list` holds the examples, `error` and `done` say how an import went.
-export function mountExamples({ list, error, done }) {
+// `href` is where the done line sends the user to see the imported workouts;
+// `onImported` is called once one is in.
+export function mountExamples({ list, error, done, href = "/#workouts", onImported = () => {} }) {
   const showError = (message) => {
     error.textContent = message ?? "";
     error.hidden = !message;
@@ -39,7 +54,7 @@ export function mountExamples({ list, error, done }) {
       list.innerHTML = `<li class="muted">The list shows when the server is reachable.</li>`;
       return;
     }
-    list.innerHTML = examples.map((example) => `
+    list.innerHTML = byFit(examples).map((example) => `
       <li>
         <div class="example-head">
           <span class="device-name"><strong>${escape(example.name)}</strong><br>
@@ -48,9 +63,11 @@ export function mountExamples({ list, error, done }) {
             ? `<span class="imported-mark">Imported <span aria-hidden="true">✓</span></span>`
             : `<button class="secondary small" data-import="${escape(example.slug)}" data-name="${escape(example.name)}">Import</button>`}
         </div>
+        ${example.description ? `<p class="example-description">${escape(example.description)}</p>` : ""}
+        <p class="example-fit${example.missing_exercises ? " short" : ""}">${escape(fitLine(example))}</p>
+        ${gearLine(example)}
         <details class="example-contents" data-slug="${escape(example.slug)}"${open.has(example.slug) ? " open" : ""}>
           <summary>What's in it</summary>
-          ${example.description ? `<p>${escape(example.description)}</p>` : ""}
           <ul>${example.workouts.map((workout) => `
             <li><strong>${escape(workoutHeading(workout))}</strong>
               <span class="muted">${escape((workout.exercises ?? []).join(", "))}</span></li>`).join("")}</ul>
@@ -73,9 +90,10 @@ export function mountExamples({ list, error, done }) {
       const response = await send(`/api/examples/${encodeURIComponent(button.dataset.import)}/import`, { body: copy ? { copy: true } : {} });
       const json = await response.json().catch(() => null);
       if (!response.ok) return showError(errorMessage(json, response.status));
-      done.innerHTML = `${escape(json.name)} is in your <a href="/#workouts">workouts</a>.`;
+      done.innerHTML = `${escape(json.name)} is in your <a href="${escape(href)}">workouts</a>.`;
       done.hidden = false;
       imported = true;
+      onImported(json);
     } catch {
       showError("Couldn't reach the server. Try again when you're online.");
     } finally {

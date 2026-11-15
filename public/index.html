@@ -41,7 +41,10 @@
     <header class="brand">
       <h1>Workouts</h1>
       <p class="tagline">Everything you can train. Open one to see it and set the weights, or start it straight away.</p>
-      <a class="button secondary small new-workout" id="new-workout" href="#edit/new"><svg class="icon" aria-hidden="true"><use href="/icons/sprite.svg#plus"/></svg>New workout</a>
+      <div class="head-actions">
+        <a class="button secondary small new-workout" id="new-workout" href="#edit/new"><svg class="icon" aria-hidden="true"><use href="/icons/sprite.svg#plus"/></svg>New workout</a>
+        <button class="secondary small new-workout" type="button" id="from-example">From an example</button>
+      </div>
     </header>
     <div class="workout-list" id="workouts-list"></div>
   </main>
@@ -82,6 +85,7 @@
       <section class="ready-section" id="ready-need">
         <h2>You'll need</h2>
         <ul class="list" id="ready-pickup"></ul>
+        <p class="muted" id="ready-note" aria-live="polite"></p>
       </section>
       <section class="ready-section" id="ready-weights">
         <h2>Weights today</h2>

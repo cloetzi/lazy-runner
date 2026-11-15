@@ -123,6 +123,7 @@ async function planWeek() {
 
 // Gear with no weights yet follows the unit picked in step 1, sent or not.
 const equipment = mountEquipment($("welcome-inventory"), { unitFor: (item) => (item.weights.length ? item.unit : preferredUnit(storage)) });
+const examples = mountExamples({ list: $("welcome-examples"), error: $("welcome-examples-error"), done: $("welcome-examples-done") });
 // The unit pick being saved, if any: the gear step waits for it.
 let unitSaved = Promise.resolve();
 
@@ -144,6 +145,8 @@ steps.forEach((step, index) => {
         await unitSaved;
         await equipment.load();
       }
+      // The examples say how they fit the gear just ticked.
+      if (steps[index + 1].contains($("welcome-examples"))) await examples.load();
       if (steps[index + 1].contains(days)) await loadDays();
       show(index + 1);
     } finally {
@@ -222,7 +225,6 @@ if (me.signedOut || me.user?.password_change_required) {
       pressAll();
     })
     .catch(() => {});
-  mountExamples({ list: $("welcome-examples"), error: $("welcome-examples-error"), done: $("welcome-examples-done") }).load();
   showFigure();
   show(0);
 }

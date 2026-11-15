@@ -53,13 +53,15 @@ export function matches(exercise, { query = "", area = "", equipment = "", stand
   return words.every((word) => text.includes(word));
 }
 
-// The header line: "33 exercises", "28 with what you own", or "4 of 28 …"
-// when a search or filter narrows it.
-// "What I own" with nothing owned yet is the exercises that need no gear.
-export function countLine(shown, total, { owned = false, filtered = false, ownsNothing = false } = {}) {
+// The header line: "33 exercises", "28 with your gear, 5 more with other
+// gear" (`more`: the exercises left out by what you own), or "4 of 28 …"
+// when a search or filter narrows it. "What I own" with nothing owned yet
+// is the exercises that need no gear. library.js links "your gear" to Equipment.
+export function countLine(shown, total, { owned = false, filtered = false, ownsNothing = false, more = 0 } = {}) {
   const of = owned && ownsNothing ? `${total} that need no gear`
-    : owned ? `${total} with what you own` : `${total} ${total === 1 ? "exercise" : "exercises"}`;
-  return filtered ? `${shown} of ${of}` : of;
+    : owned ? `${total} with your gear` : `${total} ${total === 1 ? "exercise" : "exercises"}`;
+  if (filtered) return `${shown} of ${of}`;
+  return owned && !ownsNothing && more > 0 ? `${of}, ${more} more with other gear` : of;
 }
 
 // "Last: Thu, Oct 16 · 40 lb × 8" from an entry of GET /api/history/exercises.

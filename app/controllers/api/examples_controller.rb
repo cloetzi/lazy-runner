@@ -3,12 +3,15 @@ module Api
     # The example programs.
     # @description Programs to import as your own (`db/examples`): each with
     #   its workouts and their minutes (a main workout's own, without its
-    #   warm-up and cool-down), the equipment it needs and whether you have
+    #   warm-up and cool-down), the equipment it needs (`gear`, each marked
+    #   `owned` or not), how many of its exercises need gear you lack
+    #   (`missing_exercises`, 0 for the best fit) and whether you have
     #   imported it.
     # @response 200 #/components/schemas/Examples
     def index
       library = Example.library
-      render json: Example.all.map { it.as_json(library) }
+      owned = Equipment.owned.select_map(:slug)
+      render json: Example.all.map { it.as_json(library, owned:) }
     end
 
     # Import an example program.

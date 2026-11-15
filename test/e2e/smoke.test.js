@@ -95,18 +95,28 @@ before(async () => {
   await page.waitForURL(/\/calendar\.html(#.*)?$/);
 
   // A new account has nothing to train: Today points at the example
-  // programs, with the rest of set-up under it, and importing one on
-  // Settings fills the workouts.
+  // programs, with the rest of set-up under it, and importing one from the
+  // sheet on Workouts fills the workouts. Owning nothing, the program that
+  // needs no gear comes first, and the others say what they need.
   await page.goto("/");
   await page.locator("#setup-later").getByRole("link", { name: "Invite someone" }).waitFor();
   assert.equal(await page.locator("#today-setup").isHidden(), true);
   await page.locator("#setup-examples").click();
-  await page.waitForURL(/\/settings\.html#examples$/);
+  await page.waitForURL(/#workouts$/);
+  const examples = page.locator("#examples-sheet");
+  await examples.getByRole("heading", { name: "From an example" }).waitFor();
+  await examples.locator("#examples-list > li").first().getByText("Needs no gear").waitFor();
+  await examples.locator("#examples-list > li", { hasText: "Cycle 1" }).getByText("not yours yet").first().waitFor();
+  await accessible(page, "the example programs sheet");
   for (const [slug, name] of [["cycle-1", "Cycle 1"], ["home-strength", "Home strength"]]) {
-    await page.locator(`#example-list [data-import="${slug}"]`).click();
-    await page.locator("#examples-done").getByText(`${name} is in your workouts`).waitFor();
-    await page.locator("#example-list > li", { hasText: name }).getByText("Imported ✓").waitFor();
+    await examples.locator(`[data-import="${slug}"]`).click();
+    await examples.locator("#examples-done").getByText(`${name} is in your workouts`).waitFor();
+    await examples.locator("#examples-list > li", { hasText: name }).getByText("Imported ✓").waitFor();
   }
+  // The line saying so closes the sheet onto the workouts, gear not owned marked.
+  await examples.locator("#examples-done a").click();
+  await examples.waitFor({ state: "hidden" });
+  await page.locator("#workouts-list .workout-card .gear-missing").first().waitFor();
   // What is left of set-up is on Today, until hidden.
   await page.goto("/");
   const setupCard = page.locator("#today-setup");
@@ -645,6 +655,23 @@ test("invites a second user, who is welcomed and sees none of the owner's things
   // The generic weight comes with the kettlebell.
   const owned = (await read("/api/equipment")).filter((item) => item.owned);
   assert.deepEqual(owned.map((item) => [item.slug, item.weights]), [["weight", [35]], ["kettlebell", [35]]]);
+
+  // Gear they don't own is marked, with the ways out: "I have this" ticks it
+  // on Equipment, which then says what it unlocks; Exercises counts the rest.
+  const sessionA = (await read("/api/workouts"))[0].workouts.find((w) => w.title === "Session A");
+  await page.goto(`/#workout/${sessionA.id}`);
+  const have = page.locator('#workout-blocks [data-have="stability_ball"]').first();
+  await have.waitFor();
+  await accessible(page, "a workout needing gear not owned");
+  await have.click();
+  await page.locator("#workout-saved").getByText("Stability ball is ticked on Equipment.").waitFor();
+  assert.equal(await page.locator('#workout-blocks [data-have="stability_ball"]').count(), 0);
+  assert.equal((await read("/api/equipment")).find((item) => item.slug === "stability_ball").owned, true);
+  await page.goto("/equipment.html");
+  await page.locator(".inventory-item", { hasText: "Stability ball" }).locator(".unlocks").getByText(/exercises?, used in/).waitFor();
+  await page.goto("/library.html");
+  await page.locator("#library-count").getByText(/with your gear, \d+ more with other gear/).waitFor();
+  await page.locator("#library-count").getByRole("link", { name: "your gear" }).waitFor();
 
   // The used link, opened again on another device, says so before any form.
   const stranger = await browser.newContext({ baseURL: BASE_URL });

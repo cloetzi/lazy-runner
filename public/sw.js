@@ -80,6 +80,7 @@ const SHELL = [
   "/js/equipment-list.js",
   "/js/equipment.js",
   "/js/example-list.js",
+  "/js/gear.js",
   "/js/figure-view.js",
   "/js/figure.js",
   "/js/howto.js",

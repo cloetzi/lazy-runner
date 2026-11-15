@@ -125,7 +125,9 @@ flowchart LR
 - **Example programs** (`db/examples/*.yml`, `app/models/example.rb`): not
   stored until a user imports one (`POST /api/examples/:slug/import`, MCP
   `import_example`), which copies it into an ordinary program of theirs,
-  each step's weight snapped to the nearest one they own of its gear.
+  each step's weight snapped to the nearest one they own of its gear. The
+  list marks each piece of gear the user owns and counts the exercises that
+  need gear they lack (`missing_exercises`), so the best fit goes first.
 - **Controllers** (`app/controllers/api/`): one per resource, all JSON. The
   shared error shape and the server's "today" live in
   `application_controller.rb`. Each action's comment is its OpenAPI
@@ -192,7 +194,8 @@ week as days, the note and goal forms and their requests), `plan-changes.js`
 request), `coach-news.js` (Coach's "Since you last looked", grouped by
 agent), `week.js` (how a week adds up: planned against
 done by kind, distance sums), `unit-setting.js` (the lb/kg and km/mi settings and this
-device's copy of each), `catalog.js`, `inventory.js`, `figure.js`
+device's copy of each), `catalog.js`, `inventory.js`, `gear.js` (owned and
+missing gear, what an item unlocks, how an example fits), `figure.js`
 (animation keyframes), `outbox.js`, `session-log.js`, `run-store.js`,
 `offline.js`, `preferences.js`, `routes.js`, `setup.js` (the set-up card's
 rows, the welcome's week plan), `api.js`, `account.js`. The rest (`app.js`,

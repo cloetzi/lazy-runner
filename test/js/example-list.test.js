@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { exampleSummary, workoutHeading } from "../../public/js/example-list.js";
+import { exampleSummary, workoutHeading, gearLine } from "../../public/js/example-list.js";
 
 test("sums up an example by its main workouts and their minutes", () => {
   const workouts = [
@@ -15,4 +15,11 @@ test("sums up an example by its main workouts and their minutes", () => {
 test("heads each workout under What's in it, with minutes for main ones", () => {
   assert.equal(workoutHeading({ kind: "workout", title: "Session A", subtitle: "Knees and pull", estimated_minutes: 25 }), "Session A: Knees and pull · 25 min");
   assert.equal(workoutHeading({ kind: "warmup", title: "Warm-up", subtitle: null, estimated_minutes: 5 }), "Warm-up");
+});
+
+test("marks each piece of an example's gear as yours or not, in words", () => {
+  const html = gearLine({ gear: [{ slug: "dumbbell", name: "Dumbbells", owned: true }, { slug: "kettlebell", name: "Kettlebell", owned: false }] });
+  assert.match(html, /#check[^]*Dumbbells<span class="visually-hidden">, yours<\/span>/);
+  assert.match(html, /class="gear-missing"[^]*#close[^]*Kettlebell[^]*not yours yet/);
+  assert.equal(gearLine({ gear: [] }), "");
 });

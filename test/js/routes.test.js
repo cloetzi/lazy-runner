@@ -11,6 +11,7 @@ test("parses the views the home page can open from the hash", () => {
   assert.deepEqual(parseRoute("#edit/new"), { view: "edit", id: "new" });
   assert.deepEqual(parseRoute("#exercise-history/5"), { view: "exercise-history", id: "5" });
   assert.deepEqual(parseRoute("#session/9"), { view: "session", id: "9" });
+  assert.deepEqual(parseRoute("#examples"), { view: "examples" });
   assert.deepEqual(parseRoute("#/workouts"), { view: "workouts" });
 });
 

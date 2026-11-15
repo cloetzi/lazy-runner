@@ -4,14 +4,15 @@ import { createOutbox } from "./outbox.js";
 import { pageAccount, signInHref, syncNote } from "./account.js";
 import { stepTargetWeight, sameWeight, sameShownWeight, inUnit, preferredUnit, adoptServerUnit, formatWeight, formatLoad } from "./weights.js";
 import { createFigure } from "./figure-view.js";
-import { openHowto, equipmentNames, loadEquipmentNames, knowsEquipmentNames } from "./howto.js";
+import { openHowto, equipmentNames, loadEquipmentNames, knowsEquipmentNames, ownedEquipment, equipmentId, comesInWeights, isAnyWeight, markOwned } from "./howto.js";
+import { gearChips, missingGear, nameList } from "./gear.js";
 import { escape, icon, authorLine, busy, showSheet } from "./html.js";
 import { offlineToday } from "./offline.js";
 import { setupRows, setupLeft } from "./setup.js";
 import { blockName, blockSummary, stepSummary, alternatingText, setWeight, includedKinds, framingFor, framePlan, gearList, carrierOf } from "./workout.js";
-import { previousIndex, switchesSides, mainActionLabel, stepAnnouncement, spokenTarget, tapAccepted, holdStatus, unloggedExercises, plannedExercise, swapRun, resumeChoice, sessionProgress, endsEarly, loggedFromServer, pickUpIndex, partEnd, setLabel, minutesLeft, tempoText, leadInSeconds, extraSeconds, upNextDetails, equipmentChanges, finishSummary, framingLine } from "./player.js";
+import { previousIndex, switchesSides, mainActionLabel, stepAnnouncement, spokenTarget, tapAccepted, holdStatus, unloggedExercises, plannedExercise, swapRun, resumeChoice, sessionProgress, endsEarly, loggedFromServer, pickUpIndex, partEnd, setLabel, minutesLeft, tempoText, leadInSeconds, extraSeconds, upNextDetails, equipmentChanges, finishSummary, framingLine, swapTargets } from "./player.js";
 import { rpeOptions, toggleRpe } from "./rpe-picker.js";
-import { openSwap, prefetchAlternatives } from "./swap.js";
+import { openSwap, prefetchAlternatives, forgetAlternatives } from "./swap.js";
 import { mountNav } from "./nav.js";
 import { parseRoute, routeHash, pageFor, isSessionView } from "./routes.js";
 import { setsSummary, sessionSummary, exerciseSummary, sessionParts, partLine } from "./history.js";
@@ -28,6 +29,8 @@ import {
   logRequest, changeRequest, rpeToAsk, readAsked, rememberAsked,
 } from "./activities.js";
 import { openEditor, leaveEditor } from "./editor.js";
+import { draftFrom, setExercise, saveRequest } from "./builder.js";
+import { mountExamples } from "./example-list.js";
 import {
   withActivities, listed, routineTitle, confirmRequest as confirmDayRequest, skipRequest as skipDayRequest,
   moveRequest as moveDayRequest, resetRequest as resetDayRequest, endRequest as endRoutineRequest,
@@ -136,9 +139,9 @@ function renderSetup() {
   $("today-day").hidden = true;
   $("today").innerHTML = `
     <h2>Nothing to train yet</h2>
-    <p>Start from an example program, or build a workout of your own from the exercise library.</p>
+    <p>Start from an example program, fitted to the gear you own, or build a workout of your own from the exercise library.</p>
     <div class="card-actions">
-      <a class="button primary small" href="/settings.html#examples" id="setup-examples">Example programs</a>
+      <a class="button primary small" href="#examples" id="setup-examples">From an example</a>
       <a class="button secondary small" href="${routeHash("edit", "new")}">Build a workout</a>
     </div>
     <div id="setup-later"></div>`;
@@ -585,14 +588,15 @@ async function openWorkouts() {
   show("workouts");
   $("workouts-list").innerHTML = `<p class="muted">Loading…</p>`;
   try {
-    const { data: programs, stale } = await getJson(paths.workouts);
+    // What is owned comes with the names: the cards mark missing gear.
+    const [{ data: programs, stale }] = await Promise.all([getJson(paths.workouts), loadEquipmentNames()]);
     if (programs.length === 0) {
       $("workouts-list").innerHTML = offlineNote(stale) + `
         <section class="card">
           <h2>No workouts yet</h2>
           <p>Start from an example program, or build a workout of your own from the exercise library.</p>
           <div class="card-actions">
-            <a class="button primary small" href="/settings.html#examples">Example programs</a>
+            <button class="primary small" type="button" data-examples>From an example</button>
             <a class="button secondary small" href="${routeHash("edit", "new")}">Build a workout</a>
           </div>
         </section>`;
@@ -615,6 +619,42 @@ async function openWorkouts() {
   }
 }
 
+// ---------- From an example ----------
+
+// The example programs in a sheet over Workouts (example-list.js), best fit
+// to the user's gear first. An import fills in the workouts behind it, and
+// the line saying so closes the sheet onto them.
+function openExamplesSheet() {
+  const dialog = $("examples-sheet") ?? document.body.appendChild(Object.assign(document.createElement("dialog"), { id: "examples-sheet", className: "sheet" }));
+  dialog.innerHTML = `
+    <div class="howto">
+      <header>
+        <h2>From an example</h2>
+        <button type="button" class="icon-button" data-close aria-label="Close">${icon("close")}</button>
+      </header>
+      <p class="muted">Ready-made programs to train from, the best fit to <a href="/equipment.html">your gear</a> first. An imported one is yours to change, its weights fitted to what you own.</p>
+      <ul class="device-list examples" id="examples-list"><li class="muted">Loading…</li></ul>
+      <p class="form-error" id="examples-error" role="alert" hidden></p>
+      <p id="examples-done" hidden></p>
+    </div>`;
+  dialog.onclick = (event) => {
+    if (event.target.closest("[data-close]") || event.target.closest("#examples-done a")) {
+      event.preventDefault();
+      dialog.close();
+    }
+  };
+  mountExamples({
+    list: dialog.querySelector("#examples-list"),
+    error: dialog.querySelector("#examples-error"),
+    done: dialog.querySelector("#examples-done"),
+    href: routeHash("workouts"),
+    onImported: () => {
+      if (!$("workouts").hidden) openWorkouts();
+    },
+  }).load();
+  showSheet(dialog);
+}
+
 // `level`: the card's heading, under the program's (h2) or Every session's (h3).
 function workoutCard(workout, level) {
   const main = workout.kind === "workout";
@@ -623,7 +663,6 @@ function workoutCard(workout, level) {
     : `${workout.estimated_minutes} min`;
   const facts = [`${icon("clock")}${minutes}`];
   if (main) facts.push(workout.last_done ? `Last done ${escape(shortDate(workout.last_done))}` : "Not done yet");
-  const equipment = equipmentNames(workout.equipment);
   const shown = workout.exercises.slice(0, 4).map((name) => `<li>${escape(name)}</li>`);
   if (workout.exercises.length > 4) shown.push(`<li>+${workout.exercises.length - 4} more</li>`);
   return `
@@ -633,7 +672,7 @@ function workoutCard(workout, level) {
         ${workout.subtitle ? `<p class="muted">${escape(workout.subtitle)}</p>` : ""}
         <p class="facts">${facts.map((fact) => `<span>${fact}</span>`).join("")}</p>
         <ul class="workout-exercises">${shown.join("")}</ul>
-        ${equipment.length ? `<ul class="equipment-list small" aria-label="Equipment">${equipment.map((name) => `<li>${escape(name)}</li>`).join("")}</ul>` : ""}
+        ${gearChips(workout.equipment, { names: equipmentNames, owned: ownedEquipment() })}
       </a>
       <div class="workout-actions">
         <a class="button secondary small" href="${routeHash("workout", workout.id)}">View</a>
@@ -660,7 +699,7 @@ async function openWorkout(id) {
   $("workout-blocks").innerHTML = `<p class="muted">Loading…</p>`;
   show("workout", id);
   try {
-    const { data, stale } = await getJson(paths.workout(id));
+    const [{ data, stale }] = await Promise.all([getJson(paths.workout(id)), loadEquipmentNames()]);
     state.workout = data;
     state.unit = adoptServerUnit(storage, data.unit, { queued: outbox.queued(), stale });
     renderWorkout();
@@ -674,7 +713,10 @@ function renderWorkout() {
   const workout = state.workout;
   $("workout-title").textContent = workout.title;
   $("workout-subtitle").textContent = [workout.subtitle, `about ${workout.estimated_minutes} min`].filter(Boolean).join(" · ");
-  $("workout-blocks").innerHTML = workout.blocks.map((block, b) => `
+  const gear = [...new Set(workout.blocks.flatMap((block) => block.steps.flatMap((step) => neededEquipment(step) ?? [])))];
+  $("workout-blocks").innerHTML = (gear.length ? `<div class="workout-gear"><h2 class="visually-hidden">Gear</h2>
+      ${gearChips(gear, { names: equipmentNames, owned: ownedEquipment(), label: "Gear it needs", classes: "equipment-list" })}</div>` : "") +
+    workout.blocks.map((block, b) => `
     <section class="card block">
       <h2 class="block-head"><span class="block-label">${escape(blockName(block.label))}</span><span class="block-meta">${escape(blockSummary(block))}</span></h2>
       <ol class="steps">${block.steps.map((step, s) => stepRow(step, `${b}:${s}`)).join("")}</ol>
@@ -738,16 +780,129 @@ async function onWorkoutOwn(action, button) {
 
 function stepRow(step, ref) {
   const weight = step.target.weight;
-  const equipment = equipmentNames(neededEquipment(step));
+  const missing = missingGear(neededEquipment(step), ownedEquipment());
+  const equipment = equipmentNames((neededEquipment(step) ?? []).filter((slug) => !missing.includes(slug)));
   const seed = step.weight && !sameShownWeight(step.weight, weight, state.unit) ? ` · plan: ${formatWeight(step.weight, state.unit)}` : "";
   const stepper = takesWeight(step) ? weightStepper(step.exercise.name, shownWeight(weight), `data-step="${ref}"`) : "";
   return `<li>
     <div class="step-text">
       <button class="step-name" data-howto="${ref}" aria-label="How to do ${escape(step.exercise.name)}">${escape(step.exercise.name)}${icon("info")}</button>
       <p class="muted">${escape(stepSummary(step))}${equipment.length ? ` · ${escape(equipment.join(", "))}` : ""}${seed}</p>
+      ${missing.length ? gearShort(missing, state.workout.editable ? `data-swap-step="${ref}"` : "") : ""}
     </div>
     ${stepper}
   </li>`;
+}
+
+// ---------- Gear you don't have ----------
+
+// Beside a step or a Get ready row that needs gear the user doesn't own:
+// what is missing, and the two ways out. "I have this" ticks it on
+// Equipment; Swap (`swap`, the button's attribute; none, no Swap) opens the
+// swap sheet, whose alternatives are what the user's gear can do. A generic
+// weight can't be ticked: it comes with dumbbells or a kettlebell.
+function gearShort(missing, swap) {
+  // A generic weight reads as what it is: any weight will do.
+  const names = equipmentNames(missing).map((name, i) => (isAnyWeight(missing[i]) ? "a weight" : name));
+  const tickable = missing.filter((slug) => !isAnyWeight(slug) && equipmentId(slug) != null);
+  return `<div class="gear-short">
+    <p>${icon("close")}<span>Needs ${escape(nameList(names))}: not yours yet.</span></p>
+    <div class="gear-ways">
+      ${tickable.map((slug) => {
+        const [name] = equipmentNames([slug]);
+        // With more than one to tick, each button names its own.
+        const label = tickable.length > 1 ? `I have ${escape(name)}` : `I have this<span class="visually-hidden">: ${escape(name)}</span>`;
+        return `<button type="button" class="secondary small" data-have="${escape(slug)}">${label}</button>`;
+      }).join("")}
+      ${tickable.length < missing.length ? `<a class="button secondary small" href="/equipment.html">Add your weights</a>` : ""}
+      ${swap ? `<button type="button" class="secondary small" ${swap}>${icon("swap")}Swap</button>` : ""}
+    </div>
+  </div>`;
+}
+
+// Ticks `slug` as owned on Equipment, then draws the screen again (`after`)
+// with what is owned now. `note(text)` says what happened.
+async function haveGear(slug, button, { after, note }) {
+  const [name] = equipmentNames([slug]);
+  busy(button);
+  try {
+    const response = await send(`/api/equipment/${equipmentId(slug)}`, { method: "PATCH", body: { owned: true } });
+    if (!response.ok) throw new Error(errorMessage(await response.json().catch(() => null), response.status));
+    await loadEquipmentNames(fetch, { fresh: true });
+    // The server said yes: a list read from a cache, or not read, doesn't undo it.
+    markOwned(slug);
+    forgetAlternatives();
+    busy(button, false);
+    await after();
+    note(comesInWeights(slug) ? `${name} is ticked on Equipment. List the weights you have there.` : `${name} is ticked on Equipment.`);
+  } catch (error) {
+    busy(button, false);
+    note(error instanceof TypeError ? "Couldn't reach the server. Try again when you're online." : `Not ticked: ${error.message}`);
+  }
+}
+
+// The workout read again, as the server now plans it with the gear owned
+// (which weights a step steps through), and drawn again.
+async function rereadWorkout() {
+  const workout = state.workout;
+  if (!workout) return;
+  try {
+    const { data } = await getJson(paths.workout(workout.id));
+    if (state.workout === workout) state.workout = data;
+  } catch {
+    // Offline: drawn as it was read, with the gear marks as they are now.
+  }
+  if (state.workout?.id === workout.id) renderWorkout();
+}
+
+// Swap in the workout view: the step's exercise for another, in the workout
+// itself (saved as the editor saves it), not only for one session.
+async function swapWorkoutStep(ref) {
+  const workout = state.workout;
+  const step = workoutStep(ref);
+  await saveWeights();
+  // The new step's weight starts from the gear owned for it: no list, no swap.
+  let inventory;
+  try {
+    inventory = (await getJson(paths.equipment)).data;
+  } catch {
+    $("workout-saved").textContent = "Couldn't reach the server. Try again when you're online.";
+    return;
+  }
+  if (state.workout !== workout) return;
+  openSwap({
+    planned: step.exercise,
+    current: step.exercise,
+    inSession: new Set(workout.blocks.flatMap((block) => block.steps.map((other) => other.exercise.id))),
+    unit: state.unit,
+    note: "Changes this step of the workout. Its other steps stay as they are.",
+    alreadyIn: "In this workout",
+    onPick: (exercise) => replaceWorkoutExercise(ref, exercise, inventory),
+  });
+}
+
+async function replaceWorkoutExercise(ref, exercise, inventory) {
+  const workout = state.workout;
+  const [b, s] = ref.split(":").map(Number);
+  const draft = draftFrom(workout);
+  const step = draft.blocks[b].steps[s];
+  const before = { ...step };
+  setExercise(step, exercise, inventory, state.unit);
+  // The amount stays when the new exercise is done the same way, sides
+  // counted the same; otherwise it starts from the exercise's own.
+  const sameSides = Boolean(before.exercise.unilateral) === Boolean(exercise.unilateral) &&
+    Boolean(before.exercise.alternating) === Boolean(exercise.alternating);
+  if (before.mode === step.mode && sameSides) Object.assign(step, { reps: before.reps, seconds: before.seconds });
+  const request = saveRequest(draft);
+  try {
+    await sendWorkout(request.method, request.path, request.body);
+    // Still on this workout: it is read again with the swap, and says so.
+    if (state.workout !== workout) return;
+    state.workoutNote = `${exercise.name} instead of ${workout.blocks[b].steps[s].exercise.name}.`;
+    openWorkout(workout.id);
+  } catch (error) {
+    $("workout-saved").textContent = error instanceof TypeError ? "Couldn't reach the server. Try again when you're online." : `Not swapped: ${error.message}`;
+  }
 }
 
 // Shown for a step that takes a weight but has none (yet, or on purpose).
@@ -881,6 +1036,7 @@ function startSession() {
     pickedUp: Object.keys(logged).length > 0,
     stage: "ready",
   };
+  $("ready-note").textContent = "";
   if (state.run.equipment.length === 0 && state.run.targets.length === 0) beginPlayer();
   else showReady();
 }
@@ -893,7 +1049,14 @@ function showReady() {
   // Everything the session needs, one row each, with what it is for.
   // Rows to tick off while fetching; nothing is kept.
   const gear = gearList(run.items, run.targets);
-  $("ready-pickup").innerHTML = gear.map((row) => `
+  state.readyGear = gear;
+  const owned = ownedEquipment();
+  // Gear the user doesn't own is no row to tick: it says so, with the ways out.
+  $("ready-pickup").innerHTML = gear.map((row, i) => missingGear(row.equipment ? [row.equipment] : [], owned).length ? `
+    <li class="ready-missing"><div class="row"><span class="row-text">
+      <span class="row-title">${escape(gearTitle(row))}</span>
+      <span class="row-meta">${escape(row.exercises.join(", "))}</span>
+    </span></div>${gearShort([row.equipment], `data-swap-row="${i}"`)}</li>` : `
     <li><label class="row check-row"><input type="checkbox"><span class="row-text">
       <span class="row-title">${escape(gearTitle(row))}</span>
       <span class="row-meta">${escape(row.exercises.join(", "))}</span>
@@ -904,6 +1067,34 @@ function showReady() {
   $("ready-targets").innerHTML = run.targets.map((t, i) => `<li><span>${escape(t.exercise.name)}</span>
       ${weightStepper(t.exercise.name, shownLoad(t.weight, t.weights_held), `data-target="${i}"`)}</li>`).join("");
   show("ready");
+}
+
+// Swap on Get ready: the first exercise of row `rowIndex` (gear the user
+// doesn't own) still to come, for the rest of the session, as the player
+// swaps. Get ready is drawn again with what it needs now.
+function swapReadyGear(rowIndex) {
+  const run = state.run;
+  const row = state.readyGear?.[rowIndex];
+  if (!run || !row) return;
+  const index = run.items.findIndex((item, i) => i >= run.index && run.logged?.[i] == null && item.type === "exercise" &&
+    (item.equipment ?? []).includes(row.equipment) && row.exercises.includes(item.exercise.name));
+  if (index < 0) {
+    $("ready-note").textContent = `Nothing still to come needs ${equipmentNames([row.equipment])[0]}.`;
+    return;
+  }
+  const item = run.items[index];
+  openSwap({
+    planned: plannedExercise(item),
+    current: item.exercise,
+    inSession: new Set(run.items.filter((i) => i.type === "exercise").map((i) => i.exercise.id)),
+    unit: state.unit,
+    onPick: (exercise) => {
+      if (state.run !== run) return;
+      Object.assign(run, swapRun(run, index, exercise));
+      run.targets = swapTargets(run.targets, run.items, comesInWeights);
+      showReady();
+    },
+  });
 }
 
 // A Get ready row: the equipment, with the load to pick up when it carries one.
@@ -1964,6 +2155,11 @@ async function route() {
   const cameFrom = state.shownHash;
   await saveWeights();
   if (view === "workouts") return openWorkouts();
+  // "#examples" (Today's set-up, the calendar): Workouts, with the sheet open.
+  if (view === "examples") {
+    openExamplesSheet();
+    return openWorkouts();
+  }
   if (view === "edit") return openEdit(id, cameFrom);
   if (view === "history") return openHistory();
   if (view === "exercise-history") return openExerciseHistory(id);
@@ -2037,15 +2233,29 @@ $("reps-up").onclick = () => changeReps(1);
 
 $("ready-go").onclick = () => { unlock(); beginPlayer(); };
 $("ready-back").onclick = leaveReady;
+$("ready-pickup").onclick = (event) => {
+  const have = event.target.closest("button[data-have]");
+  if (have) {
+    return haveGear(have.dataset.have, have, {
+      after: () => state.run?.stage === "ready" && showReady(),
+      note: (text) => ($("ready-note").textContent = text),
+    });
+  }
+  const swap = event.target.closest("button[data-swap-row]");
+  if (swap) swapReadyGear(Number(swap.dataset.swapRow));
+};
+
 $("ready-targets").onclick = (event) => {
   const button = event.target.closest("button");
   if (button?.dataset.weight) stepReadyWeight(Number(button.dataset.target), button.dataset.weight);
 };
 
 $("workouts-list").onclick = (event) => {
+  if (event.target.closest("button[data-examples]")) return openExamplesSheet();
   const button = event.target.closest("button[data-start]");
   if (button) startWorkout(Number(button.dataset.start));
 };
+$("from-example").onclick = openExamplesSheet;
 $("today").addEventListener("change", (event) => {
   const toggle = event.target.closest("input[data-part]");
   if (!toggle) return;
@@ -2109,6 +2319,15 @@ document.addEventListener("keydown", (event) => {
   menu.querySelector("summary").focus();
 });
 $("workout-blocks").onclick = (event) => {
+  const have = event.target.closest("button[data-have]");
+  if (have) {
+    return haveGear(have.dataset.have, have, {
+      after: () => rereadWorkout(),
+      note: (text) => ($("workout-saved").textContent = text),
+    });
+  }
+  const swap = event.target.closest("button[data-swap-step]");
+  if (swap) return swapWorkoutStep(swap.dataset.swapStep);
   const button = event.target.closest("button[data-step], button[data-howto]");
   if (!button) return;
   if (button.dataset.howto) return openHowto(workoutStep(button.dataset.howto).exercise);

@@ -358,7 +358,7 @@ components:
       items: { $ref: "#/components/schemas/Example" }
     Example:
       type: object
-      required: [slug, name, description, workouts, equipment, imported]
+      required: [slug, name, description, workouts, equipment, gear, missing_exercises, imported]
       properties:
         slug: { type: string }
         name: { type: string }
@@ -376,6 +376,17 @@ components:
               estimated_minutes: { type: integer, description: "Without the warm-up and cool-down." }
               exercises: { type: array, description: "The exercises' names, in order, each once.", items: { type: string } }
         equipment: { type: array, description: Equipment slugs its steps need., items: { type: string } }
+        gear:
+          type: array
+          description: The gear its steps need, each marked whether you own it (the generic weight counts as owned with any dumbbell or kettlebell).
+          items:
+            type: object
+            required: [slug, name, owned]
+            properties:
+              slug: { type: string }
+              name: { type: string }
+              owned: { type: boolean }
+        missing_exercises: { type: integer, description: "How many of its exercises need gear you don't own; 0 when it fits your gear." }
         imported: { type: boolean, description: Whether you have a copy. }
     Step:
       type: object

@@ -31,8 +31,13 @@ session offline, syncing when the connection returns.
   next workout in the rotation. A new account, with nothing to train yet, is
   pointed at the example programs.
 - **Example programs:** ready-made programs (Cycle 1, Home strength, No-gear strength) to import
-  on Settings. An imported program is yours to change, and its weights snap to
-  the gear you own.
+  from Workouts ("From an example"), the best fit to your gear first, each
+  with the gear it needs marked against what you own. An imported program is
+  yours to change, and its weights snap to the gear you own.
+- **Gear that shows:** gear you don't own is marked wherever gear is named
+  (workout cards, the workout view, Get ready, the editor's picker), with "I
+  have this" and Swap beside a step that needs it. Exercises counts what your
+  gear can do, and Equipment says what each item unlocks.
 - **Calendar:** plan a workout on any day from today on, with an optional note,
   and move, skip or remove what is planned. Phones show a week; wide screens
   also a month grid where a planned session can be dragged to another day.
