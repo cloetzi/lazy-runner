@@ -50,7 +50,7 @@ flowchart LR
   (`lib/log_formatter.rb`), so a client can't add fields to a line. New
   files the app writes are its user's only (umask 077), and other users of
   the machine can't read the database (`Database.keep_private`).
-- **Accounts and sign-in** (`lib/auth_app.rb`, `config/initializers/sign_in.rb`):
+- **Accounts and sign-in** (`lib/auth_app.rb`, `lib/auth/`, `config/initializers/sign_in.rb`):
   [Rodauth](https://rodauth.jeremyevans.net) as Roda middleware inside
   Rage's stack, on the app's own Sequel connection. Roda's encrypted session
   cookie (`__Host-lazy_runner`, or `lazy_runner` with `SECURE_COOKIES=false`
@@ -60,15 +60,18 @@ flowchart LR
   be signed out from another. `AuthApp` answers `/api/auth/*` (sign in, sign
   out, create an account with the setup code or an invite, change the
   password) and stands in front of
-  everything else under `/api`: a write must come from the app's
-  own origin (`Sec-Fetch-Site`, else `Origin`) with a JSON body, and a
-  request without a session is a 401, except `/api/version`,
-  `/api/openapi` and `/api/me`. What it lets through carries the user's id;
+  everything else under `/api` with its gate (`lib/auth/gate.rb`): a write
+  must come from the app's own origin (`Sec-Fetch-Site`, else `Origin`) with
+  a JSON body (`lib/auth/csrf.rb`), and what each route needs is a row in
+  `Auth::Access::RULES` (`lib/auth/access.rb`, a test fails for a route
+  without one): a request without a session is a 401, except `/api/version`,
+  `/api/openapi` and `/api/me`, and the account, users and invites need a
+  signed-in browser. What it lets through carries the user's id;
   `ApplicationController` sets `Current.user` from it. Passwords are
   Argon2id, hashed on two threads of their own (`lib/hashing.rb`) so a
   sign-in doesn't hold up other requests; ten wrong ones lock the account
   for 15 minutes, and attempts are
-  throttled per username (`lib/throttle.rb`). An unknown username costs a
+  throttled per username (`lib/throttle.rb`, `lib/auth/throttles.rb`). An unknown username costs a
   dummy hash, so its answer takes as long; past 60 a minute it waits that
   long instead, so made-up usernames can neither keep real users out nor
   keep the worker hashing. A throttle holds the latest 10,000 usernames,
@@ -87,7 +90,7 @@ flowchart LR
   `users`. With `OIDC_ISSUER` set (`lib/oidc.rb`), an OpenID Connect
   provider is another way into the same accounts: `rodauth-omniauth` and
   `omniauth_openid_connect` run the authorization code flow with PKCE, a
-  state and a nonce, and `AuthApp` signs in the user the identity is linked
+  state and a nonce, and `Auth::OidcCallback` signs in the user the identity is linked
   to (`user_identities`, by issuer and `sub`, never by a username or email
   the provider gives), joins with an invite, links it to the signed-in user
   (Settings → Account), or, with `OIDC_AUTO_SIGNUP`, makes an account. A
@@ -96,11 +99,12 @@ flowchart LR
   them (`UserIdentity#unlink!`). The
   callback is a plain GET from the provider's site, which the `SameSite=Lax`
   cookie allows. Assistants and scripts sign
-  in with personal API tokens (`ApiToken`, made in Settings): `AuthApp`
+  in with personal API tokens (`ApiToken`, made in Settings): the gate
   takes `Authorization: Bearer` on `/api` in place of the session for a
   token with REST access (`scope: api`; the default is MCP alone), and
   `/mcp` takes tokens only, through the mcp gem's `token_verifier`
-  (`TrainerMcp::TokenVerifier`), which hands each tool its user.
+  (`TrainerMcp::TokenVerifier`, read the same way for both in
+  `lib/auth/token.rb`), which hands each tool its user.
 - **Data per user**: every personal table has a `user_id` (see
   [data-model.md](data-model.md)), and the models read the user from
   `Current.user` (`ApplicationController` sets it for a request, and

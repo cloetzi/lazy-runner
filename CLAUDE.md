@@ -62,9 +62,13 @@ then `BASE_URL=http://localhost:3999 SERVER_LOG=/tmp/e2e.log npm run test:e2e`.
   undo runs the same model code the other way.
 - `lib/auth_app.rb` accounts and sign-in: Rodauth (JSON only) as Roda
   middleware inside Rage (`config/initializers/sign_in.rb`), with Roda's
-  session cookie. It answers `/api/auth/*` and gates the rest of `/api`
-  (a `Bearer` API token with REST access, `ApiToken#rest?`, stands in for
-  the session; a token is MCP-only by default): a write needs `Sec-Fetch-Site: same-origin` (else a matching
+  session cookie. It answers `/api/auth/*` and gates the rest of `/api`;
+  the gate, CSRF, tokens, throttles, the OIDC callback and the cookie are
+  each a file in `lib/auth/`. What a route needs is its row in
+  `Auth::Access::RULES` (`lib/auth/access.rb`): a new resource under `/api`
+  needs one (`test/requests/access_test.rb`). A `Bearer` API token with REST
+  access (`ApiToken#rest?`) stands in for the session (a token is MCP-only
+  by default); a write needs `Sec-Fetch-Site: same-origin` (else a matching
   `Origin`) and a JSON body, and a request without a session is a 401 but
   `/api/version`, `/api/openapi` and `/api/me`. The user's id reaches
   `ApplicationController` in `env["lazy_runner.user_id"]`, which sets

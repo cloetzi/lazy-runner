@@ -55,11 +55,7 @@ Sequel.extend(ThreadConnections)
 # begin IMMEDIATE.
 module TransactionalTests
   def run(...)
-    AuthApp::THROTTLE.reset!
-    AuthApp::DUMMY_HASHES.reset!
-    AuthApp::ACCOUNTS.reset!
-    AuthApp::PASSWORD_CHANGES.reset!
-    AuthApp::OIDC_STARTS.reset!
+    Auth::Throttles.reset!
     Oidc.cache.clear
     UserScopeTripwire.reset!
     DB.transaction(rollback: :always, auto_savepoint: true) do
@@ -208,7 +204,7 @@ module RequestHelpers
   end
 
   # Requests come from the app's own pages (see the CSRF check in
-  # lib/auth_app.rb), signed in as `user` unless a test signs out first.
+  # lib/auth/csrf.rb), signed in as `user` unless a test signs out first.
   # A test sets @fetch_site to send another Sec-Fetch-Site, or nil for none.
   def prepare_request
     header "Sec-Fetch-Site", instance_variable_defined?(:@fetch_site) ? @fetch_site : "same-origin"
@@ -246,7 +242,7 @@ module RequestHelpers
     return { "$ref" => "#/components/responses/Conflict" } if status == "409" && JSON.parse(last_response.body).dig("error", "code") == "user_mismatch"
 
     refusal = JSON.parse(last_response.body).dig("error", "message") if status == "403"
-    { "$ref" => "#/components/responses/Forbidden" } if [AuthApp::REFUSED, AuthApp::NOT_JSON, AuthApp::TOKEN_REFUSED, AuthApp::MCP_ONLY].include?(refusal)
+    { "$ref" => "#/components/responses/Forbidden" } if [Auth::Csrf::REFUSED, Auth::Csrf::NOT_JSON, Auth::Token::REFUSED, Auth::Token::MCP_ONLY].include?(refusal)
   end
 
   def must_match_description

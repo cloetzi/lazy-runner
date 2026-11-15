@@ -5,7 +5,7 @@ require "omniauth_openid_connect"
 # Signing in with an OpenID Connect provider, next to passwords (#185):
 # set OIDC_ISSUER, OIDC_CLIENT_ID and OIDC_CLIENT_SECRET, and the sign-in
 # page offers "Sign in with <OIDC_NAME>". Unset, the routes don't exist.
-# How the flow runs is in lib/auth_app.rb; the provider's own settings stay
+# How the flow runs is in lib/auth/oidc_callback.rb; the provider's own settings stay
 # out of the repo.
 #
 # - OIDC_ISSUER: the provider's issuer URL (https); its endpoints and keys

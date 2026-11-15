@@ -6,7 +6,7 @@ module TrainerMcp
   # issuing tokens) is a swap of this verifier. The token's name goes along
   # as the `agent_name` claim: what the agent is called on what it writes;
   # whether it has REST access as `rest`, which the REST API checks
-  # (AuthApp). For the REST API (`rest: true`) a token is noted as used only
+  # (lib/auth/gate.rb). For the REST API (`rest: true`) a token is noted as used only
   # when it has REST access, so one turned away there doesn't read as used.
   class TokenVerifier
     def initialize(rest: false)

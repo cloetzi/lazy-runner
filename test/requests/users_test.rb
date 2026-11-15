@@ -250,7 +250,7 @@ describe "users and invites" do
     header "Authorization", "Bearer #{secret}"
     get "/api/users"
     _(last_response.status).must_equal 403
-    _(json["error"]["message"]).must_equal AuthApp::TOKEN_REFUSED
+    _(json["error"]["message"]).must_equal Auth::Token::REFUSED
     post_json "/api/invites"
     _(last_response.status).must_equal 403
     _(Invite.count).must_equal 0

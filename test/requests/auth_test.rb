@@ -107,7 +107,7 @@ describe "accounts and sign-in" do
       sign_in_as "runner", RequestHelpers::TEST_PASSWORD
 
       cookie = last_response.headers["set-cookie"]
-      _(cookie).must_match(/\A#{SessionCookie.cookie_name}=/)
+      _(cookie).must_match(/\A#{Auth::SessionCookie.cookie_name}=/)
       _(cookie).must_match(/httponly/i)
       _(cookie).must_match(/samesite=lax/i)
     end
@@ -126,7 +126,7 @@ describe "accounts and sign-in" do
 
     it "locks the account after ten wrong passwords, then unlocks it on its own" do
       10.times { sign_in_as "runner", "wrong password" }
-      AuthApp::THROTTLE.reset! # a minute later
+      Auth::Throttles::SIGN_INS.reset! # a minute later
       sign_in_as "runner", RequestHelpers::TEST_PASSWORD
 
       _(last_response.status).must_equal 401

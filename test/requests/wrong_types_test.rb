@@ -180,7 +180,7 @@ describe "wrongly typed parameters" do
       body.each_key do |field|
         WRONG.each do |value|
           # Past the throttles, so each try reaches the route.
-          [AuthApp::THROTTLE, AuthApp::ACCOUNTS, AuthApp::PASSWORD_CHANGES].each(&:reset!)
+          [Auth::Throttles::SIGN_INS, Auth::Throttles::ACCOUNTS, Auth::Throttles::PASSWORD_CHANGES].each(&:reset!)
           post_json path, body.merge(field => value)
           must_answer_in_shape("POST #{path} #{field}: #{value.inspect}")
         end

@@ -71,7 +71,7 @@ describe "API tokens" do
       with_token(mcp_only)
       get "/api/today"
       _(last_response.status).must_equal 403
-      _(json["error"]).must_equal({ "code" => "forbidden", "message" => AuthApp::MCP_ONLY })
+      _(json["error"]).must_equal({ "code" => "forbidden", "message" => Auth::Token::MCP_ONLY })
       get "/api/me"
       _(last_response.status).must_equal 401
       _(json["user"]).must_be_nil
@@ -184,7 +184,7 @@ describe "API tokens" do
       with_token(secret)
       post_json "/api/account/tokens", name: "Another"
       _(last_response.status).must_equal 403
-      _(json["error"]["message"]).must_equal AuthApp::TOKEN_REFUSED
+      _(json["error"]["message"]).must_equal Auth::Token::REFUSED
 
       get "/api/account/devices"
       _(last_response.status).must_equal 403

@@ -43,7 +43,7 @@ class ApplicationController < RageController::API
   end
 
   # The signed-in user, from the session AuthApp checked in front of the
-  # app (lib/auth_app.rb). AuthApp has already answered 401 for a route
+  # app (lib/auth/gate.rb). The gate has already answered 401 for a route
   # that needs one when there is none.
   before_action do
     id = request.env["lazy_runner.user_id"]

@@ -1,6 +1,6 @@
 # An identity at the install's OpenID Connect provider (lib/oidc.rb) that
 # signs its user in: the provider's issuer and the `sub` it gives them. The
-# sign-in itself is in lib/auth_app.rb; this is what Settings lists and
+# sign-in itself is in lib/auth/oidc_callback.rb; this is what Settings lists and
 # unlinks. `username` is what the provider called them, for the list.
 class UserIdentity < Record
   # Unlinking the one way left into an account.

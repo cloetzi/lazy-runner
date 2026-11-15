@@ -17,6 +17,6 @@ OmniAuth.config.logger = Rage.logger
 Rage.configure do
   config.middleware.use ApiBoundary::Headers
   config.middleware.use ApiBoundary::JsonBody
-  config.middleware.use(*SessionCookie.middleware)
+  config.middleware.use(*Auth::SessionCookie.middleware)
   config.middleware.use AuthApp
 end
