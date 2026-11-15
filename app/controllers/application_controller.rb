@@ -136,6 +136,16 @@ class ApplicationController < RageController::API
     raise BadRequest.new(error.message, fields: { parts: [error.message] })
   end
 
+  # A time the client sent (ISO 8601), never later than now; nil when not
+  # given.
+  def client_time(key)
+    return if params[key].blank?
+
+    [Time.iso8601(params[key].to_s), Time.now].min
+  rescue ArgumentError
+    raise BadRequest.param(key, "must be a time as ISO 8601")
+  end
+
   # A parameter the request can't do without, such as the id of what it
   # acts on: missing is a 400, not a 404 for an id nobody sent.
   def required!(key)

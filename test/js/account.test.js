@@ -52,7 +52,8 @@ test("reads no account from blocked or broken storage", () => {
 });
 
 test("asks the server who is signed in", async () => {
-  assert.deepEqual(await whoIsSignedIn(answer({ user: someone })), { user: someone });
+  assert.deepEqual(await whoIsSignedIn(answer({ user: someone })), { user: someone, coachUnseen: 0 });
+  assert.deepEqual(await whoIsSignedIn(answer({ user: someone, coach_unseen: 3 })), { user: someone, coachUnseen: 3 });
   assert.deepEqual(
     await whoIsSignedIn(answer({ error: { code: "unauthorized" }, setup_required: true }, { status: 401 })),
     { signedOut: true, setupRequired: true, signInWith: null },
@@ -142,14 +143,14 @@ test("signs out on the server once it can after signing out on this device alone
   assert.deepEqual(storage.keys(), ["signed-out-here"]);
 
   // An app that refuses to sign out doesn't leave the device stuck offline.
-  assert.deepEqual(await checkSignedIn({ storage, caches, fetchFn: async (path) => (path === "/api/me" ? Response.json({ user: someone }) : Response.json({ error: { code: "forbidden" } }, { status: 403 })) }), { user: someone });
+  assert.deepEqual(await checkSignedIn({ storage, caches, fetchFn: async (path) => (path === "/api/me" ? Response.json({ user: someone }) : Response.json({ error: { code: "forbidden" } }, { status: 403 })) }), { user: someone, coachUnseen: 0 });
   assert.deepEqual(storage.keys(), []);
 
   // Signing in on purpose drops the note.
   await signOutHere({ storage, caches });
   await adoptAccount(someone, { storage, caches });
   assert.deepEqual(storage.keys(), ["account"]);
-  assert.deepEqual(await checkSignedIn({ storage, caches, fetchFn: answer({ user: someone }) }), { user: someone });
+  assert.deepEqual(await checkSignedIn({ storage, caches, fetchFn: answer({ user: someone }) }), { user: someone, coachUnseen: 0 });
 });
 
 // A sign-in the server ended (expired, signed out elsewhere, the user

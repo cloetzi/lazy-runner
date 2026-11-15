@@ -118,7 +118,9 @@ past sessions went.
    sessions you planned). A note on how one session or activity went takes
    its `session_id` or `activity_id`: it shows on that session's or
    activity's sheet and on its day, wherever it moves. Don't write notes to record what you copied or
-   changed; say that in your answer. The person can tidy away your older
+   changed; say that in your answer. The app itself lists for the person
+   what you planned, moved, changed and copied since they last looked, with
+   your reasons and a way to take each change back. The person can tidy away your older
    notes, so what still matters goes in the status, focus or a concern.
 
 ## Working with this server

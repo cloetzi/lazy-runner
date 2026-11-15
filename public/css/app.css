@@ -420,6 +420,14 @@ body.with-nav:not([data-focus]) { height: auto; min-height: 100%; padding-bottom
 .tab .icon { width: 1.5rem; height: 1.5rem; }
 .tab[aria-current], .tab.current, .tab[aria-expanded="true"] { color: var(--text); font-weight: 700; }
 .tab[aria-current] .icon, .tab.current .icon { color: var(--accent-ink); }
+/* Something new on Coach (showCoachNews in nav.js): a dot by the label,
+   named for a screen reader in its hidden text. */
+.tab.has-news::after, .sidebar a.has-news::after {
+  content: ""; width: 0.5rem; height: 0.5rem; border-radius: var(--radius-full); background: var(--accent);
+  box-shadow: 0 0 0 2px var(--surface);
+}
+.tab.has-news::after { position: absolute; top: 0.6rem; left: calc(50% + 0.6rem); }
+.sidebar a.has-news::after { margin-left: var(--space-2); }
 .tab[aria-current]::before, .tab.current::before {
   content: ""; position: absolute; top: 0; width: 2rem; height: 3px;
   border-radius: 0 0 var(--radius-full) var(--radius-full); background: var(--accent);
@@ -1290,6 +1298,13 @@ code.command { display: block; padding: var(--space-2) var(--space-3); overflow-
 .coach-card-head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); }
 .coach-card-head .icon { margin-right: var(--space-1); }
 .coach-card-head a.link { padding: 0; }
+/* "Since you last looked": a group per agent, a line per thing it did. */
+.coach-news { display: grid; gap: var(--space-3); }
+.coach-news .coach-card-head button { flex: none; white-space: nowrap; }
+.news-group { display: grid; gap: var(--space-1); }
+.news-items { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-1); }
+.news-items li { display: flex; flex-wrap: wrap; align-items: center; column-gap: var(--space-2); }
+.news-items a.link, .news-items button.link { min-height: 2.75rem; padding: 0; }
 .current-body { font-size: var(--text-lg); line-height: var(--leading); white-space: pre-line; }
 .note-by { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-1) var(--space-2); font-size: var(--text-sm); }
 .author { display: inline-flex; align-items: center; gap: var(--space-2); }

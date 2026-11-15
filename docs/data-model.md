@@ -306,6 +306,7 @@ erDiagram
         bool owner "made the install"
         bool password_change_required "signed in with a temporary password"
         datetime welcomed_at "finished or skipped the welcome screen"
+        datetime coach_seen_at "what agents did up to then was seen on Coach"
     }
     account_password_hashes {
         int id PK,FK "the user"

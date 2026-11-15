@@ -189,7 +189,8 @@ called, how a day of it reads on the device's today, queued activities that
 tick a day off, the routine form and its requests), `coach.js` (who wrote a note, the
 week as days, the note and goal forms and their requests), `plan-changes.js`
 (what an agent's change to the plan says on the calendar, and the undo
-request), `week.js` (how a week adds up: planned against
+request), `coach-news.js` (Coach's "Since you last looked", grouped by
+agent), `week.js` (how a week adds up: planned against
 done by kind, distance sums), `unit-setting.js` (the lb/kg and km/mi settings and this
 device's copy of each), `catalog.js`, `inventory.js`, `figure.js`
 (animation keyframes), `outbox.js`, `session-log.js`, `run-store.js`,

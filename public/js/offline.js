@@ -39,6 +39,7 @@ export function aheadPaths(date, workoutIds) {
     ...[week, month].map(({ from, to }) => paths.calendar({ from, to, today: date })),
     paths.upcoming(date),
     paths.coach(date),
+    paths.coachNews(date),
     paths.history(date),
     paths.exerciseHistory,
     paths.settings,

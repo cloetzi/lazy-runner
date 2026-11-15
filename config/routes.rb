@@ -66,6 +66,8 @@ Rage.routes.draw do
     patch "coach/notes/:id", to: "coach#update_note"
     delete "coach/notes/:id", to: "coach#destroy_note"
     get "coach/tidy", to: "coach#tidy_count"
+    get "coach/news", to: "coach#news"
+    post "coach/seen", to: "coach#seen"
     post "coach/tidy", to: "coach#tidy"
     get "history", to: "history#show"
     get "history/exercises", to: "history#exercises"

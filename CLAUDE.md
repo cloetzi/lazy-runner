@@ -159,7 +159,10 @@ then `BASE_URL=http://localhost:3999 SERVER_LOG=/tmp/e2e.log npm run test:e2e`.
   The Coach page (`coach-page.js`, sheets in `coach-sheets.js`, logic in
   `coach.js`) draws `/api/coach`: goals (only the user writes them; an
   agent's `proposed` ones wait for Accept or Dismiss), the newest status and
-  focus, open concerns and the journal. Its writes, and notes written on the
+  focus, open concerns and the journal, under "Since you last looked"
+  (`/api/coach/news`, `coach-news.js`): what agents did since the user marked
+  it seen (`users.coach_seen_at`), which `/api/me` counts for the dot on the
+  Coach tab (`showCoachNews` in `nav.js`). Its writes, and notes written on the
   Calendar, go straight through `send` rather than the outbox.
 - `public/sw.js` the service worker: the shell cached as one unit per release
   (`app/models/release.rb`), the API network first with a capped cache as the

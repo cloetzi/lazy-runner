@@ -17,6 +17,40 @@ module Api
       render json: CoachBoard.new(today: client_today)
     end
 
+    # What agents did since the user last looked: "Since you last looked".
+    # @description Since `since` (when the user last marked it seen with
+    #   POST /api/coach/seen, else the last 14 days): the changes agents
+    #   made to the plan, not taken back, newest first, each with whether
+    #   it can be taken back on `today` (the sender's own date); the notes
+    #   they wrote and the goals they proposed, newest first; and the
+    #   activities they copied, counted by agent, with their first and last
+    #   day and the sources they came from. `latest` is when the newest of them was
+    #   made (null when there is nothing), the time to mark seen.
+    # @param today? {Date} The sender's own date, which undo counts from.
+    # @response 200 #/components/schemas/CoachNews
+    # @response 400 #/components/responses/BadRequest
+    def news
+      render json: CoachNews.new(Current.user, today: client_today)
+    end
+
+    # Mark "Since you last looked" as seen.
+    # @description Up to `until` (the `latest` GET /api/coach/news gave, so
+    #   anything made after the user read it is still news), else now; never
+    #   later than now, and an earlier time than the one marked already
+    #   changes nothing. `count` is what is still news after it, which the
+    #   Coach tab's dot shows. Only the user marks it seen: with an API
+    #   token, 403.
+    # @request { until?: DateTime }
+    # @response 200 { coach_seen_at: DateTime, count: Integer }
+    # @response 400 #/components/responses/BadRequest
+    # @response 403 #/components/responses/Forbidden
+    def seen
+      raise Forbidden, "only the user marks what agents did as seen, in the app" if Current.agent_name
+
+      user = Current.user.coach_seen!(client_time(:until) || Time.now)
+      render json: { coach_seen_at: user.coach_seen_at, count: CoachNews.new(user).count }
+    end
+
     # The coach's notes, newest first, a page at a time.
     # @description `kind` keeps those kinds and `author` those authors (each
     #   one or several, comma-separated); `journal=true` keeps the journal

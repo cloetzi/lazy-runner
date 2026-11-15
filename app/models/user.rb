@@ -63,6 +63,14 @@ class User < Record
 
   def welcomed! = this.update(welcomed_at: Time.now)
 
+  # Marks what agents did up to `time` (never later than now) as seen on
+  # Coach; an earlier time than the one marked already changes nothing.
+  def coach_seen!(time = Time.now)
+    time = [time, Time.now].min
+    this.where(Sequel.|({ coach_seen_at: nil }, Sequel[:coach_seen_at] < time)).update(coach_seen_at: time)
+    refresh
+  end
+
   # Whether they can sign in with a password: a hash in Rodauth's table
   # (someone who joined with the OIDC provider may have none).
   def password? = !db[:account_password_hashes].where(id:).empty?

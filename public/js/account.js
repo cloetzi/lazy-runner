@@ -110,7 +110,7 @@ export async function whoIsSignedIn(fetchFn = fetch) {
   // own password prompt.
   if (response.status === 401 || response.status === 407) return GATE;
   if (!response.ok || !body?.user) return { offline: true };
-  return { user: body.user };
+  return { user: body.user, coachUnseen: body.coach_unseen ?? 0 };
 }
 
 // The app's own "nobody is signed in": its error shape, not just any 401

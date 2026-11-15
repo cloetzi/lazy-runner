@@ -38,6 +38,7 @@ const inSession = () => document.body.dataset.focus === "";
 async function askAccount({ again = false } = {}) {
   if (again && inSession()) return;
   checkedAt = Date.now();
+  const asked = performance.now();
   const me = await checkSignedIn({ storage, caches: globalThis.caches });
   if (again && inSession()) return;
   if (me.signedOut || me.user?.password_change_required) return location.assign(signInHref(location, { gate: me.gate }));
@@ -50,6 +51,7 @@ async function askAccount({ again = false } = {}) {
   showOffline();
   const { switched } = await adoptAccount(me.user, { storage, caches: globalThis.caches });
   if (switched) return location.reload();
+  showCoachNews(me.coachUnseen, asked);
   setTimeout(ahead, AHEAD_AFTER_MS);
   if (!again) keepData();
 }
@@ -111,6 +113,28 @@ function showOffline() {
   // The page queues changes while offline: keep the count current.
   if (shown && !offlinePoll) offlinePoll = setInterval(showOffline, 5000);
   if (!shown && offlinePoll) offlinePoll = clearInterval(offlinePoll) ?? null;
+}
+
+// A dot on the Coach tab and its sidebar link while agents did something
+// the user hasn't looked at yet (GET /api/me's coach_unseen, the Coach
+// page's "Since you last looked"), named for a screen reader: "Coach, 3
+// new". The Coach page calls it again once it is marked seen. `at` is when
+// the count was asked for: an older answer arriving late changes nothing.
+let newsAt = -1;
+export function showCoachNews(count = 0, at = performance.now()) {
+  if (at < newsAt) return;
+  newsAt = at;
+  for (const link of document.querySelectorAll('[data-page="coach"]')) {
+    link.classList.toggle("has-news", count > 0);
+    let news = link.querySelector(".nav-news");
+    if (count > 0) {
+      news ??= link.appendChild(Object.assign(document.createElement("span"), { className: "visually-hidden nav-news" }));
+      const text = `, ${count} new`;
+      if (news.textContent !== text) news.textContent = text;
+    } else {
+      news?.remove();
+    }
+  }
 }
 
 // The app shell. On wide screens a sidebar with every page stays on the

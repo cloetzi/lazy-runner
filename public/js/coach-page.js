@@ -1,4 +1,4 @@
-import { mountNav } from "./nav.js";
+import { mountNav, showCoachNews } from "./nav.js";
 import { getJson, loadProblem, offline, paths, sendChange, STALE_NOTE } from "./api.js";
 import { escape, icon } from "./html.js";
 import { localToday, dayName, shortDay, longDay, STATUS_LABELS, shownStatus } from "./calendar.js";
@@ -9,8 +9,11 @@ import {
   addGoalRequest, changeGoalRequest, deleteGoalRequest, acceptRequest, dismissRequest, movedPosition,
 } from "./coach.js";
 import { openNoteSheet, openGoalSheet, openResolveSheet, openTidySheet, aboutChoices } from "./coach-sheets.js";
+import { newsGroups, hasNews, newsCount, seenRequest } from "./coach-news.js";
+import { undoButton, undoRequest } from "./plan-changes.js";
 
-// The Coach tab: the goals that anchor everything (only the user changes
+// The Coach tab: what agents did since you last looked (each change with a
+// way to its day and back), the goals that anchor everything (only the user changes
 // them; an agent's proposals wait here to be accepted or dismissed), the
 // current status and focus, this week as a plain list, open concerns, and
 // the notes. Every entry says who wrote it: you, a coach you named, or the
@@ -23,6 +26,9 @@ mountNav("coach");
 
 const state = {
   board: null,
+  news: null, // GET /api/coach/news: what agents did since the user last looked
+  newsStale: false,
+  busy: false, // marking seen or taking a change back is on its way
   stale: false,
   failed: null,
   filter: "all", // the journal's filter, a key of JOURNAL_FILTERS
@@ -42,7 +48,7 @@ const unit = () => (storage ? preferredDistanceUnit(storage) : "km");
 
 async function load() {
   try {
-    const [{ data, stale }] = await Promise.all([getJson(paths.coach(today())), loadJournal(), loadEarlier()]);
+    const [{ data, stale }] = await Promise.all([getJson(paths.coach(today())), loadJournal(), loadEarlier(), loadNews()]);
     state.board = data;
     state.stale = stale;
     state.failed = null;
@@ -50,6 +56,36 @@ async function load() {
     state.failed = loadProblem("the coach board", error);
   }
   render();
+}
+
+// What agents did since the user last looked. Without it (offline with no
+// copy) the card just doesn't show. A fresh answer sets the Coach tab's dot.
+async function loadNews() {
+  const asked = performance.now();
+  try {
+    const { data, stale } = await getJson(paths.coachNews(today()));
+    state.news = data;
+    state.newsStale = stale;
+    if (!stale) showCoachNews(newsCount(data), asked);
+  } catch {
+    state.news = null;
+  }
+}
+
+// Marks it seen, or takes a change back, now; then reads the news again,
+// and the whole board after an undo (the week may have changed).
+async function newsChange(request, { board = false } = {}) {
+  if (state.busy) return;
+  state.busy = true;
+  render();
+  try {
+    const problem = await sendChange(request);
+    if (!problem || !offline()) await (board ? load() : loadNews());
+    if (problem) alert(problem);
+  } finally {
+    state.busy = false;
+    render();
+  }
 }
 
 // The journal's first page under the filter. The latest notes may have
@@ -123,7 +159,7 @@ function render() {
   const written = everyNote();
   state.agentSeen = board.proposals.length > 0 || written.some((note) => note.author_kind === "llm");
   const empty = !board.goals.length && !board.proposals.length && written.length === 0;
-  $("coach-board").innerHTML = [empty ? introCard() : "", goalsCard(board), currentCard("status", board.status), currentCard("focus", board.focus),
+  $("coach-board").innerHTML = [newsCard(), empty ? introCard() : "", goalsCard(board), currentCard("status", board.status), currentCard("focus", board.focus),
     weekCard(board), concernsCard(board), notesCard(board)].join("");
 }
 
@@ -137,6 +173,30 @@ function introCard() {
         <button class="primary small" data-add-goal>${icon("plus")}Add a goal</button>
         <a class="button secondary small" href="/settings.html#api-tokens">Connect an assistant</a>
       </div>
+    </section>`;
+}
+
+// "Since you last looked": what each agent did, a line each, with Show (its
+// day on the Calendar) and the button that takes a change back. Mark as seen
+// clears it, up to the newest thing shown.
+function newsCard() {
+  if (!hasNews(state.news)) return "";
+  // A copy kept on the device can't say what can still be taken back.
+  const live = !state.newsStale;
+  const groups = newsGroups(state.news, { today: today(), unit: unit() }).map((g) => `
+    <div class="news-group">
+      <p class="author"><span class="author-badge llm" aria-hidden="true">${icon("agent")}</span><strong>${escape(g.who)}</strong><span class="muted"> · ${escape(g.when)}</span></p>
+      <ul class="news-items">${g.items.map((item) => `
+        <li>
+          <span>${escape(item.text)}</span>
+          ${item.href ? `<a class="link" href="${escape(item.href)}" aria-label="${escape(`Show ${item.title} on the calendar`)}">Show</a>` : ""}
+          ${live && item.undo ? undoButton(item.undo, item.title, { classes: "link", disabled: state.busy }) : ""}
+        </li>`).join("")}</ul>
+    </div>`).join("");
+  return `
+    <section class="card coach-card coach-news" aria-labelledby="news-title">
+      <header class="coach-card-head"><h2 id="news-title">Since you last looked</h2><button class="secondary small" data-seen${state.busy || !live ? " disabled" : ""}>Mark as seen</button></header>
+      ${groups}
     </section>`;
 }
 
@@ -407,6 +467,11 @@ $("coach-board").addEventListener("click", (event) => {
   if (!target || target.disabled) return;
   const d = target.dataset;
   const find = (id) => everyNote().find((n) => String(n.id) === id);
+  if (d.seen !== undefined) return newsChange(seenRequest(state.news));
+  if (d.undo) {
+    const change = state.news?.changes.find((c) => String(c.id) === d.undo);
+    return change && newsChange(undoRequest(change, today()), { board: true });
+  }
   if (d.addGoal !== undefined) return editGoal();
   if (d.goal) return editGoal(state.board.goals.find((g) => String(g.id) === d.goal));
   if (d.goalUp) return moveGoal(Number(d.goalUp), -1);

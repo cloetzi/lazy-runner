@@ -26,7 +26,7 @@ const capital = (text) => text[0].toUpperCase() + text.slice(1);
 // How a routine's or session's changed fields read, before and after: "16
 // km → 18 km", "the note". Fields a person would not recognise by their
 // values (a note, a workout) are only named.
-function fieldChanges(change, unit) {
+export function fieldChanges(change, unit) {
   const was = change.was ?? {};
   const now = change.now ?? {};
   const both = (format) => (key) => `${format(was[key])} → ${format(now[key])}`;
@@ -156,12 +156,13 @@ export function changeHtml(change, { today, unit, tag = "span" } = {}) {
 // The button that takes `change` back, named for a screen reader by what
 // it does to `title`; empty when it can't be taken back. On a row it
 // carries the change's id in data-undo; in a sheet (`sheet`) it closes the
-// sheet with "undo". `classes` are the button's (a link on a day's line).
-export function undoButton(change, title = change?.title, { sheet = false, classes = "secondary small" } = {}) {
+// sheet with "undo". `classes` are the button's (a link on a day's line);
+// `disabled` while another change is on its way.
+export function undoButton(change, title = change?.title, { sheet = false, classes = "secondary small", disabled = false } = {}) {
   const label = undoLabel(change);
   if (!label) return "";
   const how = sheet ? `value="undo"` : `type="button" data-undo="${change.id}"`;
-  return `<button class="${classes}" ${how} aria-label="${escape(undoName(change, title))}">${escape(label)}</button>`;
+  return `<button class="${classes}" ${how}${disabled ? " disabled" : ""} aria-label="${escape(undoName(change, title))}">${escape(label)}</button>`;
 }
 
 // Taking a change back, on the device's own day (sent now, not queued: it

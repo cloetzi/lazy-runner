@@ -96,9 +96,10 @@ components:
         path: { type: string, description: "The link on this server, /signin.html#invite/<token>." }
     Me:
       type: object
-      required: [user]
+      required: [user, coach_unseen]
       properties:
         user: { $ref: "#/components/schemas/User" }
+        coach_unseen: { type: integer, description: "What agents did since the user last looked at Coach (GET /api/coach/news): the Coach tab's dot." }
     SignedOut:
       description: Nobody is signed in on this device.
       allOf:
@@ -880,6 +881,28 @@ components:
       required: [changes]
       properties:
         changes: { type: array, items: { $ref: "#/components/schemas/PlanChange" } }
+    CoachNews:
+      type: object
+      required: [since, latest, changes, notes, goals, activities]
+      properties:
+        since: { type: string, format: date-time, description: "When the user last marked it seen, else 14 days ago." }
+        latest: { type: string, format: date-time, nullable: true, description: "When the newest of these was made, the time POST /api/coach/seen takes; null when there is nothing." }
+        changes: { type: array, description: "Agents' changes to the plan, not taken back, newest first.", items: { $ref: "#/components/schemas/PlanChange" } }
+        notes: { type: array, description: "Notes agents wrote, newest first.", items: { $ref: "#/components/schemas/CoachNote" } }
+        goals: { type: array, description: "Goals agents proposed, still waiting, newest first.", items: { $ref: "#/components/schemas/Goal" } }
+        activities:
+          type: array
+          description: The activities agents copied, by the agent.
+          items:
+            type: object
+            required: [agent_name, count, from, to, sources, created_at]
+            properties:
+              agent_name: { type: string, nullable: true, description: The agent's API token name; null for one written before agents were named. }
+              count: { type: integer }
+              from: { type: string, format: date, description: The first day of them. }
+              to: { type: string, format: date, description: The last day of them. }
+              sources: { type: array, items: { type: string }, description: Where they came from (their `source`). }
+              created_at: { type: string, format: date-time, description: When the newest of them was copied. }
     PlanUndo:
       type: object
       required: [change, undone]

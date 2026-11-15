@@ -113,6 +113,7 @@ test("builds each page's address the one way, for what is fetched ahead to match
   // Under way since yesterday counts too.
   assert.equal(paths.upcoming("2026-11-14"), "/api/sessions?status=planned,in_progress&from=2026-11-13");
   assert.equal(paths.coach("2026-11-14"), "/api/coach?today=2026-11-14");
+  assert.equal(paths.coachNews("2026-11-14"), "/api/coach/news?today=2026-11-14");
   assert.equal(paths.history("2026-11-14"), "/api/history?days=28&date=2026-11-14");
   assert.equal(paths.workout(4), "/api/workouts/4");
 });

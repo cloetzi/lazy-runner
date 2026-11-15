@@ -106,8 +106,14 @@ as null when it has no value (`nullable`).
   latest change to an item back (409 with why when it can't), recorded as the
   user's change, and only the user takes one back (403 with a token).
   `GET /api/calendar` gives each session and routine the latest
-  change an agent made to it (`change`) and the sessions it moved away or
-  removed this week on (`plan_changes`).
+  change an agent made to it (`change`), while the user hasn't changed it
+  since, and the sessions it moved away or removed this week on
+  (`plan_changes`).
+- **Since you last looked** (`GET /api/coach/news`): what agents did since
+  the user last marked it seen (`POST /api/coach/seen` with the `latest` it
+  gave, so nothing made meanwhile is lost; only the user marks it): plan
+  changes, notes, proposed goals and copied activities. `GET /api/me`
+  counts them (`coach_unseen`) for the dot on the Coach tab.
 - **Weights** come back in the exercise's unit: the one the user's gear for
   it comes in (`unit` in `/api/equipment`, theirs to set). A weight sent in the other
   unit is converted and snapped to an owned weight. The `unit` setting
@@ -264,7 +270,7 @@ back through the API.
 | Today | `GET /today` (the day's session, framed and flattened for the player) |
 | Workouts | `GET/POST /workouts`, `GET/PATCH/PUT/DELETE /workouts/:id`, `POST /workouts/:id/duplicate`, `GET /programs` |
 | Calendar | `GET /calendar` (sessions, activities and dated notes over a range) |
-| Coach | `GET /coach`, `GET/POST /coach/notes`, `PATCH/DELETE /coach/notes/:id`, `GET/POST /goals`, `PATCH/DELETE /goals/:id`, `POST /goals/:id/accept`, `POST /goals/:id/dismiss` |
+| Coach | `GET /coach`, `GET /coach/news`, `POST /coach/seen`, `GET/POST /coach/notes`, `PATCH/DELETE /coach/notes/:id`, `GET/POST /goals`, `PATCH/DELETE /goals/:id`, `POST /goals/:id/accept`, `POST /goals/:id/dismiss` |
 | Activities | `GET/POST /activities`, `PATCH/DELETE /activities/:id` |
 | Sessions | `GET/POST /sessions`, `GET/PATCH/DELETE /sessions/:id`, `POST /sessions/:id/sets`, `POST /sessions/:id/complete`, `PATCH /sessions/:id/completion` |
 | Exercises | `GET /exercises`, `GET /exercises/:id`, `GET /exercises/:id/alternatives`, `GET/PATCH/PUT /exercises/:id/weight` |

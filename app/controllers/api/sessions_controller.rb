@@ -287,16 +287,6 @@ module Api
       [planned, params[:block_label].presence || step&.block&.label, { reps:, seconds:, weight: }]
     end
 
-    # A time the client sent (ISO 8601), never later than now; nil when not
-    # given.
-    def client_time(key)
-      return if params[key].blank?
-
-      [Time.iso8601(params[key].to_s), Time.now].min
-    rescue ArgumentError
-      raise BadRequest.param(key, "must be a time as ISO 8601")
-    end
-
     # Where on its day a session goes, 1 first; nil when not given.
     def position_param
       return if params[:position].blank?
