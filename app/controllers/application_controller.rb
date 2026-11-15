@@ -37,6 +37,8 @@ class ApplicationController < RageController::API
     # Signed in with an API token: its name, for what an agent writes
     # (`created_by: llm`, Record::AgentSigned).
     Current.agent_name = request.env["lazy_runner.agent_name"]
+    # The plan changes one request makes share a batch (PlanChange).
+    Current.plan_batch = nil
   end
 
   # A user given a temporary password (the owner reset theirs) chooses
@@ -69,7 +71,7 @@ class ApplicationController < RageController::API
     render_error :forbidden, "forbidden", error.message
   end
 
-  rescue_from Session::Settled, Routine::Settled, Workout::Running, Goal::NotProposed, CoachNote::NotAConcern do |error|
+  rescue_from Session::Settled, Routine::Settled, Workout::Running, Goal::NotProposed, CoachNote::NotAConcern, PlanChange::NotUndoable do |error|
     render_error :conflict, "conflict", error.message
   end
 

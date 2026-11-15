@@ -99,6 +99,15 @@ as null when it has no value (`nullable`).
   (`GET` counts, `POST /api/coach/tidy` deletes) clears the agent's notes
   written before a day, keeping the current status and focus and the open
   concerns.
+- **Plan changes** are recorded by the models (`GET /api/plan_changes`):
+  every session or routine planned, moved, removed, changed or ended, by the
+  user (`manual`) or an agent with a token (`llm`), with the fields before
+  and after and the reason given. `POST /api/plan_changes/:id/undo` takes the
+  latest change to an item back (409 with why when it can't), recorded as the
+  user's change, and only the user takes one back (403 with a token).
+  `GET /api/calendar` gives each session and routine the latest
+  change an agent made to it (`change`) and the sessions it moved away or
+  removed this week on (`plan_changes`).
 - **Weights** come back in the exercise's unit: the one the user's gear for
   it comes in (`unit` in `/api/equipment`, theirs to set). A weight sent in the other
   unit is converted and snapped to an owned weight. The `unit` setting
@@ -210,6 +219,7 @@ change reaches every future session of it.
 | `list_sessions` | The calendar over a date range (as `GET /api/sessions`), each session with its workout, minutes and completion |
 | `list_activities` | Activities over a date range (as `GET /api/activities`), with the user's distance unit |
 | `list_routines` | Routines with days in a date range (by default the 7 days before today and the 21 from today on), the days with their state (tentative, confirmed, done, skipped, missed) and raw counts per state |
+| `list_plan_changes` | Changes to the plan since a day (14 days back by default), by the user, an agent or both, each with who, when, the days, the fields before and after, the reason and whether the user took it back |
 | `list_examples` | The example programs (as `GET /api/examples`) |
 | `create_workout` | A new workout with its whole structure (as `POST /api/workouts`), marked `source: llm`; steps name exercises by slug; `warnings` name steps with gear or a weight the user doesn't own |
 | `import_example` | An example program into the user's (as `POST /api/examples/:slug/import`), marked `source: llm` |
@@ -219,12 +229,12 @@ change reaches every future session of it.
 | `set_exercise_weight` | The remembered weight (as `PUT /api/exercises/:id/weight`), for every workout with the exercise |
 | `update_equipment` | Whether the user owns an item, and its weights and unit (as `PATCH /api/equipment/:id`) |
 | `plan_sessions` | Up to 28 sessions on days from today on, all or nothing, marked `created_by: llm` |
-| `move_session` | A planned or missed session to another day or place, or a new note |
-| `remove_session` | A planned or missed session off the calendar |
+| `move_session` | A planned or missed session to another day or place, with a `reason` (required for the user's), or a new note on one the assistant planned |
+| `remove_session` | A planned or missed session off the calendar, with a `reason` (required for the user's) |
 | `log_activities` | Up to 500 activities, all or nothing (as `POST /api/activities`), marked `created_by: llm`; distances in metres or with a unit (`"5 mi"`), no RPE or note |
 | `plan_routine` | A weekly or one-off routine for a sport or a workout, always tentative, marked `created_by: llm`; distance in metres or with a unit |
-| `update_routine` | A routine the assistant planned (as `PATCH /api/routines/:id`, so a reschedule with days gone by starts a new one) |
-| `end_routine` | Ends a routine the assistant planned from today on, or deletes one without days gone by |
+| `update_routine` | A routine the assistant planned (as `PATCH /api/routines/:id`, so a reschedule with days gone by starts a new one), with an optional `reason` |
+| `end_routine` | Ends a routine the assistant planned from today on, or deletes one without days gone by, with an optional `reason` |
 | `get_coach_board` | Goals (active, proposed, dismissed), the current status and focus, open concerns, the latest notes and this week, routine days included |
 | `list_coach_notes` | Every note, newest first, by kind, author or day, paged with `before` |
 | `write_coach_note` | A status, focus, concern or note, marked `author_kind: llm` and signed with the token's name (`author_name` sent is ignored); the same note again isn't written twice, and an agent writes at most 20 a day |

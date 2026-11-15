@@ -56,12 +56,14 @@ class Routine < Record
   # Plans a routine from `attributes` (FIELDS), starting `today` unless it
   # says otherwise. `confirmed` makes a one-off's day confirmed in the same
   # write ("Planned" rather than "Maybe").
-  def self.plan!(attributes, today: Time.zone.today, created_by: "manual", confirmed: false)
-    routine = new(created_by:, today:)
+  # `agent_name` names the agent of one planned again by an undo.
+  def self.plan!(attributes, today: Time.zone.today, created_by: "manual", confirmed: false, agent_name: nil)
+    routine = new(created_by:, agent_name:, today:)
     routine.set(attributes.to_h.transform_keys(&:to_sym).slice(*FIELDS))
     routine.starts_on ||= today
     db.transaction do
       routine.save
+      PlanChange.record!(routine, "planned", to_date: routine.starts_on)
       if confirmed
         raise Settled, "only a one-off can be planned as confirmed; confirm a weekly routine's days one at a time" unless routine.one_off?
 
@@ -119,8 +121,13 @@ class Routine < Record
 
   # "I'm going": the day is confirmed. A workout routine's day is planned as a
   # session of its workout (Session.plan!), so it needs to be today or later,
-  # as a confirmed sport day does.
+  # as a confirmed sport day does. A state of the day, so no change to the
+  # plan is recorded (PlanChange), not even for the session it plans.
   def confirm!(date)
+    PlanChange.quietly { confirm_day(date) }
+  end
+
+  private def confirm_day(date)
     day = day(date)
     return day if day.state == "confirmed"
 
@@ -195,8 +202,13 @@ class Routine < Record
   # Makes a confirmed or skipped day tentative again where it shows: a move
   # stays (moving it back to its own date undoes that), and a session planned
   # for it is taken off the calendar (Session::Settled once it has started).
-  # A day gone by stays as it was.
+  # A day gone by stays as it was. Like confirm!, it records no change to the
+  # plan.
   def reset!(date)
+    PlanChange.quietly { reset_day(date) }
+  end
+
+  private def reset_day(date)
     day = day(date)
     raise Settled, "#{day.on.iso8601} has gone by; it stays as it was" if day.on < today
 
@@ -226,6 +238,7 @@ class Routine < Record
     draft.today = today
     draft.send(:normalize)
     rescheduled = SCHEDULE.any? { draft.public_send(it) != public_send(it) }
+    before = field_values
 
     db.transaction do
       if rescheduled && history?
@@ -235,7 +248,9 @@ class Routine < Record
         draft.starts_on = [draft.starts_on, today].max
         draft.save
         update(ends_on: today - 1)
-        carry_days(today, draft)
+        # One change to the user: the new routine is the one changed.
+        draft.send(:record_change, before)
+        PlanChange.because("its routine changed") { carry_days(today, draft) }
         draft
       else
         raise Settled, "routine #{id} ended on #{ends_on.iso8601}; plan a new one" if ended? && changes.key?(:ends_on) && draft.ends_on != ends_on
@@ -243,11 +258,15 @@ class Routine < Record
         reach = rescheduled || draft.ends_on != ends_on
         set(changes)
         save_changes
-        carry_days(today, self) if reach
+        record_change(before)
+        PlanChange.because("its routine changed") { carry_days(today, self) } if reach
         self
       end
     end
   end
+
+  # What a client may send, as the routine has it now.
+  def field_values = FIELDS.to_h { [it, public_send(it)] }
 
   # Stops the routine from today on: one with days before today ends
   # yesterday and keeps them; one without is deleted. Its days from today on
@@ -259,17 +278,22 @@ class Routine < Record
       if ended?
         next :ended unless erase
 
+        # Its history goes, which is not a change to the plan.
         destroy
         next :deleted
       end
-      if history?
-        update(ends_on: today - 1)
-        carry_days(today, nil)
-        :ended
-      else
-        carry_days(starts_on, nil)
-        destroy
-        :deleted
+      # Its id too, to find the sessions that went with it.
+      PlanChange.record!(self, "ended", from_date: today, was: field_values.merge(created_by:, agent_name:, id:))
+      PlanChange.because("its routine ended") do
+        if history?
+          update(ends_on: today - 1)
+          carry_days(today, nil)
+          :ended
+        else
+          carry_days(starts_on, nil)
+          destroy
+          :deleted
+        end
       end
     end
   end
@@ -336,6 +360,17 @@ class Routine < Record
   end
 
   def one_off_shape? = weekdays.is_a?(Array) && weekdays.empty?
+
+  # Records what changed since `before` (fields as they were) as one change
+  # to the plan, from the first day it reaches.
+  def record_change(before)
+    after = field_values
+    changed = FIELDS.reject { before[it] == after[it] }
+    return if changed.empty?
+
+    day = [starts_on, today].max
+    PlanChange.record!(self, "changed", from_date: day, to_date: day, was: before.slice(*changed), now: after.slice(*changed))
+  end
 
   # One of the user's workouts that isn't archived: another user's is not
   # found, as a lookup would say.

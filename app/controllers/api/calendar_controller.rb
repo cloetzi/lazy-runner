@@ -13,6 +13,12 @@ module Api
     #   Without dates, the past 28 days up to today;
     #   with only `from` the range runs 28 days on, with only `to` 28 days
     #   back. A range is at most 366 days, so a month grid fits.
+    #   Each session and routine carries `change`, the latest change an
+    #   agent made to it that was not taken back (null if none), with
+    #   whether it can be taken back now (`undoable`). `plan_changes` are
+    #   the sessions an agent moved away from a day in the range or removed
+    #   from it, not taken back, for the days of this week on (until their
+    #   week is over), by the day they left (`from_date`).
     # @param from? {Date} The first day.
     # @param to? {Date} The last day.
     # @param today? {Date} The device's own date, which routine days read against.
@@ -20,13 +26,17 @@ module Api
     # @response 400 #/components/responses/BadRequest
     def show
       days = DateRange.resolve(params[:from], params[:to])
-      routines = RoutineCalendar.new(days, today: client_today)
+      today = client_today
+      routines = RoutineCalendar.new(days, today:)
+      sessions = Session.summarized.where(date: days).in_order.all
+      changes = PlanChange::Calendar.new(days, sessions:, routines: routines.routines, today:)
       render json: {
-        sessions: Session.summarized.where(date: days).in_order.all,
+        sessions: sessions.map { it.as_json.merge(change: changes.of(it)) },
         activities: Activity.where(date: days).in_order.all,
         notes: CoachNote.eager(:activity, session: :workout).on_days(days).all,
-        routines: routines.routines,
-        routine_days: routines.days
+        routines: routines.routines.map { it.as_json.merge(change: changes.of(it)) },
+        routine_days: routines.days,
+        plan_changes: changes.lines
       }
     end
   end

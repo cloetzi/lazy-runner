@@ -42,6 +42,10 @@ erDiagram
     routines ||--o{ routine_days : "changed on"
     routines |o--o{ sessions : "confirmed as"
     routines |o--o{ activities : "linked by hand"
+    users ||--o{ plan_changes : "changed plan"
+    sessions |o--o{ plan_changes : "changed in"
+    routines |o--o{ plan_changes : "changed in"
+    plan_changes |o--o| plan_changes : "taken back by"
     users ||--o| account_password_hashes : "proves with"
     users ||--o| account_login_failures : "failed sign-ins"
     users ||--o| account_lockouts : "locked by"
@@ -243,6 +247,24 @@ erDiagram
         string status "confirmed | skipped | moved"
         date moved_to "the day it shows on instead"
     }
+    plan_changes {
+        int id PK
+        int user_id FK
+        string changed_by "manual | llm (with an API token)"
+        string agent_name "the agent's API token name, when llm"
+        string item_kind "session | routine"
+        int session_id FK "set null when deleted"
+        int routine_id FK "set null when deleted"
+        string title "the item's name at the time"
+        string action "planned | moved | removed | changed | ended"
+        date from_date "the day it left"
+        date to_date "the day it joined"
+        json was "the fields before; a removal's, all to put it back"
+        json now "the fields after"
+        text reason
+        string batch "shared by one request or tool call"
+        int undoes_id FK,UK "the change it takes back"
+    }
     goals {
         int id PK
         int user_id FK
@@ -363,6 +385,10 @@ erDiagram
   read (`RoutineCalendar`); `routine_days` holds only the days the user
   changed, a workout routine's confirmed day is a planned session naming it,
   and an activity can be linked to a day by hand.
+- **Plan changes:** `plan_changes`, one row per session or routine planned,
+  moved, removed, changed or ended, by the user or an agent, with the fields
+  before and after and the reason given. An undo is a row too, pointing at the
+  change it takes back.
 - **Coach board:** `goals` (what the user trains for; only they write active
   ones, an agent proposes) and `coach_notes` (status, focus, concerns and a
   journal, by the user, a coach they name, or an agent). The current status
@@ -384,6 +410,7 @@ erDiagram
 | Coach notes | The user or a coach they name in the app; an agent through MCP (`author_kind: llm`) | The agent changes, deletes and resolves only its own notes (at most 20 new a day); the app doesn't change an agent's note, but deletes it. |
 | Activities | The app, or a script through `POST /api/activities`, or an agent through MCP `log_activities` (`created_by: llm`) | One from elsewhere is matched by `source` + `external_id` and updated in place; the person's `rpe` and `note` are never overwritten by a resend. |
 | Routines | The app, or an agent through MCP (`created_by: llm`) | The agent changes and ends only its own, and never confirms, skips or moves a day. Days gone by never change: rescheduling one with past days ends it yesterday and starts a new one. |
+| Plan changes | Written by the `Session` and `Routine` models on every change to the plan, whoever makes it | Kept for good. `llm` for a request or MCP call made with an API token. Only the latest change to an item is taken back, and only into a day not gone by (`POST /api/plan_changes/:id/undo`). |
 | `users`, `invites` | The setup code (the owner), then the owner's invites | Removing a user removes everything of theirs. Invites belong to the install, not a user. |
 
 ## Rules worth knowing
@@ -413,11 +440,19 @@ erDiagram
   the API token it connected with (`agent_name`, a note's `author_name`), so
   the app shows one name for it everywhere; rows written before that have
   none and show a default.
+- **The plan keeps its history.** Every change to a planned session (planned,
+  moved to another day, removed while planned or missed, note or parts
+  changed) or a routine (planned, changed, ended) is a `plan_changes` row,
+  written by the models, so a session that goes because its workout was
+  archived or its routine changed is recorded too. A routine day confirmed or
+  made tentative, a session started, skipped or done, and a finished session
+  deleted are not changes to the plan. Moving a session keeps its note: the
+  reason goes on the change.
 - **Distances are metres.** `distance_m` and `climb_m` are whole metres;
   `settings.distance_unit` (km or mi) only changes how they are shown.
 - **Constraints live in the database too:** check constraints on `steps`,
   `blocks`, `workouts`, `programs`, `sessions`, `activities`, `goals`,
-  `coach_notes`, `routines`, `routine_days` and `settings`,
+  `coach_notes`, `routines`, `routine_days`, `plan_changes` and `settings`,
   a partial unique index on `activities (user_id, source, external_id)`,
   partial unique indexes on `sessions` and `activities (routine_id,
   routine_date)`, a

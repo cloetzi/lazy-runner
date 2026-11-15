@@ -10,6 +10,11 @@ class Current < ActiveSupport::CurrentAttributes
   # The name of the API token a request or an MCP tool call came with: what
   # the agent is called on what it writes (Record::AgentSigned, CoachNote).
   attribute :agent_name
+  # How the plan changes made now are recorded (PlanChange): the id shared by
+  # the changes of one request or tool call, the reason given for them, the
+  # change an undo takes back, and whether to record nothing (a routine day
+  # confirmed or made tentative again is a state, not a plan change).
+  attribute :plan_batch, :plan_reason, :plan_undo, :plan_quiet
 
   class Missing < StandardError; end
   # A record saved or deleted while someone else is signed in.

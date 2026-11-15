@@ -50,6 +50,8 @@ Rage.routes.draw do
     resources :activities, only: %i[index create destroy]
     patch "activities/:id", to: "activities#update"
     get "calendar", to: "calendar#show"
+    get "plan_changes", to: "plan_changes#index"
+    post "plan_changes/:id/undo", to: "plan_changes#undo"
     resources :routines, only: %i[index create destroy]
     patch "routines/:id", to: "routines#update"
     put "routines/:id/days/:date", to: "routines#update_day"

@@ -86,7 +86,7 @@ describe "MCP server" do
 
     it "lists the read tools marked read-only, then the write tools" do
       reads = %w[search_exercises get_exercise list_equipment list_workouts get_workout training_summary list_sessions list_activities list_routines
-        list_examples get_coach_board list_coach_notes]
+        list_plan_changes list_examples get_coach_board list_coach_notes]
       writes = %w[create_workout import_example update_workout duplicate_workout archive_workout set_exercise_weight update_equipment plan_sessions move_session
         remove_session log_activities plan_routine update_routine end_routine write_coach_note update_coach_note delete_coach_notes resolve_concern propose_goal]
 
@@ -797,17 +797,32 @@ describe "MCP server" do
         missed = session_on("2026-10-18", "planned")
         there = session_on("2026-10-21", "planned")
 
-        answer = call_tool("move_session", session_id: missed.id, date: "2026-10-21", position: 1, note: "Moved after the race")
+        answer = call_tool("move_session", session_id: missed.id, date: "2026-10-21", position: 1, reason: "Moved after the race")
 
-        _(answer["session"].values_at("date", "position", "status", "note")).must_equal ["2026-10-21", 1, "planned", "Moved after the race"]
+        _(answer["session"].values_at("date", "position", "status")).must_equal ["2026-10-21", 1, "planned"]
         _(answer["days"].transform_values { |day| day.map { it["id"] } }).must_equal({ "2026-10-18" => [], "2026-10-21" => [missed.id, there.id] })
       end
 
-      it "keeps the note unless one is given" do
-        planned = session_on("2026-10-21", "planned", note: "Legs")
+      it "keeps the note of one it planned unless one is given" do
+        planned = session_on("2026-10-21", "planned", note: "Legs", created_by: "llm")
 
         _(call_tool("move_session", session_id: planned.id, date: "2026-10-22")["session"]["note"]).must_equal "Legs"
         _(call_tool("move_session", session_id: planned.id, note: nil)["session"].key?("note")).must_equal false
+      end
+
+      it "moves the user's session only with a reason, which goes on the change while their note stays" do
+        theirs = session_on("2026-10-21", "planned", note: "Mine")
+
+        _(_ { call_tool("move_session", session_id: theirs.id, date: "2026-10-22") }.must_raise(McpToolError).message).must_include "give a `reason`"
+        _(_ { call_tool("move_session", session_id: theirs.id, date: "2026-10-22", reason: "Rest", note: "Theirs") }.must_raise(McpToolError).message).must_include "their note stays"
+
+        other = session_on("2026-10-21", "planned")
+        _(call_tool("move_session", session_id: other.id, position: 1)["session"]["position"]).must_equal 1
+        call_tool("move_session", session_id: theirs.id, date: "2026-10-22", reason: "Legs fresh for Sunday")
+
+        change = PlanChange.last
+        _(change.values.values_at(:action, :changed_by, :agent_name, :reason, :from_date, :to_date)).must_equal ["moved", "llm", "Trainer agent", "Legs fresh for Sunday", Date.new(2026, 10, 21), Date.new(2026, 10, 22)]
+        _(theirs.refresh.note).must_equal "Mine"
       end
 
       it "leaves a session that has started, been skipped or is done alone" do
@@ -823,7 +838,7 @@ describe "MCP server" do
       it "says a planned session can't go back in time" do
         planned = session_on("2026-10-21", "planned")
 
-        _(_ { call_tool("move_session", session_id: planned.id, date: "2026-10-19") }.must_raise(McpToolError).message).must_equal "Date must be today or later"
+        _(_ { call_tool("move_session", session_id: planned.id, date: "2026-10-19", reason: "Earlier") }.must_raise(McpToolError).message).must_equal "Date must be today or later"
       end
     end
 
@@ -831,11 +846,13 @@ describe "MCP server" do
       it "takes a planned session off the calendar, the user's included" do
         first, second = 2.times.map { session_on("2026-10-21", "planned") }
 
-        answer = call_tool("remove_session", session_id: first.id)
+        _(_ { call_tool("remove_session", session_id: first.id) }.must_raise(McpToolError).message).must_include "give a `reason`"
+        answer = call_tool("remove_session", session_id: first.id, reason: "Too much this week")
 
         _(answer["removed"].values_at("id", "created_by")).must_equal [first.id, "manual"]
         _(answer["day"].map { it.values_at("id", "position") }).must_equal [[second.id, 1]]
         _(Session.where(id: first.id).empty?).must_equal true
+        _(PlanChange.last.values.values_at(:action, :reason, :batch)).must_equal ["removed", "Too much this week", PlanChange.last.batch]
       end
 
       it "keeps history" do
@@ -1000,6 +1017,25 @@ describe "MCP server" do
       _(listed["routines"].map { it["title"] }).must_equal ["A week back", "Tempo run", "Last day ahead"]
       _(listed["days"].map { it.values_at("on", "state") }).must_equal [%w[2026-11-04 missed], %w[2026-11-17 tentative], %w[2026-12-01 tentative]]
       _(call_tool("list_routines", to: "2026-11-11").values_at("from", "to")).must_equal %w[2026-10-15 2026-11-11]
+    end
+
+    it "lists the plan's changes, by the user and by it, and which the user took back" do
+      session = Session.plan!(workout: workout("cycle-1-workout-1"), date: Date.new(2026, 11, 12))
+      call_tool("move_session", session_id: session.id, date: "2026-11-14", reason: "Rest before the race")
+      PlanChange.last.undo!
+      run = call_tool("plan_routine", sport: "run", weekdays: [6])["routine"]
+      call_tool("end_routine", routine_id: run["id"], reason: "Race week")
+
+      listed = call_tool("list_plan_changes")
+      _(listed["changes"].map { it.values_at("action", "item_kind", "by", "reason", "undone") }).must_equal [
+        ["ended", "routine", "llm", "Race week", nil], ["planned", "routine", "llm", nil, nil],
+        ["moved", "session", "manual", nil, nil], ["moved", "session", "llm", "Rest before the race", true], ["planned", "session", "manual", nil, nil]
+      ]
+      _(listed["changes"].third.values_at("undoes", "from_date", "to_date")).must_equal [listed["changes"].fourth["id"], "2026-11-14", "2026-11-12"]
+      _(call_tool("list_plan_changes", by: "manual")["changes"].size).must_equal 2
+      _(listed["changes"].first["was"]).must_include "ends_on"
+      _(call_tool("list_plan_changes", since: "2026-11-11")["changes"].size).must_equal 5
+      _(_ { call_tool("list_plan_changes", since: "2026-11-12") }.must_raise(McpToolError).message).must_equal "since must be today (2026-11-11) or earlier"
     end
 
     it "changes and ends only the routines it planned" do

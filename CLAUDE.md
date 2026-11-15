@@ -56,7 +56,10 @@ then `BASE_URL=http://localhost:3999 SERVER_LOG=/tmp/e2e.log npm run test:e2e`.
   wording as the API gives it, `find!` raising `NotFound`), plus plain objects
   such as `PlayerPlan`, which flattens workouts into the ordered screens the
   player walks through. Queries are datasets: subsets and `dataset_module`
-  methods on the model, `eager` for what a list reads.
+  methods on the model, `eager` for what a list reads. `Session` and
+  `Routine` record every change to the plan themselves (`PlanChange.record!`,
+  #258), with `PlanChange.because(reason)` and `quietly` around the calls;
+  undo runs the same model code the other way.
 - `lib/auth_app.rb` accounts and sign-in: Rodauth (JSON only) as Roda
   middleware inside Rage (`config/initializers/sign_in.rb`), with Roda's
   session cookie. It answers `/api/auth/*` and gates the rest of `/api`

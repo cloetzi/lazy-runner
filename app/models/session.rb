@@ -262,18 +262,55 @@ class Session < Record
     # super first: dirty records what this save changed in its own
     # after_update, and column_previously_changed? reads that.
     super
+    record_plan_change
     return unless column_previously_changed?(:status, from: "done")
 
     completion&.destroy
     associations.delete(:completion)
   end
 
+  # A session planned is a change to the plan (PlanChange), unless it
+  # confirms a routine's day (Routine#confirm! records nothing).
+  def after_create
+    super
+    PlanChange.record!(self, "planned", to_date: date) if status == "planned"
+  end
+
   def after_destroy
     super
     Session.renumber(date)
+    # Taken off the calendar while planned (or missed): recorded with what
+    # planning it again needs.
+    return unless status == "planned"
+
+    PlanChange.record!(self, "removed", from_date: date, removed: true, was: PlanChange::SESSION_RESTORE.to_h { [it, it == :parts ? part_kinds : self[it]] })
   end
 
   private
+
+  # A planned session moved to another day, or its note or parts changed, is
+  # a change to the plan (PlanChange); a new place on its day, or a change of
+  # status (started, skipped, planned again), is not.
+  def record_plan_change
+    changes = previous_changes
+    return unless changes.fetch(:status, [status]).first == "planned" && status == "planned"
+
+    moved = changes.key?(:date)
+    fields = PlanChange::SESSION_FIELDS.select { |name, column| changes.key?(column) && (moved || name != :position) }
+    return if fields.empty?
+
+    was = fields.to_h { |name, column| [name, plan_value(column, changes[column].first)] }
+    now = fields.to_h { |name, column| [name, plan_value(column, changes[column].last)] }
+    if moved && !was.key?(:position)
+      was[:position] = now[:position] = position
+    end
+    PlanChange.record!(self, moved ? "moved" : "changed", from_date: changes.dig(:date, 0) || date, to_date: date, was:, now:)
+  end
+
+  # A value as dirty kept it, parts read from their JSON.
+  def plan_value(column, value)
+    column == :part_kinds && value.is_a?(String) ? JSON.parse(value) : value
+  end
 
   # Puts the session on the `given` date (a Date or YYYY-MM-DD, read
   # strictly) at `position`, clamped to the day, and saves it. Without a

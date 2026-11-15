@@ -113,6 +113,10 @@ class Workout < Record
   # run without one from now on; while a session runs it, or a workout that
   # picks it, that raises Running. Returns the sessions taken off.
   def archive!
+    PlanChange.because("its workout was archived", over: true) { archive_now }
+  end
+
+  private def archive_now
     db.transaction do
       if FRAMES.include?(kind)
         archiving = "it can be archived once that session is finished or skipped"

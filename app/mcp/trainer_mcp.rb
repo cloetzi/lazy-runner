@@ -21,7 +21,7 @@ module TrainerMcp
 
   TOOLS = [
     SearchExercises, GetExercise, ListEquipment, ListWorkouts, GetWorkout, TrainingSummary, ListSessions, ListActivities,
-    ListRoutines, ListExamples, GetCoachBoard, ListCoachNotes, CreateWorkout, ImportExample, UpdateWorkout, DuplicateWorkout, ArchiveWorkout,
+    ListRoutines, ListPlanChanges, ListExamples, GetCoachBoard, ListCoachNotes, CreateWorkout, ImportExample, UpdateWorkout, DuplicateWorkout, ArchiveWorkout,
     SetExerciseWeight, UpdateEquipment, PlanSessions, MoveSession, RemoveSession, LogActivities, PlanRoutine, UpdateRoutine, EndRoutine,
     WriteCoachNote, UpdateCoachNote, DeleteCoachNotes, ResolveConcern, ProposeGoal
   ].freeze

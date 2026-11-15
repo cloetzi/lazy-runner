@@ -821,13 +821,63 @@ components:
         - $ref: "#/components/schemas/ActivityBatch"
     Calendar:
       type: object
-      required: [sessions, activities, notes, routines, routine_days]
+      required: [sessions, activities, notes, routines, routine_days, plan_changes]
       properties:
-        sessions: { type: array, items: { $ref: "#/components/schemas/Session" } }
+        sessions:
+          type: array
+          items:
+            allOf:
+              - $ref: "#/components/schemas/Session"
+              - $ref: "#/components/schemas/AgentChange"
         activities: { type: array, items: { $ref: "#/components/schemas/Activity" } }
         notes: { type: array, description: "The coach's notes on a day in the range: about a session or activity on it, else dated to it.", items: { $ref: "#/components/schemas/CoachNote" } }
-        routines: { type: array, description: The routines with days in the range., items: { $ref: "#/components/schemas/Routine" } }
+        routines:
+          type: array
+          description: The routines with days in the range.
+          items:
+            allOf:
+              - $ref: "#/components/schemas/Routine"
+              - $ref: "#/components/schemas/AgentChange"
         routine_days: { type: array, description: "Their days that show in the range, by the day they show on.", items: { $ref: "#/components/schemas/RoutineDay" } }
+        plan_changes: { type: array, description: "Sessions an agent moved away from a day in the range or removed from it, not taken back, from this week on, by the day they left.", items: { $ref: "#/components/schemas/PlanChange" } }
+    AgentChange:
+      type: object
+      required: [change]
+      properties:
+        change: { allOf: [{ $ref: "#/components/schemas/PlanChange" }], nullable: true, description: "The latest change an agent made to it, not taken back; null if none." }
+    PlanChange:
+      type: object
+      required: [id, changed_by, agent_name, item_kind, session_id, routine_id, title, action, from_date, to_date, was, now, reason, batch, undoes_id, undone_by_id, undoable, created_at]
+      properties:
+        id: { type: integer }
+        changed_by: { type: string, enum: [manual, llm], description: "manual for the user in the app, llm for an agent (a request or MCP call with an API token)." }
+        agent_name: { type: string, nullable: true, description: "The name of the agent's API token, when llm." }
+        item_kind: { type: string, enum: [session, routine] }
+        session_id: { type: integer, nullable: true, description: The session; null once it is deleted. }
+        routine_id: { type: integer, nullable: true, description: The routine; null once it is deleted. }
+        title: { type: string, nullable: true, description: What the item was called at the time. }
+        action: { type: string, enum: [planned, moved, removed, changed, ended] }
+        from_date: { type: string, format: date, nullable: true, description: "The day it left: a session's before a move or removal, the first day a routine change or end reaches." }
+        to_date: { type: string, format: date, nullable: true, description: The day it joined. }
+        was: { type: object, nullable: true, additionalProperties: true, description: "The fields it changed, as they were (date, position, note and parts for a session; a routine's fields); a removal's holds what planning it again needs." }
+        now: { type: object, nullable: true, additionalProperties: true, description: The fields it changed, as they are after it. }
+        reason: { type: string, nullable: true, description: The reason given with it. }
+        batch: { type: string, description: Shared by the changes made in one request or tool call. }
+        undoes_id: { type: integer, nullable: true, description: The change this one takes back. }
+        undone_by_id: { type: integer, nullable: true, description: The change that took this one back. }
+        undoable: { type: boolean, description: Whether POST /api/plan_changes/:id/undo can take it back now. }
+        created_at: { type: string, format: date-time }
+    PlanChanges:
+      type: object
+      required: [changes]
+      properties:
+        changes: { type: array, items: { $ref: "#/components/schemas/PlanChange" } }
+    PlanUndo:
+      type: object
+      required: [change, undone]
+      properties:
+        change: { $ref: "#/components/schemas/PlanChange" }
+        undone: { $ref: "#/components/schemas/PlanChange" }
     Routine:
       type: object
       required: [id, title, sport, workout, weekdays, one_off, starts_on, ends_on, minutes, distance_m, effort, note, created_by, agent_name, created_at, updated_at]

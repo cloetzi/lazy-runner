@@ -15,6 +15,17 @@ module TrainerMcp
                    "or such as [\"workout\", \"cooldown\"] to skip the warm-up after a run."
     }.freeze
 
+    # A session the user planned is moved or removed only with a reason,
+    # which goes on the change (PlanChange) while their note stays.
+    def self.reason!(session, reason, change, date: nil)
+      # One no longer planned can't change: the model says so.
+      return if session.created_by == "llm" || session.status != "planned" || reason.to_s.strip.present?
+      # A new place on its own day is no change to the plan.
+      return if change == "move" && (date.nil? || date.to_s == session.date.iso8601)
+
+      raise Problem, "session #{session.id} is the user's: give a `reason` for the #{change}, which they see with it"
+    end
+
     def self.find_session(id)
       Session.eager(:completion, :workout).with_pk(id) || raise(Problem, "no session #{id}; list_sessions lists them")
     end

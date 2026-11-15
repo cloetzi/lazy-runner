@@ -12,15 +12,16 @@ module TrainerMcp
         routine_id: { type: "integer", description: "The routine, from list_routines." },
         sport: { type: %w[string null], description: "The sport, for a sport routine; null when it becomes a workout routine." },
         workout_id: { type: %w[integer null], description: "The workout, for a workout routine; null when it becomes a sport routine." },
-        **FIELDS
+        **FIELDS,
+        reason: { type: "string", description: "Why it changes, shown to the user with the change." }
       },
       required: %w[routine_id]
     )
     annotations(title: "Change a routine", **REPLACES)
 
-    def self.answer(routine_id:, **arguments)
+    def self.answer(routine_id:, reason: nil, **arguments)
       routine = own_routine(routine_id)
-      revised = routine.revise!(attributes(arguments))
+      revised = PlanChange.because(reason) { routine.revise!(attributes(arguments)) }
       { routine: shown(revised), ended: (shown(routine.refresh) if revised.id != routine.id) }.compact
     end
   end
