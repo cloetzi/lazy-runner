@@ -1,5 +1,5 @@
 import { mountNav } from "./nav.js";
-import { getJson, sendChange, STALE_NOTE } from "./api.js";
+import { getJson, loadProblem, offline, paths, sendChange, STALE_NOTE } from "./api.js";
 import { escape, icon } from "./html.js";
 import { localToday, dayName, shortDay, longDay, STATUS_LABELS, shownStatus } from "./calendar.js";
 import { activityTitle, activityFacts, sportIcon, preferredDistanceUnit } from "./activities.js";
@@ -35,7 +35,7 @@ const unit = () => (storage ? preferredDistanceUnit(storage) : "km");
 
 async function load() {
   try {
-    const { data, stale } = await getJson(`/api/coach?today=${today()}`);
+    const { data, stale } = await getJson(paths.coach(today()));
     state.board = data;
     // The latest notes may have moved on: page the journal again from them.
     state.older = [];
@@ -43,7 +43,7 @@ async function load() {
     state.stale = stale;
     state.failed = null;
   } catch (error) {
-    state.failed = error.message;
+    state.failed = loadProblem("the coach board", error);
   }
   render();
 }
@@ -64,7 +64,7 @@ async function loadPast() {
     const { data } = await getJson("/api/goals");
     state.past = data.past.filter((g) => g.status !== "dismissed");
   } catch (error) {
-    alert(`Could not load your past goals (${error.message}).`);
+    alert(loadProblem("your past goals", error, { hint: false }));
   }
   render();
 }
@@ -73,8 +73,10 @@ async function loadPast() {
 
 function render() {
   const notes = [];
-  if (state.failed) notes.push(`Could not load the coach board (${state.failed}).`);
+  if (state.failed) notes.push(state.failed);
   else if (state.stale) notes.push(STALE_NOTE);
+  // Unlike the rest of the app, notes and goals are sent straight away.
+  if (state.stale || offline()) notes.push("Writing notes and goals needs a connection.");
   $("coach-note").textContent = notes.join(" ");
   $("coach-note").hidden = notes.length === 0;
   const board = state.board;
@@ -279,7 +281,7 @@ async function older() {
     state.older.push(...data.notes);
     state.olderNext = data.next_before;
   } catch (error) {
-    alert(`Could not load older notes (${error.message}).`);
+    alert(loadProblem("older notes", error, { hint: false }));
   }
   render();
 }
@@ -317,5 +319,8 @@ $("coach-board").addEventListener("click", (event) => {
 document.addEventListener("visibilitychange", () => {
   if (document.visibilityState === "visible") load();
 });
+// The note on writing offline comes and goes with the connection.
+addEventListener("online", load);
+addEventListener("offline", render);
 
 load();

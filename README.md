@@ -95,8 +95,9 @@ session offline, syncing when the connection returns.
   equipment (what you own by default). Each card says when you last did it and
   which workouts use it; the how-to shows either side and half speed.
   `library.html?review` is the animation review layout.
-- **Offline:** an installable PWA with cached program data, so a session can run
-  without a connection.
+- **Offline:** an installable PWA that fetches ahead while online, so every
+  workout, the calendar, the coach board and history open without a connection,
+  and a session runs and finishes there, syncing when the connection returns.
 
 - **MCP server** at `/mcp`: tools for an assistant acting as a personal
   trainer, plus a brief with the rules it plans by. See

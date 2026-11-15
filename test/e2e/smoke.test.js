@@ -211,6 +211,42 @@ test("runs Workout 1, finishes offline and syncs once back online", async () => 
   await context.close();
 });
 
+// Fetched ahead while online, the whole app opens offline (#267): a workout
+// never opened before, the calendar, the coach board and history.
+test("opens another workout, the calendar, the coach board and history offline", async () => {
+  const programs = await getJson("/api/workouts");
+  const other = programs.flatMap((program) => program.workouts).find((w) => w.example_slug === "home-strength-b");
+  const { context, page, errors } = await ownerPage({ viewport: { width: 820, height: 1180 } });
+
+  await page.goto("/");
+  await page.locator("#today h2, #today .card").first().waitFor();
+  // Once the page has fetched ahead, the worker has the workout it never opened.
+  await eventually(() => page.evaluate(async (id) => {
+    const data = await caches.open("data");
+    return Boolean(await data.match(`/api/workouts/${id}`)) && Boolean(await data.match(`/api/coach?today=${new Date().toLocaleDateString("sv")}`));
+  }, other.id));
+
+  await context.setOffline(true);
+  await page.goto("/#history");
+  await page.locator("#history-week").getByText("This week").waitFor();
+  await page.locator(".offline-badge:visible").getByText("Offline").waitFor();
+  await page.goto("/calendar.html");
+  await page.locator("#calendar-body .week-days").waitFor();
+  assert.doesNotMatch(await page.locator("#calendar-note").textContent(), /Could not load|no copy/);
+  await page.goto("/coach.html");
+  await page.locator("#coach-note").getByText("Writing notes and goals needs a connection.").waitFor();
+  assert.doesNotMatch(await page.locator("#coach-note").textContent(), /no copy/);
+  // Last: Get ready keeps the session on screen from here on.
+  await page.goto(`/#workout/${other.id}`);
+  await page.locator("#workout-title").getByText(other.title).waitFor();
+  await page.locator("#workout-start").click();
+  await page.locator("#ready-go").waitFor();
+
+  assert.deepEqual(errors, []);
+  // The session never started online: closing drops what this page queued.
+  await context.close();
+});
+
 test("plans a session on the calendar and moves it to another day", async () => {
   const { context, page, errors } = await ownerPage();
 

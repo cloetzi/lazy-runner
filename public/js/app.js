@@ -13,7 +13,7 @@ import { openSwap, prefetchAlternatives } from "./swap.js";
 import { mountNav } from "./nav.js";
 import { parseRoute, routeHash, pageFor, isSessionView } from "./routes.js";
 import { setsSummary, sessionSummary, exerciseSummary } from "./history.js";
-import { getJson, errorMessage, send, sendChange, STALE_NOTE } from "./api.js";
+import { getJson, errorMessage, loadProblem, paths, send, sendChange, STALE_NOTE } from "./api.js";
 import { readSettings } from "./preferences.js";
 import { weightRequest, skipRequest, startRequest, setRequest, finishRequests, discardRequest } from "./session-log.js";
 import { createRunStore, restoredTimer } from "./run-store.js";
@@ -88,11 +88,8 @@ const state = {
 // picked to train instead).
 async function loadToday(workoutId, sessionId) {
   loadWeek();
-  const query = new URLSearchParams({ date: localToday() });
-  if (workoutId) query.set("workout_id", workoutId);
-  else if (sessionId) query.set("session_id", sessionId);
   try {
-    const { data: today, stale } = await getJson(`/api/today?${query}`);
+    const { data: today, stale } = await getJson(paths.today({ date: localToday(), workoutId, sessionId }));
     state.unit = adoptServerUnit(storage, today.unit, { queued: outbox.queued(), stale });
     state.distanceUnit = adoptServerDistanceUnit(storage, today.distance_unit, { queued: outbox.queued(), stale });
     // The service worker answered from its cache: the server is out of reach.
@@ -107,7 +104,7 @@ async function loadToday(workoutId, sessionId) {
     // fall back to the day's own card.
     if (sessionId && !workoutId) return loadToday();
     if (error.code === "no_workouts") return renderSetup();
-    $("today").innerHTML = `<p>Could not load today's session (${escape(error.message)}).</p>
+    $("today").innerHTML = `<p>${escape(loadProblem("today's session", error, { hint: false }))}</p>
       <button class="secondary" id="retry">Try again</button>`;
     $("retry").onclick = () => loadToday(workoutId, sessionId);
     return false;
@@ -135,7 +132,7 @@ function renderSetup() {
 // Today card on wide screens, under it on narrower ones.
 async function loadWeek() {
   try {
-    state.board = (await getJson(`/api/coach?today=${localToday()}`)).data;
+    state.board = (await getJson(paths.coach(localToday()))).data;
   } catch {
     state.board = null;
   }
@@ -436,7 +433,7 @@ async function openWorkouts() {
   show("workouts");
   $("workouts-list").innerHTML = `<p class="muted">Loading…</p>`;
   try {
-    const { data: programs, stale } = await getJson("/api/workouts");
+    const { data: programs, stale } = await getJson(paths.workouts);
     if (programs.length === 0) {
       $("workouts-list").innerHTML = offlineNote(stale) + `
         <p>No workouts yet. Import an <a href="/settings.html#examples">example program</a>, or build one with New workout.</p>`;
@@ -455,7 +452,7 @@ async function openWorkouts() {
         </section>`;
     }).join("");
   } catch (error) {
-    $("workouts-list").innerHTML = `<p>Could not load the workouts (${escape(error.message)}).</p>`;
+    $("workouts-list").innerHTML = `<p>${escape(loadProblem("the workouts", error, { hint: false }))}</p>`;
   }
 }
 
@@ -504,13 +501,13 @@ async function openWorkout(id) {
   $("workout-blocks").innerHTML = `<p class="muted">Loading…</p>`;
   show("workout", id);
   try {
-    const { data, stale } = await getJson(`/api/workouts/${id}`);
+    const { data, stale } = await getJson(paths.workout(id));
     state.workout = data;
     state.unit = adoptServerUnit(storage, data.unit, { queued: outbox.queued(), stale });
     renderWorkout();
     $("workout-blocks").insertAdjacentHTML("afterbegin", offlineNote(stale));
   } catch (error) {
-    $("workout-blocks").innerHTML = `<p>Could not load the workout (${escape(error.message)}).</p>`;
+    $("workout-blocks").innerHTML = `<p>${escape(loadProblem("this workout", error, { hint: false }))}</p>`;
   }
 }
 
@@ -1448,7 +1445,7 @@ async function submitFinish() {
 // The main workout up next, now that this one is saved.
 async function showNextUp() {
   try {
-    const { data: programs } = await getJson("/api/workouts");
+    const { data: programs } = await getJson(paths.workouts);
     const next = programs.flatMap((program) => program.workouts).find((workout) => workout.up_next);
     if (!next || $("finish").hidden) return;
     $("next-up").href = routeHash("workout", next.id);
@@ -1467,8 +1464,8 @@ async function openHistory() {
   $("history-exercises").innerHTML = "";
   try {
     const [{ data: history, stale }, { data: exercises, stale: staleExercises }] = await Promise.all([
-      getJson(`/api/history?days=28&date=${localToday()}`),
-      getJson("/api/history/exercises"),
+      getJson(paths.history(localToday())),
+      getJson(paths.exerciseHistory),
     ]);
     const { done: week = 0, partial = 0 } = history.weeks[0] ?? {};
     $("history-week").textContent = [`This week: ${week} ${week === 1 ? "session" : "sessions"} done${partial ? `, ${partial} ended early` : ""}`,
@@ -1480,7 +1477,7 @@ async function openHistory() {
       ? exercises.map(exerciseRow).join("")
       : `<li class="row muted">Exercises show up here once you log a set.</li>`;
   } catch (error) {
-    $("history-list").innerHTML = `<li class="row">Could not load the history (${escape(error.message)}).</li>`;
+    $("history-list").innerHTML = `<li class="row">${escape(loadProblem("the history", error))}</li>`;
   }
 }
 
@@ -1514,7 +1511,7 @@ async function openExerciseHistory(id) {
       ? history.sessions.map(exerciseSessionRow).join("")
       : `<li class="row muted">Nothing logged yet.</li>`;
   } catch (error) {
-    $("exercise-history-list").innerHTML = `<li class="row">Could not load the history (${escape(error.message)}).</li>`;
+    $("exercise-history-list").innerHTML = `<li class="row">${escape(loadProblem("this exercise's history", error))}</li>`;
   }
 }
 
@@ -1550,7 +1547,7 @@ async function openSession(id) {
     Object.assign($("session-delete").dataset, { delete: session.id, label: `${session.workout.title} on ${date}` });
     $("session-delete").hidden = false;
   } catch (error) {
-    $("session-exercises").innerHTML = `<li>Could not load the session (${escape(error.message)}).</li>`;
+    $("session-exercises").innerHTML = `<li>${escape(loadProblem("this session", error))}</li>`;
   }
 }
 
@@ -1952,7 +1949,7 @@ $("exercise-history-howto").onclick = async () => {
   try {
     openHowto((await getJson(`/api/exercises/${id}`)).data, { controls: true });
   } catch (error) {
-    alert(`Could not load the how-to (${error.message}).`);
+    alert(loadProblem("the how-to", error));
   }
 };
 

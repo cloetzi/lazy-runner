@@ -1,7 +1,7 @@
 import { createOutbox } from "./outbox.js";
 import { pageAccount, syncNote } from "./account.js";
 import { mountNav } from "./nav.js";
-import { getJson, sendChange, STALE_NOTE } from "./api.js";
+import { getJson, loadProblem, paths, sendChange, STALE_NOTE, unreachable } from "./api.js";
 import { escape, icon, authorLine } from "./html.js";
 import {
   addDays, addMonths, weekOf, monthWeeks, rangeFor, dayName, shortDay, longDay, weekdayDay, weekLabel, monthLabel, localToday, isDate,
@@ -81,9 +81,12 @@ async function load() {
   const { from, to } = rangeFor(view(), state.focus);
   try {
     const [range, upcoming, board] = await Promise.all([
-      getJson(`/api/calendar?from=${from}&to=${to}&today=${state.today}`),
-      // Under way since yesterday counts too: a session stays under way past midnight.
-      getJson(`/api/sessions?status=planned,in_progress&from=${addDays(state.today, -1)}`),
+      getJson(paths.calendar({ from, to, today: state.today })),
+      // Offline with no copy (a new day), the range still shows.
+      getJson(paths.upcoming(state.today)).catch((error) => {
+        if (!unreachable(error)) throw error;
+        return { data: state.upcoming, stale: true };
+      }),
       loadBoard(from, to),
     ]);
     if (ticket !== state.load) return;
@@ -106,7 +109,7 @@ async function load() {
     state.failed = null;
   } catch (error) {
     if (ticket !== state.load) return;
-    state.failed = error.message;
+    state.failed = loadProblem("this part of the calendar", error);
   }
   render();
 }
@@ -117,7 +120,7 @@ async function load() {
 async function loadBoard(from, to) {
   if (view() !== "week" || state.today < from || state.today > to) return state.board;
   try {
-    return (await getJson(`/api/coach?today=${state.today}`)).data;
+    return (await getJson(paths.coach(state.today))).data;
   } catch {
     return state.board;
   }
@@ -127,7 +130,7 @@ async function loadBoard(from, to) {
 // this device's copy until it answers.
 async function loadDistanceUnit() {
   try {
-    const { data, stale } = await getJson("/api/settings");
+    const { data, stale } = await getJson(paths.settings);
     const before = preferredDistanceUnit(storage);
     if (adoptServerDistanceUnit(storage, data.distance_unit, { queued: outbox.queued(), stale }) !== before) render();
   } catch {
@@ -181,7 +184,7 @@ function render() {
   $("calendar-range").textContent = current === "month" ? monthLabel(state.focus) : weekLabel(state.focus, state.today);
 
   const notes = [];
-  if (state.failed) notes.push(`Could not load the calendar (${state.failed}).`);
+  if (state.failed) notes.push(state.failed);
   else if (state.stale) notes.push(STALE_NOTE);
   $("calendar-note").textContent = notes.join(" ");
   $("calendar-note").hidden = notes.length === 0;
@@ -372,10 +375,10 @@ async function doToday(key) {
 async function loadWorkouts({ quiet = false } = {}) {
   if (state.workouts) return state.workouts;
   try {
-    const { data: programs } = await getJson("/api/workouts");
+    const { data: programs } = await getJson(paths.workouts);
     state.workouts = programs.flatMap((program) => program.workouts).filter((w) => w.kind === "workout" && !w.archived);
   } catch (error) {
-    if (!quiet) alert(`Could not load the workouts (${error.message}).`);
+    if (!quiet) alert(loadProblem("the workouts", error, { hint: false }));
   }
   return state.workouts;
 }

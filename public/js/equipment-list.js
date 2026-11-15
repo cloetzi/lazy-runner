@@ -1,6 +1,6 @@
 import { parseWeights, formatWeights } from "./inventory.js";
 import { escape } from "./html.js";
-import { getJson, errorMessage, send, STALE_NOTE } from "./api.js";
+import { getJson, paths, loadProblem, errorMessage, send, STALE_NOTE } from "./api.js";
 
 // The inventory, drawn in a list: toggle what you own, list the weights you
 // have (comma-separated) and say whether they are lb or kg. Each change is
@@ -18,10 +18,10 @@ export function mountEquipment(list, { unitFor = (item) => item.unit } = {}) {
 
   async function load() {
     try {
-      const { data, stale } = await getJson("/api/equipment");
+      const { data, stale } = await getJson(paths.equipment);
       list.innerHTML = (stale ? `<li class="row muted">${escape(STALE_NOTE)}</li>` : "") + data.filter((item) => !item.any_weight).map(row).join("");
     } catch (error) {
-      list.innerHTML = `<li class="row">Could not load the equipment (${escape(error.message)}).</li>`;
+      list.innerHTML = `<li class="row">${escape(loadProblem("the equipment", error))}</li>`;
     }
   }
 

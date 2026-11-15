@@ -1,4 +1,4 @@
-import { getJson, send } from "./api.js";
+import { getJson, paths, send } from "./api.js";
 import { adoptAccount, checkSignedIn, nextPath, pageAccount, signInHref } from "./account.js";
 import { adoptServerUnit, preferredUnit, setPreferredUnit, unitRequest } from "./weights.js";
 import { createOutbox } from "./outbox.js";
@@ -80,7 +80,7 @@ if (me.signedOut || me.user?.password_change_required) {
   if (me.user) await adoptAccount(me.user, { storage, caches: globalThis.caches });
   $("welcome-status").hidden = true;
   press(preferredUnit(storage));
-  getJson("/api/settings")
+  getJson(paths.settings)
     .then(({ data, stale }) => {
       // A pick queued meanwhile wins over the server's answer.
       adoptServerUnit(storage, data.unit, { queued: outbox?.queued() ?? [], stale });

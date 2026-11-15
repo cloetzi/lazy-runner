@@ -11,11 +11,13 @@
 
 import { send } from "./api.js";
 import { escape } from "./html.js";
+import { AHEAD_KEY } from "./offline.js";
 
 export const ACCOUNT_KEY = "account";
-// What belongs to the signed-in user: the outbox, the running session and
-// the unit copy (see outbox.js, run-store.js, weights.js).
-export const USER_KEYS = ["outbox", "run", "unit"];
+// What belongs to the signed-in user: the outbox, the running session, the
+// unit copy and when their data was last fetched ahead (see outbox.js,
+// run-store.js, weights.js, offline.js).
+export const USER_KEYS = ["outbox", "run", "unit", AHEAD_KEY];
 // The service worker's copies of API answers (sw.js).
 export const DATA_CACHE = "data";
 // Set while the server still has to hear of a sign-out on this device alone.
@@ -52,6 +54,17 @@ export async function forgetAccount({ storage, caches }) {
     } catch {
       // Blocked storage keeps nothing to forget.
     }
+  }
+  await caches?.delete(DATA_CACHE).catch(() => false);
+}
+
+// Forgets the service worker's copies of the user's API answers, and that
+// they were fetched ahead, so the next sign-in fetches them again.
+async function forgetCopies({ storage, caches }) {
+  try {
+    storage?.removeItem(AHEAD_KEY);
+  } catch {
+    // Blocked storage keeps nothing to forget.
   }
   await caches?.delete(DATA_CACHE).catch(() => false);
 }
@@ -155,8 +168,15 @@ function note(storage, value) {
 // again. While the server can't be reached, the device counts as offline;
 // should the app refuse to sign out, the note goes, so the device isn't
 // stuck: the sign-in is the server's to end.
+//
+// When the app answers that nobody is signed in (a sign-in that expired, was
+// ended on another device or by the owner, or a user removed), the copies of
+// API answers go, so none is served offline to whoever uses the device next
+// (#210). What waits to sync and a session under way stay: they sync once
+// the same user signs in again, and go if someone else does.
 export async function checkSignedIn({ storage, caches, fetchFn = fetch }) {
   const me = await whoIsSignedIn(fetchFn);
+  if (me.signedOut && !me.gate) await forgetCopies({ storage, caches });
   if (!note(storage)) return me;
   if (me.user) {
     const outcome = await signOut({ storage, caches, fetchFn });

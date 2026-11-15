@@ -1,4 +1,4 @@
-import { getJson, errorMessage, send, STALE_NOTE } from "./api.js";
+import { getJson, loadProblem, errorMessage, paths, send, STALE_NOTE } from "./api.js";
 import { escape, icon, busy, showSheet } from "./html.js";
 import { createFigure } from "./figure-view.js";
 import { openHowto, equipmentNames, learnEquipmentNames } from "./howto.js";
@@ -43,10 +43,10 @@ export async function openEditor(id, { unit, onSaved, cameFrom = "" }) {
   $("edit-form").innerHTML = `<p class="muted">Loading…</p>`;
   try {
     const [workout, exercises, inventory, catalog] = await Promise.all([
-      routeId === "new" ? null : getJson(`/api/workouts/${routeId}`),
-      getJson("/api/exercises"),
-      getJson("/api/equipment"),
-      getJson("/api/workouts").catch(() => ({ data: [] })),
+      routeId === "new" ? null : getJson(paths.workout(routeId)),
+      getJson(paths.exercises),
+      getJson(paths.equipment),
+      getJson(paths.workouts).catch(() => ({ data: [] })),
     ]);
     if (editor !== session) return;
     learnEquipmentNames(inventory.data);
@@ -82,7 +82,7 @@ export async function openEditor(id, { unit, onSaved, cameFrom = "" }) {
     $("edit-save").textContent = workout ? "Save" : "Save workout";
     render();
   } catch (error) {
-    if (editor === session) $("edit-form").innerHTML = `<p>Could not load the editor (${escape(error.message)}).</p>`;
+    if (editor === session) $("edit-form").innerHTML = `<p>${escape(loadProblem("the editor", error))}</p>`;
   }
 }
 

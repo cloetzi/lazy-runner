@@ -15,7 +15,13 @@
 // into a separate cache that keeps the last DATA_LIMIT entries. The cache
 // only answers when there is a copy and the network fails, answers with a
 // server error or is slower than NETWORK_TIMEOUT_MS; in that last case the
-// network answer still refreshes the cache in the background.
+// network answer still refreshes the cache in the background. While online,
+// the pages fetch ahead what they read (offline.js), so the cache holds
+// every workout, the calendar, the coach board and history. The copies are
+// one user's: the pages delete the cache on a sign-out, on a switch to
+// someone else and when the server says nobody is signed in (account.js).
+// An answer still on its way then goes into the deleted cache, which a
+// request keeps from before (`caches.open` at its start), not the new one.
 //
 // Writes (anything but GET) pass straight through; the outbox in the page
 // queues them while offline.
@@ -33,7 +39,8 @@ const META_CACHE = "meta";
 const CURRENT = "/current-release"; // keys in META_CACHE
 const PREVIOUS = "/previous-release";
 const COMPLETE = "/release-complete"; // put last into a release cache, once it holds the whole shell
-const DATA_LIMIT = 50;
+// Room for 50 workouts fetched ahead (three entries each) and the rest.
+const DATA_LIMIT = 200;
 const NETWORK_TIMEOUT_MS = 3000;
 
 // The app shell. test/js/sw.test.js checks it lists every file in public/.
@@ -289,12 +296,15 @@ async function lookup(cache, request) {
   return (await cache.match(request)) ?? (await cache.match(fallbackKey(request.url)));
 }
 
-// The URL without its `date`, so a day with no copy of its own falls back to
-// the last one fetched: /api/today?date=2026-10-24 -> /api/today.
+// The URL without the day it was asked on (`date`, or `today`), so a day
+// with no copy of its own falls back to the last one fetched:
+// /api/today?date=2026-10-24 -> /api/today, and
+// /api/coach?today=2026-10-24 -> /api/coach.
+const DAY_PARAMS = ["date", "today"];
 function fallbackKey(url) {
   const parsed = new URL(url);
-  if (!parsed.searchParams.has("date")) return url;
-  parsed.searchParams.delete("date");
+  if (!DAY_PARAMS.some((name) => parsed.searchParams.has(name))) return url;
+  for (const name of DAY_PARAMS) parsed.searchParams.delete(name);
   return parsed.href;
 }
 

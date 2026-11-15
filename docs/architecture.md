@@ -212,9 +212,35 @@ done by kind, distance sums), `catalog.js`, `inventory.js`, `figure.js`
 `public/sw.js` keeps the app shell as one cache per **release**, the digest of
 `public/` that `GET /api/version` returns, so a page never mixes modules from
 two versions. A new release is fetched whole in the background and used from
-the next load. API reads are network first; the last 50 good answers are the
-offline fallback, and `getJson` (`api.js`) says when an answer came from the
-cache. Writes bypass the worker and wait in the outbox.
+the next load. API reads are network first; the last 200 good answers are the
+offline fallback (one asked on another day falls back to the last copy
+without its `date` or `today`), and `getJson` (`api.js`) says when an answer
+came from the cache. Writes bypass the worker and wait in the outbox, but
+for coach notes, goals and routines, which are sent straight away and say
+so while offline (`NEEDS_CONNECTION`).
+
+The whole app opens offline because the pages **fetch ahead**: once a page
+knows the user is signed in and online, and the worker controls it, it
+asks (on a new day and at most every 30 minutes, never mid-session,
+`fetchAhead` in `offline.js`) for every workout (its view and Today's start
+of it), this week and this month on the calendar, what is up next, the coach
+board, history, settings, exercises and equipment. It stops on a slow or
+missing server, a sign-in or a session starting, and tries again two
+minutes later. Each address comes from
+`paths` in `api.js`, which the pages use too, so the worker's copy answers
+what the page asks later. A page with no copy says so in words
+(`loadProblem`), and the navigation shows one quiet "Offline" note with the
+changes waiting while the device is offline or the server is out of reach.
+The copies are one user's: they go on a sign-out, a switch of user and when
+`/api/me` says nobody is signed in (`checkSignedIn`); the outbox and a
+session under way stay until someone else signs in.
+
+Installed on an iPad or iPhone, the app opens on its own background in
+either scheme: Safari takes the startup image from the page as it is added
+to the Home Screen, so `pwa.js` draws one for the screen it is on. Pages ask
+the browser to keep their data (`navigator.storage.persist()`), and Settings
+recommends Add to Home Screen in a browser tab, where Safari clears a site's
+data after seven days without a visit.
 
 Offline and signed out are told apart by `GET /api/me` (`whoIsSignedIn` in
 `account.js`), read without following redirects: the app's own 401 is signed

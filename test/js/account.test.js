@@ -1,8 +1,9 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
-  storedAccount, forgetAccount, adoptAccount, whoIsSignedIn, checkSignedIn, signOut, signOutHere, signInHref, nextPath, syncNote, deviceName, pageAccount, inviteToken, welcomeHref, startOidc, oidcOutcome,
+  USER_KEYS, storedAccount, forgetAccount, adoptAccount, whoIsSignedIn, checkSignedIn, signOut, signOutHere, signInHref, nextPath, syncNote, deviceName, pageAccount, inviteToken, welcomeHref, startOidc, oidcOutcome,
 } from "../../public/js/account.js";
+import { AHEAD_KEY } from "../../public/js/offline.js";
 
 function memoryStorage(entries = {}) {
   const items = new Map(Object.entries(entries));
@@ -149,6 +150,29 @@ test("signs out on the server once it can after signing out on this device alone
   await adoptAccount(someone, { storage, caches });
   assert.deepEqual(storage.keys(), ["account"]);
   assert.deepEqual(await checkSignedIn({ storage, caches, fetchFn: answer({ user: someone }) }), { user: someone });
+});
+
+// A sign-in the server ended (expired, signed out elsewhere, the user
+// removed) leaves no copies of their answers to serve offline (#210).
+test("forgets the copies of API answers when the app says nobody is signed in, and keeps what waits to sync", async () => {
+  const storage = memoryStorage({ account: JSON.stringify(someone), outbox: "[1]", run: "{}", [AHEAD_KEY]: "1" });
+  const caches = fakeCaches();
+  const signedOut = answer({ error: { code: "unauthorized" }, setup_required: false }, { status: 401 });
+
+  assert.equal((await checkSignedIn({ storage, caches, fetchFn: signedOut })).signedOut, true);
+  assert.deepEqual(caches.deleted, ["data"]);
+  assert.deepEqual(storage.keys(), ["account", "outbox", "run"]);
+
+  // Someone else's sign-in in front of the app, or offline: nothing to go on.
+  const kept = fakeCaches();
+  await checkSignedIn({ storage, caches: kept, fetchFn: async () => new Response("proxy", { status: 401 }) });
+  await checkSignedIn({ storage, caches: kept, fetchFn: async () => { throw new TypeError("offline"); } });
+  await checkSignedIn({ storage, caches: kept, fetchFn: answer({ user: someone }) });
+  assert.deepEqual(kept.deleted, []);
+});
+
+test("counts when the data was fetched ahead as the user's", () => {
+  assert.ok(USER_KEYS.includes(AHEAD_KEY));
 });
 
 test("goes to the sign-in page through the network when a sign-in is in the way", () => {

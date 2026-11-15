@@ -1,4 +1,5 @@
 import { escape, icon, busy, showSheet } from "./html.js";
+import { NEEDS_CONNECTION, offline } from "./api.js";
 import { longDay } from "./calendar.js";
 import { KINDS, KIND_LABELS, noteFields, goalFields, authorLabel } from "./coach.js";
 
@@ -25,6 +26,8 @@ const HINTS = {
 function saveOnSubmit(dialog, form, read, save) {
   const error = form.querySelector(".form-error");
   const show = (message) => { error.textContent = message; error.hidden = !message; };
+  // Unlike the rest of the app, these aren't queued: say so before writing.
+  if (offline()) show(NEEDS_CONNECTION);
   form.querySelector("[data-close]").addEventListener("click", () => dialog.close());
   form.addEventListener("submit", async (event) => {
     event.preventDefault();

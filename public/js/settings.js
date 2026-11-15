@@ -4,10 +4,11 @@ import { GEAR_LEAD_IN } from "./player.js";
 import { preferredDistanceUnit, setPreferredDistanceUnit, adoptServerDistanceUnit, distanceUnitRequest } from "./activities.js";
 import { createOutbox } from "./outbox.js";
 import { storedAccount, pageAccount, signOut, signOutHere, deviceName, startOidc, oidcOutcome } from "./account.js";
-import { getJson, send, errorMessage } from "./api.js";
+import { getJson, paths, send, errorMessage } from "./api.js";
 import { escape, busy } from "./html.js";
 import { mountNav } from "./nav.js";
 import { mountExamples } from "./example-list.js";
+import { installHint } from "./pwa.js";
 
 // The Settings page: each choice is a segmented control, saved as soon as it
 // is tapped. Units are kept on the server for every device (through the
@@ -77,7 +78,7 @@ distanceUnits.onclick = (event) => {
 // The server's units win over this device's copies, unless a change is queued.
 async function loadUnit() {
   try {
-    const { data, stale } = await getJson("/api/settings");
+    const { data, stale } = await getJson(paths.settings);
     adoptServerUnit(storage, data.unit, { queued: outbox?.queued() ?? [], stale });
     adoptServerDistanceUnit(storage, data.distance_unit, { queued: outbox?.queued() ?? [], stale });
     render();
@@ -550,6 +551,12 @@ async function loadVersion() {
 }
 
 mountNav("settings");
+// In a browser tab, a line recommending Add to Home Screen.
+const hint = installHint();
+if (hint) {
+  $("install-hint").textContent = hint;
+  $("install").hidden = false;
+}
 render();
 renderAccount();
 loadTokens();

@@ -1,4 +1,5 @@
 import { escape, icon, authorLine, showSheet } from "./html.js";
+import { NEEDS_CONNECTION, offline } from "./api.js";
 import { longDay, weekdayDay, weekOf } from "./calendar.js";
 import { KNOWN_SPORTS, sportIcon, sportLabel, formatDistance } from "./activities.js";
 import { plannedBy } from "./coach.js";
@@ -205,6 +206,8 @@ export function openRoutineSheet({ routine = null, date, once = false, unit, tod
     </form>`;
   const form = dialog.querySelector("form");
   const error = form.querySelector(".form-error");
+  // A routine is sent straight away, not queued: say so before writing.
+  if (offline()) Object.assign(error, { textContent: NEEDS_CONNECTION, hidden: false });
   const showWhat = () => {
     const value = form.elements.what.value;
     form.querySelector('[data-for="sport"]').hidden = value !== "sport";

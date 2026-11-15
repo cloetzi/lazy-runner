@@ -1,5 +1,5 @@
 import { createFigure } from "./figure-view.js";
-import { getJson } from "./api.js";
+import { getJson, paths } from "./api.js";
 import { escape, icon, showSheet } from "./html.js";
 import { tempoText } from "./player.js";
 
@@ -25,7 +25,7 @@ export function knowsEquipmentNames() {
 
 // Fetches the names once per page load; never rejects.
 export function loadEquipmentNames(fetchFn = fetch) {
-  loading ??= getJson("/api/equipment", fetchFn)
+  loading ??= getJson(paths.equipment, fetchFn)
     .then(({ data }) => learnEquipmentNames(data))
     .catch(() => { loading = null; });
   return loading;

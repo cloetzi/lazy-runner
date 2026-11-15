@@ -175,6 +175,19 @@ test("falls back to the last day fetched when a date has no copy", async () => {
   assert.equal(await response.text(), "friday");
 });
 
+test("falls back the same way for a page that sends the day as today", async () => {
+  let up = true;
+  const sw = worker({ network: async () => (up ? ok("friday") : offline()) });
+  await sw.get("/api/coach?today=2026-10-23");
+  await sw.get("/api/calendar?from=2026-10-19&to=2026-10-25&today=2026-10-23");
+  up = false;
+
+  assert.equal(await (await sw.get("/api/coach?today=2026-10-24")).text(), "friday");
+  assert.equal(await (await sw.get("/api/calendar?from=2026-10-19&to=2026-10-25&today=2026-10-24")).text(), "friday");
+  // Another range is another answer: no copy.
+  await assert.rejects(sw.get("/api/calendar?from=2026-10-26&to=2026-11-01&today=2026-10-24"));
+});
+
 test("keeps a picked workout apart from the default plan", async () => {
   let body = "default";
   let up = true;
@@ -206,23 +219,24 @@ test("does not keep redirects or errors", async () => {
   assert.equal(sw.data().size, 0);
 });
 
-test("never holds more than the last 50 answers", async () => {
+// Room for 50 workouts fetched ahead, three entries each, and the rest (#267).
+test("never holds more than the last 200 answers", async () => {
   const sw = worker({ network: async (request) => ok(request.url) });
 
-  for (let id = 1; id <= 70; id++) await sw.get(`/api/exercises/${id}/history`);
+  for (let id = 1; id <= 220; id++) await sw.get(`/api/exercises/${id}/history`);
 
-  assert.equal(sw.data().size, 50);
+  assert.equal(sw.data().size, 200);
   assert.ok(!sw.data().has(`${ORIGIN}/api/exercises/20/history`));
   assert.ok(sw.data().has(`${ORIGIN}/api/exercises/21/history`));
-  assert.ok(sw.data().has(`${ORIGIN}/api/exercises/70/history`));
+  assert.ok(sw.data().has(`${ORIGIN}/api/exercises/220/history`));
 });
 
 test("counts a refreshed answer as new", async () => {
   const sw = worker({ network: async (request) => ok(request.url) });
-  for (let id = 1; id <= 50; id++) await sw.get(`/api/exercises/${id}/history`);
+  for (let id = 1; id <= 200; id++) await sw.get(`/api/exercises/${id}/history`);
 
   await sw.get("/api/exercises/1/history");
-  await sw.get("/api/exercises/51/history");
+  await sw.get("/api/exercises/201/history");
 
   assert.ok(sw.data().has(`${ORIGIN}/api/exercises/1/history`));
   assert.ok(!sw.data().has(`${ORIGIN}/api/exercises/2/history`));

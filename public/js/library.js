@@ -2,7 +2,7 @@ import { createFigure } from "./figure-view.js";
 import { openHowto, equipmentNames, learnEquipmentNames } from "./howto.js";
 import { escape } from "./html.js";
 import { mountNav } from "./nav.js";
-import { getJson, STALE_NOTE } from "./api.js";
+import { getJson, paths, loadProblem, STALE_NOTE } from "./api.js";
 import { preferredUnit } from "./weights.js";
 import { AREAS, BODYWEIGHT, matches, standIns, gearUsed, countLine, lastLine, usedInLine } from "./catalog.js";
 
@@ -29,7 +29,7 @@ const observer = "IntersectionObserver" in window
 
 async function load() {
   try {
-    const answers = await Promise.all([getJson("/api/exercises"), getJson("/api/equipment")]);
+    const answers = await Promise.all([getJson(paths.exercises), getJson(paths.equipment)]);
     const [all, inventory] = answers.map((answer) => answer.data);
     stale = answers.some((answer) => answer.stale);
     exercises = all;
@@ -39,11 +39,11 @@ async function load() {
     fillEquipment();
     render();
   } catch (error) {
-    document.getElementById("library-count").textContent = `Could not load the exercises (${error.message}).`;
+    document.getElementById("library-count").textContent = loadProblem("the exercises", error);
     return;
   }
   // What the cards say about you comes second: the library works without it.
-  const [history, workouts] = await Promise.all([optional("/api/history/exercises"), optional("/api/workouts")]);
+  const [history, workouts] = await Promise.all([optional(paths.exerciseHistory), optional(paths.workouts)]);
   logged = new Map((history ?? []).map((entry) => [entry.id, entry]));
   programs = workouts ?? [];
   if (!review) render();
