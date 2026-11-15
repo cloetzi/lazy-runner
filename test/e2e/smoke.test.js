@@ -571,12 +571,25 @@ test("invites a second user, who is welcomed and sees none of the owner's things
   await step().locator('[data-value="kg"][aria-pressed="true"]').waitFor();
   await step().getByRole("button", { name: "Continue" }).click();
   const kettlebell = step().locator("#welcome-inventory li", { hasText: "Kettlebell" });
-  await kettlebell.locator('[data-unit="kg"][aria-pressed="true"]').waitFor();
+  // Its weights show once it is ticked.
+  assert.equal(await kettlebell.locator('input[data-field="new-weight"]').count(), 0);
   await kettlebell.locator('input[data-field="owned"]').check();
   await kettlebell.getByText("Saved").waitFor();
-  await step().locator("#welcome-inventory li", { hasText: "Kettlebell" }).locator('input[data-field="weights"]').fill("35");
-  await step().locator("#welcome-inventory li", { hasText: "Kettlebell" }).locator('input[data-field="weights"]').press("Tab");
-  await step().locator("#welcome-inventory li", { hasText: "Kettlebell" }).getByText("Saved").waitFor();
+  await kettlebell.locator('[data-unit="kg"][aria-pressed="true"]').waitFor();
+  // Weights go in one at a time, as chips: a typo says so, Enter adds, and
+  // a common size is one tap.
+  const newWeight = kettlebell.locator('input[data-field="new-weight"]');
+  await newWeight.fill("2x10");
+  await newWeight.press("Enter");
+  await kettlebell.getByText("is not a weight").waitFor();
+  await newWeight.fill("35 kg");
+  await newWeight.press("Enter");
+  await kettlebell.getByRole("button", { name: "Remove 35 kg" }).waitFor();
+  assert.equal(await newWeight.evaluate((field) => field === document.activeElement), true, "the field keeps the focus");
+  await kettlebell.getByRole("button", { name: "+ 8" }).click();
+  await kettlebell.getByRole("button", { name: "Remove 8 kg" }).click();
+  await kettlebell.getByRole("button", { name: "+ 8" }).waitFor();
+  await accessible(page, "the gear step with weights");
   await step().getByRole("button", { name: "Continue" }).click();
   // What an example holds shows before importing it.
   const homeStrength = step().locator("#welcome-examples > li", { hasText: "Home strength" });

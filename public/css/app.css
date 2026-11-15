@@ -786,17 +786,32 @@ button.link.danger { color: var(--danger); align-self: flex-start; padding: 0; }
 .inventory-item .owned { display: flex; align-items: center; gap: var(--space-3); flex: 1 1 12rem; min-height: 2.75rem; font-size: var(--text-lg); font-weight: 600; }
 .inventory-item .owned input { width: 1.5rem; height: 1.5rem; accent-color: var(--accent); }
 .inventory-item.not-owned .owned span { color: var(--muted); font-weight: 400; }
-.inventory-item .weights { display: flex; flex: 1 1 100%; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
-.inventory-item .weights label { display: flex; flex: 1 1 8rem; align-items: center; gap: var(--space-2); max-width: 18rem; }
-.inventory-item .weights label input { flex: 1; width: 4rem; min-width: 0; }
-.inventory-item .weights .segmented { align-self: center; flex: none; }
-.inventory-item .weights .segmented button { min-width: 2.75rem; }
-.inventory-item .weights-hint { flex-basis: 100%; margin: 0; font-size: var(--text-sm); }
-.inventory-item.not-owned .weights-hint { display: none; }
-.inventory-item .weights input {
-  width: 6.5rem; min-height: 2.75rem; padding: 0 var(--space-3); font: inherit; font-size: var(--text-md);
+/* Weights as chips (equipment-list.js): a chip per weight with its own
+   remove button, then a field and Add, then common sizes as one-tap adds. */
+.inventory-item .weights { display: grid; flex: 1 1 100%; gap: var(--space-2); }
+.weight-chips { display: flex; flex-wrap: wrap; gap: var(--space-2); margin: 0; padding: 0; list-style: none; }
+.weight-chips:empty { display: none; }
+.weight-chip {
+  display: inline-flex; align-items: center; gap: var(--space-1); min-height: 2.75rem; padding-left: var(--space-3);
+  border: 1px solid var(--control-border); border-radius: 999px; background: var(--surface); font-size: var(--text-md); font-weight: 600; font-variant-numeric: tabular-nums;
+}
+.chip-remove {
+  display: inline-grid; place-items: center; width: 2.75rem; height: 2.75rem; padding: 0;
+  background: none; border: 0; border-radius: 999px; color: var(--muted);
+}
+.chip-remove:hover { color: var(--text); }
+.weight-add { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
+.weight-add input {
+  width: 7rem; min-height: 2.75rem; padding: 0 var(--space-3); font: inherit; font-size: var(--text-md);
   color: var(--text); background: var(--bg); border: 1px solid var(--control-border); border-radius: var(--radius-sm);
 }
+.weight-add input[aria-invalid="true"] { border-color: var(--danger); }
+.weight-add button.small { min-height: 2.75rem; }
+.weight-add .segmented { flex: none; }
+.weight-add .segmented button { min-width: 2.75rem; }
+.weight-quick { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.weight-quick button.small { min-height: 2.75rem; min-width: 2.75rem; font-variant-numeric: tabular-nums; }
+.inventory-item .weights-hint, .inventory-item .weights .form-error { margin: 0; font-size: var(--text-sm); }
 .inventory-item .status { flex-basis: 100%; margin: 0; font-size: var(--text-sm); }
 .inventory-item .status:empty { display: none; }
 
