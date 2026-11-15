@@ -200,6 +200,12 @@ then `BASE_URL=http://localhost:3999 SERVER_LOG=/tmp/e2e.log npm run test:e2e`.
   a version number elsewhere.
 - Use the latest stable release of everything (Ruby, gems, Node, base images,
   GitHub Actions) unless there is a stated reason not to.
+  Renovate (the hosted app, `renovate.json`) keeps them there: weekly grouped
+  PRs as Conventional Commits, minor and patch ones squash-merged once CI is
+  green; majors, new Ruby or Node minors and lock file maintenance left for
+  review; a dependency dashboard issue. An older pin needs a `packageRules`
+  entry saying why. Not covered: the vendored Swagger UI (by hand) and the
+  Debian release in the session-start hook's fallback image.
 - CI runs on GitHub-hosted runners (`ubuntu-latest`) and only tests: Ruby,
   node and e2e as parallel jobs, toolchains from setup actions reading the
   version files, dependencies cached. The image is built only for a release

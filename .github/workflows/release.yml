@@ -27,8 +27,8 @@ on:
         default: false
 
 # Actions are pinned to a commit, the release in a comment, since the jobs
-# below can write to the repository and the registry; Dependabot moves the
-# pins (.github/dependabot.yml).
+# below can write to the repository and the registry; Renovate moves the
+# pins (renovate.json).
 permissions:
   contents: read
 

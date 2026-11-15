@@ -1,0 +1,89 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "description": [
+    "Keeps Ruby (.ruby-version), Node (.node-version), the gems, the npm packages",
+    "and the GitHub Actions at their latest release; the Docker base image follows",
+    ".ruby-version, which the Dockerfile takes as a build arg. Titles are",
+    "Conventional Commits, as release-please reads them on main: what ships in the",
+    "image (Ruby and the gems) is fix(deps), so it gets released, the actions",
+    "ci(deps) and the rest chore(deps)."
+  ],
+  "customManagers": [
+    {
+      "description": "Gemfile.lock's RUBY VERSION, moved with .ruby-version: a frozen bundle install refuses a lockfile naming another Ruby.",
+      "customType": "regex",
+      "managerFilePatterns": ["/^Gemfile\\.lock$/"],
+      "matchStrings": ["RUBY VERSION\\n\\s+ruby (?<currentValue>\\d+\\.\\d+\\.\\d+)"],
+      "depNameTemplate": "ruby",
+      "datasourceTemplate": "ruby-version"
+    }
+  ],
+  "extends": [
+    "config:recommended",
+    ":semanticCommits",
+    "helpers:pinGitHubActionDigestsToSemver"
+  ],
+  "timezone": "UTC",
+  "schedule": ["before 6am on monday"],
+  "minimumReleaseAge": "3 days",
+  "labels": ["dependencies"],
+  "automergeType": "pr",
+  "automergeStrategy": "squash",
+  "platformAutomerge": false,
+  "lockFileMaintenance": {
+    "description": "Waits for review: it can move a gem with no constraint in the Gemfile to a new major.",
+    "enabled": true,
+    "automerge": false,
+    "schedule": ["before 6am on monday"]
+  },
+  "vulnerabilityAlerts": {
+    "labels": ["dependencies", "security"],
+    "minimumReleaseAge": null,
+    "schedule": ["at any time"]
+  },
+  "packageRules": [
+    {
+      "description": "Minor, patch and digest updates merge themselves once CI is green; a major waits for review.",
+      "matchUpdateTypes": ["minor", "patch", "pin", "pinDigest", "digest"],
+      "automerge": true
+    },
+    {
+      "matchManagers": ["bundler"],
+      "matchUpdateTypes": ["minor", "patch"],
+      "groupName": "gems"
+    },
+    {
+      "matchManagers": ["bundler", "ruby-version"],
+      "semanticCommitType": "fix"
+    },
+    {
+      "description": ".ruby-version and Gemfile.lock's RUBY VERSION in one PR.",
+      "matchManagers": ["ruby-version", "custom.regex"],
+      "matchDepNames": ["ruby"],
+      "groupName": "Ruby",
+      "semanticCommitType": "fix"
+    },
+    {
+      "description": "The vendored Swagger UI release is updated by hand, all its files together.",
+      "matchFileNames": ["lib/api_reference/swagger-ui/**"],
+      "enabled": false
+    },
+    {
+      "matchManagers": ["npm"],
+      "matchUpdateTypes": ["minor", "patch"],
+      "groupName": "npm packages"
+    },
+    {
+      "description": "Every action in one PR, kept pinned to a commit with its release in a comment.",
+      "matchManagers": ["github-actions"],
+      "groupName": "GitHub Actions",
+      "semanticCommitType": "ci"
+    },
+    {
+      "description": "A new Ruby or Node minor or major is its own PR to review; a patch merges itself.",
+      "matchManagers": ["ruby-version", "custom.regex", "nodenv"],
+      "matchUpdateTypes": ["minor", "major"],
+      "automerge": false
+    }
+  ]
+}
