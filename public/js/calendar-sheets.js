@@ -385,7 +385,7 @@ export function openRpeSheet({ activity, unit, onRpe, today = activity.date }) {
         <span><strong>${escape(activityTitle(activity))}</strong>${facts.length ? `<br><span class="muted">${escape(facts.join(" · "))}</span>` : ""}</span></p>
       ${rpePicker({ answer: true })}
       <button class="quiet small" value="close">Not now</button>
-      <p class="muted">You can turn this question off in Settings.</p>
+      <p class="muted">You can turn this question off in <a href="/settings.html#training">Settings</a>.</p>
     </form>`;
   dialog.onclose = () => {
     const answer = dialog.returnValue;

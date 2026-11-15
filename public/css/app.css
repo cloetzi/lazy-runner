@@ -909,11 +909,112 @@ body:not(.calendar-month) .calendar-key { display: none; }
 
 /* Settings and the equipment inventory */
 .setting { gap: var(--space-2); }
-.setting h2, .setting h3, .setting p { margin: 0; }
+.setting :is(h2, h3, h4, p) { margin: 0; }
+.setting h4 { font-size: var(--text-md); }
 .setting h2 { font-size: var(--text-lg); }
 .setting a:not(.button) { color: var(--link); font-weight: 600; }
-/* A link to a card (settings.html#users) lands below the sticky top bar. */
-.setting { scroll-margin-top: calc(4.5rem + env(safe-area-inset-top)); }
+
+/* The page: the title, the list of sections, the open section. One list,
+   drawn three ways: rows to tap into (phone), tabs (from 40rem, an iPad in
+   portrait beside the rail), a list beside the section (from 60rem, beside
+   the sidebar). */
+.settings-pane, .settings-section { display: grid; gap: var(--space-5); min-width: 0; align-content: start; }
+.settings-sections .row-meta { white-space: normal; }
+.section-head h2 { margin: 0; font-size: var(--text-xl); }
+.section-head h2:focus { outline: none; }
+.section-head .back { margin-left: calc(-1 * var(--space-1)); }
+
+/* A group of settings: a title with where the choice is kept, over one
+   surface with a row per setting: its name and what it does on the left,
+   the choice on the right. */
+.settings-group { display: grid; gap: var(--space-2); }
+.settings-group-title { margin: 0; display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-1) var(--space-2); font-size: var(--text-lg); }
+.setting-row {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-2) var(--space-4);
+  min-height: var(--control-md); padding: var(--space-3) var(--space-4);
+}
+.setting-row .row-text { flex: 1 1 14rem; gap: 0; }
+.setting-note { font-size: var(--text-sm); color: var(--muted); }
+.setting-row .segmented { flex: none; align-self: center; }
+.setting-row > button { flex: none; }
+
+/* A field and its button on one line where there is room: a name and Make
+   a token, an address and Copy. */
+.field-with-button { grid-template-columns: minmax(0, 1fr) auto; align-items: end; }
+.field-with-button > :not(.field, button) { grid-column: 1 / -1; }
+@media (max-width: 30rem) { .field-with-button { grid-template-columns: minmax(0, 1fr); } }
+
+/* A card a link names lands clear of the top bar (phones) or the top. */
+.settings-section [id] { scroll-margin-top: calc(3.5rem + var(--space-4) + env(safe-area-inset-top)); }
+
+/* Phone: the list, or one section with Back to it. */
+@media (max-width: 39.99rem) {
+  .settings[data-open] .settings-sections { display: none; }
+  /* The page's h1 stays for a screen reader; the section's heading shows. */
+  .settings[data-open] .settings-title {
+    position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap;
+  }
+  .settings:not([data-open]) .settings-pane { display: none; }
+  .section-head h2 { font-size: var(--text-2xl); }
+  /* The choice beside the setting's name, what it does underneath. */
+  .setting-row { gap: var(--space-2) var(--space-3); }
+  .setting-row .row-text { display: contents; }
+  .setting-row .row-title { flex: 1 1 auto; }
+  .setting-row .setting-note { order: 1; flex: 1 1 100%; }
+}
+
+/* From 40rem the list stays on screen, so a section needs no Back. */
+@media (min-width: 40rem) {
+  .section-head .back { display: none; }
+}
+
+/* Up to 60rem: the list as a row of tabs under the title. The tab names the
+   open section, so its heading is there for a screen reader only. */
+@media (min-width: 40rem) and (max-width: 59.99rem) {
+  .settings { gap: var(--space-4); }
+  .settings-sections .list {
+    display: flex; background: none; border: 0; border-bottom: 1px solid var(--border); border-radius: 0;
+    /* Out of room (larger text), the tabs scroll sideways, as a segmented control does. */
+    overflow-x: auto; scrollbar-width: none;
+  }
+  .settings-sections .list > * + *::before { content: none; }
+  .settings-sections .row { width: auto; min-height: var(--control-md); padding: 0 var(--space-3); color: var(--muted); white-space: nowrap; }
+  .settings-sections .row-title { font-weight: 600; }
+  .settings-sections :is(.row-meta, .row > .icon) { display: none; }
+  .settings-sections [aria-current] { color: var(--text); }
+  .settings-sections [aria-current] .row-title { font-weight: 700; }
+  .settings-sections [aria-current]::after {
+    content: ""; position: absolute; left: var(--space-3); right: var(--space-3); bottom: 0; height: 3px;
+    border-radius: var(--radius-full) var(--radius-full) 0 0; background: var(--accent);
+  }
+  .settings-sections .list > li { position: relative; flex: none; }
+  .settings-sections .list > li:first-child .row { padding-left: 0; }
+  .settings-sections .list > li:first-child [aria-current]::after { left: 0; }
+  .section-head { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+}
+/* An iPad mini upright: the five tabs closer together, so they still fit beside the rail. */
+@media (min-width: 40rem) and (max-width: 48rem) {
+  .settings-sections .row { padding: 0 var(--space-2); }
+  .settings-sections [aria-current]::after { left: var(--space-2); right: var(--space-2); }
+}
+
+/* From 60rem: the list in its own column beside the open section, their
+   first lines level, the list staying put while a long section scrolls. */
+@media (min-width: 60rem) {
+  body.with-nav:not([data-focus]) .settings {
+    max-width: var(--wide); display: grid; grid-template-columns: 14rem minmax(0, var(--measure));
+    grid-template-rows: auto 1fr; gap: var(--space-5) var(--space-6); align-items: start;
+  }
+  .settings-title { grid-area: 1 / 1; }
+  .settings-sections { grid-area: 2 / 1; position: sticky; top: var(--space-4); }
+  .settings-pane { grid-area: 1 / 2 / span 2; }
+  .settings-sections .row > .icon { display: none; }
+  .settings-sections .row-title { font-weight: 600; }
+  .settings-sections [aria-current] { background: var(--accent-tint); box-shadow: inset 3px 0 0 var(--accent); }
+  .settings-sections [aria-current] .row-title { font-weight: 700; }
+  .section-head { display: flex; align-items: flex-end; min-height: calc(var(--text-2xl) * var(--leading-tight)); }
+  .settings-section [id] { scroll-margin-top: var(--space-4); }
+}
 .inventory-item { flex-wrap: wrap; gap: var(--space-2) var(--space-4); }
 .inventory-item .owned { display: flex; align-items: center; gap: var(--space-3); flex: 1 1 12rem; min-height: var(--control-sm); font-size: var(--text-lg); font-weight: 600; }
 .inventory-item .owned input { width: 1.5rem; height: 1.5rem; }

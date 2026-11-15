@@ -15,188 +15,289 @@
   <script type="module" src="/js/settings.js"></script>
 </head>
 <body>
-  <main class="view">
-    <header class="brand">
+  <!-- Five sections, each with its own address (its id).
+       One list of sections, drawn three ways by the CSS: rows to tap into on a
+       phone, a row of tabs from 40rem (an iPad in portrait, beside the rail),
+       a list beside the open section from 60rem (beside the sidebar).
+       `data-open` on <main> names the open section (settings.js); without it
+       a phone shows the list. -->
+  <main class="view settings" id="settings">
+    <header class="brand settings-title">
       <h1>Settings</h1>
-      <p class="tagline">Your account and units follow you to every device; the rest is kept on this one.</p>
     </header>
 
-    <section class="card setting" id="account">
-      <h2>Account</h2>
-      <p id="account-who">Signed in.</p>
-      <p class="form-error" id="account-error" role="alert" hidden></p>
-      <div class="account-actions">
-        <button class="secondary" id="sign-out">Sign out</button>
-        <button class="secondary" id="change-password-open" aria-expanded="false" aria-controls="change-password">Change password</button>
-      </div>
-      <form class="form" id="change-password" hidden>
-        <label class="field">
-          <span>Current password</span>
-          <input name="password" type="password" autocomplete="current-password" required>
-        </label>
-        <label class="field">
-          <span>New password</span>
-          <input name="new_password" type="password" autocomplete="new-password" minlength="8" required>
-          <span class="muted">At least 8 characters.</span>
-        </label>
-        <label class="form-check">
-          <input name="sign_out_others" type="checkbox" checked>
-          <span id="sign-out-others-label">Sign out my other devices and revoke my API tokens</span>
-        </label>
-        <p class="form-error" role="alert" hidden></p>
-        <button class="primary" type="submit">Change password</button>
-      </form>
-      <div class="form" id="identities" hidden>
-        <h3 id="identities-title">Single sign-on</h3>
-        <p class="muted" id="identities-note">Link your account to sign in with it instead of a password.</p>
-        <p id="identities-outcome" role="status" hidden></p>
-        <ul class="device-list" id="identity-list"></ul>
-        <p class="form-error" role="alert" hidden></p>
-        <div class="account-actions">
-          <button class="secondary" type="button" id="link-identity" hidden>Link</button>
+    <nav class="settings-sections" aria-label="Settings sections">
+      <ul class="list">
+        <li><a class="row" href="#training" data-section="training">
+          <span class="row-text"><span class="row-title">Training</span><span class="row-meta">Units, beeps, timing</span></span>
+          <svg class="icon" aria-hidden="true"><use href="/icons/sprite.svg#chevron-right"/></svg></a></li>
+        <li><a class="row" href="#account" data-section="account">
+          <span class="row-text"><span class="row-title">Account</span><span class="row-meta">Password, devices</span></span>
+          <svg class="icon" aria-hidden="true"><use href="/icons/sprite.svg#chevron-right"/></svg></a></li>
+        <li id="section-link-people" hidden><a class="row" href="#people" data-section="people">
+          <span class="row-text"><span class="row-title">People</span><span class="row-meta">Users and invites</span></span>
+          <svg class="icon" aria-hidden="true"><use href="/icons/sprite.svg#chevron-right"/></svg></a></li>
+        <li><a class="row" href="#coach" data-section="coach">
+          <span class="row-text"><span class="row-title">Coach and integrations</span><span class="row-meta">API tokens, assistants</span></span>
+          <svg class="icon" aria-hidden="true"><use href="/icons/sprite.svg#chevron-right"/></svg></a></li>
+        <li><a class="row" href="#about" data-section="about">
+          <span class="row-text"><span class="row-title">About</span><span class="row-meta">Version, Home Screen</span></span>
+          <svg class="icon" aria-hidden="true"><use href="/icons/sprite.svg#chevron-right"/></svg></a></li>
+      </ul>
+    </nav>
+
+    <div class="settings-pane">
+
+      <!-- 1. Training: everything a person changes mid-week. -->
+      <section class="settings-section" id="training" aria-labelledby="training-title" hidden>
+        <header class="brand section-head">
+          <button class="back" type="button" data-back><svg class="icon" aria-hidden="true"><use href="/icons/sprite.svg#chevron-left"/></svg>Settings</button>
+          <h2 id="training-title">Training</h2>
+        </header>
+
+        <div class="settings-group" id="units-group">
+          <h3 class="settings-group-title">Units <span class="tag">Every device</span></h3>
+          <div class="list">
+            <div class="setting-row">
+              <div class="row-text">
+                <span class="row-title" id="units-label">Weights</span>
+                <span class="setting-note">Weights in workouts and sessions are shown and stepped in this unit.</span>
+              </div>
+              <div class="segmented" role="group" aria-labelledby="units-label" id="units">
+                <button data-value="lb">lb</button>
+                <button data-value="kg">kg</button>
+              </div>
+            </div>
+            <div class="setting-row">
+              <div class="row-text">
+                <span class="row-title" id="distance-label">Distances</span>
+                <span class="setting-note">Activities show distances in this unit, with climb in metres or feet.</span>
+              </div>
+              <div class="segmented" role="group" aria-labelledby="distance-label" id="distance-units">
+                <button data-value="km">km</button>
+                <button data-value="mi">mi</button>
+              </div>
+            </div>
+          </div>
         </div>
-      </div>
-    </section>
 
-    <section class="card setting" id="users" hidden>
-      <h2>Users</h2>
-      <p class="muted">Everyone here has their own workouts, sessions, gear and settings; the exercise library is shared.</p>
-      <ul class="device-list" id="user-list"></ul>
-      <div class="form" id="temporary-password" hidden>
-        <p><strong>Give <span id="temporary-password-who"></span> this temporary password.</strong> They choose their own when they sign in. It won't be shown again.</p>
-        <label class="field"><span>Temporary password</span><input class="token-secret" readonly></label>
-        <button class="secondary" type="button" id="copy-temporary-password">Copy</button>
-      </div>
-      <h2>Invites</h2>
-      <p class="muted">Someone joins with an invite link, choosing their own username and password. A link works once, for 7 days.</p>
-      <ul class="device-list" id="invite-list"></ul>
-      <form class="form" id="new-invite-form">
-        <label class="field">
-          <span>Who is it for? <span class="muted">(optional)</span></span>
-          <input name="label" maxlength="60" placeholder="For Sam" autocomplete="off">
-        </label>
-        <button class="secondary" type="submit" id="new-invite">Make an invite link</button>
-      </form>
-      <div class="form" id="new-invite-link" hidden>
-        <p><strong>Send this link</strong> to the person joining. It won't be shown again.</p>
-        <label class="field"><span>Invite link</span><input class="token-secret" readonly></label>
-        <div class="account-actions">
-          <button class="secondary" type="button" id="copy-invite">Copy</button>
-          <button class="secondary" type="button" id="share-invite" hidden>Share</button>
+        <div class="settings-group" id="workout-group">
+          <h3 class="settings-group-title">In a workout <span class="tag">This device</span></h3>
+          <div class="list">
+            <div class="setting-row" id="beeps">
+              <div class="row-text">
+                <span class="row-title" id="sound-label">Beeps</span>
+                <span class="setting-note">Counting down the last seconds, at the start and end of a timed set, and when to switch sides.</span>
+              </div>
+              <div class="segmented" role="group" aria-labelledby="sound-label" data-setting="sound">
+                <button data-value="true">On</button>
+                <button data-value="false">Off</button>
+              </div>
+            </div>
+            <!-- Test sound (#266, already in the app) keeps its hint, as a row of its own under Beeps. -->
+            <div class="setting-row" id="test-sound-row">
+              <div class="row-text">
+                <span class="row-title">Volume and mute</span>
+                <span class="setting-note">Beeps play alongside your music, at the device's volume. A muted iPad or iPhone stays silent.</span>
+                <span class="setting-note" id="test-sound-note" role="status" hidden>This browser didn't play sound. Tap again, or check that it may play audio for this site.</span>
+              </div>
+              <button class="secondary small" type="button" id="test-sound">Test sound</button>
+            </div>
+            <div class="setting-row" id="vibration">
+              <div class="row-text">
+                <span class="row-title" id="vibration-label">Vibration</span>
+                <span class="setting-note">The same cues as a buzz, for a phone in your pocket or on mute.</span>
+              </div>
+              <div class="segmented" role="group" aria-labelledby="vibration-label" data-setting="vibration">
+                <button data-value="true">On</button>
+                <button data-value="false">Off</button>
+              </div>
+            </div>
+            <div class="setting-row" id="lead-in">
+              <div class="row-text">
+                <span class="row-title" id="lead-in-label">Get into position</span>
+                <span class="setting-note">Seconds before a timed exercise starts counting. When it needs other gear than the exercise before, you get at least <span id="gear-lead-in"></span>&nbsp;s.</span>
+              </div>
+              <div class="segmented" role="group" aria-labelledby="lead-in-label" data-setting="leadIn"></div>
+            </div>
+          </div>
         </div>
-      </div>
-      <p class="form-error" id="users-error" role="alert" hidden></p>
-    </section>
 
-    <section class="card setting">
-      <h2>Signed-in devices</h2>
-      <p class="muted">Devices stay signed in for 90 days after they were last used.</p>
-      <ul class="device-list" id="devices"></ul>
-      <button class="secondary" id="sign-out-others" hidden>Sign out the other devices</button>
-    </section>
+        <div class="settings-group" id="activity-group">
+          <h3 class="settings-group-title">After an activity <span class="tag">This device</span></h3>
+          <div class="list">
+            <div class="setting-row" id="ask-rpe">
+              <div class="row-text">
+                <span class="row-title" id="ask-rpe-label">Ask how hard it was</span>
+                <span class="setting-note">When a run or another activity arrives from elsewhere, Today asks once how hard it felt.</span>
+              </div>
+              <div class="segmented" role="group" aria-labelledby="ask-rpe-label" data-setting="askRpe">
+                <button data-value="true">On</button>
+                <button data-value="false">Off</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
 
-    <section class="card setting" id="api-tokens">
-      <h2>API tokens</h2>
-      <p class="muted">For an assistant or a script acting as you. A token has full access to your data; revoke it here when you're done with it.</p>
-      <ul class="device-list" id="tokens"></ul>
-      <form class="form" id="new-token">
-        <label class="field">
-          <span>Name</span>
-          <input name="name" maxlength="60" placeholder="Coach agent" required>
-        </label>
-        <p class="form-error" role="alert" hidden></p>
-        <button class="secondary" type="submit">Make a token</button>
-      </form>
-      <div class="form" id="new-token-secret" hidden>
-        <p><strong>Copy it now:</strong> it won't be shown again.</p>
-        <label class="field"><span>Your new token</span><input class="token-secret" readonly></label>
-        <button class="secondary" type="button" id="copy-token">Copy</button>
-      </div>
-      <h2>Connect an assistant</h2>
-      <p class="muted">Make a token above, then connect. The MCP server (Streamable HTTP) gives an assistant tools to read your training and plan workouts. Point the client at this address with the token in an <code>Authorization: Bearer &lt;token&gt;</code> header, the same header a script sends to the API.</p>
-      <div class="form" id="mcp-url">
-        <label class="field"><span>MCP server</span><input class="token-secret" readonly></label>
-        <button class="secondary" type="button" id="copy-mcp-url">Copy</button>
-      </div>
-      <div class="form" id="mcp-command">
-        <label class="field"><span>For Claude Code</span><input class="token-secret" readonly></label>
-        <button class="secondary" type="button" id="copy-mcp-command">Copy</button>
-      </div>
-      <p class="muted">If the server is reached by a name other than a loopback address, whoever runs it lists that name in <code>MCP_ALLOWED_HOSTS</code>; until then the server refuses MCP requests. The <a id="mcp-docs" href="https://github.com/cloetzi/lazy-runner/blob/main/docs/api.md#mcp-server" target="_blank" rel="noopener">MCP docs</a> list the tools.</p>
-    </section>
+      <!-- 2. Account: who is signed in, password, single sign-on, devices. -->
+      <section class="settings-section" id="account" aria-labelledby="account-title" hidden>
+        <header class="brand section-head">
+          <button class="back" type="button" data-back><svg class="icon" aria-hidden="true"><use href="/icons/sprite.svg#chevron-left"/></svg>Settings</button>
+          <h2 id="account-title">Account</h2>
+        </header>
 
-    <section class="card setting">
-      <h2 id="units-label">Units</h2>
-      <p class="muted">Weights in workouts and sessions are shown and stepped in this unit, on every device.</p>
-      <div class="segmented" role="group" aria-labelledby="units-label" id="units">
-        <button data-value="lb">lb</button>
-        <button data-value="kg">kg</button>
-      </div>
-    </section>
+        <div class="card setting" id="sign-in">
+          <h3>Sign-in</h3>
+          <p id="account-who">Signed in.</p>
+          <p class="form-error" id="account-error" role="alert" hidden></p>
+          <div class="account-actions">
+            <button class="secondary" id="sign-out">Sign out</button>
+            <button class="secondary" id="change-password-open" aria-expanded="false" aria-controls="change-password">Change password</button>
+          </div>
+          <form class="form" id="change-password" hidden>
+            <label class="field">
+              <span>Current password</span>
+              <input name="password" type="password" autocomplete="current-password" required>
+            </label>
+            <label class="field">
+              <span>New password</span>
+              <input name="new_password" type="password" autocomplete="new-password" minlength="8" required>
+              <span class="muted">At least 8 characters.</span>
+            </label>
+            <label class="form-check">
+              <input name="sign_out_others" type="checkbox" checked>
+              <span id="sign-out-others-label">Sign out my other devices and revoke my API tokens</span>
+            </label>
+            <p class="form-error" role="alert" hidden></p>
+            <button class="primary" type="submit">Change password</button>
+          </form>
+          <div class="form" id="identities" hidden>
+            <h4 id="identities-title">Single sign-on</h4>
+            <p class="muted" id="identities-note">Link your account to sign in with it instead of a password.</p>
+            <p id="identities-outcome" role="status" hidden></p>
+            <ul class="device-list" id="identity-list"></ul>
+            <p class="form-error" role="alert" hidden></p>
+            <div class="account-actions">
+              <button class="secondary" type="button" id="link-identity" hidden>Link</button>
+            </div>
+          </div>
+        </div>
 
-    <section class="card setting">
-      <h2 id="distance-label">Distances</h2>
-      <p class="muted">Activities on every device show distances in this unit, with climb in metres or feet.</p>
-      <div class="segmented" role="group" aria-labelledby="distance-label" id="distance-units">
-        <button data-value="km">km</button>
-        <button data-value="mi">mi</button>
-      </div>
-    </section>
+        <div class="card setting" id="signed-in-devices">
+          <h3>Signed-in devices</h3>
+          <p class="muted">Devices stay signed in for 90 days after they were last used.</p>
+          <ul class="device-list" id="devices"></ul>
+          <button class="secondary" id="sign-out-others" hidden>Sign out the other devices</button>
+        </div>
+      </section>
 
-    <section class="card setting">
-      <h2 id="ask-rpe-label">Ask how hard it was</h2>
-      <p class="muted">When a run or another activity arrives from elsewhere, Today asks once how hard it felt.</p>
-      <div class="segmented" role="group" aria-labelledby="ask-rpe-label" data-setting="askRpe">
-        <button data-value="true">On</button>
-        <button data-value="false">Off</button>
-      </div>
-    </section>
+      <!-- 3. People: the owner's only; for anyone else the section and its entry stay hidden. -->
+      <section class="settings-section" id="people" aria-labelledby="people-title" hidden>
+        <header class="brand section-head">
+          <button class="back" type="button" data-back><svg class="icon" aria-hidden="true"><use href="/icons/sprite.svg#chevron-left"/></svg>Settings</button>
+          <h2 id="people-title">People</h2>
+        </header>
 
-    <section class="card setting">
-      <h2 id="sound-label">Beeps</h2>
-      <p class="muted">Counting down the last seconds, at the start and end of a timed set, and when to switch sides.</p>
-      <div class="segmented" role="group" aria-labelledby="sound-label" data-setting="sound">
-        <button data-value="true">On</button>
-        <button data-value="false">Off</button>
-      </div>
-      <p class="muted">They follow the device's volume. On an iPad or iPhone they play alongside your music and stay silent while it is muted, so try them before a workout.</p>
-      <div class="account-actions">
-        <button class="secondary" type="button" id="test-sound">Test sound</button>
-      </div>
-      <p class="muted" id="test-sound-note" role="status" hidden>This browser didn't play sound. Tap again, or check that it may play audio for this site.</p>
-    </section>
+        <div class="card setting" id="users">
+          <h3>Users</h3>
+          <p class="muted">Everyone here has their own workouts, sessions, gear and settings; the exercise library is shared.</p>
+          <ul class="device-list" id="user-list"></ul>
+          <div class="form" id="temporary-password" hidden>
+            <p><strong>Give <span id="temporary-password-who"></span> this temporary password.</strong> They choose their own when they sign in. It won't be shown again.</p>
+            <label class="field"><span>Temporary password</span><input class="token-secret" readonly></label>
+            <button class="secondary" type="button" id="copy-temporary-password">Copy</button>
+          </div>
+          <p class="form-error" id="users-error" role="alert" hidden></p>
+        </div>
 
-    <section class="card setting">
-      <h2 id="vibration-label">Vibration</h2>
-      <p class="muted">The same cues as a buzz, for a phone in your pocket or on mute.</p>
-      <div class="segmented" role="group" aria-labelledby="vibration-label" data-setting="vibration">
-        <button data-value="true">On</button>
-        <button data-value="false">Off</button>
-      </div>
-      <p class="muted" id="vibration-unsupported" hidden>This browser can't vibrate.</p>
-    </section>
+        <div class="card setting" id="invites">
+          <h3>Invites</h3>
+          <p class="muted">Someone joins with an invite link, choosing their own username and password. A link works once, for 7 days.</p>
+          <ul class="device-list" id="invite-list"></ul>
+          <form class="form field-with-button" id="new-invite-form">
+            <label class="field">
+              <span>Who is it for? <span class="muted">(optional)</span></span>
+              <input name="label" maxlength="60" placeholder="For Sam" autocomplete="off">
+            </label>
+            <button class="secondary small" type="submit" id="new-invite">Make an invite link</button>
+          </form>
+          <div class="form" id="new-invite-link" hidden>
+            <p><strong>Send this link</strong> to the person joining. It won't be shown again.</p>
+            <label class="field"><span>Invite link</span><input class="token-secret" readonly></label>
+            <div class="account-actions">
+              <button class="secondary" type="button" id="copy-invite">Copy</button>
+              <button class="secondary" type="button" id="share-invite" hidden>Share</button>
+            </div>
+          </div>
+        </div>
+      </section>
 
-    <section class="card setting">
-      <h2 id="lead-in-label">Get into position</h2>
-      <p class="muted">Seconds before a timed exercise starts counting. When it needs other gear than the exercise before, you get at least <span id="gear-lead-in"></span> s.</p>
-      <div class="segmented" role="group" aria-labelledby="lead-in-label" data-setting="leadIn"></div>
-    </section>
+      <!-- 4. Coach and integrations: everything technical. -->
+      <section class="settings-section" id="coach" aria-labelledby="coach-title" hidden>
+        <header class="brand section-head">
+          <button class="back" type="button" data-back><svg class="icon" aria-hidden="true"><use href="/icons/sprite.svg#chevron-left"/></svg>Settings</button>
+          <h2 id="coach-title">Coach and integrations</h2>
+        </header>
 
-    <section class="card setting" id="install" hidden>
-      <h3>Add to Home Screen</h3>
-      <p class="muted" id="install-hint"></p>
-    </section>
+        <div class="card setting" id="api-tokens">
+          <h3>API tokens</h3>
+          <p class="muted">For an assistant or a script acting as you. A token has full access to your data; revoke it here when you're done with it.</p>
+          <ul class="device-list" id="tokens"></ul>
+          <form class="form field-with-button" id="new-token">
+            <label class="field">
+              <span>Name</span>
+              <input name="name" maxlength="60" placeholder="Coach agent" required>
+            </label>
+            <button class="secondary small" type="submit">Make a token</button>
+            <p class="form-error" role="alert" hidden></p>
+          </form>
+          <div class="form field-with-button" id="new-token-secret" hidden>
+            <p><strong>Copy it now:</strong> it won't be shown again.</p>
+            <label class="field"><span>Your new token</span><input class="token-secret" readonly></label>
+            <button class="secondary small" type="button" id="copy-token">Copy</button>
+          </div>
+        </div>
 
-    <section class="card setting">
-      <h2>API</h2>
-      <p class="muted">Everything the app does goes through a JSON API. <a href="/api/openapi">Read its reference</a>, or fetch the <a href="/api/openapi/json">OpenAPI document</a>.</p>
-    </section>
+        <div class="card setting" id="assistant">
+          <h3>Connect an assistant</h3>
+          <p class="muted">Make a token above, then connect. The MCP server (Streamable HTTP) gives an assistant tools to read your training and plan workouts. Point the client at this address with the token in an <code>Authorization: Bearer &lt;token&gt;</code> header, the same header a script sends to the API.</p>
+          <div class="form field-with-button" id="mcp-url">
+            <label class="field"><span>MCP server</span><input class="token-secret" readonly></label>
+            <button class="secondary small" type="button" id="copy-mcp-url">Copy</button>
+          </div>
+          <div class="form field-with-button" id="mcp-command">
+            <label class="field"><span>For Claude Code</span><input class="token-secret" readonly></label>
+            <button class="secondary small" type="button" id="copy-mcp-command">Copy</button>
+          </div>
+          <p class="muted">If the server is reached by a name other than a loopback address, whoever runs it lists that name in <code>MCP_ALLOWED_HOSTS</code>; until then the server refuses MCP requests. The <a id="mcp-docs" href="https://github.com/cloetzi/lazy-runner/blob/main/docs/api.md#mcp-server" target="_blank" rel="noopener">MCP docs</a> list the tools.</p>
+        </div>
 
-    <section class="card setting" id="about">
-      <h2>About</h2>
-      <p id="about-version">The Lazy Runner</p>
-      <p class="muted" id="about-build"></p>
-    </section>
+        <div class="card setting" id="api">
+          <h3>API</h3>
+          <p class="muted">Everything the app does goes through a JSON API. <a href="/api/openapi">Read its reference</a>, or fetch the <a href="/api/openapi/json">OpenAPI document</a>.</p>
+        </div>
+      </section>
+
+      <!-- 5. About: the version, and Add to Home Screen while in a browser tab. -->
+      <section class="settings-section" id="about" aria-labelledby="about-title" hidden>
+        <header class="brand section-head">
+          <button class="back" type="button" data-back><svg class="icon" aria-hidden="true"><use href="/icons/sprite.svg#chevron-left"/></svg>Settings</button>
+          <h2 id="about-title">About</h2>
+        </header>
+
+        <div class="card setting" id="version">
+          <h3>Version</h3>
+          <p id="about-version">The Lazy Runner</p>
+          <p class="muted" id="about-build"></p>
+        </div>
+
+        <div class="card setting" id="install" hidden>
+          <h3>Add to Home Screen</h3>
+          <p class="muted" id="install-hint"></p>
+        </div>
+      </section>
+    </div>
   </main>
 </body>
 </html>

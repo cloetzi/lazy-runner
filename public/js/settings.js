@@ -10,10 +10,11 @@ import { mountNav } from "./nav.js";
 import { testSound } from "./beeper.js";
 import { installHint } from "./pwa.js";
 
-// The Settings page: each choice is a segmented control, saved as soon as it
-// is tapped. Units are kept on the server for every device (through the
-// outbox, so a change made offline is sent later) and copied here; the rest
-// are kept on this device.
+// The Settings page, in five sections, each with its own address
+// (settings.html#training, #account, #people, #coach, #about). Each choice
+// is a segmented control, saved as soon as it is tapped. Units are kept on the server for every device (through the outbox, so a
+// change made offline is sent later) and copied here; the rest are kept on
+// this device.
 
 const storage = (() => {
   try {
@@ -29,10 +30,9 @@ const leadIn = document.querySelector('[data-setting="leadIn"]');
 document.getElementById("gear-lead-in").textContent = GEAR_LEAD_IN;
 leadIn.innerHTML = LEAD_IN_CHOICES.map((seconds) => `<button data-value="${seconds}">${seconds} s</button>`).join("");
 
-if (!("vibrate" in navigator)) {
-  document.querySelector('[data-setting="vibration"]').hidden = true;
-  document.getElementById("vibration-unsupported").hidden = false;
-}
+// A device that can't vibrate (an iPad, an iPhone) has nothing to choose:
+// the row is left out rather than shown with a note.
+if (!("vibrate" in navigator)) document.getElementById("vibration").hidden = true;
 
 const press = (group, value) => {
   for (const button of group.querySelectorAll("[data-value]")) {
@@ -279,8 +279,8 @@ async function loadUsers() {
     users = usersAnswer.data.users;
     invites = invitesAnswer.data.invites;
   } catch (error) {
-    // Not the owner after all (the server decides): no card.
-    if (error.status === 403) return ($("users").hidden = true);
+    // Not the owner after all (the server decides): no People section.
+    if (error.status === 403) return showPeople(false);
     $("user-list").innerHTML = `<li class="muted">The list shows when the server is reachable.</li>`;
     $("invite-list").innerHTML = "";
     return;
@@ -362,13 +362,105 @@ $("share-invite").onclick = async () => {
 };
 $("copy-temporary-password").onclick = () => copyFrom($("temporary-password"), $("copy-temporary-password"));
 
-// The owner's, as this device knows (or, with storage blocked, as the server
-// answers: anyone else gets a 403, which hides the card again).
-let usersLoaded = Promise.resolve();
-if (!storage || storedAccount(storage)?.owner) {
-  $("users").hidden = false;
-  usersLoaded = loadUsers();
+// ---------- Sections ----------
+
+// One list of sections, drawn by the CSS as rows to tap into on a phone, a
+// row of tabs from 40rem and a list beside the open section from 60rem. A
+// phone opens Settings on the list; anything wider on Training, since the
+// list stays on screen. `data-open` on <main> names the open section.
+const main = $("settings");
+const phone = matchMedia("(max-width: 39.99rem)");
+let peopleShown = false;
+
+// People is the owner's, as this device knows (or, with storage blocked, as
+// the server answers: anyone else gets a 403, which hides it again).
+function showPeople(shown) {
+  peopleShown = shown;
+  $("section-link-people").hidden = !shown;
+  if (!shown && main.dataset.open === "people") {
+    history.replaceState(null, "", location.pathname + location.search);
+    openSection("", { scroll: false });
+  }
 }
+
+// What an address names: a section (#training), or a card or setting inside
+// one, as links named them before the sections (#users, #api-tokens), which
+// opens its section with the card in view. Anything else names nothing.
+function target(hash) {
+  let id;
+  try {
+    id = decodeURIComponent((hash ?? "").replace(/^#/, ""));
+  } catch {
+    return null; // a malformed escape (#%E0) names nothing
+  }
+  const element = id ? document.getElementById(id) : null;
+  const section = element?.closest(".settings-section");
+  if (!section || (section.id === "people" && !peopleShown)) return null;
+  // A card at the top of its section is in view with the section.
+  const first = section.querySelector(".section-head").nextElementSibling;
+  return { section, card: element === section || first.contains(element) ? null : element };
+}
+
+function openSection(hash, { scroll = true } = {}) {
+  const found = target(hash);
+  const open = found?.section.id ?? (phone.matches ? null : "training");
+  const was = main.dataset.open;
+  if (open) main.dataset.open = open;
+  else delete main.dataset.open;
+  for (const section of document.querySelectorAll(".settings-section")) section.hidden = section.id !== open;
+  for (const link of document.querySelectorAll(".settings-sections a")) {
+    if (link.dataset.section === open) link.setAttribute("aria-current", "page");
+    else link.removeAttribute("aria-current");
+  }
+  const name = open ? $(`${open}-title`).textContent : null;
+  document.title = name ? `${name} · Settings · The Lazy Runner` : "Settings · The Lazy Runner";
+  // Back to the list on a phone: focus returns to the section just left.
+  if (!open && was) document.querySelector(`.settings-sections a[data-section="${was}"]`)?.focus({ preventScroll: true });
+  if (!scroll) return;
+  if (found?.card) found.card.scrollIntoView();
+  else scrollTo(0, 0);
+}
+
+// A phone goes into a section and back out, a step in the history each; the
+// tabs and the list beside the section switch in place.
+document.querySelector(".settings-sections").onclick = (event) => {
+  const link = event.target.closest("a[data-section]");
+  if (!link) return;
+  event.preventDefault();
+  if (phone.matches) history.pushState({ fromList: true }, "", link.hash);
+  else history.replaceState(null, "", link.hash);
+  followed = location.hash;
+  openSection(link.hash);
+  if (phone.matches) {
+    const heading = $(`${link.dataset.section}-title`);
+    heading.tabIndex = -1;
+    heading.focus({ preventScroll: true });
+  }
+};
+for (const button of document.querySelectorAll("[data-back]")) {
+  button.onclick = () => {
+    if (history.state?.fromList) return history.back();
+    history.pushState(null, "", location.pathname + location.search);
+    followed = "";
+    openSection("");
+  };
+}
+// Back and forward between two addresses fire both events: follow once.
+let followed = location.hash;
+const follow = () => {
+  if (location.hash === followed) return;
+  followed = location.hash;
+  openSection(location.hash);
+};
+addEventListener("popstate", follow);
+addEventListener("hashchange", follow);
+// Turning a phone or resizing a window keeps the open section, and a wider
+// screen never shows the list alone.
+phone.onchange = () => openSection(main.dataset.open ? `#${main.dataset.open}` : location.hash, { scroll: false });
+
+let usersLoaded = Promise.resolve();
+showPeople(!storage || Boolean(storedAccount(storage)?.owner));
+if (peopleShown) usersLoaded = loadUsers();
 
 // ---------- Signing in with the OIDC provider ----------
 
@@ -578,10 +670,26 @@ renderAccount();
 const tokensLoaded = loadTokens();
 loadIdentities();
 const devicesLoaded = loadDevices();
-// A link to a card (settings.html#users) is followed before the lists
-// above it fill in; once they have, the card is brought back into view.
-const anchored = location.hash ? document.getElementById(location.hash.slice(1)) : null;
-Promise.allSettled([usersLoaded, tokensLoaded, devicesLoaded]).then(() => anchored?.scrollIntoView());
+// The address opens its section. A link to a card inside one (an older
+// address, settings.html#api-tokens) is followed before the lists above it
+// fill in; once they have, the card is brought back into view.
+// An address that names nothing here (or People, for anyone but the owner) is dropped.
+if (location.hash && !target(location.hash)) history.replaceState(null, "", location.pathname + location.search);
+openSection(location.hash);
+followed = location.hash;
+const anchored = target(location.hash)?.card;
+// Only until the reader scrolls or opens another section themselves.
+const firstOpen = main.dataset.open;
+let moved = false;
+for (const type of ["wheel", "touchmove", "keydown"]) addEventListener(type, () => (moved = true), { once: true, passive: true });
+const settle = () => {
+  if (moved || main.dataset.open !== firstOpen) return;
+  if (anchored) anchored.scrollIntoView();
+  else scrollTo(0, 0);
+};
+Promise.allSettled([usersLoaded, tokensLoaded, devicesLoaded]).then(settle);
+// The browser's own jump to the address's element, once the page has loaded, is undone the same way.
+addEventListener("load", () => requestAnimationFrame(settle));
 outbox?.flush();
 loadUnit();
 loadVersion();

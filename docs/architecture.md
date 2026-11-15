@@ -164,9 +164,10 @@ Plain ES modules in `public/js/`, no framework, no build step. Pages:
 activities and the coach's notes on its days), `coach.html` (goals, status, focus,
 this week, concerns and notes; `coach-page.js`, sheets in
 `coach-sheets.js`, shared with the Calendar), `library.html`
-(exercises), `equipment.html`, `settings.html` (with the account: sign
-out, change the password, signed-in devices; for the owner, users and
-invites), `signin.html` (sign in, set up a fresh install, join with an
+(exercises), `equipment.html`, `settings.html` (five sections, each with its own
+address: `#training`, `#account` with sign-out, the password and signed-in
+devices, `#people` for the owner's users and invites, `#coach` with API
+tokens and MCP, `#about`; a card's id opens its section), `signin.html` (sign in, set up a fresh install, join with an
 invite, leave a temporary password) and `welcome.html` (a first sign-in:
 units, gear, example programs and training days, which become weekly
 routines; counted as seen once it shows, and `/api/me` says `welcomed`).

@@ -604,15 +604,25 @@ test("sets a goal on the Coach tab, writes a status, and accepts the agent's pro
 test("makes an API token on Settings that an assistant signs in to /mcp with", async () => {
   const { context, page, errors } = await ownerPage();
 
+  // On a phone Settings is the list of its sections; each opens with Back.
   await page.goto("/settings.html");
+  await page.getByRole("link", { name: /^About/ }).click();
+  await page.waitForURL(/\/settings\.html#about$/);
   // The About card names the running version: a release, or a dev build.
   await page.locator("#about-version").getByText(/^The Lazy Runner( \d+\.\d+\.\d+|, development build)$/).waitFor();
-  await accessible(page, "Settings");
+  await accessible(page, "Settings, About");
+  await page.locator("#about").getByRole("button", { name: "Settings" }).click();
+  await page.waitForURL(/\/settings\.html$/);
+  await page.getByRole("link", { name: /^Training/ }).click();
+  await accessible(page, "Settings, Training");
   // Test sound plays where the browser has audio, and says so where not.
   await page.getByRole("button", { name: "Test sound" }).click();
   await page.waitForTimeout(200);
   assert.equal(await page.locator("#test-sound-note").isHidden(), true);
   assert.deepEqual(errors, []);
+  // An older address (Coach's "Connect an assistant") opens its section.
+  await page.goto("/settings.html#api-tokens");
+  await page.locator("#coach-title").waitFor();
   await page.locator('#new-token input[name="name"]').fill("Trainer agent");
   await page.locator("#new-token").getByRole("button", { name: "Make a token" }).click();
   await page.waitForFunction(() => document.querySelector("#new-token-secret input").value !== "");
@@ -648,7 +658,7 @@ test("makes an API token on Settings that an assistant signs in to /mcp with", a
 
 test("invites a second user, who is welcomed and sees none of the owner's things", async () => {
   const owner = await ownerPage();
-  await owner.page.goto("/settings.html");
+  await owner.page.goto("/settings.html#users");
   await owner.page.locator("#user-list").getByText(OWNER.username).waitFor();
   await owner.page.locator('#new-invite-form input[name="label"]').fill("For a friend");
   await owner.page.locator("#new-invite").click();
@@ -771,9 +781,13 @@ test("invites a second user, who is welcomed and sees none of the owner's things
   await stranger.close();
 
   // Only the owner manages users; the owner now sees them, the invite used.
-  await page.goto("/settings.html");
+  await page.goto("/settings.html#account");
   await page.locator("#account-who").getByText("e2e-friend").waitFor();
-  assert.equal(await page.locator("#users").isHidden(), true);
+  assert.equal(await page.locator("#section-link-people").isHidden(), true);
+  // People is the owner's: its address opens the list for anyone else.
+  await page.goto("/settings.html#people");
+  await page.getByRole("link", { name: /^Account/ }).waitFor();
+  assert.equal(await page.locator("#people").isHidden(), true);
   await owner.page.reload();
   await owner.page.locator("#user-list").getByText("e2e-friend").waitFor();
   await owner.page.locator("#invite-list").getByText("No invites waiting").waitFor();
@@ -788,7 +802,7 @@ test("invites a second user, who is welcomed and sees none of the owner's things
 test("signs out on Settings, and back in on the sign-in screen", async () => {
   const { context, page, errors } = await ownerPage();
 
-  await page.goto("/settings.html");
+  await page.goto("/settings.html#account");
   await page.locator("#account-who").getByText(OWNER.username).waitFor();
   await page.locator("#devices").getByText("(this device)").waitFor();
   await page.locator("#sign-out").click();
@@ -806,6 +820,7 @@ test("signs out on Settings, and back in on the sign-in screen", async () => {
   await form.locator('input[name="password"]').fill(OWNER.password);
   await form.getByRole("button", { name: "Sign in" }).click();
   await page.waitForURL(/\/settings\.html$/);
+  await page.getByRole("link", { name: /^Account/ }).click();
   await page.locator("#account-who").getByText(OWNER.username).waitFor();
   assert.deepEqual(errors, []);
   await context.close();
