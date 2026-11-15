@@ -184,7 +184,6 @@ function swapItem(item, alternative) {
     weight_unit: weightUnit,
     weights_held: weightUnit ? alternative.weights_held ?? 1 : null,
     allowed_weights: (carried ? planned.allowed_weights : weightUnit && allowed) ?? null,
-    suggestion: null,
     note: null,
     equipment: alternative.equipment,
   };
@@ -192,8 +191,8 @@ function swapItem(item, alternative) {
 
 // What a swap changes, kept so it can be undone.
 function pick(item) {
-  const { exercise, mode, reps, seconds, tempo, weight, weight_unit, weights_held, allowed_weights, seed_weight, suggestion, note, equipment, side } = item;
-  return { exercise, mode, reps, seconds, tempo, weight, weight_unit, weights_held, allowed_weights, seed_weight, suggestion, note, equipment, side };
+  const { exercise, mode, reps, seconds, tempo, weight, weight_unit, weights_held, allowed_weights, seed_weight, note, equipment, side } = item;
+  return { exercise, mode, reps, seconds, tempo, weight, weight_unit, weights_held, allowed_weights, seed_weight, note, equipment, side };
 }
 
 // An exercise with only a time is held; one with only reps is counted;

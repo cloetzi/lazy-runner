@@ -365,17 +365,17 @@ describe "GET /api/today" do
     _(json["session"]).must_be_nil
   end
 
-  it "shows a pending suggestion on the step" do
+  it "keeps the weight after a session that felt too easy: the app suggests none" do
     inventory("kettlebell").update(weights: [40, 45])
-    session = session_on(Date.today - 1)
+    session = session_on(Date.today - 1, "in_progress")
     log_all(session, "goblet-squat")
     finish(session, "too_easy")
 
     get "/api/today?workout_id=#{workout("cycle-1-workout-1").id}"
     squat = json["plan"]["items"].find { it["exercise"]["slug"] == "goblet-squat" }
 
-    _(squat["suggestion"]["value"]).must_equal 45.0
-    _(squat["suggestion"]["direction"]).must_equal "up"
+    _(squat.keys).wont_include "suggestion"
+    _(squat["weight"]["value"]).must_equal 40.0
   end
 
   it "gives weighted items the owned weights to step through" do

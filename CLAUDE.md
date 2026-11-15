@@ -163,12 +163,13 @@ then `BASE_URL=http://localhost:3999 SERVER_LOG=/tmp/e2e.log npm run test:e2e`.
 - `public/js/skeleton.json` the animation skeleton, shared by the renderer and
   the Ruby check in `app/models/animation.rb`. `figure.js` documents the keyframe
   format; `figure-view.js` draws it as SVG; `library.html` previews every exercise.
-- `config/coach.yml` weight increments and the next-time suggestion rule.
+- `config/coach.yml` the weight stepper's increments (the app suggests no
+  weights: changing one is the user's or the coach agent's).
   `app/models/weights.rb` converts and compares weights: each exercise keeps
   them in the unit of the user's gear for it (`user_equipment.unit`, else the
-  lb/kg setting), converted at the API boundary; fixed-weight
-  equipment steps through the owned weights (`allowed_weights`), mirrored in
-  `public/js/weights.js`.
+  lb/kg setting), converted at the API boundary. The stepper itself is
+  `public/js/weights.js`: fixed-weight equipment steps through the owned
+  weights (`allowed_weights`), anything else by the increments.
 - `test/` Minitest (`test/requests`, `test/models`, `test/lib`); `test/js` node tests;
   `test/e2e` a Playwright run through the real server, offline finish included
   (CI runs it with the Playwright version in `package-lock.json`).

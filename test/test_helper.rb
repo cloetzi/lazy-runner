@@ -79,7 +79,7 @@ end
 # steps and completions, which belong to a user through their parent, are
 # left to the isolation tests (test/requests/isolation_test.rb).
 module UserScopeTripwire
-  TABLES = %w[programs workouts sessions set_logs exercise_weights weight_suggestions settings user_equipment api_tokens user_identities activities goals coach_notes routines].freeze
+  TABLES = %w[programs workouts sessions set_logs exercise_weights settings user_equipment api_tokens user_identities activities goals coach_notes routines].freeze
   # Asked on purpose of everyone's: the token a request's secret is, and
   # the identity an OIDC sign-in vouched for.
   ALLOWED = [
@@ -328,7 +328,6 @@ module LoggingHelpers
   def finish(session, feedback)
     Completion.create(session:, finished_at: Time.now, feedback:)
     session.update(status: "done")
-    WeightSuggestion.generate_for(session)
   end
 end
 

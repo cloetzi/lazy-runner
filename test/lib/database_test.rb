@@ -66,8 +66,12 @@ describe Database do
   # SQLite can't change a column default or add a constraint in place, so
   # Sequel copies the table, and the copy has none of the CHECK constraints
   # or partial indexes: a migration doing that has to make them again.
-  # Dropped on purpose: the seed-only rules, when programs became examples (#183).
-  DROPPED = { programs: %w[programs_seed_slug index_programs_on_slug], workouts: %w[workouts_seed_slug index_workouts_on_slug] }.freeze
+  # Dropped on purpose: the seed-only rules, when programs became examples (#183);
+  # the weight suggestions with their table (#264).
+  DROPPED = {
+    programs: %w[programs_seed_slug index_programs_on_slug], workouts: %w[workouts_seed_slug index_workouts_on_slug],
+    weight_suggestions: :all
+  }.freeze
 
   it "keeps every CHECK constraint and partial index of the baseline through the later migrations" do
     kept = ->(db) { shape(db).transform_values { it[:checks] + it[:indexes].select { |_, (_, partial)| partial == 1 }.keys } }
@@ -77,7 +81,11 @@ describe Database do
     Database.migrate!(db)
 
     after = kept.(db)
-    baseline.each { |table, names| _(names - DROPPED.fetch(table, []) - after.fetch(table)).must_be_empty table }
+    baseline.each do |table, names|
+      next if DROPPED[table] == :all
+
+      _(names - DROPPED.fetch(table, []) - after.fetch(table)).must_be_empty table
+    end
   end
 
   it "migrates a new database with every migration, once" do
@@ -102,7 +110,8 @@ describe Database do
       _ { add(:sessions, user_id: theirs, workout_id: workout, date: Date.today, position: 1) }.must_raise Sequel::ForeignKeyConstraintViolation
       _ { db[:workouts].where(id: workout).update(warmup_id: warmup) }.must_raise Sequel::ForeignKeyConstraintViolation
       session = add(:sessions, user_id: mine, workout_id: workout, date: Date.today, position: 1)
-      _ { add(:weight_suggestions, user_id: theirs, session_id: session, exercise_id: add(:exercises, slug: "x", name: "X", category: "strength"), direction: "up", value: 1, unit: "lb", reason: "r") }.must_raise Sequel::ForeignKeyConstraintViolation
+      exercise = add(:exercises, slug: "x", name: "X", category: "strength")
+      _ { add(:set_logs, user_id: theirs, session_id: session, exercise_id: exercise, planned_exercise_id: exercise, set_number: 1) }.must_raise Sequel::ForeignKeyConstraintViolation
     end
 
     it "deletes a user with everything of theirs" do

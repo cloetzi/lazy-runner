@@ -50,9 +50,9 @@ export function setRequest(run, item, status, { reps = item.reps, seconds = item
   return { method: "POST", path: `${sessionPath(run)}/sets`, body };
 }
 
-// The kept weight changes first, so the suggestion for next time is worked
-// out from them, then the finish, timed by the device's clock so a finish
-// synced late keeps its place in the day. Its answer is saved under `key`.
+// The kept weight changes, then the finish (the server needs no order),
+// timed by the device's clock so a finish synced late keeps its place in the
+// day. Its answer is saved under `key`.
 export function finishRequests(run, { rpe = null, feedback = null, now = new Date() } = {}) {
   const key = `complete:${run.id}`;
   const weights = Object.entries(run.weights)

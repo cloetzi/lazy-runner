@@ -12,18 +12,16 @@ describe "exercise weight API" do
       _(last_response.status).must_equal 200
       _(json["exercise_id"]).must_equal squat.id
       _(json["value"]).must_be_nil
-      _(json["suggestion"]).must_be_nil
+      _(json.keys).wont_include "suggestion"
     end
 
-    it "returns the remembered weight and any pending suggestion" do
+    it "returns the remembered weight" do
       ExerciseWeight.create(exercise: squat, value: 45, unit: "lb")
-      WeightSuggestion.create(exercise: squat, session: session_on(Date.today), direction: "up", value: 50, unit: "lb", reason: "Felt too easy at 45 lb")
 
       get "/api/exercises/#{squat.id}/weight"
 
       _(json["value"]).must_equal 45.0
       _(json["unit"]).must_equal "lb"
-      _(json["suggestion"]["value"]).must_equal 50.0
     end
   end
 
@@ -46,13 +44,11 @@ describe "exercise weight API" do
   describe "PUT /api/exercises/:id/weight" do
     it "remembers no weight, which wins over the weight a workout step sets" do
       ExerciseWeight.create(exercise: squat, value: 20, unit: "lb")
-      WeightSuggestion.create(exercise: squat, session: session_on(Date.today), direction: "up", value: 40, unit: "lb", reason: "Felt too easy")
 
       put_json "/api/exercises/#{squat.id}/weight", value: nil
 
       _(last_response.status).must_equal 200
       _(json.slice("value", "unit")).must_equal({ "value" => nil, "unit" => "lb" })
-      _(WeightSuggestion.first!(exercise_id: squat.id).status).must_equal "dismissed"
 
       get "/api/workouts/#{workout("cycle-1-workout-1").id}"
       step = json["blocks"].flat_map { it["steps"] }.find { it["exercise"]["id"] == squat.id }
@@ -138,41 +134,6 @@ describe "exercise weight API" do
       put_json "/api/exercises/#{squat.id}/weight", value: 9, unit: "kg"
 
       _(json.slice("value", "unit")).must_equal({ "value" => 20.0, "unit" => "lb" })
-    end
-
-    describe "with a pending suggestion" do
-      let(:suggestion) do
-        WeightSuggestion.create(exercise: squat, session: session_on(Date.today), direction: "up", value: 45, unit: "lb", reason: "Felt too easy at 40 lb")
-      end
-
-      before { suggestion }
-
-      it "accepts a pending suggestion when its weight is chosen" do
-        put_json "/api/exercises/#{squat.id}/weight", value: 45, unit: "lb"
-
-        _(suggestion.refresh.status).must_equal "accepted"
-        _(json["suggestion"]).must_be_nil
-      end
-
-      it "accepts a pending suggestion chosen in the other unit" do
-        put_json "/api/exercises/#{squat.id}/weight", value: 20.5, unit: "kg"
-
-        _(suggestion.refresh.status).must_equal "accepted"
-      end
-
-      it "dismisses a pending suggestion when another weight is kept" do
-        put_json "/api/exercises/#{squat.id}/weight", value: 40, unit: "lb"
-
-        _(suggestion.refresh.status).must_equal "dismissed"
-      end
-
-      it "answers every pending suggestion for the exercise" do
-        older = WeightSuggestion.create(exercise: squat, session: session_on(Date.today - 1), direction: "up", value: 45, unit: "lb", reason: "Felt too easy at 40 lb")
-
-        put_json "/api/exercises/#{squat.id}/weight", value: 45, unit: "lb"
-
-        _([older, suggestion].map { it.refresh.status }).must_equal %w[accepted accepted]
-      end
     end
 
     it "rejects a negative weight or an unknown unit" do

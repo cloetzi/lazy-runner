@@ -289,17 +289,6 @@ components:
             weight: { allOf: [{ $ref: "#/components/schemas/Weight" }], nullable: true, description: The weight to start at. }
             weight_unit: { type: string, nullable: true, enum: [lb, kg], description: "The unit it takes a weight in; null when it is done without weights." }
             allowed_weights: { $ref: "#/components/schemas/AllowedWeights" }
-    Suggestion:
-      type: object
-      description: A pending step up or down for an exercise's weight, from a finished session.
-      required: [id, exercise_id, direction, value, unit, reason]
-      properties:
-        id: { type: integer }
-        exercise_id: { type: integer }
-        direction: { type: string, enum: [up, down] }
-        value: { type: number }
-        unit: { $ref: "#/components/schemas/Unit" }
-        reason: { type: string }
     RememberedWeight:
       type: object
       required: [exercise_id, value, unit, updated_at]
@@ -311,10 +300,6 @@ components:
     ExerciseWeight:
       allOf:
         - $ref: "#/components/schemas/RememberedWeight"
-        - type: object
-          required: [suggestion]
-          properties:
-            suggestion: { allOf: [{ $ref: "#/components/schemas/Suggestion" }], nullable: true }
     FrameChoice:
       description: A workout id, "none", or null for the program's.
       nullable: true
@@ -388,7 +373,7 @@ components:
         imported: { type: boolean, description: Whether you have a copy. }
     Step:
       type: object
-      required: [id, position, reps, duration_seconds, tempo, weight, weights_held, per_side, note, equipment, equipment_needed, exercise, target, weight_unit, allowed_weights, suggestion]
+      required: [id, position, reps, duration_seconds, tempo, weight, weights_held, per_side, note, equipment, equipment_needed, exercise, target, weight_unit, allowed_weights]
       properties:
         id: { type: integer }
         position: { type: integer }
@@ -405,7 +390,6 @@ components:
         target: { $ref: "#/components/schemas/Target" }
         weight_unit: { type: string, nullable: true, enum: [lb, kg], description: "The unit its weight is kept in; null when it is done without weights (no weight and no gear in set weights)." }
         allowed_weights: { $ref: "#/components/schemas/AllowedWeights" }
-        suggestion: { allOf: [{ $ref: "#/components/schemas/Suggestion" }], nullable: true }
     Block:
       type: object
       description: A circuit; every round runs its steps in order.
@@ -477,7 +461,7 @@ components:
         target: { description: "From GET; ignored." }
         weight_unit: { description: "From GET; ignored." }
         allowed_weights: { description: "From GET; ignored." }
-        suggestion: { description: "From GET; ignored." }
+        suggestion: { description: "From an older GET; ignored." }
     BlockInput:
       type: object
       description: A block as the builder writes it; one from GET /api/workouts/:id fits as it is.
@@ -540,7 +524,7 @@ components:
     PlanExerciseItem:
       type: object
       description: One set of a step, for one side.
-      required: [type, mode, workout, block, step_id, side, reps, seconds, tempo, weight, weight_unit, weights_held, weight_equipment, allowed_weights, any_weight, seed_weight, suggestion, note, equipment, exercise]
+      required: [type, mode, workout, block, step_id, side, reps, seconds, tempo, weight, weight_unit, weights_held, weight_equipment, allowed_weights, any_weight, seed_weight, note, equipment, exercise]
       properties:
         type: { type: string, enum: [exercise] }
         mode: { type: string, enum: [timed, reps] }
@@ -558,7 +542,6 @@ components:
         allowed_weights: { $ref: "#/components/schemas/AllowedWeights" }
         any_weight: { $ref: "#/components/schemas/AnyWeight" }
         seed_weight: { allOf: [{ $ref: "#/components/schemas/Weight" }], nullable: true }
-        suggestion: { allOf: [{ $ref: "#/components/schemas/Suggestion" }], nullable: true }
         note: { type: string, nullable: true }
         equipment: { type: array, items: { type: string } }
         exercise: { $ref: "#/components/schemas/PlanExercise" }
@@ -575,7 +558,7 @@ components:
     PlanTarget:
       type: object
       description: One exercise that takes a weight, for the get-ready screen; its weight is null while none is set.
-      required: [weight, weight_unit, weights_held, weight_equipment, any_weight, seed_weight, suggestion, equipment, allowed_weights, exercise]
+      required: [weight, weight_unit, weights_held, weight_equipment, any_weight, seed_weight, equipment, allowed_weights, exercise]
       properties:
         weight: { allOf: [{ $ref: "#/components/schemas/Weight" }], nullable: true }
         weight_unit: { type: string, enum: [lb, kg] }
@@ -583,7 +566,6 @@ components:
         weight_equipment: { type: string, nullable: true }
         any_weight: { $ref: "#/components/schemas/AnyWeight" }
         seed_weight: { allOf: [{ $ref: "#/components/schemas/Weight" }], nullable: true }
-        suggestion: { allOf: [{ $ref: "#/components/schemas/Suggestion" }], nullable: true }
         equipment: { type: array, items: { type: string } }
         allowed_weights: { $ref: "#/components/schemas/AllowedWeights" }
         exercise:
@@ -689,11 +671,16 @@ components:
         target: { $ref: "#/components/schemas/Target" }
     CompletedSession:
       type: object
-      required: [session, completion, suggestions]
+      required: [session, completion]
       properties:
         session: { $ref: "#/components/schemas/Session" }
         completion: { $ref: "#/components/schemas/Completion" }
-        suggestions: { type: array, description: For next time., items: { $ref: "#/components/schemas/Suggestion" } }
+        suggestions:
+          type: array
+          items: { type: object }
+          maxItems: 0
+          deprecated: true
+          description: Always empty; kept for a page still on a release from before the app stopped suggesting weights.
     History:
       type: object
       required: [from, to, sessions, weeks]

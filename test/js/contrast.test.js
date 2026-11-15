@@ -29,7 +29,7 @@ export function ratio(a, b) {
 
 const pairs = [
   ["--accent-text", "--accent", 4.5, "text on accent fills (badge, selected toggle, current nav item)"],
-  ["--accent", "--surface", 4.5, "accent text on cards (suggestions, links)"],
+  ["--accent", "--surface", 4.5, "accent text on cards (links)"],
   ["--accent", "--bg", 4.5, "accent text on the page"],
   ["--accent-ink", "--accent-tint", 4.5, "badge text"],
   ["--link", "--surface", 4.5, "links in text on cards"],

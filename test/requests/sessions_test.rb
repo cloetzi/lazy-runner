@@ -433,11 +433,9 @@ describe "sessions API" do
     end
 
     it "picks up a session ended early, taking back its finish" do
-      inventory("kettlebell").update(weights: [40, 53])
       session = create_session
       log_all(session, "goblet-squat")
       post_json "/api/sessions/#{session.id}/complete", feedback: "too_easy", ended_early: true
-      _(session.weight_suggestions_dataset.pending.count).must_equal 1
 
       patch_json "/api/sessions/#{session.id}", status: "in_progress", parts: %w[workout cooldown]
 
@@ -445,7 +443,6 @@ describe "sessions API" do
       _(json["status"]).must_equal "in_progress"
       _(json["completion"]).must_be_nil
       _(session.refresh.parts.map(&:kind)).must_equal %w[workout cooldown]
-      _(session.weight_suggestions_dataset.pending.count).must_equal 0
       _(session.set_logs_dataset.count).wont_equal 0
 
       post_json "/api/sessions/#{session.id}/complete", feedback: "too_easy"
@@ -722,21 +719,24 @@ describe "sessions API" do
       _(json["completion"]["ended_early"]).must_equal false
     end
 
-    it "suggests the next weight owned when every set was made and it felt too easy" do
+    it "changes no weight, whatever the feedback: that is the user's and the coach's" do
       inventory("kettlebell").update(weights: [40, 53])
+      ExerciseWeight.create(exercise: exercise("goblet-squat"), value: 40, unit: "lb")
       session = create_session
       log_all(session, "goblet-squat")
 
       post_json "/api/sessions/#{session.id}/complete", feedback: "too_easy"
 
-      squat_suggestion = json["suggestions"].find { it["exercise_id"] == squat.exercise_id }
-      _(squat_suggestion).wont_be_nil
-      _(squat_suggestion["direction"]).must_equal "up"
-      _(squat_suggestion["value"]).must_equal 53.0
-      _(squat_suggestion["reason"]).must_equal "Felt too easy at 40 lb"
+      _(json["completion"]["feedback"]).must_equal "too_easy"
+      _(ExerciseWeight.first!(exercise_id: squat.exercise_id).value).must_equal 40
+
+      get "/api/workouts/#{workout_1.id}"
+      step = json["blocks"].flat_map { it["steps"] }.find { it["id"] == squat.id }
+      _(step["target"]["weight"]).must_equal({ "value" => 40.0, "unit" => "lb" })
+      _(step.keys).wont_include "suggestion"
     end
 
-    it "steps, targets and suggests in kg for gear listed in kg" do
+    it "steps and targets in kg for gear listed in kg" do
       patch_json "/api/equipment/#{equipment("dumbbell").id}", unit: "kg", weights: [4, 8]
       patch_json "/api/equipment/#{equipment("kettlebell").id}", unit: "kg", weights: [16, 24]
 
@@ -744,48 +744,20 @@ describe "sessions API" do
       step = json["blocks"].flat_map { it["steps"] }.find { it["id"] == squat.id }
       _(step["allowed_weights"]).must_equal [4.0, 8.0, 16.0, 24.0]
       _(step["target"]["weight"]["unit"]).must_equal "kg"
-
-      session = create_session
-      log_all(session, "goblet-squat", weight_value: 16, weight_unit: "kg")
-      post_json "/api/sessions/#{session.id}/complete", feedback: "too_easy"
-
-      suggestion = json["suggestions"].find { it["exercise_id"] == squat.exercise_id }
-      _(suggestion.slice("direction", "value", "unit", "reason")).must_equal(
-        "direction" => "up", "value" => 24.0, "unit" => "kg", "reason" => "Felt too easy at 16 kg"
-      )
     end
 
-    it "leaves swapped sets out of the planned exercise's suggestion" do
+    it "leaves the session unfinished when it cannot be marked done" do
       session = create_session
-      log_all(session, "goblet-squat", exercise: exercise("straight-leg-deadlift"))
-
-      post_json "/api/sessions/#{session.id}/complete", feedback: "too_easy"
-
-      _(json["suggestions"].map { it["exercise_id"] }).wont_include squat.exercise_id
-    end
-
-    it "suggests a weight for the exercise swapped in" do
-      session = create_session
-      log_all(session, "goblet-squat", exercise: exercise("straight-leg-deadlift"), weight_value: 10)
-
-      post_json "/api/sessions/#{session.id}/complete", feedback: "too_easy"
-
-      suggestion = json["suggestions"].find { it["exercise_id"] == exercise("straight-leg-deadlift").id }
-      _(suggestion["direction"]).must_equal "up"
-      _(suggestion["value"]).must_equal 20.0
-    end
-
-    it "leaves the session unfinished when suggestions cannot be worked out" do
-      session = create_session
-
-      original = WeightSuggestion.method(:generate_for)
-      WeightSuggestion.define_singleton_method(:generate_for) { |*| raise Sequel::ConstraintViolation, "boom" }
+      # Session has no update of its own, so removing the stub restores Sequel's.
+      _(Session.instance_methods(false)).wont_include :update
+      original = Session.instance_method(:update)
+      Session.define_method(:update) { |values| id == session.id && values[:status] == "done" ? raise(Sequel::ConstraintViolation, "boom") : original.bind_call(self, values) }
       begin
         post_json "/api/sessions/#{session.id}/complete", feedback: "right"
       rescue Sequel::ConstraintViolation
         nil
       ensure
-        WeightSuggestion.define_singleton_method(:generate_for, original)
+        Session.remove_method(:update)
       end
 
       _(session.refresh.status).wont_equal "done"
@@ -833,7 +805,7 @@ describe "sessions API" do
       _(session.refresh.status).must_equal "done"
     end
 
-    it "leaves the feedback to /complete, which works out the suggestions" do
+    it "leaves the feedback to /complete" do
       session = create_session
       post_json "/api/sessions/#{session.id}/complete", feedback: "right"
 
@@ -935,11 +907,9 @@ describe "sessions API" do
       _([first, third].map { it.refresh.position }).must_equal [1, 2]
     end
 
-    it "deletes the session with its sets, completion and suggestions" do
-      inventory("kettlebell").update(weights: [40, 53])
+    it "deletes the session with its sets and completion" do
       session = squat_session("2026-10-19", 40)
       finish(session, "too_easy")
-      _(session.weight_suggestions.count).must_equal 1
 
       delete "/api/sessions/#{session.id}"
 
@@ -947,7 +917,6 @@ describe "sessions API" do
       _(Session.where(id: session.id).empty?).must_equal true
       _(SetLog.where(session_id: session.id).count).must_equal 0
       _(Completion.where(session_id: session.id).count).must_equal 0
-      _(WeightSuggestion.where(session_id: session.id).count).must_equal 0
 
       get "/api/history?date=2026-10-19"
       _(json["sessions"]).must_equal []

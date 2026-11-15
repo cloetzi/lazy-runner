@@ -40,14 +40,12 @@ export function stepSummary(step) {
   return bits.join(" · ");
 }
 
-// A remembered weight belongs to the exercise, so every step of it changes
-// and its pending suggestion is answered.
+// A remembered weight belongs to the exercise, so every step of it changes.
 export function setWeight(workout, exerciseId, weight) {
   for (const step of workout.blocks.flatMap((block) => block.steps)) {
     if (step.exercise.id !== exerciseId) continue;
     // Each step keeps it in its own unit (that of the gear it is done with).
     step.target.weight = weight && { ...inUnit(weight, step.weight_unit) };
-    step.suggestion = null;
   }
   return workout;
 }

@@ -54,7 +54,7 @@ test("formats a weight in the shown unit", () => {
   assert.equal(formatWeight({ value: 40, unit: "lb" }, "lb"), "40 lb");
 });
 
-test("steps to the next owned weight, like Coach.step_weight", () => {
+test("steps to the next owned weight", () => {
   assert.equal(stepWeight(10, "lb", ["dumbbell"], "up", table, [10, 20]), 20);
   assert.equal(stepWeight(20, "lb", ["dumbbell"], "down", table, [10, 20]), 10);
   assert.equal(stepWeight(15, "lb", ["dumbbell"], "up", table, [10, 20]), 20);

@@ -237,13 +237,10 @@ describe "library API" do
       _(step["allowed_weights"]).must_equal [10.0, 15.0, 20.0]
     end
 
-    it "includes pending suggestions and the weight increments" do
-      WeightSuggestion.create(exercise: exercise("goblet-squat"), session: session_on(Date.today), direction: "up", value: 45, unit: "lb", reason: "Felt too easy at 40 lb")
-
+    it "includes the weight increments, and no suggestion" do
       get "/api/workouts/#{workout("cycle-1-workout-1").id}"
 
-      _(step_json("goblet-squat")["suggestion"]["value"]).must_equal 45.0
-      _(step_json("straight-leg-deadlift")["suggestion"]).must_be_nil
+      _(step_json("goblet-squat").keys).wont_include "suggestion"
       _(json["weight_steps"]).must_equal Coach.weight_steps
     end
   end

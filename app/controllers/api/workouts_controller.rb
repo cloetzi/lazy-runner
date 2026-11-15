@@ -14,7 +14,7 @@ module Api
 
     # The whole workout, with blocks and steps expanded.
     # @description Each step carries its resolved `target` (a remembered
-    #   weight winning over the seed), any pending `suggestion` and, when
+    #   weight winning over the seed) and, when
     #   weighted, the owned weights to step through (`allowed_weights`), else
     #   the `weight_steps` bands apply. A step's `equipment` and
     #   `weights_held` are its own, null while it follows its exercise;

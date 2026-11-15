@@ -80,12 +80,11 @@ session offline, syncing when the connection returns.
   instructions and common mistakes.
 - **Remembered weights:** per exercise, not per workout. A remembered weight
   always wins over the seed value, in every workout that uses the exercise;
-  reps and time are not remembered, they stay with each workout's step. After
-  each session the app suggests one step up or down based on your feedback and
-  missed reps (a skipped set never counts as missed, and one rep short of the
-  target still counts as made), also for an exercise you
-  swapped in; it never changes weights on its own.
-- **Finish:** a short summary, optional RPE and a one-tap too easy / right / too hard.
+  reps and time are not remembered, they stay with each workout's step. The
+  app never suggests a weight or changes one from how a session went: you
+  change it with the stepper, or your coach agent recommends one from your
+  sets and feedback and sets it when you agree.
+- **Finish:** a short summary, optional RPE and a one-tap too easy / right / too hard on the weights, kept for you and your coach agent.
 - **History:** a simple list, a weekly count, and weight and reps over time per exercise.
 - **Equipment:** an inventory of what you have at home, with the weights you
   own for dumbbells and kettlebells. Every exercise names the equipment it

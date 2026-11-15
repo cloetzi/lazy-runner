@@ -198,14 +198,14 @@ describe "MCP server" do
       _(found["used_in"].map { it["title"] }).must_include "Workout 1"
     end
 
-    it "gives the remembered weight and a pending suggestion" do
+    it "gives the remembered weight and no suggestion" do
       ExerciseWeight.create(exercise: squat, value: 20, unit: "lb")
-      WeightSuggestion.create(exercise: squat, session: session_on(Date.today), direction: "up", value: 30, unit: "lb", reason: "Felt too easy at 20 lb")
+      finish(session_on(Date.today, "in_progress").tap { log_all(it, "goblet-squat") }, "too_easy")
 
       found = call_tool("get_exercise", exercise: squat.id)
 
       _(found["remembered_weight"]).must_equal({ "value" => 20.0, "unit" => "lb" })
-      _(found["suggestion"]).must_equal({ "direction" => "up", "value" => 30.0, "unit" => "lb", "reason" => "Felt too easy at 20 lb" })
+      _(found.keys).wont_include "suggestion"
     end
 
     it "leaves the remembered weight out while there is none" do
@@ -413,19 +413,14 @@ describe "MCP server" do
       _(squat.slice("exercise", "instead_of")).must_equal({ "exercise" => "curtsy-lunge", "instead_of" => "goblet-squat" })
     end
 
-    it "gives the remembered weights and the suggestions waiting for the user" do
+    it "gives the remembered weights, and no suggestions: changing one is the coach's call" do
       squat = exercise("goblet-squat")
       ExerciseWeight.create(exercise: squat, value: 20, unit: "lb")
-      session = session_on("2026-10-19")
-      WeightSuggestion.create(exercise: squat, session:, direction: "up", value: 30, unit: "lb", reason: "Felt too easy at 20 lb")
 
       answer = call_tool("training_summary", from: "2026-10-01", to: "2026-10-28")
 
       _(answer["remembered_weights"].map { it.except("updated") }).must_equal [{ "exercise" => "goblet-squat", "name" => "Goblet squat", "value" => 20.0, "unit" => "lb" }]
-      _(answer["pending_suggestions"]).must_equal [{
-        "exercise" => "goblet-squat", "name" => "Goblet squat", "direction" => "up", "value" => 30.0, "unit" => "lb",
-        "reason" => "Felt too easy at 20 lb", "after_session" => session.id
-      }]
+      _(answer.keys).wont_include "pending_suggestions"
     end
 
     it "dates a remembered weight by the server's day" do
@@ -682,13 +677,11 @@ describe "MCP server" do
     describe "set_exercise_weight" do
       let(:squat) { exercise("goblet-squat") }
 
-      it "remembers the weight for every workout with the exercise, answering a pending suggestion" do
-        WeightSuggestion.create(exercise: squat, session: session_on("2026-10-19"), direction: "up", value: 20, unit: "lb", reason: "Felt too easy")
-
+      it "remembers the weight for every workout with the exercise" do
         answer = call_tool("set_exercise_weight", exercise: "goblet-squat", value: 20)
 
         _(answer.slice("exercise", "remembered_weight", "suggestion")).must_equal(
-          { "exercise" => "goblet-squat", "remembered_weight" => { "value" => 20.0, "unit" => "lb" }, "suggestion" => { "direction" => "up", "value" => 20.0, "unit" => "lb", "status" => "accepted" } }
+          { "exercise" => "goblet-squat", "remembered_weight" => { "value" => 20.0, "unit" => "lb" } }
         )
         _(answer["used_in"].map { it["title"] }).must_include "Workout 1"
         _(call_tool("get_workout", workout_id: workout("cycle-1-workout-1").id)["blocks"].first["steps"].first["target"]["weight"]).must_equal({ "value" => 20.0, "unit" => "lb" })

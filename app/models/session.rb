@@ -47,8 +47,7 @@ class Session < Record
   many_to_one :workout, key: %i[user_id workout_id], primary_key: %i[user_id id]
   one_to_many :set_logs, key: %i[user_id session_id], primary_key: %i[user_id id]
   one_to_one :completion
-  one_to_many :weight_suggestions, key: %i[user_id session_id], primary_key: %i[user_id id]
-  # Its set logs, completion and suggestions go with it (ON DELETE CASCADE).
+  # Its set logs and completion go with it (ON DELETE CASCADE).
 
   dataset_module do
     order :in_order, :date, :position, :id
@@ -209,7 +208,6 @@ class Session < Record
       affected = last_weights.select do |exercise_id, weight|
         weights[exercise_id] && Weights.same?(weights[exercise_id].weight, weight) && !later_logs?(exercise_id)
       end
-      WeightSuggestion.give_back(self)
       destroy
       affected.each_key { weights[it].fall_back! }
     end
@@ -258,9 +256,8 @@ class Session < Record
     workout_current
   end
 
-  # Picked up again, a session is no longer finished: its finish and the
-  # suggestions still pending from it go until it is finished again, and the
-  # older ones its finish superseded are pending again.
+  # Picked up again, a session is no longer finished: its finish goes until
+  # it is finished again.
   def after_update
     # super first: dirty records what this save changed in its own
     # after_update, and column_previously_changed? reads that.
@@ -269,8 +266,6 @@ class Session < Record
 
     completion&.destroy
     associations.delete(:completion)
-    weight_suggestions_dataset.pending.delete
-    WeightSuggestion.give_back(self)
   end
 
   def after_destroy

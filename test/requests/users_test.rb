@@ -283,7 +283,6 @@ describe "users and invites" do
         session = session_on(Time.zone.today, "in_progress")
         log_all(session, "goblet-squat")
         finish(session, "too_easy")
-        WeightSuggestion.create(exercise: exercise("goblet-squat"), session:, direction: "up", value: 45, unit: "lb", reason: "Felt too easy")
         Activity.log!({ date: Time.zone.today.to_s, sport: "run" }, today: Time.zone.today)
         ExerciseWeight.find_or_new(exercise_id: exercise("goblet-squat").id).set(value: 40, unit: "lb").save_changes
         Goal.add!(title: "Run a 10k")

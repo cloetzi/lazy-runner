@@ -51,7 +51,7 @@ as null when it has no value (`nullable`).
   nothing is a `not_found`.
 - **Everything is the signed-in user's**: the exercise library and the
   equipment catalogue are shared, and everything else (workouts, programs,
-  sessions, sets, weights, suggestions, settings, what equipment is owned)
+  sessions, sets, weights, settings, what equipment is owned)
   is the user's own. Another user's id is a 404, as an id that names nothing
   is, and a `client_ref` is the user's own.
 - **Today** is the server's day in `TZ` when a request sends no `date`.
@@ -67,8 +67,8 @@ as null when it has no value (`nullable`).
   again take a day from today on, and only a planned (or missed) session
   moves: anything else is a 409 (its own date sent back is no move). A done
   session keeps its status. `/api/today` lists the whole `day`. Sessions on
-  one day happened in the order they finished, which the weight suggestions
-  and deleting a session go by; `position` is only the planned order.
+  one day happened in the order they finished, which deleting a session
+  goes by; `position` is only the planned order.
   `DELETE /api/sessions/:id` erases a session of any status (History);
   with `only=planned` (the calendar's Remove) it is a 409 once it has started.
 - **Activities record what happened**, never a plan: `date` is the
@@ -202,11 +202,11 @@ change reaches every future session of it.
 | Tool | Does |
 |------|------|
 | `search_exercises` | The library, filtered by `text`, `area`, `pattern`, `category` and `equipment` (what is owned by default) |
-| `get_exercise` | One exercise by slug: instructions, mistakes, equipment, remembered weight, owned weights, pending suggestion, workouts using it |
+| `get_exercise` | One exercise by slug: instructions, mistakes, equipment, remembered weight, owned weights, workouts using it |
 | `list_equipment` | The inventory with owned weights, and the display unit |
 | `list_workouts` | Workouts by program, the user's own last (as `GET /api/workouts`) |
 | `get_workout` | One workout's blocks and steps with resolved targets (as `GET /api/workouts/:id`, without the player plan) |
-| `training_summary` | Sessions in a date range (28 days by default) with how they felt and what was done per exercise, weekly counts, remembered weights, pending suggestions |
+| `training_summary` | Sessions in a date range (28 days by default) with how they felt and what was done per exercise, weekly counts, remembered weights |
 | `list_sessions` | The calendar over a date range (as `GET /api/sessions`), each session with its workout, minutes and completion |
 | `list_activities` | Activities over a date range (as `GET /api/activities`), with the user's distance unit |
 | `list_routines` | Routines with days in a date range (by default the 7 days before today and the 21 from today on), the days with their state (tentative, confirmed, done, skipped, missed) and raw counts per state |

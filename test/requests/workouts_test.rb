@@ -240,6 +240,16 @@ describe "workouts API" do
       end
     end
 
+    it "ignores a suggestion on a step, as a page on an older release sends it" do
+      blocks = structure
+      blocks.first[:steps].first[:suggestion] = { direction: "up", value: 45, unit: "lb", reason: "Felt too easy" }
+
+      put_json "/api/workouts/#{copy.id}", blocks: blocks
+
+      _(last_response.status).must_equal 200
+      _(json["blocks"].first["steps"].first.keys).wont_include "suggestion"
+    end
+
     it "replaces the blocks and steps, keeping the ids it names" do
       blocks = structure
       first, *rest = blocks.first[:steps]

@@ -123,7 +123,7 @@ test("sends a run in order once the server is back", async () => {
   const fetch = async (path, options) => {
     if (!online) throw new TypeError("Failed to fetch");
     calls.push(`${options.method} ${path}`);
-    const json = path === "/api/sessions" ? { id: 42 } : path.endsWith("/complete") ? { suggestions: [] } : {};
+    const json = path === "/api/sessions" ? { id: 42 } : path.endsWith("/complete") ? { session: { id: 42 }, completion: {} } : {};
     return { ok: true, status: 200, redirected: false, json: async () => json };
   };
   const outbox = createOutbox({ storage, fetch });
@@ -145,5 +145,5 @@ test("sends a run in order once the server is back", async () => {
     "PATCH /api/exercises/1/weight",
     "POST /api/sessions/42/complete",
   ]);
-  assert.deepEqual(outbox.result(key), { suggestions: [] });
+  assert.deepEqual(outbox.result(key), { session: { id: 42 }, completion: {} });
 });

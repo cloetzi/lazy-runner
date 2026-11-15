@@ -293,11 +293,9 @@ class Workout < Record
 
   # The whole workout, blocks and steps expanded (load it with `expanded`):
   # each step with its target (the remembered weight winning over the
-  # seed's), the owned weights to step through and any pending suggestion,
-  # plus the parts a session runs and the player's plan.
+  # seed's) and the owned weights to step through, plus the parts a session runs and the player's plan.
   def detail
     weights = ExerciseWeight.as_hash(:exercise_id)
-    suggestions = WeightSuggestion.pending.as_hash(:exercise_id)
     fixed = Equipment.fixed
 
     expanded_blocks = blocks.map do |block|
@@ -305,8 +303,7 @@ class Workout < Record
         target = step.target(weights[step.exercise_id])
         unit = step.target_unit(target[:weight], weights[step.exercise_id])
         step.as_json.merge(
-          target:, weight_unit: unit, allowed_weights: (step.allowed_weights(fixed) if unit),
-          suggestion: suggestions[step.exercise_id]&.as_json
+          target:, weight_unit: unit, allowed_weights: (step.allowed_weights(fixed) if unit)
         )
       end
       block.as_json.merge(steps:)
@@ -316,7 +313,7 @@ class Workout < Record
       blocks: expanded_blocks,
       # The warm-up, workout and cool-down a session of it runs.
       framed: framed.map(&:summary),
-      plan: PlayerPlan.new([self], weights:, suggestions:, fixed:),
+      plan: PlayerPlan.new([self], weights:, fixed:),
       weight_steps: Coach.weight_steps,
       # The unit weights are shown in.
       unit: Setting.unit

@@ -24,7 +24,8 @@ class WorkoutStructure
   BLOCK_KEYS = %w[id label rounds rest_seconds steps].freeze
   STEP_KEYS = %w[id exercise_id reps duration_seconds tempo weight weights_held per_side note equipment].freeze
   # What GET /api/workouts/:id adds to each, ignored here, so a workout read
-  # can be edited and sent back as it is.
+  # can be edited and sent back as it is. `suggestion` is what an older GET
+  # gave (until #264), for a page still on that release.
   BLOCK_EXTRAS = %w[position].freeze
   STEP_EXTRAS = %w[position exercise equipment_needed target weight_unit allowed_weights suggestion].freeze
   WEIGHT_KEYS = %w[value unit].freeze

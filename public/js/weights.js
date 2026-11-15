@@ -1,4 +1,5 @@
-// Pure weight stepper logic, mirroring Coach.step_weight on the server. Each
+// Pure weight stepper logic, the app's only one (the server keeps the
+// increments, config/coach.yml, and steps nothing itself). Each
 // weighted step comes with its `allowed_weights` (the owned dumbbells or
 // kettlebells, in the weight's unit) and the stepper moves through those;
 // without them it steps by the increments table from /api/today

@@ -8,7 +8,7 @@ describe "one user's data, kept from another" do
   let(:today) { Time.zone.today }
 
   # Someone else, with a bit of everything: a workout of their own, a day
-  # with two sessions (one done, with sets, a finish and a suggestion), a
+  # with two sessions (one done, with sets and a finish), a
   # remembered weight, their settings and inventory.
   before do
     @someone = create_user("someone")
@@ -52,11 +52,9 @@ describe "one user's data, kept from another" do
     _(json["session"]).must_be_nil
   end
 
-  it "keeps their weights, suggestions, settings and inventory to them" do
+  it "keeps their weights, settings and inventory to them" do
     get "/api/exercises/#{exercise("reverse-fly").id}/weight"
     _(json["value"]).must_be_nil
-    get "/api/exercises/#{exercise("goblet-squat").id}/weight"
-    _(json["suggestion"]).must_be_nil
 
     get "/api/settings"
     _(json["unit"]).must_equal "lb"
@@ -66,7 +64,6 @@ describe "one user's data, kept from another" do
 
     get "/api/workouts/#{workout("cycle-1-workout-1").id}"
     targets = json["blocks"].flat_map { it["steps"] }.to_h { [it["exercise"]["slug"], it] }
-    _(targets["goblet-squat"]["suggestion"]).must_be_nil
     _(targets["reverse-fly"]["target"]["weight"]).must_equal("value" => 10.0, "unit" => "lb")
   end
 
@@ -145,7 +142,7 @@ describe "one user's data, kept from another" do
     Current.set(user: nil) do
       _ { Setting.current }.must_raise Current::Missing
       _ { Workout.suggested }.must_raise Current::Missing
-      [Program, Workout, Block, Step, Session, SetLog, Completion, ExerciseWeight, WeightSuggestion, Setting, UserEquipment, ApiToken].each do |model|
+      [Program, Workout, Block, Step, Session, SetLog, Completion, ExerciseWeight, Setting, UserEquipment, ApiToken].each do |model|
         _ { model.count }.must_raise Current::Missing, model.name
       end
     end
@@ -225,7 +222,6 @@ describe "one user's data, kept from another" do
       summary = JSON.parse(text)
       _(summary["sessions"]).must_be_empty
       _(summary["remembered_weights"].to_a).must_be_empty
-      _(summary["pending_suggestions"].to_a).must_be_empty
 
       _, text = call_tool("get_exercise", exercise: "reverse-fly")
       _(JSON.parse(text)["remembered_weight"]).must_be_nil

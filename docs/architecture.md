@@ -142,8 +142,7 @@ flowchart LR
   [data-model.md](data-model.md)), sharing `Record`'s plugins and validation
   wording, plus plain objects for the logic:
   `PlayerPlan` flattens workouts into the screens the player walks through,
-  `Coach` and `WeightSuggestion` make the next-time suggestion from
-  `config/coach.yml`, `Weights` converts and steps weights, `SessionDetail`
+  `Coach` reads the stepper's increments from `config/coach.yml`, `Weights` converts, snaps and compares weights, `SessionDetail`
   and `ExerciseHistory` shape history, `WorkoutStructure` writes a
   workout's blocks and steps in one go (the builder API, and MCP through
   `Workout.create_with!` and `Workout#revise!`), `Release` digests `public/`.
@@ -204,8 +203,9 @@ done by kind, distance sums), `catalog.js`, `inventory.js`, `figure.js`
    created with a `client_ref`, and later requests name it as `{ref}` until
    the server gives it an id, so sets and the finish can be logged offline.
    Retries are safe: sessions by `client_ref`, sets by their unique key.
-4. `POST /api/sessions/:id/complete` stores the finish and makes any
-   weight suggestions for next time.
+4. `POST /api/sessions/:id/complete` stores the finish (RPE, how the weights
+   felt, a note) for the user and the coach agent to go by; the app changes
+   no weight from it.
 
 ## Offline and releases
 

@@ -8,7 +8,8 @@ module TrainerMcp
       counts a set once for both sides and lists reps left then right; `instead_of` names the
       exercise planned when it was swapped). Planned sessions in the range are listed too, and a planned one whose day has gone by reads as missed. `weeks`
       counts the main workouts done per week (Monday to Sunday). Also the remembered weight of every
-      exercise (0 for done without one), and the step up or down suggestions still waiting for the user. Weights are in each
+      exercise (0 for done without one). The app suggests no weights: the sets, RPE and feedback are what to
+      recommend a change from. Weights are in each
       exercise's unit. A week only partly in the range says how many of its `days` it covers.
     TEXT
     input_schema(
@@ -30,8 +31,7 @@ module TrainerMcp
         **today_and_weekday, from: from.iso8601, to: to.iso8601,
         weeks: weeks(sessions, from, to),
         sessions: sessions.map { session(it) },
-        remembered_weights: remembered_weights,
-        pending_suggestions: pending_suggestions
+        remembered_weights: remembered_weights
       )
     end
 
@@ -82,12 +82,6 @@ module TrainerMcp
     def self.remembered_weights
       ExerciseWeight.eager(exercise: :equipment).all.sort_by { it.exercise.name }.map do
         { exercise: it.exercise.slug, name: it.exercise.name, **remembered_weight(it, it.exercise.weight_unit), updated: it.updated_at.in_time_zone.to_date.iso8601 }
-      end
-    end
-
-    def self.pending_suggestions
-      WeightSuggestion.pending.eager(:exercise).order(:id).all.map do
-        { exercise: it.exercise.slug, name: it.exercise.name, direction: it.direction, value: it.value.to_f, unit: it.unit, reason: it.reason, after_session: it.session_id }
       end
     end
   end

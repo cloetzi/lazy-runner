@@ -317,7 +317,6 @@ button[aria-busy="true"]::after {
   display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: baseline; gap: var(--space-2) var(--space-4);
   border-bottom: 1px solid var(--border); padding-bottom: var(--space-2);
 }
-.targets .suggestion, .targets .suggestion-actions { grid-column: 1 / -1; }
 /* One action bar: pinned to the bottom of the screen (above the tab bar),
    the page's background behind it and a hairline on top, so nothing shows
    through. It sits at the end of the page, so the last row scrolls clear of
@@ -356,8 +355,6 @@ body.with-nav:not([data-focus]) .action-bar { padding-bottom: var(--space-3); }
   border-bottom: 1px solid var(--border); padding-bottom: var(--space-2);
 }
 .changes li.undone span { color: var(--muted); }
-.suggestion { flex-basis: 100%; margin: 0; color: var(--accent); }
-.suggestion-actions { display: flex; gap: var(--space-2); flex-basis: 100%; }
 
 /* How-to and swap dialogs */
 #howto, #swap, .calendar-sheet, #picker {
@@ -558,7 +555,6 @@ button.step-name .icon { color: var(--muted); }
 /* On wide screens keep the weight next to the name rather than across the card. */
 @media (min-width: 40rem) {
   .steps li { display: grid; grid-template-columns: minmax(0, 24rem) auto; justify-content: start; column-gap: var(--space-5); }
-  .steps li .suggestion, .steps li .suggestion-actions { grid-column: 1 / -1; }
 }
 #workout-saved { margin: 0; text-align: center; min-height: 1.2em; }
 #workout-start { min-height: 4.5rem; }

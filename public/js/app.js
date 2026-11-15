@@ -609,15 +609,12 @@ function stepRow(step, ref) {
   const equipment = equipmentNames(neededEquipment(step));
   const seed = step.weight && !sameShownWeight(step.weight, weight, state.unit) ? ` · plan: ${formatWeight(step.weight, state.unit)}` : "";
   const stepper = takesWeight(step) ? weightStepper(step.exercise.name, shownWeight(weight), `data-step="${ref}"`) : "";
-  const suggestion = step.suggestion && weight
-    ? suggestionAnswers(step.suggestion, weight, `data-suggestion="accept" data-step="${ref}"`, `data-suggestion="keep" data-step="${ref}"`)
-    : "";
   return `<li>
     <div class="step-text">
       <button class="step-name" data-howto="${ref}" aria-label="How to do ${escape(step.exercise.name)}">${escape(step.exercise.name)}${icon("info")}</button>
       <p class="muted">${escape(stepSummary(step))}${equipment.length ? ` · ${escape(equipment.join(", "))}` : ""}${seed}</p>
     </div>
-    ${stepper}${suggestion}
+    ${stepper}
   </li>`;
 }
 
@@ -654,16 +651,6 @@ function weightStepper(name, shown, data) {
     </div>`;
 }
 
-// A weight suggestion with buttons to take it or keep the current weight.
-function suggestionAnswers(suggestion, weight, acceptData, keepData) {
-  return `
-    <p class="suggestion">${escape(suggestion.reason)}: try ${formatWeight(suggestion, state.unit)}?</p>
-    <div class="suggestion-actions">
-      <button class="primary small" ${acceptData}>Use ${formatWeight(suggestion, state.unit)}</button>
-      <button class="secondary small" ${keepData}>Keep ${formatWeight(weight, state.unit)}</button>
-    </div>`;
-}
-
 // What a step of the workout view is done with. A workout cached offline by
 // an older release names it `equipment`.
 function neededEquipment(step) {
@@ -688,8 +675,8 @@ function rememberWeight(step, weight) {
   renderWorkout();
 }
 
-// Taps are gathered so a run of + presses saves once (and answers a pending
-// suggestion once, with the weight the user settled on).
+// Taps are gathered so a run of + presses saves once, with the weight the
+// user settled on.
 function queueWeightSave(exerciseId, weight) {
   state.weightSaves[exerciseId] = weight;
   clearTimeout(state.weightSaveTimer);
@@ -782,11 +769,8 @@ function showReady() {
   $("ready-go").textContent = startLabel(run.items[run.index] ?? run.items[0]);
   $("ready-need").hidden = gear.length === 0;
   $("ready-weights").hidden = run.targets.length === 0;
-  $("ready-targets").innerHTML = run.targets.map((t, i) => {
-    const suggestion = t.suggestion && t.weight ? suggestionAnswers(t.suggestion, t.weight, `data-accept="${i}"`, `data-keep="${i}"`) : "";
-    return `<li><span>${escape(t.exercise.name)}</span>
-      ${weightStepper(t.exercise.name, shownLoad(t.weight, t.weights_held), `data-target="${i}"`)}${suggestion}</li>`;
-  }).join("");
+  $("ready-targets").innerHTML = run.targets.map((t, i) => `<li><span>${escape(t.exercise.name)}</span>
+      ${weightStepper(t.exercise.name, shownLoad(t.weight, t.weights_held), `data-target="${i}"`)}</li>`).join("");
   show("ready");
 }
 
@@ -805,18 +789,6 @@ function startLabel(first) {
   return { warmup: "Start warm-up", cooldown: "Start cool-down" }[kind] ?? `Start ${title}`;
 }
 
-// The user's answer to a suggestion is saved straight away; it is not a
-// change made during the session, so there is nothing to undo at the end.
-function answerSuggestion(index, accept) {
-  const run = state.run;
-  const target = run.targets[index];
-  const weight = accept ? (target.suggestion.value > 0 ? { value: target.suggestion.value, unit: target.suggestion.unit } : null) : target.weight;
-  outbox.enqueue(weightRequest(target.exercise.id, weight));
-  sync();
-  setTargetWeight(target, weight);
-  showReady();
-}
-
 // A weight stepped on Get ready is remembered for the exercise, as in the
 // workout view (taps are gathered and saved once).
 function stepReadyWeight(index, direction) {
@@ -833,11 +805,9 @@ function stepReadyWeight(index, direction) {
 // unit (a step done with gear of its own keeps that gear's).
 function setTargetWeight(target, weight) {
   target.weight = weight;
-  target.suggestion = null;
   for (const item of state.run.items) {
     if (item.exercise?.id !== target.exercise.id) continue;
     item.weight = inUnit(weight, item.weight_unit);
-    item.suggestion = null;
   }
 }
 
@@ -1479,7 +1449,6 @@ async function submitFinish() {
   $("finish-form").hidden = true;
   $("finish-done").hidden = false;
   $("finish-result").textContent = "Saving…";
-  $("finish-suggestions").innerHTML = "";
   $("next-up").hidden = true;
 
   const synced = await sync();
@@ -1494,12 +1463,7 @@ async function submitFinish() {
     $("finish-result").textContent = "The server would not take this session. The reason is on the home screen.";
     return;
   }
-  $("finish-result").textContent = result.suggestions.length
-    ? "Suggested for next time (you confirm before it changes):"
-    : "See you next time.";
-  const names = Object.fromEntries(run.items.filter((i) => i.exercise).map((i) => [i.exercise.id, i.exercise.name]));
-  $("finish-suggestions").innerHTML = result.suggestions.map((s) =>
-    `<li><span>${escape(names[s.exercise_id] ?? "")}</span><strong>${formatWeight(s, state.unit)}</strong><p class="suggestion">${escape(s.reason)}</p></li>`).join("");
+  $("finish-result").textContent = "See you next time.";
   showNextUp();
 }
 
@@ -1898,8 +1862,6 @@ $("ready-go").onclick = () => { unlock(); beginPlayer(); };
 $("ready-back").onclick = leaveReady;
 $("ready-targets").onclick = (event) => {
   const button = event.target.closest("button");
-  if (button?.dataset.accept) answerSuggestion(Number(button.dataset.accept), true);
-  if (button?.dataset.keep) answerSuggestion(Number(button.dataset.keep), false);
   if (button?.dataset.weight) stepReadyWeight(Number(button.dataset.target), button.dataset.weight);
 };
 
@@ -1959,8 +1921,6 @@ $("workout-blocks").onclick = (event) => {
   if (button.dataset.howto) return openHowto(workoutStep(button.dataset.howto).exercise);
   const step = workoutStep(button.dataset.step);
   if (button.dataset.weight) changeWorkoutWeight(step, button.dataset.weight);
-  if (button.dataset.suggestion === "accept") rememberWeight(step, { value: step.suggestion.value, unit: step.suggestion.unit });
-  if (button.dataset.suggestion === "keep") rememberWeight(step, step.target.weight);
 };
 
 $("changes").onclick = (event) => {

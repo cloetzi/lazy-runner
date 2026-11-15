@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { blockName, blockSummary, stepSummary, setWeight, includedKinds, framingFor, framePlan, gearList, carrierOf } from "../../public/js/workout.js";
 
 const step = (overrides = {}) => ({
-  per_side: false, tempo: null, note: null, suggestion: null,
+  per_side: false, tempo: null, note: null,
   exercise: { id: 1 }, target: { reps: 8, seconds: null, weight: null },
   ...overrides,
 });
@@ -29,19 +29,17 @@ test("summarises a step from its target", () => {
   assert.equal(stepSummary(step({ target: { reps: null, seconds: null }, note: "Hold the top" })), "Hold the top");
 });
 
-test("sets the weight on every step of the exercise and clears its suggestion", () => {
-  const squat = step({ target: { reps: 8, weight: { value: 40, unit: "lb" } }, suggestion: { value: 45, unit: "lb" } });
+test("sets the weight on every step of the exercise", () => {
+  const squat = step({ target: { reps: 8, weight: { value: 40, unit: "lb" } } });
   const again = step({ target: { reps: 5, weight: { value: 40, unit: "lb" } } });
-  const other = step({ exercise: { id: 2 }, target: { reps: 8, weight: { value: 10, unit: "lb" } }, suggestion: { value: 12.5 } });
+  const other = step({ exercise: { id: 2 }, target: { reps: 8, weight: { value: 10, unit: "lb" } } });
   const workout = { blocks: [{ steps: [squat, other] }, { steps: [again] }] };
 
   setWeight(workout, 1, { value: 45, unit: "lb" });
 
   assert.deepEqual(squat.target.weight, { value: 45, unit: "lb" });
   assert.deepEqual(again.target.weight, { value: 45, unit: "lb" });
-  assert.equal(squat.suggestion, null);
   assert.deepEqual(other.target.weight, { value: 10, unit: "lb" });
-  assert.deepEqual(other.suggestion, { value: 12.5 });
 });
 
 test("sets no weight, and each step's weight in its own unit", () => {

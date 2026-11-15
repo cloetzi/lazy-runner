@@ -9,7 +9,7 @@ const plank = { id: 3, name: "Plank", equipment: ["mat"], default_reps: null, de
 const set = (exercise, round, overrides = {}) => ({
   type: "exercise", mode: "reps", step_id: 10, side: null, block: { label: "A", round, rounds: 2 },
   exercise, reps: 8, seconds: null, tempo: "3010", weight: { value: 40, unit: "lb" }, weight_unit: "lb", weights_held: 1, seed_weight: { value: 40, unit: "lb" },
-  allowed_weights: [20, 40], suggestion: null, note: null, equipment: ["dumbbell"],
+  allowed_weights: [20, 40], note: null, equipment: ["dumbbell"],
   ...overrides,
 });
 const rest = (round) => ({ type: "rest", mode: "timed", block: { label: "A", round, rounds: 2 }, seconds: 60 });

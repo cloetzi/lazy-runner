@@ -31,9 +31,6 @@ erDiagram
     exercises ||--o{ set_logs : "done / planned"
     sessions ||--o| completions : "finished by"
     exercises ||--o| exercise_weights : remembers
-    exercises ||--o{ weight_suggestions : "suggested for"
-    sessions ||--o{ weight_suggestions : suggests
-    sessions |o--o{ weight_suggestions : supersedes
     users ||--o{ activities : logs
     users ||--o{ goals : "aims for"
     goals |o--o{ goals : "proposed to replace"
@@ -199,18 +196,6 @@ erDiagram
         int exercise_id FK "unique per user"
         decimal value "null: no weight"
         string unit
-    }
-    weight_suggestions {
-        int id PK
-        int user_id FK "the session's"
-        int exercise_id FK
-        int session_id FK
-        string direction "up | down"
-        decimal value
-        string unit
-        string reason
-        string status "pending | accepted | dismissed | superseded"
-        int superseded_by_id FK "the session whose finish superseded it"
     }
     activities {
         int id PK
@@ -383,8 +368,8 @@ erDiagram
   journal, by the user, a coach they name, or an agent). The current status
   or focus is the newest note of its kind; nothing marks which replaced which.
 - **Coach state:** `exercise_weights` (the remembered weight per exercise, which
-  wins over a step's own weight in every workout), `weight_suggestions` (a
-  step up or down after a session, until confirmed or declined) and `settings`.
+  wins over a step's own weight in every workout; the user or the coach agent
+  sets it, never the app) and `settings`.
 
 ## Who owns what
 
@@ -394,7 +379,7 @@ erDiagram
 | Programs and their workouts | Imported from `db/examples/*.yml` (`POST /api/examples/:slug/import`, MCP `import_example`), weights snapped to the user's gear | The user's from then on, like any workout of theirs; `example_slug` notes the example. Nothing is seeded. |
 | `user_equipment` | The user, on the Equipment page | A new account owns nothing. |
 | Workouts (`source: user` or `llm`) | Imported, duplicated, or built with `POST /api/workouts` (MCP marks its own `llm`) | Archived, never deleted. `PUT` rewrites their blocks and steps, keeping the step ids it names; steps it drops go, their logged sets stay. |
-| Sessions, set logs, completions, weights, suggestions, settings | The app, per user | Never touched by the seed loader. A logged set is never deleted by it. |
+| Sessions, set logs, completions, weights, settings | The app, per user | Never touched by the seed loader. A logged set is never deleted by it. |
 | Goals | The user, in the app | An agent only proposes one (MCP `propose_goal`): `proposed` until the user accepts or dismisses it; dismissed ones stay so it isn't proposed again. |
 | Coach notes | The user or a coach they name in the app; an agent through MCP (`author_kind: llm`) | The agent changes, deletes and resolves only its own notes (at most 20 new a day); the app doesn't change an agent's note, but deletes it. |
 | Activities | The app, or a script through `POST /api/activities`, or an agent through MCP `log_activities` (`created_by: llm`) | One from elsewhere is matched by `source` + `external_id` and updated in place; the person's `rpe` and `note` are never overwritten by a resend. |

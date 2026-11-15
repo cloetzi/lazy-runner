@@ -11,9 +11,7 @@ class ExerciseWeight < Record
 
   # Remembers `value` for the exercise, in `unit` (else the unit remembered,
   # else the exercise's); a weight in the other unit is converted and
-  # snapped to an owned weight. A pending suggestion for the exercise is
-  # answered with it: accepted when it is the suggested weight, else
-  # dismissed. A nil or 0 `value` remembers no weight (and dismisses it). Raises
+  # snapped to an owned weight. A nil or 0 `value` remembers no weight. Raises
   # Sequel::ValidationFailed for a value that is no weight.
   def self.remember!(exercise, value, unit = nil)
     remembered = find_or_new(exercise_id: exercise.id)
@@ -23,13 +21,7 @@ class ExerciseWeight < Record
     end
     unit = unit.presence || remembered.unit || exercise.weight_unit
     given = none?(value) ? { value: nil, unit: } : exercise.in_weight_unit(value, unit)
-    db.transaction do
-      remembered.update(value: given[:value], unit: given[:unit])
-      WeightSuggestion.pending.where(exercise_id: exercise.id).all.each do |suggestion|
-        taken = remembered.none? ? suggestion.value.zero? : Weights.same?(suggestion.weight, remembered.weight)
-        suggestion.update(status: taken ? "accepted" : "dismissed")
-      end
-    end
+    remembered.update(value: given[:value], unit: given[:unit])
     remembered
   end
 

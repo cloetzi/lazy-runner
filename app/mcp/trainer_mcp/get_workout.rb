@@ -8,7 +8,7 @@ module TrainerMcp
       to use. The weight comes from the exercise's remembered weight when there is one, so
       changing an exercise's weight applies to every workout that uses it, while reps and time are
       set per workout step. The blocks can be sent back to update_workout, changed where needed. `allowed_weights` are the owned weights a step can
-      use, and `suggestion` a pending step up or down. `framed` is what a session of it runs: its
+      use. `framed` is what a session of it runs: its
       warm-up, the workout and its cool-down. `editable` is false for archived workouts.
     TEXT
     input_schema(

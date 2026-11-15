@@ -89,7 +89,7 @@ module Api
     #   leaves and joins are renumbered. Finishing goes through
     #   POST /api/sessions/:id/complete. A done session keeps its status and
     #   parts, except that one ended early can be picked up again
-    #   (`in_progress`), which takes back its finish and pending suggestions.
+    #   (`in_progress`), which takes back its finish.
     # @request { status?: [planned, in_progress, skipped], date?: Date, today?: Date, position?: Integer, parts?: String, note?: String, started_at?: DateTime }
     # @response 200 #/components/schemas/Session
     # @response 400 #/components/responses/BadRequest
@@ -216,7 +216,7 @@ module Api
       render json: log, status: created ? :created : :ok
     end
 
-    # Finish a session, and work out the weight suggestions for next time.
+    # Finish a session.
     # @description `ended_early` marks a session finished from End session
     #   before the main workout was through. Calling it again (a retry) keeps
     #   the fields it leaves out; send a field as null to clear it.
@@ -235,19 +235,19 @@ module Api
       finished_at = completion.finished_at || [client_time(:finished_at) || Time.now, session.started_at].compact.max
       changes = { finished_at:, **completion_fields(%i[rpe feedback note]) }
       changes[:ended_early] = Record.boolean(params[:ended_early]) || false if params.key?(:ended_early)
-      # Suggestions are worked out with the completion, so a failure leaves the
-      # session unfinished and a retry starts over.
-      suggestions = Session.db.transaction do
+      # Together, so a failure leaves the session unfinished and a retry starts over.
+      Session.db.transaction do
         completion.update(changes)
         session.update(status: "done")
-        WeightSuggestion.generate_for(session.refresh)
       end
-      render json: { session:, completion:, suggestions: }
+      # `suggestions` stays, always empty, for a page still on a release from
+      # before the app stopped suggesting weights (#264).
+      render json: { session: session.refresh, completion:, suggestions: [] }
     end
 
     # Change a finished session's RPE or note, such as a note added later.
-    # @description Fields left out are kept. The feedback drives the weight
-    #   suggestions, so it changes through POST /api/sessions/:id/complete.
+    # @description Fields left out are kept. The feedback is part of the
+    #   finish, so it changes through POST /api/sessions/:id/complete.
     # @request { rpe?: Integer, note?: String }
     # @response 200 #/components/schemas/Completion
     # @response 400 #/components/responses/BadRequest
@@ -255,7 +255,7 @@ module Api
     # @response 422 #/components/responses/Invalid
     def completion
       if params.key?(:feedback)
-        raise BadRequest.new("change the feedback with POST /api/sessions/:id/complete, which works out the suggestions again", fields: { feedback: ["is set by POST /api/sessions/:id/complete"] })
+        raise BadRequest.new("change the feedback with POST /api/sessions/:id/complete", fields: { feedback: ["is set by POST /api/sessions/:id/complete"] })
       end
 
       session = Session.find!(params[:id])

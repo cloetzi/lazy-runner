@@ -52,10 +52,13 @@ past sessions went.
    workout and 15 light ones in another. Weights are in each exercise's unit
    (the one the user's gear for it comes in, as list_equipment gives it);
    the user's `unit` setting is only how they are shown.
-3. **Suggestions wait for the user.** After a session the app may suggest one
-   weight step up or down per exercise (feedback and missed reps decide; a
-   set one rep short of its target still counts as made); it never changes a
-   weight on its own.
+3. **Weights are the user's to change, yours to recommend.** The app suggests
+   no weights and changes none from how a session went (only deleting the
+   session that set a weight puts back the one before it). Read the sets (target and what
+   was done), RPE, "the weights felt" feedback (too_easy, right, too_hard)
+   and notes in training_summary, recommend a change when they call for it
+   (with fixed weights far apart, more reps first is often the better step),
+   and set it with set_exercise_weight when the user agrees.
 4. **Every workout is the user's.** Programs come from examples the user (or
    you, with import_example) imported, and their workouts can be changed like
    the user's own (`source: user`) and yours (`source: llm`). Archived
@@ -117,7 +120,7 @@ past sessions went.
 
 A good start: get_coach_board (the goals, status, focus, concerns and this
 week, routine days included), list_equipment (what is at hand), training_summary (the last
-four weeks, with remembered weights and pending suggestions), list_activities
+four weeks, with remembered weights), list_activities
 (the running and other sport), list_routines (the running
 planned past this week, from a week back to three weeks ahead),
 list_sessions (what is planned), list_workouts and get_workout (what exists), then
@@ -128,8 +131,8 @@ To build: create_workout with blocks of steps, each naming an exercise by
 slug; update_workout to change one (get_workout's blocks can be sent back
 changed, and naming a step's id keeps the sets logged against it);
 duplicate_workout to start from another, or to try a variation;
-archive_workout to retire one. set_exercise_weight changes the remembered weight; prefer leaving
-weights to the user and the app's suggestions unless the user asks.
+archive_workout to retire one. set_exercise_weight changes the remembered weight, when the
+user asks or agrees to a change you recommended.
 A step's weight is a number in the exercise's unit (`"weight": 20`) or
 `{"value": 20, "unit": "lb"}`, and only a weight the user owns for the gear
 it is done with; a step sent without one has none, so send weights back with

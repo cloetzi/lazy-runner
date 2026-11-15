@@ -82,14 +82,12 @@ class SeedLoader
   end
 
   # An exercise dropped from the seeds leaves the library, with every user's
-  # remembered weight and suggestions. One still used by a step is kept; one
+  # remembered weight. One still used by a step is kept; one
   # with logged sets is retired, so its history stays.
   def prune_exercises(slugs)
     Exercise.exclude(slug: slugs).exclude(id: Step.everyone.select(:exercise_id)).all.each do |exercise|
       ExerciseWeight.everyone.where(exercise_id: exercise.id).delete
-      WeightSuggestion.everyone.pending.where(exercise_id: exercise.id).delete
       if SetLog.everyone.where(Sequel.|({ exercise_id: exercise.id }, { planned_exercise_id: exercise.id })).empty?
-        WeightSuggestion.everyone.where(exercise_id: exercise.id).delete
         exercise.destroy
       else
         exercise.update(retired: true)

@@ -6,10 +6,9 @@
 # exercise's unit, and items that take a weight (`weight_unit`), set or not,
 # carry the owned weights to step through.
 class PlayerPlan
-  def initialize(workouts, weights: ExerciseWeight.as_hash(:exercise_id), suggestions: WeightSuggestion.pending.as_hash(:exercise_id), fixed: Equipment.fixed)
+  def initialize(workouts, weights: ExerciseWeight.as_hash(:exercise_id), fixed: Equipment.fixed)
     @workouts = workouts
     @weights = weights
-    @suggestions = suggestions
     @fixed = fixed
   end
 
@@ -32,7 +31,7 @@ class PlayerPlan
       item = same.first
       lists = same.select { it[:weight_unit] == item[:weight_unit] }.filter_map { it[:allowed_weights] }
       allowed = lists.flatten.uniq.sort unless lists.empty?
-      item.slice(:weight, :weight_unit, :weights_held, :weight_equipment, :any_weight, :seed_weight, :suggestion, :equipment)
+      item.slice(:weight, :weight_unit, :weights_held, :weight_equipment, :any_weight, :seed_weight, :equipment)
           .merge(allowed_weights: allowed, exercise: item[:exercise].slice(:id, :name))
     end
   end
@@ -74,7 +73,6 @@ class PlayerPlan
         allowed_weights: (step.allowed_weights(@fixed) if unit),
         any_weight: (any_weight(step) if unit),
         seed_weight: step.weight,
-        suggestion: @suggestions[step.exercise_id]&.as_json,
         note: step.note,
         equipment: step.equipment_needed,
         exercise: step.exercise.as_json.slice(:id, :slug, :name, :category, :alternating, :cues, :mistakes, :instructions, :animation)
