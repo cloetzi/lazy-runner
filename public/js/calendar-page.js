@@ -25,7 +25,7 @@ import { routineRow, routineChip, dayKey, openRoutineDaySheet, openRoutineSheet 
 import { changeHtml, undoButton, dayChangeLines, undoRequest, sessionChange as agentChange, routineChangeOn, changeShownOn, withoutUndo } from "./plan-changes.js";
 
 // The Calendar page. Phones show one week, Monday to Sunday, days top to
-// bottom; wide screens also have a month grid with the chosen day under it,
+// bottom; tablets and wider also have a month grid with the chosen day under it,
 // where a planned session can be dragged to another day. Activities (runs,
 // rides, anything done) show beside the sessions, each with its sport's icon,
 // and the coach's notes dated to a day under them. Routine days (a run on
@@ -39,7 +39,9 @@ const VIEW_KEY = "calendarView";
 // Set once the calendar has shown anything to this account: the page's
 // how-to line goes.
 const usedKey = () => `calendarUsed:${pageAccount(storage).id}`;
-const wide = matchMedia("(min-width: 60rem)");
+// The month is offered from the tablet tier, the same query as the
+// shell's rail (44rem wide on a screen 48rem tall, or 60rem wide).
+const wide = matchMedia("(min-width: 60rem), (min-width: 44rem) and (min-height: 48rem)");
 const $ = (id) => document.getElementById(id);
 const storage = (() => {
   try {
@@ -194,10 +196,22 @@ function render() {
   // A range not loaded yet shows nothing rather than a week of Rest.
   if (state.loaded !== rangeKey()) {
     $("calendar-body").innerHTML = state.failed ? "" : `<p class="muted">Loading…</p>`;
+    // An arrow key left the month: the focus waits on the body until the
+    // next month is drawn, and the keys still work there. Nothing to wait
+    // for once the load failed.
+    if (state.gridFocus) {
+      if (state.failed) state.gridFocus = false;
+      else $("calendar-body").focus({ preventScroll: true });
+    }
   } else {
     const data = shown();
     $("calendar-body").innerHTML = current === "month" ? monthView(data) : weekView(data);
     if (state.toToday) bringTodayIntoView();
+    // The arrow keys moved the selection; focus follows it.
+    if (state.gridFocus) {
+      state.gridFocus = false;
+      if (current === "month") document.querySelector('.month-date[tabindex="0"]')?.focus();
+    }
     if (state.showDay) {
       state.showDay = false;
       if (current === "month") showSelectedDay();
@@ -346,11 +360,13 @@ const MAX_CHIPS = 3;
 
 // The month grid at the full width, the selected day under it (#253).
 // Each chip is a tile and what and how much; a cell too narrow for words
-// shows the tiles alone (a container query in app.css).
+// shows the tiles alone (a container query in app.css). The grid is one tab
+// stop: the arrow keys move the selected day (#254), and the whole cell is
+// its button.
 function monthView({ days, activityDays, noteDays, routineDayMap, fulfils, next, changeDays, changeShown }) {
   const month = state.focus.slice(0, 7);
-  const head = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((d) => `<span class="month-weekday" aria-hidden="true">${d}</span>`).join("");
-  const cells = monthWeeks(state.focus).flat().map((date) => {
+  const head = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((d) => `<span class="month-weekday" role="columnheader">${d}</span>`).join("");
+  const weeks = monthWeeks(state.focus).map((week) => `<div class="month-week" role="row">${week.map((date) => {
     const sessions = days[date] ?? [];
     const activities = activityDays[date] ?? [];
     const notes = noteDays[date] ?? [];
@@ -370,14 +386,17 @@ function monthView({ days, activityDays, noteDays, routineDayMap, fulfils, next,
     ];
     const shown = chips.length > MAX_CHIPS + 1 ? [...chips.slice(0, MAX_CHIPS), `<li class="chip more-chip"><span class="chip-label">+${chips.length - MAX_CHIPS} more</span></li>`] : chips;
     return `
-      <div class="${classes}" data-date="${date}">
-        <button class="month-date" data-select="${date}" aria-label="${escape(label)}" aria-pressed="${date === state.focus}">${Number(date.slice(8))}</button>
+      <div class="${classes}" role="gridcell" aria-selected="${date === state.focus}" data-date="${date}">
+        <button class="month-date" data-select="${date}" tabindex="${date === state.focus ? 0 : -1}" aria-label="${escape(label)}">${Number(date.slice(8))}</button>
         <ul class="chips" aria-hidden="true">${shown.join("")}</ul>
       </div>`;
-  }).join("");
+  }).join("")}</div>`).join("");
   return `
     <div class="month">
-      <div class="month-grid">${head}${cells}</div>
+      <div class="month-grid" role="grid" aria-label="${escape(monthLabel(state.focus))}" aria-describedby="month-keys">
+        <div class="month-week" role="row">${head}</div>${weeks}
+      </div>
+      <p class="visually-hidden" id="month-keys">Arrow keys move a day or a week, Home and End to the start or end of the week, Page Up and Page Down a month.</p>
       <section class="card day-panel" aria-label="${escape(longDay(state.focus))}">${dayCard(state.focus, days[state.focus] ?? [], activityDays[state.focus] ?? [], next, { heading: "h2", notes: noteDays[state.focus], routineDays: routineDayMap[state.focus], fulfils, changes: changeDays[state.focus], changeShown })}</section>
     </div>`;
 }
@@ -677,6 +696,23 @@ $("calendar-switch").onclick = (event) => {
 };
 
 $("calendar-key").onclick = openKeySheet;
+
+// One tab stop for the month grid, arrow keys inside it (#254): they move
+// the selected day, and the focus follows it.
+const KEY_MOVES = {
+  ArrowLeft: (d) => addDays(d, -1), ArrowRight: (d) => addDays(d, 1),
+  ArrowUp: (d) => addDays(d, -7), ArrowDown: (d) => addDays(d, 7),
+  Home: (d) => weekOf(d)[0], End: (d) => weekOf(d)[6],
+  PageUp: (d) => addMonths(d, -1), PageDown: (d) => addMonths(d, 1),
+};
+$("calendar-body").addEventListener("keydown", (event) => {
+  const step = KEY_MOVES[event.key];
+  const inGrid = event.target.closest(".month-grid") || (event.target.id === "calendar-body" && state.gridFocus);
+  if (!step || !inGrid || event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
+  event.preventDefault();
+  state.gridFocus = true;
+  goTo(step(state.focus));
+});
 
 $("calendar-body").addEventListener("click", (event) => {
   const target = event.target.closest("[data-add], [data-open], [data-activity], [data-routine-day], [data-note], [data-do-today], [data-undo], [data-unfold], [data-select], .month-day");

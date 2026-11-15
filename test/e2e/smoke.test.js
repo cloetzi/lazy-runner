@@ -308,7 +308,7 @@ test("opens another workout, the calendar, the coach board and history offline",
   await page.locator("#history-week").getByText("This week").waitFor();
   await page.locator(".offline-badge:visible").getByText("Offline").waitFor();
   await page.goto("/calendar.html");
-  await page.locator("#calendar-body .week-days").waitFor();
+  await page.locator("#calendar-body .month-grid").waitFor();
   assert.doesNotMatch(await page.locator("#calendar-note").textContent(), /Could not load|no copy/);
   await page.goto("/coach.html");
   await page.locator("#coach-note").getByText("Writing notes and goals needs a connection.").waitFor();
@@ -350,6 +350,33 @@ test("shows every page on the iPad's rail, and Back returns to where a detail wa
   await page.locator("#exercise-history-back").getByText("Exercises").waitFor();
   await page.locator("#exercise-history-back").click();
   await page.waitForURL(/\/library\.html$/);
+
+  // The calendar offers the month on the rail's tier. Its grid is one tab
+  // stop: the arrow keys move the selected day, and the day under it follows.
+  await page.goto("/calendar.html");
+  await page.locator("#calendar-switch").getByText("Month").click();
+  const selected = page.locator('.month-grid [role="gridcell"][aria-selected="true"]');
+  const start = await selected.getAttribute("data-date");
+  await page.locator('.month-date[tabindex="0"]').focus();
+  await page.keyboard.press("ArrowRight");
+  await page.keyboard.press("ArrowDown");
+  const moved = await page.evaluate((date) => {
+    const day = new Date(`${date}T12:00:00Z`);
+    day.setUTCDate(day.getUTCDate() + 8);
+    return day.toISOString().slice(0, 10);
+  }, start);
+  await page.locator(`.month-grid [aria-selected="true"][data-date="${moved}"]`).waitFor();
+  await page.waitForFunction((date) => document.activeElement?.dataset.select === date, moved);
+  assert.equal(await page.locator('.month-date[tabindex="0"]').count(), 1);
+  // Page Down opens the next month, and the keys go on working there.
+  await page.keyboard.press("PageDown");
+  await page.keyboard.press("ArrowLeft");
+  const nextMonth = await page.evaluate(async (date) => {
+    const { addDays, addMonths } = await import("/js/calendar.js");
+    return addDays(addMonths(date, 1), -1);
+  }, moved);
+  await page.waitForFunction((date) => document.activeElement?.dataset.select === date, nextMonth);
+  await accessible(page, "the month on an iPad in portrait");
 
   // A phone on its side is as wide as the rail's tier but keeps the tab bar.
   await page.setViewportSize({ width: 844, height: 390 });
