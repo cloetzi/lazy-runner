@@ -45,10 +45,18 @@ as null when it has no value (`nullable`).
   (404 from Today with nothing to train yet), `conflict` (409),
   `already_imported` (409, an example imported before), `user_mismatch`
   (409, a write for another user than the one signed in), `invalid` (422),
-  `too_many_requests` (429, with `Retry-After`).
+  `too_many_requests` (429, with `Retry-After`), `server_error` (500, a
+  bug; the log has the details).
   `bad_request` and `invalid` name the offending `fields`. A required id
   left out is a `bad_request` ("step_id is required"); an id that names
-  nothing is a `not_found`.
+  nothing is a `not_found`. A value of the wrong type (an object where text
+  or a number goes, `true` as `{}`) is a `bad_request` or `invalid`, never
+  read as something else, and a JSON body that isn't an object is a
+  `bad_request`. Query text that isn't UTF-8 is read with the bad bytes
+  replaced.
+- **Never cached on the way**: every answer under `/api` and `/mcp` is
+  `Cache-Control: no-store` (the API reference page says its own) and
+  `X-Content-Type-Options: nosniff`.
 - **Everything is the signed-in user's**: the exercise library and the
   equipment catalogue are shared, and everything else (workouts, programs,
   sessions, sets, weights, settings, what equipment is owned)
@@ -165,14 +173,30 @@ as null when it has no value (`nullable`).
   owner (`setup_required`). A device signed out from elsewhere gets a 401
   that says so.
 - **API tokens** (made in Settings, `/api/account/tokens`) are sent as
-  `Authorization: Bearer lr_...` and act as their user with full access,
-  without the session or the CSRF headers. An unknown or revoked one is a
-  401 with `WWW-Authenticate`. They can't manage the account (devices,
-  tokens): that is a 403, so a leaked token can't make itself another. Only
+  `Authorization: Bearer lr_...` and act as their user, without the session
+  or the CSRF headers. A token's `scope` is `mcp` (the default, and every
+  token made before scopes): good for `/mcp` alone, a 403 anywhere under
+  `/api`. One made with REST access (`scope: api`, ticked in Settings) is
+  good for `/api` too. An unknown or revoked one is a
+  401 with `WWW-Authenticate`. No token can manage the account (devices,
+  tokens, users, invites): that is a 403, so a leaked token can't make
+  itself another. Only
   the `Bearer` scheme counts; another `Authorization` header (a proxy's
-  Basic sign-in) is left to the session. What a token writes as an agent
-  (`created_by: llm`, and everything over MCP) carries the token's name as
-  `agent_name`, the name the app shows for the agent.
+  Basic sign-in) is left to the session.
+- **A token writes as an agent**, on `/api` as over MCP, and the models
+  hold it to the agent's rules (`Record.user_only!`): what it writes is
+  `created_by: llm` (a note `author_kind: llm`) whatever the request says,
+  and carries the token's name as `agent_name`, the name the app shows for
+  the agent. A goal it makes is a proposal; adding, changing, deleting,
+  accepting or dismissing goals, skipping a session or changing or erasing
+  one started, skipped or done (an agent may start and finish a planned
+  one, logging its sets as it goes), changing the sets or the finish of a
+  session done or skipped, changing or deleting an activity the user
+  logged, changing or ending the user's routines and confirming, skipping or
+  moving any routine's day, changing or deleting the user's own coach
+  notes (or an agent's note they replied to), taking a plan change back and
+  marking agent news seen are the user's, a 403. An agent writes at most 20
+  coach notes a day (409 past that).
 - **Writes come from the app.** A POST, PUT, PATCH or DELETE needs
   `Sec-Fetch-Site: same-origin` (or, without it, an `Origin` equal to the
   server's) and a body of `application/json`, else a 403. Browsers send the

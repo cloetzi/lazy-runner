@@ -57,8 +57,51 @@ describe "API tokens" do
     end
   end
 
+  describe "its scope" do
+    it "is MCP alone unless REST access is asked for" do
+      post_json "/api/account/tokens", name: "Coach agent"
+      _(json["token"]["scope"]).must_equal "mcp"
+      mcp_only = json["secret"]
+      post_json "/api/account/tokens", name: "Script", scope: "api"
+      _(json["token"]["scope"]).must_equal "api"
+
+      get "/api/account/tokens"
+      _(json["tokens"].map { it.values_at("name", "scope") }).must_equal [%w[Script api], ["Coach agent", "mcp"]]
+
+      with_token(mcp_only)
+      get "/api/today"
+      _(last_response.status).must_equal 403
+      _(json["error"]).must_equal({ "code" => "forbidden", "message" => AuthApp::MCP_ONLY })
+      get "/api/me"
+      _(last_response.status).must_equal 401
+      _(json["user"]).must_be_nil
+      patch_json "/api/settings", unit: "kg"
+      _(last_response.status).must_equal 403
+      _(Setting.unit).must_equal "lb"
+      # Turned away, it wasn't used.
+      _(ApiToken.first!(name: "Coach agent").last_used_at).must_be_nil
+    end
+
+    it "is one of the two" do
+      post_json "/api/account/tokens", name: "Script", scope: "admin"
+      _(last_response.status).must_equal 422
+      _(json["error"]["fields"].keys).must_equal ["scope"]
+
+      post_json "/api/account/tokens", name: "Script", scope: { "a" => 1 }
+      _(last_response.status).must_equal 422
+      _(ApiToken.count).must_equal 0
+    end
+
+    it "is MCP alone for a token made before scopes" do
+      ApiToken.db[:api_tokens].insert(user_id: user.id, name: "Old", digest: "x" * 64, created_at: Time.now, updated_at: Time.now)
+
+      _(ApiToken.first!.scope).must_equal "mcp"
+      _ { ApiToken.db[:api_tokens].where(name: "Old").update(scope: "admin") }.must_raise Sequel::CheckConstraintViolation
+    end
+  end
+
   describe "using one on the API" do
-    let(:secret) { ApiToken.issue!(user, "Script").last }
+    let(:secret) { ApiToken.issue!(user, "Script", scope: "api").last }
 
     it "acts as its user, with no session and no CSRF headers" do
       with_token(secret)
@@ -71,14 +114,14 @@ describe "API tokens" do
       _(last_response.headers["set-cookie"]).must_be_nil
     end
 
-    it "signs what an agent plans with the token's name, and nothing of yours" do
+    it "signs what an agent plans with the token's name, whatever the request says" do
       with_token(secret)
       post_json "/api/sessions", workout_id: workout("cycle-1-workout-1").id, date: "2030-11-05", status: "planned", created_by: "llm"
       _(last_response.status).must_equal 201, last_response.body
       _(json.values_at("created_by", "agent_name")).must_equal ["llm", "Script"]
 
-      post_json "/api/sessions", workout_id: workout("cycle-1-workout-1").id, date: "2030-11-06", status: "planned"
-      _(json.values_at("created_by", "agent_name")).must_equal ["manual", nil]
+      post_json "/api/sessions", workout_id: workout("cycle-1-workout-1").id, date: "2030-11-06", status: "planned", created_by: "manual"
+      _(json.values_at("created_by", "agent_name")).must_equal ["llm", "Script"]
     end
 
     it "turns away an unknown token, saying how to send one" do

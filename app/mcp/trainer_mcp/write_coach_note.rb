@@ -34,12 +34,14 @@ module TrainerMcp
         same = same_as(written)
         next note(same).merge(already_written: true) if same
 
-        if CoachNote.by_agent.written_today.count >= CoachNote::AGENT_DAILY_LIMIT
+        # The daily limit is the model's (CoachNote#before_create), said here
+        # with the tools that help.
+        begin
+          note(written.save(validate: false))
+        rescue CoachNote::DailyLimit
           raise Problem, "you wrote #{CoachNote::AGENT_DAILY_LIMIT} notes today, the most in a day: update_coach_note " \
             "the ones there, or delete_coach_notes what is stale"
         end
-
-        note(written.save(validate: false))
       end
     end
 

@@ -201,7 +201,7 @@ describe PlanChange do
     end
 
     it "changes a routine back, and plans an ended one again from today" do
-      run = Routine.plan!({ sport: "run", weekdays: [3], minutes: 40 }, today:)
+      run = Routine.plan!({ sport: "run", weekdays: [3], minutes: 40 }, today:, created_by: "llm")
       as_agent { run.revise!(minutes: 60) }
       undo(latest)
       _(run.refresh.minutes).must_equal 40
@@ -213,7 +213,7 @@ describe PlanChange do
     end
 
     it "plans an ended workout routine again with the sessions that confirmed its days" do
-      lift = Routine.plan!({ workout_id: strength.id, weekdays: [5] }, today:)
+      lift = Routine.plan!({ workout_id: strength.id, weekdays: [5] }, today:, created_by: "llm")
       lift.confirm!(d("2026-11-13"))
       as_agent { lift.end! }
       ended = PlanChange.first(action: "ended")

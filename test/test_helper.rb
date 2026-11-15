@@ -239,13 +239,14 @@ module RequestHelpers
 
   # What AuthApp, in front of the app, answers for any route: a 401 without a
   # session or a valid token, a 403 for a write from another site or without
-  # a JSON body, or for an API token on the account's routes.
+  # a JSON body, or for an API token on the account's routes or one
+  # without REST access.
   def answered_by_auth_app(status)
     return { "$ref" => "#/components/responses/Unauthorized" } if status == "401"
     return { "$ref" => "#/components/responses/Conflict" } if status == "409" && JSON.parse(last_response.body).dig("error", "code") == "user_mismatch"
 
     refusal = JSON.parse(last_response.body).dig("error", "message") if status == "403"
-    { "$ref" => "#/components/responses/Forbidden" } if [AuthApp::REFUSED, AuthApp::NOT_JSON, AuthApp::TOKEN_REFUSED].include?(refusal)
+    { "$ref" => "#/components/responses/Forbidden" } if [AuthApp::REFUSED, AuthApp::NOT_JSON, AuthApp::TOKEN_REFUSED, AuthApp::MCP_ONLY].include?(refusal)
   end
 
   def must_match_description

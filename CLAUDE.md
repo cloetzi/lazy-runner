@@ -63,7 +63,8 @@ then `BASE_URL=http://localhost:3999 SERVER_LOG=/tmp/e2e.log npm run test:e2e`.
 - `lib/auth_app.rb` accounts and sign-in: Rodauth (JSON only) as Roda
   middleware inside Rage (`config/initializers/sign_in.rb`), with Roda's
   session cookie. It answers `/api/auth/*` and gates the rest of `/api`
-  (a `Bearer` API token, `ApiToken`, stands in for the session): a write needs `Sec-Fetch-Site: same-origin` (else a matching
+  (a `Bearer` API token with REST access, `ApiToken#rest?`, stands in for
+  the session; a token is MCP-only by default): a write needs `Sec-Fetch-Site: same-origin` (else a matching
   `Origin`) and a JSON body, and a request without a session is a 401 but
   `/api/version`, `/api/openapi` and `/api/me`. The user's id reaches
   `ApplicationController` in `env["lazy_runner.user_id"]`, which sets
@@ -77,6 +78,17 @@ then `BASE_URL=http://localhost:3999 SERVER_LOG=/tmp/e2e.log npm run test:e2e`.
   owner) on their first request
   (`test/test_helper.rb`; `sign_out!`, `sign_in`, `create_user`), and
   every write in the PWA goes through `send` in `api.js` or the outbox.
+  What a token may do is the models' to say, not the controllers' or the
+  tools': with `Current.agent_name` set, `Record::AgentSigned` makes what it
+  writes `llm`, and `Record.user_only!` refuses what only the user does
+  (goals, erasing history, the user's notes) with `Record::UserOnly`, a 403
+  on the API and a tool error over MCP. `lib/api_boundary.rb` puts
+  `no-store`/`nosniff` on every `/api` and `/mcp` answer and turns away a
+  JSON body that isn't an object; `ApplicationController` answers a bug as
+  `server_error` and has typed readers (`string_param`, `integer_param`,
+  `id_param`, `boolean_param`, `hash_param`) for anything that reaches a
+  query or a `dig`; `test/requests/wrong_types_test.rb` sends every
+  documented field the wrong types.
 - Data is per user (#175): the library and the equipment catalogue are
   shared, everything else has a `user_id` (or a parent with one). A
   per-user model calls `per_user` (`Record`), and then every query on it

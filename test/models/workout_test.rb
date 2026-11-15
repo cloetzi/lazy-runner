@@ -78,6 +78,20 @@ describe Workout do
     end
   end
 
+  it "refuses a warm-up that is neither an id nor none, until it is given one" do
+    workout = Workout.new(kind: "workout", title: "Mine", source: "user")
+    workout.choose_frame("warmup", { "a" => 1 })
+    _(workout.valid?).must_equal false
+    _(workout.errors[:warmup]).must_equal ["must be a workout's id, or none"]
+
+    workout.choose_frame("warmup", "none")
+    _(workout.valid?).must_equal true
+
+    saved = workout("cycle-1-workout-1")
+    saved.choose_frame("warmup", [1])
+    _ { saved.save_changes }.must_raise Sequel::ValidationFailed
+  end
+
   describe "#duplicate!" do
     let(:original) { workout("cycle-1-workout-1") }
     let(:copy) { original.duplicate! }

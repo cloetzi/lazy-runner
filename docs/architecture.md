@@ -97,7 +97,8 @@ flowchart LR
   callback is a plain GET from the provider's site, which the `SameSite=Lax`
   cookie allows. Assistants and scripts sign
   in with personal API tokens (`ApiToken`, made in Settings): `AuthApp`
-  takes `Authorization: Bearer` on `/api` in place of the session, and
+  takes `Authorization: Bearer` on `/api` in place of the session for a
+  token with REST access (`scope: api`; the default is MCP alone), and
   `/mcp` takes tokens only, through the mcp gem's `token_verifier`
   (`TrainerMcp::TokenVerifier`), which hands each tool its user.
 - **Data per user**: every personal table has a `user_id` (see

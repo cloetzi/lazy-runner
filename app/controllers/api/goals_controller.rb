@@ -16,9 +16,11 @@ module Api
 
     # Add a goal.
     # @description Active, and last unless `position` (1 first) puts it
-    #   elsewhere. Only the user adds goals; an agent proposes them over MCP.
+    #   elsewhere. Only the user adds goals; an agent proposes them over MCP
+    #   (with an API token: 403).
     # @request #/components/schemas/GoalInput
     # @response 201 #/components/schemas/Goal
+    # @response 403 #/components/responses/Forbidden
     # @response 422 #/components/responses/Invalid
     def create
       goal = Goal.add!(params.slice(:title, :why, :target_date, :position))
@@ -29,9 +31,11 @@ module Api
     # @description Fields left out are kept; `why` and `target_date` sent as
     #   null are cleared. `status` is active, achieved or dropped; `position`
     #   (1 first) moves an active goal among the others. A proposal is
-    #   accepted or dismissed instead, which answers 409.
+    #   accepted or dismissed instead, which answers 409. Only the user
+    #   changes a goal: with an API token, 403.
     # @request #/components/schemas/GoalInput
     # @response 200 #/components/schemas/Goal
+    # @response 403 #/components/responses/Forbidden
     # @response 404 #/components/responses/NotFound
     # @response 409 #/components/responses/Conflict
     # @response 422 #/components/responses/Invalid
@@ -40,8 +44,10 @@ module Api
     end
 
     # Delete a goal, a proposal included.
-    # @description A goal another one replaced is kept as it was; the link goes.
+    # @description A goal another one replaced is kept as it was; the link
+    #   goes. Only the user deletes a goal: with an API token, 403.
     # @response 204
+    # @response 403 #/components/responses/Forbidden
     # @response 404 #/components/responses/NotFound
     def destroy
       Goal.find!(params[:id]).destroy
@@ -51,7 +57,9 @@ module Api
     # Accept a proposed goal.
     # @description It becomes active in the place of the goal it replaces
     #   (which is dropped), else last. One no longer proposed answers 409.
+    #   Only the user accepts: with an API token, 403.
     # @response 200 #/components/schemas/Goal
+    # @response 403 #/components/responses/Forbidden
     # @response 404 #/components/responses/NotFound
     # @response 409 #/components/responses/Conflict
     def accept
@@ -61,7 +69,9 @@ module Api
     # Dismiss a proposed goal.
     # @description It is kept as dismissed, so the agent sees it was turned
     #   down and doesn't propose it again. One no longer proposed answers 409.
+    #   Only the user dismisses: with an API token, 403.
     # @response 200 #/components/schemas/Goal
+    # @response 403 #/components/responses/Forbidden
     # @response 404 #/components/responses/NotFound
     # @response 409 #/components/responses/Conflict
     def dismiss

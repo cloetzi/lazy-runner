@@ -5,6 +5,18 @@ describe SetLog do
   let(:squat) { step_for("cycle-1-workout-1", "goblet-squat") }
   let(:deadlift) { step_for("cycle-1-workout-1", "single-leg-deadlift") }
 
+  it "keeps the block label the player sent to 100 characters, and saves a longer one kept from before" do
+    log = SetLog.new(session:, set_number: 1, reps: 6, exercise_id: squat.exercise_id)
+    log.record_plan(squat.exercise, "A" * 101, { reps: 6 })
+    _(log.valid?).must_equal false
+    _(log.errors[:block_label]).must_equal ["is longer than 100 characters"]
+
+    log.block_label = "A" * 100
+    log.save
+    log.update_columns(block_label: "B" * 300)
+    _(log.refresh.update(reps: 7).reps).must_equal 7
+  end
+
   it "refuses a second log of the same set without a side" do
     SetLog.create(session:, step: squat, set_number: 1, reps: 6)
 

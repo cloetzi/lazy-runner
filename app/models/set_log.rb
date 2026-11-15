@@ -6,6 +6,8 @@
 class SetLog < Record
   STATUSES = %w[done skipped].freeze
   SIDES = %w[left right].freeze
+  # A block's label as the player showed it (Block::MAX_LABEL, with room).
+  MAX_BLOCK_LABEL = 100
   # The part of the session it was logged in: the session's own workout, or
   # the warm-up or cool-down framing it.
   PARTS = Workout::KINDS
@@ -87,6 +89,11 @@ class SetLog < Record
     if step_id && (new? || column_changed?(:step_id)) && Step.where(id: step_id).empty?
       raise Current::Mismatch, "this set's step is another user's"
     end
+    # A finished or skipped session is history: an agent logs sets only in
+    # one planned or under way.
+    if Current.agent_name && %w[done skipped].include?(session&.status)
+      Record.user_only!("session #{session_id} is #{session.status}: only the user changes the sets of a session done or skipped")
+    end
     super
   end
 
@@ -112,5 +119,8 @@ class SetLog < Record
     validates_includes ExerciseWeight::UNITS, :target_weight_unit unless target_weight_value.nil?
     validates_number :reps, :seconds, only_integer: true, at_least: 0, allow_nil: true
     validates_number :weight_value, :target_weight_value, at_least: 0, allow_nil: true
+    if new? || column_changed?(:block_label)
+      validates_max_length MAX_BLOCK_LABEL, :block_label, allow_nil: true, message: "is longer than #{MAX_BLOCK_LABEL} characters"
+    end
   end
 end

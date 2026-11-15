@@ -629,7 +629,7 @@ async function loadTokens() {
     : tokens.map((token) => `
     <li>
       <span class="device-name">${escape(token.name)}<br>
-        <span class="muted">${escape(token.last_used_at ? lastUsed(token.last_used_at) : "never used")}</span></span>
+        <span class="muted">${token.scope === "api" ? "MCP and REST" : "MCP only"} · ${escape(token.last_used_at ? lastUsed(token.last_used_at) : "never used")}</span></span>
       <button class="secondary small danger" data-revoke-token="${token.id}" data-name="${escape(token.name)}">Revoke</button>
     </li>`).join("");
 }
@@ -672,7 +672,8 @@ tokenForm.onsubmit = async (event) => {
   showError(error, null);
   busy(button);
   try {
-    const response = await send("/api/account/tokens", { body: { name: tokenForm.elements.name.value } });
+    const scope = tokenForm.elements.rest.checked ? "api" : "mcp";
+    const response = await send("/api/account/tokens", { body: { name: tokenForm.elements.name.value, scope } });
     const json = await response.json().catch(() => null);
     if (!response.ok) return showError(error, errorMessage(json, response.status));
     tokenForm.reset();

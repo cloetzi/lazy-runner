@@ -343,6 +343,7 @@ erDiagram
         string name "what it is for"
         string digest UK "SHA-256 of the token, shown once"
         datetime last_used_at "to the minute"
+        string scope "mcp: /mcp alone (the default) | api: /api too"
         int user_identity_id FK "made on a device signed in with it, if any"
     }
     invites {

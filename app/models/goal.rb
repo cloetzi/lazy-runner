@@ -56,6 +56,7 @@ class Goal < Record
 
   # A goal the user adds: active, last unless `position` says otherwise.
   def self.add!(fields)
+    user_only!("only the user adds a goal; an agent proposes one (MCP propose_goal)")
     db.transaction(savepoint: true) do
       position = fields[:position]
       goal = create(**fields.except(:position, :status), status: "active", created_by: "user", position: next_position)
@@ -72,6 +73,7 @@ class Goal < Record
   # The user's changes to a goal of theirs. A proposal changes only by
   # accept! or dismiss!.
   def revise!(fields)
+    Record.user_only!("only the user changes a goal; an agent proposes a change (MCP propose_goal with `replaces`)")
     raise NotProposed, "a proposed goal is accepted or dismissed, not edited" if proposed? || status == "dismissed"
 
     db.transaction(savepoint: true) do
@@ -97,6 +99,7 @@ class Goal < Record
   # The proposal becomes an active goal: in the place of the goal it
   # replaces, which is dropped, else last.
   def accept!
+    Record.user_only!("only the user accepts a proposed goal, in the app")
     raise NotProposed, "goal #{id} is #{status}, not proposed" unless proposed?
 
     db.transaction(savepoint: true) do
@@ -110,6 +113,7 @@ class Goal < Record
   end
 
   def dismiss!
+    Record.user_only!("only the user dismisses a proposed goal, in the app")
     raise NotProposed, "goal #{id} is #{status}, not proposed" unless proposed?
 
     update(status: "dismissed", decided_at: Time.now)
@@ -150,7 +154,14 @@ class Goal < Record
     validates_includes STATUSES, :status
     validates_includes CREATORS, :created_by
     validates_presence :proposed_reason if proposed?
+    # An agent's goal waits for the user (Goal.propose!).
+    errors.add(:status, "must be proposed for a goal an agent writes") if new? && Current.agent_name && !proposed?
     MAX_LENGTHS.each { |column, length| validates_max_length length, column, allow_nil: true, message: "is longer than #{length} characters" }
+  end
+
+  def before_destroy
+    Record.user_only!("only the user deletes a goal, in the app")
+    super
   end
 
   # The active goals left close up behind one deleted.

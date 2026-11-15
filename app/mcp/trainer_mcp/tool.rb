@@ -25,7 +25,8 @@ module TrainerMcp
     # model's own message: a record that doesn't validate, a workout that is
     # read-only or being trained, a session no longer planned. The API's
     # rescue_from list (ApplicationController) names the same errors.
-    REFUSALS = [Problem, Record::NotFound, Workout::ReadOnly, Workout::Running, Session::Settled, Routine::Settled, Example::AlreadyImported, Goal::NotProposed, CoachNote::NotAConcern, PlanChange::NotUndoable].freeze
+    REFUSALS = [Problem, Record::NotFound, Workout::ReadOnly, Workout::Running, Session::Settled, Routine::Settled, Example::AlreadyImported, Goal::NotProposed, CoachNote::NotAConcern, PlanChange::NotUndoable,
+               Record::UserOnly, CoachNote::DailyLimit].freeze
 
     def self.inherited(tool)
       super

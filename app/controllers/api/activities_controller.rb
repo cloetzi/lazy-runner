@@ -12,7 +12,8 @@ module Api
     # @response 400 #/components/responses/BadRequest
     def index
       activities = Activity.where(date: DateRange.resolve(params[:from], params[:to])).in_order
-      activities = activities.of_sport(params[:sport]) if params[:sport].present?
+      sport = string_param(:sport)
+      activities = activities.of_sport(sport) if sport.present?
       render json: activities.all
     end
 
@@ -38,6 +39,7 @@ module Api
     # @response 201 #/components/schemas/Activity
     # @response 200 #/components/schemas/ActivityOrBatch
     # @response 400 #/components/responses/BadRequest
+    # @response 403 #/components/responses/Forbidden
     # @response 409 #/components/responses/Conflict
     # @response 422 #/components/responses/Invalid
     def create
@@ -60,6 +62,8 @@ module Api
     #   `started_at` are as in POST, with `today` the sender's own date.
     # @request { date?: Date, today?: Date, started_at?: DateTime, sport?: String, title?: String, moving_seconds?: Integer, elapsed_seconds?: Integer, distance_m?: Integer, climb_m?: Integer, avg_hr?: Integer, max_hr?: Integer, rpe?: Integer, note?: String }
     # @response 200 #/components/schemas/Activity
+    # @response 400 #/components/responses/BadRequest
+    # @response 403 #/components/responses/Forbidden
     # @response 404 #/components/responses/NotFound
     # @response 422 #/components/responses/Invalid
     def update
@@ -72,6 +76,7 @@ module Api
     # Delete an activity.
     # @description One from somewhere else comes back if its source sends it again.
     # @response 204
+    # @response 403 #/components/responses/Forbidden
     # @response 404 #/components/responses/NotFound
     def destroy
       Activity.find!(params[:id]).destroy

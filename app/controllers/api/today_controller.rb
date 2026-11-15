@@ -31,8 +31,8 @@ module Api
     # @response 404 #/components/responses/NotFound
     def show
       date = date_param
-      chosen = params[:session_id].presence
-      picked = params[:workout_id].presence unless chosen
+      chosen = id_param(:session_id)
+      picked = id_param(:workout_id) unless chosen
       session = chosen ? Session.eager(:set_logs, :completion).where(date:).find!(chosen) : day_session(date, picked)
 
       main, source =

@@ -22,7 +22,9 @@ module Api
     def update
       item = Equipment.current.find!(params[:id])
       mine = UserEquipment.first(equipment_id: item.id) || UserEquipment.new(equipment: item, owned: false)
-      mine.update(params.slice(:owned, :weights, :unit))
+      changes = params.slice(:weights, :unit)
+      changes[:owned] = boolean_param(:owned) if params.key?(:owned)
+      mine.update(changes)
       render json: item.as_json(mine)
     end
   end

@@ -124,6 +124,7 @@ class Routine < Record
   # as a confirmed sport day does. A state of the day, so no change to the
   # plan is recorded (PlanChange), not even for the session it plans.
   def confirm!(date)
+    users_day!
     PlanChange.quietly { confirm_day(date) }
   end
 
@@ -154,6 +155,7 @@ class Routine < Record
   # "Not this week": the day won't happen, on the day it shows. One planned
   # as a session is skipped with it.
   def skip!(date)
+    users_day!
     day = day(date)
     return day if day.state == "skipped"
 
@@ -175,6 +177,7 @@ class Routine < Record
   # (tentative or confirmed); its own date takes the move back. A day planned
   # as a session moves the session.
   def move!(date, to)
+    users_day!
     day = day(date)
     open!(day, "moved")
     to = DateRange.date(to, :moved_to)
@@ -205,6 +208,7 @@ class Routine < Record
   # A day gone by stays as it was. Like confirm!, it records no change to the
   # plan.
   def reset!(date)
+    users_day!
     PlanChange.quietly { reset_day(date) }
   end
 
@@ -233,6 +237,7 @@ class Routine < Record
   # days go, sessions still planned come off the calendar and other links are
   # dropped.
   def revise!(changes)
+    users_own!
     changes = changes.to_h.transform_keys(&:to_sym).slice(*FIELDS)
     draft = Routine.new((columns - %i[id created_at updated_at]).to_h { [it, public_send(it)] }).set(changes)
     draft.today = today
@@ -273,7 +278,11 @@ class Routine < Record
   # go, sessions still planned for them come off the calendar. An ended
   # routine asked to `erase` is deleted with its history; otherwise ending it
   # again changes nothing. Answers :ended or :deleted.
-  def end!(erase: false)
+  # `archived`: its workout was archived, which ends the routines running
+  # it whoever planned them (Workout#archive!).
+  def end!(erase: false, archived: false)
+    users_own! unless archived
+    @ending = true
     db.transaction do
       if ended?
         next :ended unless erase
@@ -296,14 +305,28 @@ class Routine < Record
         end
       end
     end
+  ensure
+    @ending = nil
   end
 
   # Sessions and activities that fulfilled its days stay, unlinked: the
   # foreign key nulls routine_id, and this the day it named.
   def before_destroy
+    users_own! unless @ending
     super
     Session.where(routine_id: id).update(routine_id: nil, routine_date: nil)
     Activity.where(routine_id: id).update(routine_id: nil, routine_date: nil)
+  end
+
+  # The user's own routines are theirs to change or end; an agent changes
+  # only the ones it planned.
+  def users_own!
+    Record.user_only!("routine #{id} is the user's; only they change or end it") unless created_by == "llm"
+  end
+
+  # A day's state is the user's word: going, skipping, moving it.
+  def users_day!
+    Record.user_only!("only the user confirms, skips or moves a routine's day, in the app")
   end
 
   def as_json(*)

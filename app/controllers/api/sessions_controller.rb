@@ -50,7 +50,7 @@ module Api
       status = params[:status].presence || "planned"
       settable!(status)
 
-      client_ref = params[:client_ref].presence
+      client_ref = string_param(:client_ref).presence
       today = client_today
       if client_ref && (session = Session.first(client_ref:))
         session.today = today
@@ -93,6 +93,7 @@ module Api
     # @request { status?: [planned, in_progress, skipped], date?: Date, today?: Date, position?: Integer, parts?: String, note?: String, started_at?: DateTime }
     # @response 200 #/components/schemas/Session
     # @response 400 #/components/responses/BadRequest
+    # @response 403 #/components/responses/Forbidden
     # @response 404 #/components/responses/NotFound
     # @response 409 #/components/responses/Conflict
     # @response 422 #/components/responses/Invalid
@@ -141,9 +142,12 @@ module Api
     #   history. With `only=planned` (the calendar's Remove) it deletes a
     #   session only while it is planned (or missed), else 409, so a removal
     #   sent late can't erase a session started elsewhere in the meantime.
+    #   With an API token, only a planned or missed session goes: one
+    #   started, skipped or done is the user's history (403).
     # @param only? Set to planned to delete only a planned or missed session.
     # @response 204
     # @response 400 #/components/responses/BadRequest
+    # @response 403 #/components/responses/Forbidden
     # @response 404 #/components/responses/NotFound
     # @response 409 #/components/responses/Conflict
     def destroy
@@ -172,6 +176,7 @@ module Api
     # @response 201 #/components/schemas/SetLog
     # @response 200 #/components/schemas/SetLog
     # @response 400 #/components/responses/BadRequest
+    # @response 403 #/components/responses/Forbidden
     # @response 404 #/components/responses/NotFound
     # @response 422 #/components/responses/Invalid
     def sets
@@ -190,10 +195,11 @@ module Api
       exercise = params[:exercise_id].present? ? Exercise.find!(params[:exercise_id]) : (linked&.exercise || shown[0])
       # In the unit of the gear the step is done with, unless swapped.
       unit = linked && linked.exercise_id == exercise.id ? Step.unit_for(linked.equipment, exercise) : exercise.gear_unit
-      weight = exercise.in_weight_unit(params.dig(:weight, :value), params.dig(:weight, :unit), unit)
+      weight = hash_param(:weight) || {}
+      weight = exercise.in_weight_unit(weight[:value], weight[:unit], unit)
       attempts = 0
       begin
-        log = SetLog.find_or_new(user_id: session.user_id, session_id: session.id, step_ref:, set_number: params[:set_number], side: params[:side].presence)
+        log = SetLog.find_or_new(user_id: session.user_id, session_id: session.id, step_ref:, set_number: integer_param(:set_number), side: string_param(:side).presence)
         created = log.new?
         # The target is the one shown when the set was first logged.
         if created && linked
@@ -230,6 +236,7 @@ module Api
     # @request { rpe?: Integer, feedback?: [too_easy, right, too_hard], note?: String, ended_early?: Boolean, finished_at?: DateTime }
     # @response 200 #/components/schemas/CompletedSession
     # @response 400 #/components/responses/BadRequest
+    # @response 403 #/components/responses/Forbidden
     # @response 404 #/components/responses/NotFound
     # @response 422 #/components/responses/Invalid
     def complete
@@ -238,7 +245,7 @@ module Api
       # A device's finish never goes before the start the server has.
       finished_at = completion.finished_at || [client_time(:finished_at) || Time.now, session.started_at].compact.max
       changes = { finished_at:, **completion_fields(%i[rpe feedback note]) }
-      changes[:ended_early] = Record.boolean(params[:ended_early]) || false if params.key?(:ended_early)
+      changes[:ended_early] = boolean_param(:ended_early) || false if params.key?(:ended_early)
       # Together, so a failure leaves the session unfinished and a retry starts over.
       Session.db.transaction do
         completion.update(changes)
@@ -255,6 +262,7 @@ module Api
     # @request { rpe?: Integer, note?: String }
     # @response 200 #/components/schemas/Completion
     # @response 400 #/components/responses/BadRequest
+    # @response 403 #/components/responses/Forbidden
     # @response 404 #/components/responses/NotFound
     # @response 422 #/components/responses/Invalid
     def completion

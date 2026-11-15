@@ -223,8 +223,11 @@ otherwise. An unknown name stops the server at boot.
 Make an API token in Settings (it is shown once), then point an MCP client at
 `http://<host>:3000/mcp` (Streamable HTTP) with it, for example
 `claude mcp add --transport http lazy-runner http://<host>:3000/mcp --header "Authorization: Bearer lr_..."`.
-The assistant then acts as you, with full access to your data; revoke the
-token in Settings to cut it off. Scripts can send the same header to `/api`.
+The assistant then acts as you, as an agent: it proposes goals rather than
+setting them, and leaves your history and your own notes alone. Revoke the
+token in Settings to cut it off. A token is for MCP only unless you tick
+"REST access" when you make it; then a script can send the same header to
+`/api`, under the same rules.
 A sign-in proxy in front of the app has to let `/mcp` and requests with a
 `Bearer` token through without its own sign-in, and pass the
 `Authorization` header on. The

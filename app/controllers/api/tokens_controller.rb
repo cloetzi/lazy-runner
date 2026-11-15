@@ -11,15 +11,19 @@ module Api
 
     # Make an API token.
     # @description For an assistant (point its MCP client at `/mcp`) or a
-    #   script (`Authorization: Bearer <token>` on `/api`), with full access
-    #   to your data. `secret` is the token: it is shown this once.
-    # @request { name: String }
+    #   script (`Authorization: Bearer <token>` on `/api`). `scope` is `mcp`
+    #   (the default), good for `/mcp` alone, or `api`, good for the REST
+    #   API under `/api` too; the account, users and invites stay closed to
+    #   every token. Either writes as an agent: it can't add, accept or
+    #   dismiss goals, erase a session started or finished, or change your
+    #   own notes. `secret` is the token: it is shown this once.
+    # @request { name: String, scope?: [mcp, api] }
     # @response 201 #/components/schemas/NewApiToken
     # @response 422 #/components/responses/Invalid
     def create
       user = Current.user!
       identity = SignedInDevice.identity_id(user, SignedInDevice.current_key(rodauth))
-      token, secret = ApiToken.issue!(user, params[:name], user_identity_id: identity)
+      token, secret = ApiToken.issue!(user, params[:name], scope: params[:scope].presence || "mcp", user_identity_id: identity)
       render json: { token: token.as_json, secret: }, status: :created
     end
 

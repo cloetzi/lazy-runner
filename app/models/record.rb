@@ -42,6 +42,16 @@ class Record
     end
   end
 
+  # Asked of an agent (an API token's request or MCP call: Current.agent_name)
+  # what only the user does, in the app: accepting a goal, erasing history,
+  # changing what the user wrote. The models refuse it themselves, so the
+  # REST API and the MCP tools can't drift apart.
+  class UserOnly < StandardError; end
+
+  def self.user_only!(message)
+    raise UserOnly, message if Current.agent_name
+  end
+
   # Errors as people read them: "Reps must be greater than 0", and a
   # problem with the whole record (`:base`) on its own.
   class Errors < Sequel::Model::Errors
@@ -125,7 +135,13 @@ class Record
   # the API token it connected with (Current.agent_name, set for a token's
   # request or MCP call), so the app shows one name for it everywhere (#247).
   # A row written without a token has none, and the app shows its default.
+  # What a token writes is always the agent's, whatever the request says.
   module AgentSigned
+    def before_validation
+      self.created_by = "llm" if new? && Current.agent_name
+      super
+    end
+
     def before_create
       self.agent_name ||= Current.agent_name if created_by == "llm"
       super

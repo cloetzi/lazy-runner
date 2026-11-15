@@ -23,10 +23,11 @@ module Api
     #   another copy.
     # @request { copy?: Boolean }
     # @response 201 #/components/schemas/Program
+    # @response 400 #/components/responses/BadRequest
     # @response 404 #/components/responses/NotFound
     # @response 409 #/components/responses/Conflict
     def import
-      program = Example.find!(params[:slug]).import!(copy: Record.boolean(params[:copy]) || false)
+      program = Example.find!(params[:slug]).import!(copy: boolean_param(:copy) || false)
       render json: Program.eager(workouts: { blocks: :steps }).with_pk(program.id), status: :created
     end
   end

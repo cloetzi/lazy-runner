@@ -11,6 +11,7 @@ class Session < Record
   CREATORS = %w[manual llm].freeze
   # The most sessions planned in one go, four weeks of one a day.
   PLAN_LIMIT = 28
+  MAX_NOTE = 2000
 
   # Asked to move or remove a session that is no longer planned: it has
   # started, was skipped or is done.
@@ -248,6 +249,8 @@ class Session < Record
     validates_includes STATUSES, :status
     validates_includes CREATORS, :created_by
     validates_number :position, only_integer: true, greater_than: 0
+    # Checked when written, so a longer note kept from before still saves.
+    validates_max_length MAX_NOTE, :note, allow_nil: true, message: "is longer than #{MAX_NOTE} characters" if new? || column_changed?(:note)
     history_stays
     routine_own
     return unless planning?
@@ -274,6 +277,26 @@ class Session < Record
   def after_create
     super
     PlanChange.record!(self, "planned", to_date: date) if status == "planned"
+  end
+
+  # What an agent may do to a session's status: start one planned, and
+  # finish one. Skipping is the user's, and a session started, skipped or
+  # done is history: planned again it could be removed, and a finished one
+  # picked up again drops its finish.
+  AGENT_MOVES = { "planned" => %w[in_progress done], "in_progress" => %w[done] }.freeze
+
+  def before_save
+    if !new? && Current.agent_name && column_changed?(:status) && !AGENT_MOVES[initial_value(:status)]&.include?(status)
+      Record.user_only!("session #{id} is #{initial_value(:status).tr("_", " ")}: only the user skips a session or takes one back from started, skipped or done")
+    end
+    super
+  end
+
+  # A session started, skipped or done is history: an agent takes off only
+  # what is still planned (remove!).
+  def before_destroy
+    Record.user_only!("session #{id} is #{status.tr("_", " ")}: only the user erases one started, skipped or done") unless status == "planned"
+    super
   end
 
   def after_destroy

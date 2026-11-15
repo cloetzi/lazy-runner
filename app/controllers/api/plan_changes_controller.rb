@@ -38,11 +38,11 @@ module Api
     #   token, 403.
     # @request { today?: Date }
     # @response 200 #/components/schemas/PlanUndo
+    # @response 400 #/components/responses/BadRequest
     # @response 403 #/components/responses/Forbidden
     # @response 404 #/components/responses/NotFound
     # @response 409 #/components/responses/Conflict
     def undo
-      raise Forbidden, "only the user takes a change back, in the app" if Current.agent_name
       change = PlanChange.find!(params[:id])
       today = client_today
       taken_back = change.undo!(today:)

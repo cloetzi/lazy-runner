@@ -17,7 +17,7 @@ components:
           properties:
             code:
               type: string
-              enum: [bad_request, unauthorized, password_change_required, forbidden, not_found, no_workouts, conflict, already_imported, user_mismatch, invalid, too_many_requests]
+              enum: [bad_request, unauthorized, password_change_required, forbidden, not_found, no_workouts, conflict, already_imported, user_mismatch, invalid, too_many_requests, server_error]
             message:
               type: string
               description: What went wrong, in a sentence a person can read.
@@ -132,10 +132,11 @@ components:
           items: { $ref: "#/components/schemas/Device" }
     ApiToken:
       type: object
-      required: [id, name, created_at, last_used_at]
+      required: [id, name, scope, created_at, last_used_at]
       properties:
         id: { type: integer }
         name: { type: string, description: What it is for, such as "Trainer agent". }
+        scope: { type: string, enum: [mcp, api], description: "mcp: good for /mcp alone. api: for the REST API under /api too." }
         created_at: { type: string, format: date-time }
         last_used_at: { type: string, format: date-time, nullable: true, description: To the minute. }
     ApiTokens:

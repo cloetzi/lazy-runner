@@ -8,7 +8,7 @@ describe "plan changes API" do
   after { travel_back }
 
   let(:strength) { workout("cycle-1-workout-1") }
-  let(:token) { ApiToken.issue!(user, "Coach agent").last }
+  let(:token) { ApiToken.issue!(user, "Coach agent", scope: "api").last }
 
   def d(text) = Date.iso8601(text)
 

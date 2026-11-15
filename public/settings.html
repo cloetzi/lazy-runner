@@ -249,7 +249,7 @@
 
         <div class="card setting" id="api-tokens">
           <h3>API tokens</h3>
-          <p class="muted">For an assistant or a script acting as you. A token has full access to your data; revoke it here when you're done with it.</p>
+          <p class="muted">For an assistant or a script acting as you. A token is for the MCP server unless you give it REST access too; either way it writes as an agent, so it can't add or accept goals, erase a finished session or change your own notes. Revoke it here when you're done with it.</p>
           <ul class="device-list" id="tokens"></ul>
           <form class="form field-with-button" id="new-token">
             <label class="field">
@@ -257,6 +257,10 @@
               <input name="name" maxlength="60" placeholder="Coach agent" required>
             </label>
             <button class="secondary small" type="submit">Make a token</button>
+            <label class="form-check">
+              <input name="rest" type="checkbox">
+              <span>REST access: a script can use the API under /api too, not only MCP</span>
+            </label>
             <p class="form-error" role="alert" hidden></p>
           </form>
           <div class="form field-with-button" id="new-token-secret" hidden>
@@ -268,7 +272,7 @@
 
         <div class="card setting" id="assistant">
           <h3>Connect an assistant</h3>
-          <p class="muted">Make a token above, then connect. The MCP server (Streamable HTTP) gives an assistant tools to read your training and plan workouts. Point the client at this address with the token in an <code>Authorization: Bearer &lt;token&gt;</code> header, the same header a script sends to the API.</p>
+          <p class="muted">Make a token above, then connect. The MCP server (Streamable HTTP) gives an assistant tools to read your training and plan workouts. Point the client at this address with the token in an <code>Authorization: Bearer &lt;token&gt;</code> header; a script sends the same header to the API with a token that has REST access.</p>
           <div class="form field-with-button" id="mcp-url">
             <label class="field"><span>MCP server</span><input class="token-secret" readonly></label>
             <button class="secondary small" type="button" id="copy-mcp-url">Copy</button>

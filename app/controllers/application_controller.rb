@@ -28,6 +28,20 @@ class ApplicationController < RageController::API
 
   class Forbidden < StandardError; end
 
+  # A bug: logged, and answered in the one shape. Declared first, so every
+  # handler below comes before it (Rage tries the last declared first).
+  rescue_from StandardError do |error|
+    Rage.logger.error("#{error.class}: #{error.message}\n#{Array(error.backtrace).first(10).join("\n")}")
+    render_error :internal_server_error, "server_error", "Something went wrong on the server; the log says what"
+  end
+
+  # Text that isn't UTF-8 (a stray %FF in the path or query, a raw byte in
+  # a JSON string) is read with its bad bytes replaced, once, so nothing
+  # further in trips over it.
+  before_action do
+    ApplicationController.scrub!(params)
+  end
+
   # The signed-in user, from the session AuthApp checked in front of the
   # app (lib/auth_app.rb). AuthApp has already answered 401 for a route
   # that needs one when there is none.
@@ -67,11 +81,11 @@ class ApplicationController < RageController::API
     render_error :bad_request, "bad_request", error.message, fields: { error.field => [error.problem] }
   end
 
-  rescue_from Forbidden, Workout::ReadOnly do |error|
+  rescue_from Forbidden, Workout::ReadOnly, Record::UserOnly do |error|
     render_error :forbidden, "forbidden", error.message
   end
 
-  rescue_from Session::Settled, Routine::Settled, Workout::Running, Goal::NotProposed, CoachNote::NotAConcern, PlanChange::NotUndoable do |error|
+  rescue_from Session::Settled, Routine::Settled, Workout::Running, Goal::NotProposed, CoachNote::NotAConcern, PlanChange::NotUndoable, CoachNote::DailyLimit do |error|
     render_error :conflict, "conflict", error.message
   end
 
@@ -91,7 +105,67 @@ class ApplicationController < RageController::API
     render_error :unprocessable_content, "invalid", error.message, fields: error.fields
   end
 
+  # Replaces bytes that aren't UTF-8 in every string of `value`, a hash or
+  # array of params, in place.
+  # Writes only what changes: most params hold nothing to scrub.
+  def self.scrub!(value)
+    case value
+    when Hash
+      value.each { |key, item| (clean = scrub!(item)).equal?(item) || (value[key] = clean) }
+    when Array
+      value.each_with_index { |item, index| (clean = scrub!(item)).equal?(item) || (value[index] = clean) }
+    when String then value.valid_encoding? ? value : value.scrub("\uFFFD")
+    else value
+    end
+  end
+
   private
+
+  # A parameter that must be text when it is sent: nil when it isn't,
+  # else the string; anything else (an object, a number) is a 400.
+  def string_param(key)
+    value = params[key]
+    return value if value.nil? || value.is_a?(String)
+
+    raise BadRequest.param(key, "must be text")
+  end
+
+  # A whole number given as one or as its digits; nil when not sent.
+  def integer_param(key)
+    value = params[key]
+    return if value.nil? || value == ""
+    return value if value.is_a?(Integer)
+    return value.to_i if value.is_a?(String) && value.match?(/\A-?\d+\z/)
+
+    raise BadRequest.param(key, "must be a whole number")
+  end
+
+  # A record's id, as a number or its digits; nil when not sent. Anything
+  # else is no record's id: a 404, as for an id there is no record of.
+  def id_param(key)
+    value = params[key]
+    return if value.nil? || value == ""
+
+    Record.id(value) || raise(Record::NotFound.new(key.to_s.delete_suffix("_id").camelize, value.is_a?(String) ? value : value.to_json))
+  end
+
+  # true or false, given as one or as text ("true", "0", ...); nil when not
+  # sent. An object or a number is a 400 rather than true.
+  def boolean_param(key)
+    value = params[key]
+    return Record.boolean(value) if value.nil? || value == true || value == false || value.is_a?(String)
+
+    raise BadRequest.param(key, "must be true or false")
+  end
+
+  # An object (a JSON one), or nil when not sent.
+  def hash_param(key)
+    value = params[key]
+    return if value.nil?
+    return value if value.is_a?(Hash)
+
+    raise BadRequest.param(key, "must be an object")
+  end
 
   # Rodauth for this request (lib/auth_app.rb): its session and devices.
   def rodauth = request.env.fetch("rodauth")

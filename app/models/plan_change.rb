@@ -260,6 +260,7 @@ class PlanChange < Record
   # NotUndoable when it can't be (anything the model refuses included), and
   # then nothing has changed. Answers with the change that took it back.
   def undo!(today: Time.zone.today)
+    Record.user_only!("only the user takes a change back, in the app")
     db.transaction do
       # Checked inside the transaction, which holds the connection, so a
       # second tap waits and then finds it taken back.

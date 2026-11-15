@@ -215,7 +215,7 @@ describe "accounts and sign-in" do
     it "is refused with an API token of someone else too" do
       sign_out!
       header "X-Lazy-Runner-User", (user.id + 1).to_s
-      header "Authorization", "Bearer #{ApiToken.issue!(user, "Script").last}"
+      header "Authorization", "Bearer #{ApiToken.issue!(user, "Script", scope: "api").last}"
       patch_json "/api/settings", unit: "kg"
 
       _(last_response.status).must_equal 409

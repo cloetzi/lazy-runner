@@ -222,6 +222,22 @@ class Activity < Record
     super
   end
 
+  # What the user logged is theirs: an agent changes or deletes only the
+  # activities it logged.
+  def before_save
+    theirs! unless new?
+    super
+  end
+
+  def before_destroy
+    theirs!
+    super
+  end
+
+  def theirs!
+    Record.user_only!("activity #{id} is the user's; an agent changes only the ones it logged") unless initial_value(:created_by) == "llm"
+  end
+
   def validate
     super
     validates_presence %i[date sport]

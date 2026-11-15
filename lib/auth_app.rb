@@ -68,6 +68,7 @@ class AuthApp < Roda
   REFUSED = "Refused: the request didn't come from this app".freeze
   NOT_JSON = "Send the body as application/json".freeze
   TOKEN_REFUSED = "Manage the account from a signed-in browser, not with an API token".freeze
+  MCP_ONLY = "This API token is for MCP (/mcp) only; for the REST API, make one with REST access in Settings".freeze
   USER_MISMATCH = "This change was made by another user, who is no longer signed in here".freeze
   INVITE_GONE = "This invite link has expired, been used or been revoked; ask for a new one".freeze
   WRONG_SETUP_CODE = "Wrong setup code. It is the newest one in the server's log; a restart prints a new one".freeze
@@ -139,14 +140,30 @@ class AuthApp < Roda
   end
 
   # The mcp gem's bearer check, with the app's verifier: one reading of a
-  # token for /api and /mcp alike.
+  # token for /api and /mcp alike (for /api, noted as used only with REST
+  # access).
   def self.authenticator
-    @authenticator ||= MCP::Server::OAuth::Authenticator.new(token_verifier: TrainerMcp::TokenVerifier.new)
+    @authenticator ||= MCP::Server::OAuth::Authenticator.new(token_verifier: TrainerMcp::TokenVerifier.new(rest: true))
   end
 
   # A page of the app to go back to: a path, not another site.
   def self.local_path(value)
     value if value.is_a?(String) && value.length <= 500 && value.match?(%r{\A/(?![/\\])[^\\\x00-\x20\x7f]*\z})
+  end
+
+  # Where a password's hash made ahead waits for Rodauth to ask for it.
+  PREHASHED = :lazy_runner_password_hash
+
+  # Runs the block with the password's hash made already, so the block can
+  # hold a transaction (and with it the one connection) without hashing
+  # inside it: Argon2 takes about 100 ms, and every other request would
+  # wait for it (User#set_password!).
+  def self.with_password_hashed(password)
+    hash = rodauth.internal_request_eval { password_hash(password) }
+    Fiber[PREHASHED] = [password, hash]
+    yield
+  ensure
+    Fiber[PREHASHED] = nil
   end
 
   def self.error_body(status, message, fields: nil, code: nil, **extra)
@@ -455,8 +472,18 @@ class AuthApp < Roda
     end
 
     auth_class_eval do
-      # Argon2 off the worker's thread (lib/hashing.rb).
-      private def password_hash(password) = Hashing.run { super(password) }
+      # Argon2 off the worker's thread (lib/hashing.rb), or the hash made
+      # already for this password (AuthApp.with_password_hashed).
+      private def password_hash(password)
+        hashed = Fiber[AuthApp::PREHASHED]
+        return hashed.last if hashed && hashed.first == password
+
+        Hashing.run { super(password) }
+      end
+
+      # A password set from code (a reset) isn't compared with the one it
+      # replaces: that is one more hash, and a reset may give the same one.
+      private def new_password_matches_current_password?(password) = !internal_request? && super
       private def password_hash_match?(hash, password) = Hashing.run { super(hash, password) }
 
       # A locked account is turned away before its password is checked, and
@@ -626,6 +653,14 @@ class AuthApp < Roda
     # Refused before the token is looked at, so a refused try isn't a use.
     halt_json(403, TOKEN_REFUSED) if ACCOUNT.match?(path)
     token = AuthApp.authenticator.authenticate(r.env)
+
+    # A token is good for /api only with REST access (ApiToken#rest?);
+    # without it, for /mcp alone. /api/me answers it as signed out.
+    unless token.claims["rest"]
+      return if path == "/api/me"
+
+      halt_json(403, MCP_ONLY)
+    end
 
     env["lazy_runner.user_id"] = token.subject.to_i
     # What a script or agent writes with the token carries its name.

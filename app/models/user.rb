@@ -37,13 +37,16 @@ class User < Record
   # current password needed. As any change made
   # from code, it signs out every device and revokes the API tokens
   # (lib/auth_app.rb, after_change_password); it also lifts a lockout, so
-  # the user can get in. `temporary`: they must change it first.
+  # the user can get in. `temporary`: they must change it first. The hash
+  # is made before the transaction opens, so no one waits on it.
   def set_password!(password, temporary: false)
-    db.transaction do
-      AuthApp.rodauth.change_password(account_id: id, new_password: password)
-      this.update(password_change_required: temporary)
-      db[:account_lockouts].where(id:).delete
-      db[:account_login_failures].where(id:).delete
+    AuthApp.with_password_hashed(password) do
+      db.transaction do
+        AuthApp.rodauth.change_password(account_id: id, new_password: password)
+        this.update(password_change_required: temporary)
+        db[:account_lockouts].where(id:).delete
+        db[:account_login_failures].where(id:).delete
+      end
     end
     # As the database has it now, without marking the column changed.
     values[:password_change_required] = temporary
@@ -66,6 +69,7 @@ class User < Record
   # Marks what agents did up to `time` (never later than now) as seen on
   # Coach; an earlier time than the one marked already changes nothing.
   def coach_seen!(time = Time.now)
+    Record.user_only!("only the user marks what agents did as seen, in the app")
     time = [time, Time.now].min
     this.where(Sequel.|({ coach_seen_at: nil }, Sequel[:coach_seen_at] < time)).update(coach_seen_at: time)
     refresh

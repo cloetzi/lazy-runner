@@ -8,7 +8,7 @@ describe "since you last looked" do
   after { travel_back }
 
   let(:strength) { workout("cycle-1-workout-1") }
-  let(:token) { ApiToken.issue!(user, "Coach agent").last }
+  let(:token) { ApiToken.issue!(user, "Coach agent", scope: "api").last }
 
   # A request as the agent, with its API token.
   def as_agent(method, path, body = {})

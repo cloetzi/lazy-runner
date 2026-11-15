@@ -10,9 +10,10 @@ module Api
     # @param ended? {Boolean} Routines that ended too.
     # @param today? {Date} The device's own date.
     # @response 200 #/components/schemas/Routines
+    # @response 400 #/components/responses/BadRequest
     def index
       routines = Routine.eager(:workout).in_order
-      routines = routines.current(client_today) unless Record.boolean(params[:ended])
+      routines = routines.current(client_today) unless boolean_param(:ended)
       render json: { routines: routines.all }
     end
 
@@ -24,10 +25,12 @@ module Api
     #   the session.
     # @request #/components/schemas/RoutineInput
     # @response 201 #/components/schemas/Routine
+    # @response 400 #/components/responses/BadRequest
+    # @response 403 #/components/responses/Forbidden
     # @response 409 #/components/responses/Conflict
     # @response 422 #/components/responses/Invalid
     def create
-      routine = Routine.plan!(params.slice(*Routine::FIELDS), today: client_today, confirmed: Record.boolean(params[:confirmed]) || false)
+      routine = Routine.plan!(params.slice(*Routine::FIELDS), today: client_today, confirmed: boolean_param(:confirmed) || false)
       render json: routine, status: :created
     end
 
@@ -45,6 +48,8 @@ module Api
     #   an ended routine's schedule, can't change (409).
     # @request #/components/schemas/RoutineInput
     # @response 200 #/components/schemas/Routine
+    # @response 400 #/components/responses/BadRequest
+    # @response 403 #/components/responses/Forbidden
     # @response 404 #/components/responses/NotFound
     # @response 409 #/components/responses/Conflict
     # @response 422 #/components/responses/Invalid
@@ -63,6 +68,8 @@ module Api
     # @param today? {Date} The device's own date.
     # @response 200 #/components/schemas/Routine
     # @response 204
+    # @response 400 #/components/responses/BadRequest
+    # @response 403 #/components/responses/Forbidden
     # @response 404 #/components/responses/NotFound
     def destroy
       routine = Routine.find!(params[:id])
@@ -83,6 +90,7 @@ module Api
     # @request #/components/schemas/RoutineDayChange
     # @response 200 #/components/schemas/RoutineDay
     # @response 400 #/components/responses/BadRequest
+    # @response 403 #/components/responses/Forbidden
     # @response 404 #/components/responses/NotFound
     # @response 409 #/components/responses/Conflict
     # @response 422 #/components/responses/Invalid
@@ -105,6 +113,8 @@ module Api
     #   has started).
     # @param today? {Date} The device's own date.
     # @response 200 #/components/schemas/RoutineDay
+    # @response 400 #/components/responses/BadRequest
+    # @response 403 #/components/responses/Forbidden
     # @response 404 #/components/responses/NotFound
     # @response 409 #/components/responses/Conflict
     def reset_day

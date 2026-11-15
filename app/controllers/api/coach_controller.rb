@@ -46,8 +46,6 @@ module Api
     # @response 400 #/components/responses/BadRequest
     # @response 403 #/components/responses/Forbidden
     def seen
-      raise Forbidden, "only the user marks what agents did as seen, in the app" if Current.agent_name
-
       user = Current.user.coach_seen!(client_time(:until) || Time.now)
       render json: { coach_seen_at: user.coach_seen_at, count: CoachNews.new(user).count }
     end
@@ -67,7 +65,7 @@ module Api
     # @response 200 #/components/schemas/CoachNotes
     # @response 400 #/components/responses/BadRequest
     def notes
-      notes = Record.boolean(params[:journal]) ? CoachBoard.new.journal_notes : CoachNote.threads.eager(:activity, session: :workout).newest_first
+      notes = boolean_param(:journal) ? CoachBoard.new.journal_notes : CoachNote.threads.eager(:activity, session: :workout).newest_first
       notes = notes.of_kind(list_param(:kind, CoachNote::KINDS)) if params[:kind].present?
       notes = notes.by(list_param(:author, CoachNote::AUTHORS)) if params[:author].present?
       if params[:before].present?
@@ -89,18 +87,23 @@ module Api
     #   `author_kind` is user (the signed-in person, the default), or human
     #   with an `author_name` for a coach without an account. A note can be
     #   about a `date`, an `activity_id` or a `session_id` of the user's.
-    #   An agent writes over MCP; `author_kind: llm` here answers 400.
+    #   An agent writes over MCP; `author_kind: llm` here answers 400. A
+    #   note made with an API token is the agent's (`llm`, signed with the
+    #   token's name), whatever `author_kind` says, and an agent writes
+    #   at most 20 a day (409 past that).
     #   `reply_to_id` makes it a reply to a note the user didn't write: a
     #   plain note of theirs, shown under that note (its `replies`) rather
     #   than on its own, and deleted with it.
     # @request #/components/schemas/CoachNoteInput
     # @response 201 #/components/schemas/CoachNote
     # @response 400 #/components/responses/BadRequest
+    # @response 409 #/components/responses/Conflict
     # @response 422 #/components/responses/Invalid
     def create_note
       fields = params.slice(*CoachNote::FIELDS)
       fields[:author_kind] = "user" if fields[:author_kind].blank?
-      raise BadRequest.param(:author_kind, "must be user or human") if fields[:author_kind] == "llm"
+      # With an API token the note is the agent's whatever this says (CoachNote).
+      raise BadRequest.param(:author_kind, "must be user or human") if fields[:author_kind] == "llm" && !Current.agent_name
 
       render json: CoachNote.create(fields), status: :created
     end
@@ -112,7 +115,8 @@ module Api
     #   already keeps its date, and `resolution` alone rewrites how a
     #   resolved concern was resolved. An agent's note stays
     #   as it wrote it: changing one answers 403 (resolving or deleting it is
-    #   fine).
+    #   fine). With an API token it is the other way round: the agent
+    #   changes the notes it wrote, and the user's answer 403.
     # @request #/components/schemas/CoachNoteChange
     # @response 200 #/components/schemas/CoachNote
     # @response 400 #/components/responses/BadRequest
@@ -123,15 +127,17 @@ module Api
     def update_note
       note = CoachNote.find!(params[:id])
       fields = params.slice(*CoachNote::FIELDS)
-      raise BadRequest.param(:author_kind, "must be user or human") if fields[:author_kind] == "llm"
-      if note.author_kind == "llm" && !fields.empty?
+      raise BadRequest.param(:author_kind, "must be user or human") if fields[:author_kind] == "llm" && !Current.agent_name
+      # The user leaves an agent's note as it wrote it; the agent may change
+      # its own (and only its own: CoachNote#theirs!).
+      if note.author_kind == "llm" && !fields.empty? && !Current.agent_name
         raise Forbidden, "an agent's note stays as it wrote it; delete it, or write a note of your own"
       end
 
       CoachNote.db.transaction(savepoint: true) do
         note.update(fields) unless fields.empty?
         if params.key?(:resolved)
-          resolved = Record.boolean(params[:resolved])
+          resolved = boolean_param(:resolved)
           raise BadRequest.param(:resolved, "must be true or false") unless [true, false].include?(resolved)
 
           resolved ? note.resolve!(params[:resolution]) : note.reopen!
@@ -146,8 +152,10 @@ module Api
 
     # Delete a note.
     # @description Deleting the current status or focus brings the one
-    #   before it back.
+    #   before it back. With an API token, only a note an agent wrote: the
+    #   user's own are theirs (403).
     # @response 204
+    # @response 403 #/components/responses/Forbidden
     # @response 404 #/components/responses/NotFound
     def destroy_note
       CoachNote.find!(params[:id]).destroy

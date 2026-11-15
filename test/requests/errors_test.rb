@@ -41,6 +41,9 @@ describe "API errors" do
       [:get, "/api/sessions/0", nil, 404, "not_found"],
       [:post, "/api/sessions/#{session.id}/sets", { step_id: step_for("cycle-1-workout-1", "goblet-squat").id, set_number: 0 }, 422, "invalid"],
       [:post, "/api/sessions/#{session.id}/complete", { feedback: "meh" }, 422, "invalid"],
+      [:post, "/api/sessions/#{session.id}/complete", { note: "x" * 2001 }, 422, "invalid"],
+      [:patch, "/api/sessions/#{session.id}", { note: "x" * 2001 }, 422, "invalid"],
+      [:post, "/api/sessions", { workout_id: seeded.id, date: "2099-01-01", note: "x" * 2001 }, 422, "invalid"],
       [:patch, "/api/sessions/#{session.id}/completion", { note: "later" }, 404, "not_found"],
       [:get, "/api/history?days=0", nil, 400, "bad_request"],
       [:get, "/api/exercises/0/history", nil, 404, "not_found"]
@@ -79,5 +82,21 @@ describe "API errors" do
     get "/api/today?date=tomorrow"
 
     _(json["error"]).must_equal({ "code" => "bad_request", "message" => "date must be a date as YYYY-MM-DD", "fields" => { "date" => ["must be a date as YYYY-MM-DD"] } })
+  end
+
+  # Nothing along the way keeps a copy of the user's data, and no browser
+  # reads it as anything but JSON.
+  it "marks every API answer no-store and nosniff, the sign-in gate's too" do
+    get "/api/today"
+    _(last_response.headers.values_at("cache-control", "x-content-type-options")).must_equal %w[no-store nosniff]
+
+    sign_out!
+    get "/api/today"
+    _(last_response.status).must_equal 401
+    _(last_response.headers.values_at("cache-control", "x-content-type-options")).must_equal %w[no-store nosniff]
+
+    # The reference page says how it is cached.
+    get "/api/openapi", {}, { "rack.input" => StringIO.new }
+    _(last_response.headers["cache-control"]).must_equal "no-cache"
   end
 end

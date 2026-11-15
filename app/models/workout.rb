@@ -133,7 +133,7 @@ class Workout < Record
       picked_by.update("#{kind}_id": nil, "no_#{kind}": true, updated_at: Time.now) if FRAMES.include?(kind)
       removed = Session.where(workout_id: id, status: "planned", date: Time.zone.today..).in_order.all.each(&:destroy)
       # Its routines end too: their days could never be confirmed.
-      Routine.where(workout_id: id).all.each { it.end! unless it.ended? }
+      Routine.where(workout_id: id).all.each { it.end!(archived: true) unless it.ended? }
       removed
     end
   end
@@ -183,6 +183,14 @@ class Workout < Record
 
   def choose_frame(part, choice)
     choice = nil if choice == ""
+    # Neither an id nor "none" (an object, a list): refused when validated.
+    @unreadable_frames = (@unreadable_frames || []) - [part]
+    unless choice.nil? || choice == "none" || Record.id(choice)
+      @unreadable_frames << part
+      # Saved changes or not, it is validated and refused.
+      return modified!
+    end
+
     set("no_#{part}" => choice == "none", "#{part}_id" => (choice unless choice == "none"))
   end
 
@@ -376,6 +384,8 @@ class Workout < Record
   # A warm-up or cool-down picked by a main workout is one of that kind.
   def frames_fit
     FRAMES.each do |part|
+      next errors.add(part.to_sym, "must be a workout's id, or none") if @unreadable_frames&.include?(part)
+
       chosen = public_send(part)
       picked = public_send("#{part}_id")
       next unless picked || public_send("no_#{part}")

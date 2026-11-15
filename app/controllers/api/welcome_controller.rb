@@ -9,6 +9,7 @@ module Api
     #   pending invite.
     # @param today? {Date} The device's own date.
     # @response 200 #/components/schemas/Setup
+    # @response 400 #/components/responses/BadRequest
     def show
       today = client_today
       user = Current.user!

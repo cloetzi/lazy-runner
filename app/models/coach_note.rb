@@ -28,6 +28,8 @@ class CoachNote < Record
 
   # Asked to resolve a note that isn't a concern.
   class NotAConcern < StandardError; end
+  # An agent's note past AGENT_DAILY_LIMIT.
+  class DailyLimit < StandardError; end
 
   per_user
   many_to_one :activity
@@ -123,6 +125,8 @@ class CoachNote < Record
       value = self[column]
       self[column] = value.strip.presence if value.is_a?(String)
     end
+    # What a token writes is the agent's, whatever the request says.
+    self.author_kind = "llm" if Current.agent_name && new?
     self.author_name = nil if author_kind == "user"
     # An agent's note is signed with its API token's name, as everything it
     # writes is (Record::AgentSigned).
@@ -154,7 +158,38 @@ class CoachNote < Record
     end
   end
 
+  # An agent changes and deletes only the notes it wrote: the user's, and a
+  # coach's they named, are theirs.
+  def before_save
+    unless new?
+      theirs!
+      Record.user_only!("note #{id} stays signed as the agent's") if Current.agent_name && (column_changed?(:author_kind) || column_changed?(:author_name))
+    end
+    super
+  end
+
+  # However it is written, over MCP or the API, an agent writes at most
+  # AGENT_DAILY_LIMIT notes a day.
+  def before_create
+    if author_kind == "llm" && Current.agent_name && CoachNote.by_agent.written_today.count >= AGENT_DAILY_LIMIT
+      raise DailyLimit, "an agent writes at most #{AGENT_DAILY_LIMIT} notes a day; change or delete the ones there"
+    end
+    super
+  end
+
+  # The user's replies go with the note they answer (the foreign key
+  # cascades), so an agent leaves a note the user replied to.
+  def before_destroy
+    theirs!
+    Record.user_only!("note #{id} has the user's replies; an agent changes it rather than deleting it") unless replies_dataset.empty?
+    super
+  end
+
   private
+
+  def theirs!
+    Record.user_only!("note #{id} is the user's; an agent changes only the notes it wrote") unless initial_value(:author_kind) == "llm"
+  end
 
   # A reply answers a note the user didn't write, and is theirs: a plain
   # note with no day or link of its own, under a note that isn't a reply.
