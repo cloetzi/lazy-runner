@@ -87,10 +87,20 @@ components, pages, player, figure.
   in `app.js`), the count carries its unit for a screen reader, and each
   step is said once in a polite live region (`stepAnnouncement` in
   `player.js`, the sentence spoken cues will use).
-- **Layout**: phones and iPads in portrait get a bottom tab bar (Today,
-  Calendar, Coach, Workouts) with History, Exercises, Equipment and Settings
-  under More; from 60rem a sidebar (`nav.js`, `routes.js`). Every page starts
-  at the same left edge.
+- **Layout** (`nav.js`, `routes.js`): phones get a top bar naming the page
+  and a bottom tab bar (Today, Calendar, Coach, Workouts) with History,
+  Exercises, Equipment and Settings under More; from 44rem on a screen at
+  least 48rem tall (an iPad in portrait, not a phone on its side) a rail on
+  the left with every page, an icon over its name; from 60rem a sidebar, the
+  icon beside the name. Who is signed in shows at the
+  foot of the rail and the sidebar and at the head of More, and opens
+  Settings. Every page starts at the same left edge.
+- **Back goes where you came from**: a detail's Back button names and
+  returns to the view it was opened from, else the page that linked to it
+  (Exercises, Calendar), else its usual parent (`backFor`); through the
+  browser's history when that is where it came from. The
+  tab's title names the view, and a view that replaces another moves the
+  focus to its heading.
 - **Accessibility in the smoke test**: `test/e2e/smoke.test.js` runs
   axe-core (WCAG A and AA, best practices) on the main screens and sheets.
 - **Calendar marks**: done filled in `--success`, planned outlined, up next

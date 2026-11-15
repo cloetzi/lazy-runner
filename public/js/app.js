@@ -14,7 +14,7 @@ import { previousIndex, switchesSides, mainActionLabel, stepAnnouncement, spoken
 import { rpeOptions, toggleRpe } from "./rpe-picker.js";
 import { openSwap, prefetchAlternatives, forgetAlternatives } from "./swap.js";
 import { mountNav } from "./nav.js";
-import { parseRoute, routeHash, pageFor, isSessionView } from "./routes.js";
+import { parseRoute, routeHash, pageFor, isSessionView, backFor, viewLabel } from "./routes.js";
 import { setsSummary, sessionSummary, exerciseSummary, sessionParts, partLine } from "./history.js";
 import { getJson, errorMessage, loadProblem, paths, send, sendChange, STALE_NOTE } from "./api.js";
 import { readSettings } from "./preferences.js";
@@ -85,7 +85,11 @@ const state = {
   askedHowHard: false, // Today's how-hard question was asked on this visit
   readRecent: null, // the date whose days before were read for it
   shownHash: "", // the URL hash of the view on screen, for the editor to return to
-  workoutFrom: "home", // the view its back button returns to
+  trail: [], // the URL hashes of the views opened on this page, latest last
+  wandered: false, // a view on this page was left for another: the page that linked here is no longer the way back
+  back: null, // where the view on screen's Back button goes (backFor)
+  pushedFrom: null, // { hash, from }: the view on screen came by a link from `from`, the history entry before it
+  focusOnLoad: false, // the detail on screen takes the focus to its heading once loaded
   weightSaves: {}, // exercise id -> weight changed in the workout view or on Get ready, not yet queued
   weightSaveTimer: null,
   switchCueUntil: 0, // "Switch sides" shows until then on a rep-based right side
@@ -687,8 +691,6 @@ function workoutCard(workout, level) {
 // exercise straight away (through the outbox), so the next session uses them;
 // a running session keeps the weights it started with.
 async function openWorkout(id) {
-  state.workoutFrom = $("home").hidden ? "workouts" : "home";
-  $("workout-back").innerHTML = `${icon("chevron-left")}${state.workoutFrom === "home" ? "Today" : "Workouts"}`;
   state.workout = null;
   $("workout-title").textContent = "";
   $("workout-subtitle").textContent = "";
@@ -698,6 +700,7 @@ async function openWorkout(id) {
   $("workout-actions").hidden = true;
   $("workout-blocks").innerHTML = `<p class="muted">Loading…</p>`;
   show("workout", id);
+  aimBack("workout");
   try {
     const [{ data, stale }] = await Promise.all([getJson(paths.workout(id)), loadEquipmentNames()]);
     state.workout = data;
@@ -706,12 +709,14 @@ async function openWorkout(id) {
     $("workout-blocks").insertAdjacentHTML("afterbegin", offlineNote(stale));
   } catch (error) {
     $("workout-blocks").innerHTML = `<p>${escape(loadProblem("this workout", error, { hint: false }))}</p>`;
+    loaded("workout", id, null);
   }
 }
 
 function renderWorkout() {
   const workout = state.workout;
   $("workout-title").textContent = workout.title;
+  loaded("workout", workout.id, workout.title);
   $("workout-subtitle").textContent = [workout.subtitle, `about ${workout.estimated_minutes} min`].filter(Boolean).join(" · ");
   const gear = [...new Set(workout.blocks.flatMap((block) => block.steps.flatMap((step) => neededEquipment(step) ?? [])))];
   $("workout-blocks").innerHTML = (gear.length ? `<div class="workout-gear"><h2 class="visually-hidden">Gear</h2>
@@ -985,9 +990,7 @@ async function saveWeights() {
 
 async function leaveWorkout() {
   await saveWeights();
-  if (state.workoutFrom === "workouts") return openWorkouts();
-  show("home");
-  await reloadToday();
+  goBack();
 }
 
 async function startWorkout(id) {
@@ -1912,12 +1915,14 @@ function exerciseRow(exercise) {
 // Weight and reps per session for one exercise, newest first.
 async function openExerciseHistory(id) {
   show("exercise-history", id);
+  aimBack("exercise-history");
   $("exercise-history-name").textContent = "";
   $("exercise-history-remembered").textContent = "";
   $("exercise-history-list").innerHTML = `<li class="row muted">Loading…</li>`;
   try {
     const { data: history, stale } = await getJson(`/api/exercises/${id}/history`);
     $("exercise-history-name").textContent = history.exercise.name;
+    loaded("exercise-history", id, history.exercise.name);
     $("exercise-history-remembered").textContent = [
       history.remembered?.value != null ? `Next time: ${formatWeight(history.remembered, state.unit)}`
         : history.remembered?.unit ? `Next time: ${NO_WEIGHT}` : "",
@@ -1928,6 +1933,7 @@ async function openExerciseHistory(id) {
       : `<li class="row muted">Nothing logged yet.</li>`;
   } catch (error) {
     $("exercise-history-list").innerHTML = `<li class="row">${escape(loadProblem("this exercise's history", error))}</li>`;
+    loaded("exercise-history", id, null);
   }
 }
 
@@ -1945,6 +1951,7 @@ function weekdayDate(iso) {
 // progress, and Delete at the bottom.
 async function openSession(id) {
   show("session", id);
+  aimBack("session");
   $("session-title").textContent = "";
   $("session-summary").textContent = "";
   $("session-note").hidden = true;
@@ -1956,6 +1963,7 @@ async function openSession(id) {
     const { data: session, stale } = await getJson(`/api/sessions/${id}`);
     const date = weekdayDate(session.date);
     $("session-title").textContent = session.workout.title;
+    loaded("session", id, session.workout.title);
     $("session-summary").textContent = [date, sessionSummary(session), stale ? STALE_NOTE : ""].filter(Boolean).join(" · ");
     $("session-note").textContent = session.completion?.note ?? "";
     $("session-note").hidden = !session.completion?.note;
@@ -1975,6 +1983,7 @@ async function openSession(id) {
     $("session-delete").hidden = false;
   } catch (error) {
     $("session-exercises").innerHTML = `<li>${escape(loadProblem("this session", error))}</li>`;
+    loaded("session", id, null);
   }
 }
 
@@ -2144,12 +2153,25 @@ function offlineNote(stale) {
 // Going into a session adds a history entry, so back stays in the app (see
 // onPopState).
 function show(view, id) {
-  for (const other of ["home", "workouts", "workout", "edit", "ready", "player", "finish", "history", "exercise-history", "session"]) $(other).hidden = other !== view;
   const hash = routeHash(view, id);
+  const changed = state.shownHash && state.shownHash !== hash;
+  for (const other of ["home", "workouts", "workout", "edit", "ready", "player", "finish", "history", "exercise-history", "session"]) $(other).hidden = other !== view;
   state.shownHash = hash;
+  nameView(viewLabel(view));
+  // A view that replaces another takes the focus to its heading, so a screen
+  // reader starts there, as on a new page: a detail once its name is in
+  // (loaded()). The session screens say their step in the live region
+  // instead, and the editor focuses its first field.
+  const focus = changed && !isSessionView(view) && view !== "edit";
+  state.focusOnLoad = focus && Boolean(id);
+  if (focus && !id) focusHeading(view);
+  trailTo(hash);
   const entering = isSessionView(view) && location.hash !== hash;
   if (entering) history.pushState({ session: true }, "", hash);
-  else if (location.hash !== hash) history.replaceState(null, "", hash);
+  else if (location.hash !== hash) {
+    history.replaceState(null, "", hash);
+    state.pushedFrom = null; // no link brought this view
+  }
   // The session screens and the editor hide the navigation: one tap on a tab
   // would leave a session, or a draft.
   if (isSessionView(view)) document.body.dataset.focus = "";
@@ -2160,9 +2182,79 @@ function show(view, id) {
   window.scrollTo(0, 0);
 }
 
+// The tab's title: the view's name, and a detail's own once it has loaded.
+function nameView(name) {
+  const title = name ? `${name} · The Lazy Runner` : "The Lazy Runner";
+  if (document.title !== title) document.title = title;
+}
+
+// A detail has loaded, or failed to (`name` null): it names the tab and the
+// heading takes the focus, unless another view or item has replaced it in
+// the meantime.
+function loaded(view, id, name) {
+  if (state.shownHash !== routeHash(view, id)) return;
+  nameView(name ?? viewLabel(view));
+  // Failed: the heading says what it is, over the problem.
+  const heading = $(view).querySelector("h1");
+  if (!name && heading && !heading.textContent) heading.textContent = viewLabel(view);
+  if (!state.focusOnLoad) return;
+  state.focusOnLoad = false;
+  focusHeading(view);
+}
+
+function focusHeading(view) {
+  const heading = $(view).querySelector("h1");
+  if (!heading) return;
+  heading.setAttribute("tabindex", "-1");
+  heading.focus({ preventScroll: true });
+}
+
 // Navigates as a link would, so the phone's back button returns here.
 function go(hash) {
   location.hash = hash;
+}
+
+// The views opened on this page, latest last: going to the one before goes
+// back along it, any other is added.
+function trailTo(hash) {
+  const trail = state.trail;
+  if (trail.at(-1) === hash) return;
+  if (trail.length) state.wandered = true;
+  if (trail.at(-2) === hash) trail.pop();
+  else trail.push(hash);
+  if (trail.length > 50) trail.shift();
+}
+
+// The page of the app that linked here, while it is still the way back:
+// this page was opened by a link (not reloaded or restored) and nothing on it
+// has been left since.
+function linkedFrom() {
+  if (state.wandered) return "";
+  return performance.getEntriesByType?.("navigation")[0]?.type === "navigate" ? document.referrer : "";
+}
+
+// A detail's Back button names where it came from and returns there: a view
+// on this page, the page that linked here (Exercises, Calendar) or its usual
+// parent; the navigation shows that page as current.
+const BACK_BUTTONS = { workout: "workout-back", "exercise-history": "exercise-history-back", session: "session-back" };
+function aimBack(view) {
+  state.back = backFor(view, { cameFrom: state.trail.at(-2) ?? null, referrer: linkedFrom(), origin: location.origin });
+  $(BACK_BUTTONS[view]).innerHTML = `${icon("chevron-left")}${escape(state.back.label)}`;
+  nav.setCurrent(state.back.page);
+}
+
+// Back in the browser's history when that is where the view came from (a
+// link from the view on this page, or the page that linked here), so the
+// phone's back button doesn't return to the detail; else a link there.
+function goBack() {
+  const back = state.back;
+  const pushed = state.pushedFrom;
+  if (back.inPage && pushed?.hash === location.hash && pushed.from === back.href) return history.back();
+  // Off this page only when it was opened by a link from that page, so the
+  // entry before is that page (on its day, for the calendar).
+  if (!back.inPage && history.length > 1) return history.back();
+  if (back.inPage) go(back.href);
+  else location.assign(back.href);
 }
 
 // Back while a session runs: leaving Get ready goes back to where Start was
@@ -2191,6 +2283,8 @@ async function route() {
   const { view, id } = parseRoute(location.hash);
   if (!leaveEditor(view, id)) return;
   const cameFrom = state.shownHash;
+  // A link (or the browser's back and forward) brought this hash.
+  state.pushedFrom = { hash: location.hash, from: cameFrom };
   await saveWeights();
   if (view === "workouts") return openWorkouts();
   // "#examples" (Today's set-up, the calendar): Workouts, with the sheet open.
@@ -2318,7 +2412,7 @@ $("today-day").addEventListener("click", (event) => {
 });
 $("today").addEventListener("click", (event) => {
   const button = event.target.closest("button[data-view]");
-  if (button) openWorkout(button.dataset.view);
+  if (button) go(routeHash("workout", button.dataset.view));
 });
 $("today-activities").addEventListener("click", (event) => {
   if (event.target.closest("#log-activity")) return logActivity();
@@ -2411,13 +2505,13 @@ $("session-exercises").onclick = $("session-frames").onclick = (event) => {
   const button = event.target.closest("button[data-exercise]");
   if (button) go(routeHash("exercise-history", button.dataset.exercise));
 };
-$("session-back").onclick = () => go(routeHash("history"));
+$("session-back").onclick = goBack;
 $("session-delete").onclick = (event) => deleteSession(event.currentTarget);
 $("history-exercises").onclick = (event) => {
   const button = event.target.closest("button[data-exercise]");
   if (button) go(routeHash("exercise-history", button.dataset.exercise));
 };
-$("exercise-history-back").onclick = () => go(routeHash("history"));
+$("exercise-history-back").onclick = goBack;
 $("exercise-history-howto").onclick = async () => {
   const id = parseRoute(location.hash).id;
   try {

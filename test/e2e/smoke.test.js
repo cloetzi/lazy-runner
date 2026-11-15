@@ -324,6 +324,42 @@ test("opens another workout, the calendar, the coach board and history offline",
   await context.close();
 });
 
+test("shows every page on the iPad's rail, and Back returns to where a detail was opened", async () => {
+  const exercises = await getJson("/api/exercises");
+  const squat = exercises.find((exercise) => exercise.name === "Goblet squat");
+  const { context, page, errors } = await ownerPage({ viewport: { width: 820, height: 1180 } });
+
+  await page.goto("/#workouts");
+  await page.locator("#workouts-list .workout-card").first().waitFor();
+  assert.equal(await page.locator(".sidebar a[data-page]:visible").count(), 8);
+  assert.equal(await page.locator(".tabbar").isVisible(), false);
+  assert.match(await page.locator(".nav-user:visible").textContent(), /Signed in as\s*e2e-runner/);
+  assert.equal(await page.title(), "Workouts · The Lazy Runner");
+
+  // A workout opened from Today goes back to Today, and the tab names it.
+  await page.goto("/#today");
+  await page.locator("#today button[data-view]").first().click();
+  await page.locator("#workout-back").getByText("Today").waitFor();
+  await page.waitForFunction(() => document.title !== "Workout · The Lazy Runner" && document.title.endsWith("· The Lazy Runner"));
+  await page.locator("#workout-back").click();
+  await page.waitForURL(/#today$/);
+
+  // An exercise's history opened from Exercises goes back to Exercises.
+  await page.goto("/library.html");
+  await page.evaluate((id) => { location.href = `/#exercise-history/${id}`; }, squat.id);
+  await page.locator("#exercise-history-back").getByText("Exercises").waitFor();
+  await page.locator("#exercise-history-back").click();
+  await page.waitForURL(/\/library\.html$/);
+
+  // A phone on its side is as wide as the rail's tier but keeps the tab bar.
+  await page.setViewportSize({ width: 844, height: 390 });
+  assert.equal(await page.locator(".tabbar").isVisible(), true);
+  assert.equal(await page.locator(".sidebar").isVisible(), false);
+
+  assert.deepEqual(errors, []);
+  await context.close();
+});
+
 test("plans a session on the calendar and moves it to another day", async () => {
   const { context, page, errors } = await ownerPage();
 

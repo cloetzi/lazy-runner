@@ -138,8 +138,9 @@ then `BASE_URL=http://localhost:3999 SERVER_LOG=/tmp/e2e.log npm run test:e2e`.
   The logic modules (listed in `docs/architecture.md`) are kept free of the
   DOM and tested in `test/js`. Writes go through the outbox so they
   survive a lost connection; the running session is kept in localStorage.
-  `nav.js` draws the navigation on every page from `routes.js`: a sidebar on
-  wide screens, a bottom tab bar on phones with the rest under More.
+  `nav.js` draws the navigation on every page from `routes.js`: a bottom tab
+  bar on phones with the rest under More, a rail from 44rem, a sidebar from
+  60rem; a detail's Back goes where it was opened from (`backFor`).
   Views on the home page have a URL hash, and the session screens and the
   editor hide the navigation (`body[data-focus]`). The workout editor
   (`#edit/<id>`, `#edit/new`), with Cancel and Save in its own header, keeps its draft

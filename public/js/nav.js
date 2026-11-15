@@ -1,6 +1,6 @@
 import { PAGES, TABS, MORE, SIDEBAR, SIDEBAR_SECONDARY } from "./routes.js";
 import { escape, icon } from "./html.js";
-import { ACCOUNT_KEY, adoptAccount, checkSignedIn, signInHref } from "./account.js";
+import { ACCOUNT_KEY, adoptAccount, checkSignedIn, signInHref, storedAccount } from "./account.js";
 import { offline } from "./api.js";
 import { localToday } from "./calendar.js";
 import { fetchAhead } from "./offline.js";
@@ -51,6 +51,7 @@ async function askAccount({ again = false } = {}) {
   showOffline();
   const { switched } = await adoptAccount(me.user, { storage, caches: globalThis.caches });
   if (switched) return location.reload();
+  showUser(me.user.username);
   showCoachNews(me.coachUnseen, asked);
   setTimeout(ahead, AHEAD_AFTER_MS);
   if (!again) keepData();
@@ -137,10 +138,22 @@ export function showCoachNews(count = 0, at = performance.now()) {
   }
 }
 
-// The app shell. On wide screens a sidebar with every page stays on the
-// left. On phones a top bar names the page and a tab bar in thumb reach holds
-// the main pages, with the rest (Exercises, Equipment, Settings) under More.
-// The session screens and the editor hide it all with `body[data-focus]`.
+// Who is signed in, at the foot of the rail and the sidebar and at the head
+// of More: a shared iPad says whose training it logs. It opens Settings,
+// Account.
+function showUser(name) {
+  for (const link of document.querySelectorAll(".nav-user")) {
+    link.hidden = !name;
+    const label = link.querySelector(".nav-user-name");
+    if (label.textContent !== (name ?? "")) label.textContent = name ?? "";
+  }
+}
+
+// The app shell. On phones a top bar names the page and a tab bar in thumb
+// reach holds the main pages, with the rest under More. From 44rem (tablets
+// in portrait) a rail on the left holds every page, an icon over its name;
+// from 60rem it is a sidebar, the icon beside the name. The session screens
+// and the editor hide it all with `body[data-focus]`.
 export function mountNav(current) {
   checkAccount();
   addEventListener("online", () => {
@@ -160,7 +173,8 @@ export function mountNav(current) {
     if (event.key === ACCOUNT_KEY || event.key === null) location.reload();
   });
   const links = (pages) => pages
-    .map((page) => `<li><a href="${page.href}" data-page="${page.id}">${escape(page.label)}</a></li>`).join("");
+    .map((page) => `<li><a href="${page.href}" data-page="${page.id}">${icon(page.icon)}<span>${escape(page.label)}</span></a></li>`).join("");
+  const user = (where) => `<a class="nav-user ${where}" href="/settings.html#account" hidden>${icon("person")}<span><span class="visually-hidden">Signed in as </span><span class="nav-user-name"></span></span></a>`;
   const tabs = TABS
     .map((page) => `<a class="tab" href="${page.href}" data-page="${page.id}">${icon(page.icon)}<span>${escape(page.label)}</span></a>`).join("");
 
@@ -168,21 +182,21 @@ export function mountNav(current) {
   document.body.insertAdjacentHTML("afterbegin", `
     <a class="skip-link" id="skip-link">Skip to content</a>
     <header class="topbar">
-      <span class="topbar-brand">${icon("mark")}Lazy Runner</span>
+      <span class="topbar-brand">${icon("mark", "The Lazy Runner")}</span>
       <span class="topbar-title" id="topbar-title" aria-hidden="true"></span>
       <span class="offline-badge" role="status" hidden></span>
     </header>
     <nav class="sidebar" id="sidebar" aria-label="Main">
-      <p class="sidebar-brand">${icon("mark")}The Lazy Runner</p>
-      <p class="sidebar-tagline">Strength for people who'd rather just run.</p>
+      <p class="sidebar-brand">${icon("mark")}<span>The Lazy Runner</span></p>
       <p class="offline-badge" role="status" hidden></p>
       <ul>${links(SIDEBAR)}</ul>
       <ul class="sidebar-secondary">${links(SIDEBAR_SECONDARY)}</ul>
+      ${user("in-sidebar")}
     </nav>
     <div class="scrim" id="scrim" hidden></div>
     <nav class="tabbar" id="tabbar" aria-label="Main">
       ${tabs}
-      <ul class="more-sheet" id="more-sheet" hidden>${links(MORE)}</ul>
+      <div class="more-sheet" id="more-sheet" hidden>${user("in-more")}<ul>${links(MORE)}</ul></div>
       <button class="tab" id="more-button" aria-controls="more-sheet" aria-expanded="false">${icon("more")}<span>More</span></button>
     </nav>`);
 
@@ -195,7 +209,7 @@ export function mountNav(current) {
     button.setAttribute("aria-expanded", String(open));
     sheet.hidden = !open;
     scrim.hidden = !open;
-    if (open) sheet.querySelector("a")?.focus();
+    if (open) sheet.querySelector("ul a")?.focus();
   };
 
   // Past the navigation to the view that shows. It points at that view's
@@ -238,20 +252,12 @@ export function mountNav(current) {
       else link.removeAttribute("aria-current");
     }
     button.classList.toggle("current", MORE.some((page) => page.id === id));
-    title.textContent = PAGES.find((page) => page.id === id)?.label ?? "";
+    // The top bar names the page from the start; the mark is the brand.
+    const name = PAGES.find((page) => page.id === id)?.label ?? "";
+    if (title.textContent !== name) title.textContent = name;
   };
   setCurrent(current);
   showOffline();
-
-  // The top bar shows the brand; once the page's own title scrolls under it,
-  // the title takes its place, as in native apps.
-  const observer = new IntersectionObserver((entries) => {
-    for (const entry of entries) {
-      if (!entry.target.offsetParent) continue; // a hidden view
-      title.textContent = entry.target.textContent;
-      document.body.classList.toggle("title-in-bar", !entry.isIntersecting && entry.boundingClientRect.top < 0);
-    }
-  }, { rootMargin: "-56px 0px 0px 0px" });
-  document.querySelectorAll(".brand h1").forEach((h1) => observer.observe(h1));
+  showUser(storedAccount(storage)?.username);
   return { setCurrent };
 }
