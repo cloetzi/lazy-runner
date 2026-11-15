@@ -287,7 +287,7 @@ function dayChangeRow(line) {
   return `
     <li>
       <span>${escape(line.text)}</span>
-      ${line.undo ? undoButton(line.undo, undefined, { classes: "link" }) : ""}
+      ${line.undo ? undoButton(line.undo, undefined, { classes: "quiet small" }) : ""}
       ${line.reason ? `<span class="change-reason">${escape(line.reason)}</span>` : ""}
     </li>`;
 }

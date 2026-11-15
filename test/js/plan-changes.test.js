@@ -90,7 +90,7 @@ test("lines a day that lost a session, with Put it back for a removal", () => {
   assert.equal(line.text, "Session B removed by Coach agent");
   assert.equal(line.reason, "Legs fresh for Sunday");
   assert.equal(line.undo, removed);
-  assert.match(undoButton(line.undo, undefined, { classes: "link" }), /class="link" type="button" data-undo="8" aria-label="Put Session B back on Wed 18">Put it back</);
+  assert.match(undoButton(line.undo, undefined, { classes: "quiet small" }), /class="quiet small" type="button" data-undo="8" aria-label="Put Session B back on Wed 18">Put it back</);
 });
 
 test("offers Move it back on the line when the session went outside the days shown", () => {

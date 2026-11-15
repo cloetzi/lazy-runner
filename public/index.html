@@ -61,7 +61,7 @@
     <div class="workout-blocks" id="workout-blocks"></div>
     <p class="muted" id="workout-saved" aria-live="polite"></p>
     <div class="action-bar">
-      <button class="primary" id="workout-start" hidden>Start this workout</button>
+      <button class="primary large" id="workout-start" hidden>Start this workout</button>
     </div>
   </main>
 
@@ -94,7 +94,7 @@
     </div>
     <div class="action-bar">
       <button class="secondary" id="ready-back">Back</button>
-      <button class="primary" id="ready-go">Start</button>
+      <button class="primary large" id="ready-go">Start</button>
     </div>
   </main>
 
@@ -103,7 +103,7 @@
     <header class="player-top">
       <span class="player-where"><span id="where"></span> <span id="count" class="muted"></span></span>
       <span class="player-actions">
-        <button class="link" id="quit">End session</button>
+        <button class="quiet small" id="quit">End session</button>
       </span>
     </header>
 
@@ -144,8 +144,8 @@
       <ul class="equipment-list player-gear" id="equipment" aria-label="Equipment" hidden></ul>
       <ul class="cues" id="cues"></ul>
       <div class="stage-links">
-        <button class="link" id="howto-open"><svg class="icon" aria-hidden="true"><use href="/icons/sprite.svg#info"/></svg>How to</button>
-        <button class="link" id="swap-open"><svg class="icon" aria-hidden="true"><use href="/icons/sprite.svg#swap"/></svg>Swap</button>
+        <button class="quiet small" id="howto-open"><svg class="icon" aria-hidden="true"><use href="/icons/sprite.svg#info"/></svg>How to</button>
+        <button class="quiet small" id="swap-open"><svg class="icon" aria-hidden="true"><use href="/icons/sprite.svg#swap"/></svg>Swap</button>
       </div>
       </div>
     </section>
@@ -157,7 +157,7 @@
       </div>
       <div class="controls">
         <button class="secondary" id="prev"><svg class="icon" aria-hidden="true"><use href="/icons/sprite.svg#chevron-left"/></svg><span class="label">Back</span></button>
-        <button class="primary" id="main-action">Done</button>
+        <button class="primary large" id="main-action">Done</button>
         <button class="secondary" id="skip"><span class="label">Skip</span><svg class="icon" aria-hidden="true"><use href="/icons/sprite.svg#chevron-right"/></svg></button>
       </div>
     </footer>
@@ -187,7 +187,7 @@
       <h2><label for="finish-note">A note</label> <span class="muted">(optional)</span></h2>
       <input id="finish-note" type="text" maxlength="500" autocomplete="off" enterkeyhint="done" placeholder="How it went, anything that hurt" aria-describedby="finish-note-hint">
       <p class="muted hint" id="finish-note-hint">Kept with the session; your coach reads it too.</p>
-      <button class="primary" id="finish-save">Save</button>
+      <button class="primary large" id="finish-save">Save</button>
     </section>
     <section class="card finish-saved" id="finish-done" hidden>
       <header class="finish-head">
@@ -231,7 +231,7 @@
     <p class="note" id="session-note" hidden></p>
     <ul class="list" id="session-exercises"></ul>
     <div id="session-frames"></div>
-    <button class="secondary delete" id="session-delete" hidden>Delete this session</button>
+    <div class="danger-zone"><button class="secondary danger" id="session-delete" hidden>Delete this session</button></div>
   </main>
 </body>
 </html>

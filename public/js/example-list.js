@@ -71,7 +71,7 @@ export function mountExamples({ list, error, done, href = "/#workouts", onImport
           <ul>${example.workouts.map((workout) => `
             <li><strong>${escape(workoutHeading(workout))}</strong>
               <span class="muted">${escape((workout.exercises ?? []).join(", "))}</span></li>`).join("")}</ul>
-          ${example.imported ? `<button class="link" data-import="${escape(example.slug)}" data-name="${escape(example.name)}" data-copy="true">Import another copy</button>` : ""}
+          ${example.imported ? `<button class="quiet small" data-import="${escape(example.slug)}" data-name="${escape(example.name)}" data-copy="true">Import another copy</button>` : ""}
         </details>
       </li>`).join("");
   }

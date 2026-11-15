@@ -190,7 +190,7 @@ function newsCard() {
         <li>
           <span>${escape(item.text)}</span>
           ${item.href ? `<a class="link" href="${escape(item.href)}" aria-label="${escape(`Show ${item.title} on the calendar`)}">Show</a>` : ""}
-          ${live && item.undo ? undoButton(item.undo, item.title, { classes: "link", disabled: state.busy }) : ""}
+          ${live && item.undo ? undoButton(item.undo, item.title, { classes: "quiet small", disabled: state.busy }) : ""}
         </li>`).join("")}</ul>
     </div>`).join("");
   return `
@@ -232,7 +232,8 @@ function goalsCard({ goals, proposals }) {
           </span>` : ""}
         </li>`).join("")}</ol>`
     : `<p class="muted">No goals yet. What are you training for? Everything the coach writes ties back to these.</p>`;
-  const proposed = proposals.map((p) => `
+  // Only the first waiting proposal is the page's main action.
+  const proposed = proposals.map((p, i) => `
     <div class="proposal">
       <p class="proposal-title"><strong>Proposed: ${escape(p.title)}</strong></p>
       ${p.replaces_id && byId.get(p.replaces_id) ? `<p class="muted small-print">Instead of “${escape(byId.get(p.replaces_id).title)}”</p>` : ""}
@@ -240,7 +241,7 @@ function goalsCard({ goals, proposals }) {
       ${p.why || p.target_date ? `<p class="muted small-print">${[p.target_date && `By ${shortDay(p.target_date)}`, p.why].filter(Boolean).map(escape).join(" · ")}</p>` : ""}
       ${author({ author_kind: "llm", author_name: p.agent_name, created_at: p.created_at })}
       <div class="proposal-actions">
-        <button class="primary small" data-accept="${p.id}">Accept</button>
+        <button class="${i === 0 ? "primary" : "secondary"} small" data-accept="${p.id}">Accept</button>
         <button class="secondary small" data-dismiss="${p.id}">Dismiss</button>
       </div>
     </div>`).join("");
@@ -255,18 +256,18 @@ function goalsCard({ goals, proposals }) {
 }
 
 function pastGoals() {
-  if (!state.past) return `<p><button class="link" data-past>Past goals</button></p>`;
+  if (!state.past) return `<p><button class="quiet small" data-past>Past goals</button></p>`;
   if (state.past.length === 0) return `<p class="muted small-print">No past goals yet.</p>`;
   return `
     <div class="past-goals">
       <h3>Past goals</h3>
       <ul class="coach-entries">${state.past.map((g) => `
         <li class="coach-entry">
-          <p class="entry-title"><strong>${escape(g.title)}</strong> <span class="tag">${g.status === "achieved" ? "Achieved" : "Dropped"}</span></p>
+          <p class="entry-title"><strong>${escape(g.title)}</strong> ${g.status === "achieved" ? `<span class="tag success">Achieved</span>` : `<span class="tag">Dropped</span>`}</p>
           ${g.decided_at ? `<p class="muted small-print">${escape(writtenOn({ created_at: g.decided_at }))}</p>` : ""}
           <div class="entry-actions">
-            <button class="link" data-reactivate="${g.id}">Make it a goal again</button>
-            <button class="link danger" data-delete-goal="${g.id}" data-title="${escape(g.title)}">Delete</button>
+            <button class="quiet small" data-reactivate="${g.id}">Make it a goal again</button>
+            <button class="quiet small danger" data-delete-goal="${g.id}" data-title="${escape(g.title)}">Delete</button>
           </div>
         </li>`).join("")}</ul>
     </div>`;
@@ -323,8 +324,8 @@ function noteItem(note, { concern = false } = {}) {
 // An agent's note stays as it wrote it: it can only go.
 function editButton(note) {
   return note.author_kind === "llm"
-    ? `<button class="link" data-delete-note="${note.id}">Delete</button>`
-    : `<button class="link" data-edit-note="${note.id}">Edit</button>`;
+    ? `<button class="quiet small danger" data-delete-note="${note.id}">Delete</button>`
+    : `<button class="quiet small" data-edit-note="${note.id}">Edit</button>`;
 }
 
 function concernsCard({ concerns }) {
@@ -352,11 +353,11 @@ function notesCard({ notes }) {
   }[state.filter];
   const actions = [
     state.journal && state.journalNext != null && `<button class="secondary small" data-older${state.loadingOlder ? " disabled" : ""}>Older notes</button>`,
-    (list.length || state.earlier.length) && `<button class="link" data-tidy>Tidy up</button>`,
+    (list.length || state.earlier.length) && `<button class="quiet small" data-tidy>Tidy up</button>`,
   ].filter(Boolean);
   return `
     <section class="card coach-card" aria-labelledby="notes-title">
-      <header class="coach-card-head"><h2 id="notes-title">Notes</h2><button class="primary small" data-write="note">Write a note</button></header>
+      <header class="coach-card-head"><h2 id="notes-title">Notes</h2><button class="secondary small" data-write="note">Write a note</button></header>
       ${filters}
       ${list.length ? `<ul class="coach-entries">${list.map((n) => noteItem(n)).join("")}</ul>` : `<p class="muted">${empty}</p>`}
       ${earlier}

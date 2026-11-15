@@ -146,7 +146,7 @@ for (const input of document.querySelectorAll("input[type=password]")) {
   input.replaceWith(box);
   const toggle = document.createElement("button");
   toggle.type = "button";
-  toggle.className = "link show-password";
+  toggle.className = "quiet small show-password";
   toggle.innerHTML = `Show<span class="visually-hidden"> password</span>`;
   toggle.onclick = () => {
     const shown = input.type === "password";

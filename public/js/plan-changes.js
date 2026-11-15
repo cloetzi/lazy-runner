@@ -156,7 +156,7 @@ export function changeHtml(change, { today, unit, tag = "span" } = {}) {
 // The button that takes `change` back, named for a screen reader by what
 // it does to `title`; empty when it can't be taken back. On a row it
 // carries the change's id in data-undo; in a sheet (`sheet`) it closes the
-// sheet with "undo". `classes` are the button's (a link on a day's line);
+// sheet with "undo". `classes` are the button's (quiet on a day's line);
 // `disabled` while another change is on its way.
 export function undoButton(change, title = change?.title, { sheet = false, classes = "secondary small", disabled = false } = {}) {
   const label = undoLabel(change);

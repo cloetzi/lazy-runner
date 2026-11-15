@@ -106,7 +106,7 @@ export function openRoutineDaySheet({ day, routine, unit, today, on, change = nu
         ${routine.workout ? `<a class="button secondary small" href="/#workout/${routine.workout.id}">Open workout</a>` : ""}
         ${on.onEdit ? `<button class="secondary small" value="edit">${oneOff ? "Edit" : "Edit the routine"}</button>` : ""}
       </div>
-      ${canRemove ? `<button class="link danger" value="remove">Remove from the calendar</button>` : ""}
+      ${canRemove ? `<div class="danger-zone"><button class="quiet small danger" value="remove">Remove from the calendar</button></div>` : ""}
     </form>`;
 
   const later = dialog.querySelector(".move-later");
@@ -209,7 +209,7 @@ export function openRoutineSheet({ routine = null, date, once = false, unit, tod
       </label>
       <p class="form-error" role="alert" hidden></p>
       <button class="primary" type="submit">${editing ? "Save" : "Plan"}</button>
-      ${editing && onEnd ? `<button class="link danger" type="button" data-end>${routine.starts_on < today ? "Stop this routine" : "Delete this routine"}</button>` : ""}
+      ${editing && onEnd ? `<div class="danger-zone"><button class="quiet small danger" type="button" data-end>${routine.starts_on < today ? "Stop this routine" : "Delete this routine"}</button></div>` : ""}
     </form>`;
   const form = dialog.querySelector("form");
   const error = form.querySelector(".form-error");

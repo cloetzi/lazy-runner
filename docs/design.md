@@ -29,11 +29,35 @@ components, pages, player, figure.
 - **Tokens** (one `:root`, one dark override, and an Increase Contrast
   override for each): colours (`--bg`, `--surface`, `--text`, `--muted`,
   `--accent` for fills and primary actions, `--accent-ink` / `--accent-tint`
-  for quiet accents, `--link` for links in text, `--rest` for rest screens,
-  `--danger`, and the figure's `--figure*`, `--accent-far` and `--prop`), type (`--text-xs` to `--text-2xl`, `--display-*` for
-  the player), spacing (`--space-1` to `--space-6`, 4px base), radii, and
-  widths (`--measure` for every page, `--wide` for grids beside the
-  sidebar). A new rule uses the nearest token, never a raw value.
+  for quiet accents, `--link` for links, `--rest` for rest screens,
+  `--success`, `--warning` and `--danger` (the first two with an ink and a
+  tint), and the figure's `--figure*`, `--accent-far` and `--prop`), type
+  (`--text-xs` to `--text-2xl`, `--display-*` for the player), spacing
+  (`--space-1` to `--space-6`), control heights (`--control-sm`, `-md`,
+  `-lg`), radii, and widths (`--measure` for every page, `--wide` for grids
+  beside the sidebar). A new rule uses the nearest token, never a raw value.
+- **The root is 17px**, on purpose (`html { font-size: 106.25% }`): every rem
+  and token is measured against it, so `--space-1` is 4.25px and body text
+  (`--text-md`) 18px. Media queries use the browser's 16px, so `60rem` there
+  is 960px.
+- **Colour roles**: orange has one job. *Action* is solid `--accent`, at most
+  one per view or sheet (the first waiting proposal on Coach, the up-next
+  workout's Start). *Now* is `--accent-ink` on `--accent-tint`: today, the
+  current nav item, the up-next badge. *Done* is `--success` (done marks, the
+  finish badge, achieved goals), *watch out* is `--warning` (sync problems,
+  open concerns, changed gear), and `--danger` is for deleting and for
+  errors.
+  Everything else (plus buttons, sheet icons, disclosure arrows) is neutral.
+- **Buttons**: three kinds, `.primary`, `.secondary` and `.quiet` (no
+  outline, text colour, for small actions such as Edit or Tidy up), in three
+  sizes, `.small`, the default and `.large`, each a control height with its
+  own type size; nothing tappable is under `--control-sm` (about 47px) but
+  the month grid's date, whose whole day cell takes the tap. `.large`
+  is for the session screens and a page's one main action. Underlined text
+  (`a.link`, in `--link`) is only for links that go somewhere. Anything that
+  deletes or discards adds `.danger` (danger ink, a danger outline on a
+  secondary) and sits apart from the safe actions: under a hairline at the
+  end of a sheet (`.danger-zone`), or at the far end of a row.
 - **Headings**: one `h1` per view (the exercise name in the player), card
   and section titles `h2`, nothing skipped. A sheet opens with `showSheet()`
   (`html.js`), which names it by its heading.
@@ -58,8 +82,9 @@ components, pages, player, figure.
   at the same left edge.
 - **Accessibility in the smoke test**: `test/e2e/smoke.test.js` runs
   axe-core (WCAG A and AA, best practices) on the main screens and sheets.
-- **Calendar marks**: done filled, planned outlined, up next filled in
-  `--accent`, missed dashed, skipped struck through (`.mark` in `app.css`).
+- **Calendar marks**: done filled in `--success`, planned outlined, up next
+  filled in `--accent`, missed dashed, skipped struck through (`.mark` in
+  `app.css`).
 
 ## Exercise figures
 

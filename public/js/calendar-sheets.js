@@ -129,7 +129,7 @@ export function openSessionSheet({ session, today, on, notes = [], change = null
         ${logged ? `<a class="button secondary small" href="/#session/${session.id}">See the log</a>` : ""}
         ${can ? `<button class="secondary small" value="skip">Skip</button>` : ""}
       </div>
-      ${can ? `<button class="link danger" value="remove">Remove from the calendar</button>` : ""}
+      ${can ? `<div class="danger-zone"><button class="quiet small danger" value="remove">Remove from the calendar</button></div>` : ""}
     </form>`;
 
   const later = dialog.querySelector(".move-later");
@@ -353,7 +353,7 @@ export function openActivitySheet({ activity, unit, today, on, notes = [] }) {
         <button class="secondary small" value="note">Save note</button>
       </div>
       ${notesList(notes)}
-      <button class="link danger" value="delete">Delete the activity</button>
+      <div class="danger-zone"><button class="quiet small danger" value="delete">Delete the activity</button></div>
     </form>`;
   const form = dialog.querySelector("form");
   // A tap on the picked one takes it back.
@@ -384,7 +384,7 @@ export function openRpeSheet({ activity, unit, onRpe, today = activity.date }) {
       <p class="rpe-about"><span class="sport-tile small" aria-hidden="true">${icon(sportIcon(activity.sport))}</span>
         <span><strong>${escape(activityTitle(activity))}</strong>${facts.length ? `<br><span class="muted">${escape(facts.join(" · "))}</span>` : ""}</span></p>
       ${rpePicker({ answer: true })}
-      <button class="link" value="close">Not now</button>
+      <button class="quiet small" value="close">Not now</button>
       <p class="muted">You can turn this question off in Settings.</p>
     </form>`;
   dialog.onclose = () => {

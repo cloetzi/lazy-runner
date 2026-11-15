@@ -33,7 +33,7 @@ function saveOnSubmit(dialog, form, read, save) {
     event.preventDefault();
     const { fields, problems } = read();
     if (problems.length) return show(problems.join(" "));
-    const button = form.querySelector("button.primary");
+    const button = form.querySelector("button[type=submit]");
     busy(button);
     try {
       const problem = await save(fields);
@@ -57,7 +57,7 @@ function openAgentNoteSheet({ note, onDelete }) {
       <p class="entry-body">${escape(note.body)}</p>
       <p class="muted small-print">Written by ${escape(authorLabel(note))}. An agent's note stays as it wrote it; write a note of your own to answer it.</p>
       <p class="form-error" role="alert" hidden></p>
-      <button class="link danger" type="button" data-delete>${icon("trash")}Delete the note</button>
+      <div class="danger-zone"><button class="quiet small danger" type="button" data-delete>${icon("trash")}Delete the note</button></div>
     </form>`;
   const form = dialog.querySelector("form");
   form.querySelector("[data-close]").addEventListener("click", () => dialog.close());
@@ -128,7 +128,7 @@ export function openNoteSheet({ note = null, kind = "note", date = "", about = [
       </label>
       <p class="form-error" role="alert" hidden></p>
       <button class="primary" type="submit">Save</button>
-      ${editing ? `<button class="link danger" type="button" data-delete>${icon("trash")}Delete the note</button>` : ""}
+      ${editing ? `<div class="danger-zone"><button class="quiet small danger" type="button" data-delete>${icon("trash")}Delete the note</button></div>` : ""}
     </form>`;
 
   const form = dialog.querySelector("form");
@@ -195,7 +195,7 @@ export function openGoalSheet({ goal = null, onSave, onStatus, onDelete }) {
       <div class="goal-actions">
         <button class="secondary small" type="button" data-status="achieved">${icon("check")}Achieved</button>
         <button class="secondary small" type="button" data-status="dropped">Drop it</button>
-        <button class="link danger" type="button" data-delete>${icon("trash")}Delete</button>
+        <button class="quiet small danger" type="button" data-delete>${icon("trash")}Delete</button>
       </div>` : ""}
     </form>`;
   const form = dialog.querySelector("form");
@@ -258,10 +258,10 @@ export function openTidySheet({ count, onTidy }) {
       </label>
       <p class="tidy-count muted" aria-live="polite"></p>
       <p class="form-error" role="alert" hidden></p>
-      <button class="primary" type="submit" disabled>Delete</button>
+      <button class="secondary danger" type="submit" disabled>Delete</button>
     </form>`;
   const form = dialog.querySelector("form");
-  const button = form.querySelector("button.primary");
+  const button = form.querySelector("button[type=submit]");
   const said = form.querySelector(".tidy-count");
   let found = 0;
   // The count for the day picked; an answer for an earlier pick is dropped.

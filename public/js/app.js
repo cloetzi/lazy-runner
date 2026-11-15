@@ -209,7 +209,7 @@ function drawSetup() {
   card.innerHTML = `
     <div class="setup-head">
       <h2 id="setup-title">Getting set up</h2>
-      <button class="link" type="button" id="setup-hide">Hide</button>
+      <button class="quiet small" type="button" id="setup-hide">Hide</button>
     </div>
     ${setupList(rows)}`;
   $("setup-hide").onclick = () => {
@@ -340,7 +340,7 @@ function renderToday() {
       <h2>${escape(title)}</h2>
       <p>You did part of ${escape(title)} today: ${done} of ${exercises} exercises.</p>
       <ul class="list parts">${parts}</ul>
-      <button class="primary" id="start">Pick up again</button>
+      <button class="primary large" id="start">Pick up again</button>
       <button class="secondary" id="pick">Pick another</button>`;
     $("start").onclick = startSession;
     $("pick").onclick = () => go("#workouts");
@@ -371,9 +371,9 @@ function renderToday() {
       ${offlineNote}
       <ul class="list parts">${parts}</ul>
       <p class="muted">About ${estimated_minutes} minutes</p>
-      <button class="primary" id="start">Start</button>
+      <button class="primary large" id="start">Start</button>
       <a class="button secondary" href="/calendar.html">Plan my week</a>
-      <button class="link" id="pick">Pick another</button>`;
+      <button class="quiet" id="pick">Pick another</button>`;
     $("start").onclick = startSession;
     $("pick").onclick = () => go("#workouts");
     return;
@@ -391,7 +391,7 @@ function renderToday() {
       ${next.note ? `<p class="planner-note">${escape(next.note)}</p>` : ""}
       ${authorLine(plannedBy(next, state.today.date), "p")}
       ${offlineNote}
-      <button class="primary" id="bring-forward">Do it today</button>
+      <button class="primary large" id="bring-forward">Do it today</button>
       <button class="secondary" id="pick">Pick another</button>` : `
       <p class="muted">Rest day</p>
       <h2>${heading}</h2>
@@ -399,7 +399,7 @@ function renderToday() {
       ${offlineNote}
       <ul class="list parts">${parts}</ul>
       <p class="muted">About ${estimated_minutes} minutes</p>
-      <button class="primary" id="start">Train anyway</button>
+      <button class="primary large" id="start">Train anyway</button>
       <button class="secondary" id="pick">Pick another</button>`;
     if ($("start")) $("start").onclick = startSession;
     if ($("bring-forward")) $("bring-forward").onclick = (event) => moveToToday(next, event.currentTarget);
@@ -416,12 +416,12 @@ function renderToday() {
     ${offlineNote}
     <ul class="list parts">${parts}</ul>
     <p class="muted">About ${estimated_minutes} minutes</p>
-    <button class="primary" id="start">${status === "skipped" ? "Train anyway" : "Start"}</button>
+    <button class="primary large" id="start">${status === "skipped" ? "Train anyway" : "Start"}</button>
     ${status === "skipped" ? "" : `<div class="secondary-actions">
       ${planned ? `<button class="secondary" id="move">Move</button>` : ""}
       <button class="secondary" id="skip-today">Skip today</button>
     </div>`}
-    <button class="link" id="pick">${source === "picked" ? "Pick another" : "Train something else"}</button>`;
+    <button class="quiet" id="pick">${source === "picked" ? "Pick another" : "Train something else"}</button>`;
   $("start").onclick = startSession;
   $("pick").onclick = () => go("#workouts");
   if ($("skip-today")) $("skip-today").onclick = skipToday;
@@ -497,7 +497,7 @@ function renderActivities() {
       <ul class="list day-sessions">${plans.map((d) => routineRow(d, todayRoutine(d), state.distanceUnit, "data-today-routine", state.today.date)).join("")}</ul>` : ""}
     ${list.length ? `<h2>Activities today</h2>
       <ul class="list day-sessions">${list.map((a) => activityRow(a, state.distanceUnit, "data-today-activity", fulfils.get(activityKey(a)))).join("")}</ul>` : ""}
-    <button class="link" id="log-activity">${icon("plus")}Log an activity</button>`;
+    <button class="quiet" id="log-activity">${icon("plus")}Log an activity</button>`;
   renderWeek();
 }
 
@@ -676,7 +676,7 @@ function workoutCard(workout, level) {
       </a>
       <div class="workout-actions">
         <a class="button secondary small" href="${routeHash("workout", workout.id)}">View</a>
-        <button class="${main ? "primary" : "secondary"} small" data-start="${workout.id}">Start</button>
+        <button class="${workout.up_next ? "primary" : "secondary"} small" data-start="${workout.id}">Start</button>
       </div>
     </article>`;
 }
@@ -742,8 +742,8 @@ function renderWorkoutOwn() {
     <details class="more-actions">
       <summary title="More">${icon("more")}<span class="visually-hidden">More for this workout</span></summary>
       <div class="more-actions-list">
-        <button class="secondary small" data-own="duplicate">Duplicate</button>
-        <button class="secondary small danger" data-own="delete">${icon("trash")}Delete</button>
+        <button class="quiet small" data-own="duplicate">Duplicate</button>
+        <div class="danger-zone stretch"><button class="quiet small danger" data-own="delete">${icon("trash")}Delete</button></div>
       </div>
     </details>`;
 }
@@ -1615,22 +1615,27 @@ function nextExercise() {
 }
 
 // End session asks: keep going, finish with what was done, or discard. With
-// nothing logged yet, discarding comes first.
+// nothing logged yet discarding comes first; after that it is a delete.
 function quit() {
   const running = state.timer && countdown.isRunning(state.timer);
   if (running) togglePause();
   const { exercises, done, sets } = sessionProgress(state.run);
   const sheet = $("end-sheet");
+  // With nothing logged, Discard loses nothing and is the likely choice. With
+  // sets logged it throws them away: it looks it, and sits apart under a line.
   const keep = `<button class="${sets ? "primary" : "secondary"}" value="keep">Keep going</button>`;
   const finish = `<button class="secondary" value="finish">Finish here</button>`;
-  const discard = `<button class="${sets ? "secondary" : "primary"}" value="discard">Discard</button>`;
+  const discard = sets
+    ? `<div class="danger-zone stretch"><button class="secondary danger" value="discard">Discard</button></div>`
+    : `<button class="primary" value="discard">Discard</button>`;
   sheet.innerHTML = `
     <form method="dialog" class="howto">
       <h2>End this session?</h2>
       <p class="muted">${sets
         ? `${done} of ${exercises} exercises done, ${sets} ${sets === 1 ? "set" : "sets"}. Finish here keeps them${state.run.pickedUp ? "" : "; Discard deletes the session"}.`
         : "Nothing logged yet."}</p>
-      <div class="choices">${state.run.pickedUp ? keep + finish : sets ? keep + finish + discard : discard + keep + finish}</div>
+      ${state.run.pickedUp ? `<div class="choices">${keep + finish}</div>`
+        : sets ? `<div class="choices">${keep + finish}</div>${discard}` : `<div class="choices">${discard + keep + finish}</div>`}
     </form>`;
   sheet.returnValue = "keep";
   sheet.addEventListener("close", () => {
@@ -2024,11 +2029,11 @@ function renderParked(view, note = "") {
     <h2>${escape(run.title)}</h2>
     <p>Started ${escape(started)} · ${escape(where)}</p>
     ${note ? `<p><strong>${escape(note)}</strong></p>` : ""}
-    <button class="primary" data-parked="resume">Resume</button>
+    <button class="primary large" data-parked="resume">Resume</button>
     <div class="secondary-actions">
       <button class="secondary" data-parked="finish">Finish with what I did</button>
-      ${run.pickedUp ? "" : `<button class="secondary" data-parked="discard">Discard</button>`}
-    </div>`;
+    </div>
+    ${run.pickedUp ? "" : `<div class="danger-zone"><button class="secondary small danger" data-parked="discard">Discard</button></div>`}`;
 }
 
 function askAboutParked() {
