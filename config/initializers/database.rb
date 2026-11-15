@@ -9,8 +9,12 @@ Sequel.extension :fiber_concurrency
 # (config/initializers/time_zone.rb).
 Sequel.default_timezone = :utc
 
+# Whatever the app writes (the database, its backups, the session secret)
+# is readable by its own user only, whatever umask it was started with.
+File.umask(File.umask | 0o077)
+
 DB = Database.connect
-# Single-user app on SQLite: the schema is brought up to date on every boot,
+# The schema is brought up to date on every boot,
 # before the models load and read it, so `docker run` is all it takes.
 Database.migrate!(DB)
 Sequel::Model.db = DB

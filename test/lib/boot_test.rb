@@ -26,7 +26,7 @@ describe "booting against an existing database" do
     JSON.parse(output.lines.reverse.find { it.start_with?("RESULT ") }.delete_prefix("RESULT "))
   end
 
-  it "takes over a 0.1.0 database, seeds it, copies the one-user data aside and opens no connection" do
+  it "takes over a 0.1.0 database, seeds it, copies the one-user data aside, keeps both private and opens no connection" do
     Dir.mktmpdir do |dir|
       database = File.join(dir, "production.sqlite3")
       # Release 0.1.0 as ActiveRecord left it, with a workout of the user's
@@ -41,14 +41,19 @@ describe "booting against an existing database" do
 
       after = run_app(database, <<~RUBY)
         connections = DB.pool.size
-        { connections:, current: Database.current?(DB), exercises: Exercise.count, sessions: DB[:sessions].count }
+        { connections:, current: Database.current?(DB), exercises: Exercise.count, sessions: DB[:sessions].count,
+          max_body: Iodine::DEFAULT_SETTINGS[:max_body] }
       RUBY
 
-      _(after).must_equal("current" => true, "connections" => 0, "exercises" => Exercise.count, "sessions" => 0)
-      # Data from before users is nobody's: it goes, kept in a copy.
-      Sequel.sqlite(File.join(dir, "production.before-per-user.sqlite3")) do |copy|
-        _(copy[:sessions].select_map(:id)).must_equal [900]
+      # Request bodies of 1 MB at most.
+      _(after).must_equal("current" => true, "connections" => 0, "exercises" => Exercise.count, "sessions" => 0, "max_body" => 1)
+      # Data from before users is nobody's: it goes, kept in a copy, which
+      # like the database itself only the app's user can read.
+      copy = File.join(dir, "production.before-per-user.sqlite3")
+      Sequel.sqlite(copy) do |db|
+        _(db[:sessions].select_map(:id)).must_equal [900]
       end
+      _([database, copy].map { File.stat(it).mode & 0o777 }).must_equal [0o600, 0o600]
       # No users yet: the log carries the code that makes the owner.
       _(@output).must_match(/the setup code [A-Z0-9]{5}(-[A-Z0-9]{1,5}){5}\b/)
     end

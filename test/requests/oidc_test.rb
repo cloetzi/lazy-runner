@@ -288,7 +288,10 @@ describe "signing in with an OpenID Connect provider" do
       _(newcomer.owner).must_equal false
       _(newcomer.welcomed_at).must_be_nil
       _(newcomer.password?).must_equal false
-      _(UserIdentity.everyone.first!(subject: "new").user_id).must_equal newcomer.id
+      identity = UserIdentity.everyone.first!(subject: "new")
+      _(identity.user_id).must_equal newcomer.id
+      # The device is signed in with it, for unlinking to sign it out.
+      _(SignedInDevice.of(newcomer).select_map(:user_identity_id)).must_equal [identity.id]
     end
 
     it "makes no account before the install has its owner, auto sign-up or not" do
@@ -379,6 +382,41 @@ describe "signing in with an OpenID Connect provider" do
 
       _(last_response.status).must_equal 204
       _(UserIdentity.count).must_equal 0
+    end
+
+    it "signs out the other devices that signed in with it, and keeps this one" do
+      identity = link(user, "sub-1")
+      devices = -> { SignedInDevice.of(user).order(:id).select_map(:user_identity_id) }
+      2.times do
+        sign_out!
+        sign_in_at_provider(sub: "sub-1")
+      end
+      sign_out!
+      sign_in(user)
+      _(devices.()).must_equal [identity.id, identity.id, nil]
+
+      sign_out!
+      sign_in_at_provider(sub: "sub-1")
+      delete "/api/account/identities/#{identity.id}"
+
+      _(last_response.status).must_equal 204
+      # The one asking stays signed in, and with its identity gone it names none.
+      _(devices.()).must_equal [nil, nil]
+      _(signed_in_as).must_equal user.username
+    end
+
+    it "revokes the API tokens made on a device signed in with it" do
+      identity = link(user, "sub-1")
+      post_json "/api/account/tokens", name: "made with a password"
+      sign_out!
+      sign_in_at_provider(sub: "sub-1")
+      post_json "/api/account/tokens", name: "made with the identity"
+      _(ApiToken.order(:id).select_map(:user_identity_id)).must_equal [nil, identity.id]
+
+      delete "/api/account/identities/#{identity.id}"
+
+      _(last_response.status).must_equal 204
+      _(ApiToken.select_map(:name)).must_equal ["made with a password"]
     end
 
     it "won't unlink the only way in" do

@@ -33,10 +33,11 @@ class ApiToken < Record
   end
 
   # A new token for the user: the record, and the token itself, which is
-  # never seen again.
-  def self.issue!(user, name)
+  # never seen again. Made on a device signed in with the OIDC provider, it
+  # names that identity, so unlinking it revokes the token too.
+  def self.issue!(user, name, user_identity_id: nil)
     secret = "#{PREFIX}#{SecureRandom.urlsafe_base64(32)}"
-    [Current.set(user:) { create(name:, digest: digest(secret)) }, secret]
+    [Current.set(user:) { create(name:, digest: digest(secret), user_identity_id:) }, secret]
   end
 
   # The token this secret is, whoever's it is, else nil: how a request

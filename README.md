@@ -147,11 +147,21 @@ and the person joining picks their own username and password. There the
 owner also resets a forgotten password to a temporary one, which the user
 changes when they next sign in, and removes a user with their data. A
 first sign-in shows a welcome screen: units, the gear you own and the
-example programs to import. From a shell,
-`bundle exec rake users:create_owner USERNAME=<name>` does the same without a
-code, and `bundle exec rake users:reset_password USERNAME=<name>` sets a
-forgotten password, signing out every device and revoking the API tokens.
-Both ask for the password, or take `PASSWORD=`.
+example programs to import.
+
+**Getting back in.** There is no email to reset a password by, so the owner
+resets one from a shell where the app runs, for any user, themselves
+included. In the container that is
+`docker exec -it <container> bundle exec rake users:reset_password USERNAME=<name>`
+(from a checkout, `RAGE_ENV=production bundle exec rake ...`). It prints a
+temporary password to sign in with, which has to be changed at once; their
+devices are signed out, their API tokens revoked, their sign-ins with an
+OpenID Connect provider unlinked and a lockout lifted. It takes no password
+of your choosing, so none ends up in the shell's history.
+`rake users:list` names the users, owners first, for a forgotten username,
+and `rake users:create_owner USERNAME=<name>` makes the owner of a fresh
+install without the setup code (it asks for the password, or takes
+`PASSWORD=` for a scripted install).
 
 **Each user's data is their own.** The exercise library and the equipment
 catalogue are shared; workouts, the calendar, history, weights, settings
@@ -181,7 +191,9 @@ on first sign-in, named after their `preferred_username`, so the provider's
 own access rules decide who joins. Optional: `OIDC_CLIENT_AUTH_METHOD=client_secret_post`
 and `OIDC_SIGNING_ALG` (RS256 by default). The owner account is still made
 with the setup code. Changing a password (signing out the other devices) or
-an owner's reset unlinks the user's sign-ins, as it revokes their API tokens.
+an owner's reset unlinks the user's sign-ins, as it revokes their API tokens,
+and unlinking one signs out the other devices that signed in with it and
+revokes the API tokens made on them.
 
 Set `TZ` to your time zone (an IANA name, such as `-e TZ=America/Vancouver`) so
 that "today" is your day for API calls that don't send a date; it is UTC

@@ -12,3 +12,7 @@ CHANGELOG.md
 version.txt
 release-please-config.json
 .release-please-manifest.json
+# Secrets in a working tree never go into the image.
+**/.env*
+**/*.pem
+**/*.key

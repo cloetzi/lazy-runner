@@ -336,8 +336,10 @@ class AuthApp < Roda
       end
     end
 
+    # The identity at the OIDC provider it signed in with, if it did, so
+    # unlinking that identity signs the device out (UserIdentity#unlink!).
     active_sessions_insert_hash do
-      super().merge(device: request.user_agent.to_s[0, 200].presence)
+      super().merge(device: request.user_agent.to_s[0, 200].presence, user_identity_id: @oidc_identity_id)
     end
 
     # Rodauth's { "error": ..., "field-error": [field, message] } in the
@@ -496,6 +498,7 @@ class AuthApp < Roda
         if identity
           user_id = identity.user_id
           Current.set(user: User.with_pk!(user_id)) { identity.update(username: name || identity.username, last_used_at: now) }
+          @oidc_identity_id = identity.id
         else
           user_id, refusal = oidc_new_account(intent, claims, issuer:, subject:, name:, now:)
           oidc_finish(refusal, intent) if refusal
@@ -526,7 +529,8 @@ class AuthApp < Roda
 
           username = Oidc.username(claims, taken: ->(candidate) { !db[:users].where(username: candidate).empty? })
           id = db[:users].insert(username:, owner: false, created_at: now, updated_at: now)
-          Current.set(user: User.with_pk!(id)) { UserIdentity.create(issuer:, subject:, username: name, last_used_at: now) }
+          identity = Current.set(user: User.with_pk!(id)) { UserIdentity.create(issuer:, subject:, username: name, last_used_at: now) }
+          @oidc_identity_id = identity.id
           [id, nil]
         end
       end

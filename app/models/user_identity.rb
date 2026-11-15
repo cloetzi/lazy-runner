@@ -20,13 +20,18 @@ class UserIdentity < Record
   # Unlinks it, unless it is the only way the user has to sign in: one at
   # the install's provider, for a user without a password (there is one
   # identity per provider). One at a provider the install no longer uses
-  # signs nobody in and can always go.
-  def unlink!
+  # signs nobody in and can always go. The devices that signed in with it
+  # are signed out, but for the one asking (`keep`, its key as
+  # SignedInDevice.current_key gives it), and the API tokens made on them
+  # revoked: whoever could use the identity is out too.
+  def unlink!(keep: nil)
     db.transaction do
       if issuer == Oidc.settings&.issuer && !user.password?
         raise Refused, "Set a password first: this is the only way you sign in"
       end
 
+      SignedInDevice.of(user).where(user_identity_id: id).exclude(session_id: keep).delete
+      ApiToken.of(user_id).where(user_identity_id: id).delete
       destroy
     end
   end

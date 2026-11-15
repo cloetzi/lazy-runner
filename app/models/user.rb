@@ -22,13 +22,19 @@ class User < Record
   def reset_password!
     raise Refused, "Change your own password under Account" if id == Current.user!.id
 
+    temporary_password!
+  end
+
+  # The same from a shell (`rake users:reset_password`), for anyone, the
+  # owner included: how an owner who lost their password gets back in.
+  def temporary_password!
     temporary = SetupCode.random(TEMPORARY_LENGTH).scan(/.{4}/).join("-")
     set_password!(temporary, temporary: true)
     temporary
   end
 
-  # Sets the password from code (the owner's reset, or `rake
-  # users:reset_password`): no current password needed. As any change made
+  # Sets the password from code (a reset, by the owner or from a shell): no
+  # current password needed. As any change made
   # from code, it signs out every device and revokes the API tokens
   # (lib/auth_app.rb, after_change_password); it also lifts a lockout, so
   # the user can get in. `temporary`: they must change it first.

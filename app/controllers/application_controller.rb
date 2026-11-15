@@ -91,6 +91,9 @@ class ApplicationController < RageController::API
 
   private
 
+  # Rodauth for this request (lib/auth_app.rb): its session and devices.
+  def rodauth = request.env.fetch("rodauth")
+
   def password_chosen!
     return unless Current.user&.password_change_required
 

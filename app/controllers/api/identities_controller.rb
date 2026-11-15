@@ -24,13 +24,16 @@ module Api
     end
 
     # Unlink a sign-in.
-    # @description It no longer signs you in. Refused (409) when it is the
-    #   only way you have to sign in: set a password first.
+    # @description It no longer signs you in: the other devices that signed
+    #   in with it are signed out and the API tokens made on a device signed
+    #   in with it revoked (ones from before that was recorded aren't known:
+    #   sign out the other devices for them). Refused (409) when it is the only
+    #   way you have to sign in: set a password first.
     # @response 204
     # @response 404 #/components/responses/NotFound
     # @response 409 #/components/responses/Conflict
     def destroy
-      identities.find!(params[:id]).unlink!
+      identities.find!(params[:id]).unlink!(keep: SignedInDevice.current_key(rodauth))
       head :no_content
     end
 

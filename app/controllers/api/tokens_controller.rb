@@ -17,7 +17,9 @@ module Api
     # @response 201 #/components/schemas/NewApiToken
     # @response 422 #/components/responses/Invalid
     def create
-      token, secret = ApiToken.issue!(Current.user!, params[:name])
+      user = Current.user!
+      identity = SignedInDevice.identity_id(user, SignedInDevice.current_key(rodauth))
+      token, secret = ApiToken.issue!(user, params[:name], user_identity_id: identity)
       render json: { token: token.as_json, secret: }, status: :created
     end
 

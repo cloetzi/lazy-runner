@@ -51,6 +51,8 @@ erDiagram
     users ||--o{ account_active_session_keys : "signed in on"
     users ||--o{ api_tokens : "lets in"
     users ||--o{ user_identities : "signs in as"
+    user_identities |o--o{ account_active_session_keys : "signed in"
+    user_identities |o--o{ api_tokens : "made under"
     users ||--o{ user_equipment : owns
     equipment ||--o{ user_equipment : "owned as"
 
@@ -325,6 +327,7 @@ erDiagram
         string name "what it is for"
         string digest UK "SHA-256 of the token, shown once"
         datetime last_used_at "to the minute"
+        int user_identity_id FK "made on a device signed in with it, if any"
     }
     invites {
         int id PK
@@ -337,6 +340,7 @@ erDiagram
         string session_id "HMAC of the cookie's key"
         string device "user agent at sign-in; signed in at created_at"
         datetime last_use
+        int user_identity_id FK "the identity it signed in with, if any"
     }
 ```
 
@@ -347,7 +351,9 @@ erDiagram
   passwords in a row and the lockout they lead to; and one row per signed-in
   device. `user_identities` are the identities at the install's OpenID
   Connect provider that sign a user in (one per user and provider): a user
-  has a password, an identity or both.
+  has a password, an identity or both. A device signed in with one names
+  it, as does a token made there, so unlinking the identity signs that
+  device out and revokes the token.
   `api_tokens` let an assistant or a script in as the user (revoking deletes one).
 
 - **Inventory:** the `equipment` catalogue, and what each exercise needs

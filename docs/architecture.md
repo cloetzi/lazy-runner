@@ -44,7 +44,12 @@ flowchart LR
   other site frame the app. The API reference page (`lib/api_reference.rb`)
   serves an exact Swagger UI release kept in `lib/api_reference/swagger-ui`
   (its `package.json` says which), under its own CSP, and Rage's OpenAPI
-  document at `/api/openapi/json`.
+  document at `/api/openapi/json`. Iodine takes request bodies of 1 MB at
+  most (`config/initializers/request_limits.rb`), and in production the log
+  is Rage's JSON lines with the path and messages escaped
+  (`lib/log_formatter.rb`), so a client can't add fields to a line. New
+  files the app writes are its user's only (umask 077), and other users of
+  the machine can't read the database (`Database.keep_private`).
 - **Accounts and sign-in** (`lib/auth_app.rb`, `config/initializers/sign_in.rb`):
   [Rodauth](https://rodauth.jeremyevans.net) as Roda middleware inside
   Rage's stack, on the app's own Sequel connection. Roda's encrypted session
@@ -69,8 +74,10 @@ flowchart LR
   keep the worker hashing. A throttle holds the latest 10,000 usernames,
   so a flood can't grow it either. While there are no
   users, the boot logs a setup code (`lib/setup_code.rb`) that creates the
-  owner on the setup screen; `rake users:create_owner` and
-  `rake users:reset_password` do the same from a shell. The owner invites
+  owner on the setup screen, and `rake users:create_owner` from a shell
+  (`lib/tasks/users.rake`). There `rake users:reset_password` gets anyone
+  back in, the owner included, with a temporary password
+  (`User#temporary_password!`), and `rake users:list` names them. The owner invites
   the others (`Invite`: a one-time link, `/signin.html#invite/<token>`, in
   the fragment so no log records it, for 7 days, kept as a digest and used
   up in the transaction that makes the account), and resets a password to
@@ -83,7 +90,10 @@ flowchart LR
   state and a nonce, and `AuthApp` signs in the user the identity is linked
   to (`user_identities`, by issuer and `sub`, never by a username or email
   the provider gives), joins with an invite, links it to the signed-in user
-  (Settings → Account), or, with `OIDC_AUTO_SIGNUP`, makes an account. The
+  (Settings → Account), or, with `OIDC_AUTO_SIGNUP`, makes an account. A
+  device signed in that way names the identity, so unlinking it also signs
+  out the other devices that used it and revokes the API tokens made on
+  them (`UserIdentity#unlink!`). The
   callback is a plain GET from the provider's site, which the `SameSite=Lax`
   cookie allows. Assistants and scripts sign
   in with personal API tokens (`ApiToken`, made in Settings): `AuthApp`
@@ -99,7 +109,9 @@ flowchart LR
   made, so `Session.find!(id)`, an association or an eager load all keep to
   that user, and any of them raises `Current::Missing` when nobody is signed
   in rather than reading everyone's. Blocks, steps and completions are
-  scoped through their parent (`workout_id IN (the user's workouts)`).
+  scoped through their parent (`workout_id IN (the user's workouts)`), and
+  saved or deleted only while that parent is the user's (`Record::OwnParent`);
+  a set log's step, a plain link, must be the user's too.
   Opting out is explicit and rare: `Model.everyone` (the seed loader's
   maintenance, finding an API token by its secret) and `Model.of(user_id)`.
   Model code reads the user only from `Current`; code working on someone

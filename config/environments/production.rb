@@ -1,3 +1,5 @@
+require_relative "../../lib/log_formatter"
+
 Rage.configure do
   # Specify the number of server processes to run. Defaults to number of CPU cores.
   # One process: SQLite and a single user need no more.
@@ -11,5 +13,6 @@ Rage.configure do
   $stdout.sync = true
   config.logger = Rage::Logger.new(STDOUT)
   config.log_level = Logger::INFO
-  config.log_formatter = Rage::JSONFormatter.new
+  # Rage's JSON lines, with the path and messages escaped (lib/log_formatter.rb).
+  config.log_formatter = LogFormatter.new
 end

@@ -44,6 +44,25 @@ describe Database do
     end
   end
 
+  it "keeps the database and its write-ahead log files from other users" do
+    Dir.mktmpdir do |dir|
+      fresh = "#{dir}/fresh.sqlite3"
+      Database.connect("sqlite://#{fresh}").then { it.create_table(:t) { Integer :a } && it.disconnect }
+      _(File.stat(fresh).mode & 0o777).must_equal 0o600
+
+      # As a release before this one left it.
+      old = "#{dir}/old.sqlite3"
+      files = %W[#{old} #{old}-wal #{old}-shm]
+      FileUtils.cp(fresh, old)
+      files.each { FileUtils.touch(it) && File.chmod(0o644, it) }
+      db = Database.connect("sqlite://#{old}").tap(&:test_connection)
+
+      # A group the operator gave it keeps reading it.
+      _(files.map { File.stat(it).mode & 0o777 }).must_equal [0o640] * 3
+      db.disconnect
+    end
+  end
+
   # SQLite can't change a column default or add a constraint in place, so
   # Sequel copies the table, and the copy has none of the CHECK constraints
   # or partial indexes: a migration doing that has to make them again.

@@ -114,6 +114,11 @@ class Record
     define_singleton_method(:everyone) { dataset.unfiltered }
     define_singleton_method(:of) { |user_id| dataset.unfiltered.where(column => user_id) } if columns.include?(:user_id)
     include PerUser if columns.include?(:user_id)
+    return unless parent_key
+
+    define_singleton_method(:parent_key) { parent_key }
+    define_singleton_method(:own_parents, &parents)
+    include OwnParent
   end
 
   # What an agent writes (`created_by: llm`) carries its name: the name of
@@ -155,6 +160,31 @@ class Record
       return if user_id == Current.user!.id
 
       raise Current::Mismatch, "this #{model} is another user's"
+    end
+  end
+
+  # The same for a record that is a user's through its parent, which has no
+  # user_id to compare: it is saved or deleted only while its parent (a
+  # block's workout) is the signed-in user's, so no code can attach one to
+  # another user's workout, or change one of theirs.
+  module OwnParent
+    def before_save
+      own_parent!
+      super
+    end
+
+    def before_destroy
+      own_parent!
+      super
+    end
+
+    private
+
+    def own_parent!
+      id = self[model.parent_key]
+      return if id.nil? || !model.own_parents.where(id:).empty?
+
+      raise Current::Mismatch, "this #{model}'s #{model.parent_key.to_s.delete_suffix("_id")} is another user's"
     end
   end
 

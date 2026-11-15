@@ -67,6 +67,15 @@ class SetLog < Record
     }
   end
 
+  # The step is a plain link, not keyed by the user: one of another user's
+  # workouts is refused, as Record.per_user refuses their records.
+  def before_save
+    if step_id && (new? || column_changed?(:step_id)) && Step.where(id: step_id).empty?
+      raise Current::Mismatch, "this set's step is another user's"
+    end
+    super
+  end
+
   # Without a plan of its own, a new log takes its step's, and the planned
   # exercise was the one done.
   def before_validation

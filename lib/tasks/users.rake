@@ -1,35 +1,60 @@
 require "io/console"
 
-# Accounts from the command line, for the owner's own account: making it
-# without the setup code (tests, scripted installs) and resetting its
-# password, since there is no email to reset it by (the owner resets
-# others' in Settings, Users). PASSWORD may come from the environment;
-# otherwise it is asked for without echo.
+# Accounts from a shell on the server, for whoever runs the install: making
+# the owner without the setup code (scripted installs), finding a username
+# and getting a user back in, the owner included, since there is no email
+# to reset a password by (the owner resets others' in Settings, Users).
 namespace :users do
   desc "Create the owner account: rake users:create_owner USERNAME=name [PASSWORD=...]"
   task :create_owner do
     abort "This install already has users; sign in instead." unless User.empty?
 
     username = ENV.fetch("USERNAME") { abort "Set USERNAME." }
-    AuthApp.rodauth.create_account(login: username, password: password_from_env_or_prompt)
+    AuthApp.rodauth.create_account(login: username, password: owner_password)
     SetupCode.consume!
     puts "Created the owner account #{username}."
   rescue Rodauth::InternalRequestError => e
     abort "Not created: #{e.message}"
   end
 
-  desc "Set a user's password, sign out their devices and revoke their API tokens: rake users:reset_password USERNAME=name [PASSWORD=...]"
-  task :reset_password do
-    username = ENV.fetch("USERNAME") { abort "Set USERNAME." }
-    user = User.first(username:) or abort "No user #{username}."
+  desc "List the users, owners first: rake users:list"
+  task :list do
+    users = User.order(Sequel.desc(:owner), :username).all
+    abort "No users yet: create the owner with the setup code from the server's log." if users.empty?
 
-    user.set_password!(password_from_env_or_prompt)
-    puts "Set the password of #{user.username}, signed out their devices and revoked their API tokens."
+    users.each do |user|
+      notes = [("owner" if user.owner), ("must choose a new password" if user.password_change_required)].compact
+      puts [user.username, *notes].join("  ")
+    end
+  end
+
+  desc "Give a user a temporary password to sign in with, sign out their devices and revoke their API tokens: " \
+       "rake users:reset_password USERNAME=name"
+  task :reset_password do
+    # Taking the new password from the command line would leave it in the
+    # shell's history; the temporary one is changed at the next sign-in. A
+    # PASSWORD in the environment (a container's, for create_owner) is left be.
+    warn "PASSWORD is ignored: this gives a temporary password instead." if ENV["PASSWORD"].present?
+
+    username = ENV.fetch("USERNAME") { abort "Set USERNAME." }
+    user = User.first(username:) or abort "No user #{username}; rake users:list names them."
+
+    temporary = user.temporary_password!
+    puts <<~TEXT
+      #{user.username} can sign in with the temporary password
+
+        #{temporary}
+
+      and must choose a new one then. Their devices are signed out, their API tokens
+      revoked, their sign-ins with the OIDC provider unlinked and any lockout lifted.
+    TEXT
   rescue Rodauth::InternalRequestError => e
     abort "Not changed: #{e.message}"
   end
 
-  def password_from_env_or_prompt
+  # The owner's first password, from PASSWORD for a scripted install, else
+  # asked for without echo.
+  def owner_password
     ENV["PASSWORD"].presence || begin
       print "Password: "
       $stdin.noecho(&:gets).to_s.chomp.tap { puts }

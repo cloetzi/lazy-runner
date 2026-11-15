@@ -7,6 +7,17 @@ module SignedInDevice
 
   def self.of(user) = DB[TABLE].where(account_id: user.id)
 
+  # What the table keeps for the device `rodauth` answers (the HMAC of its
+  # session's key), nil when it has no session (an API token).
+  def self.current_key(rodauth)
+    key = rodauth.session[rodauth.session_id_session_key]
+    key && rodauth.compute_hmac(key)
+  end
+
+  # The identity at the OIDC provider the device with this key signed in
+  # with, if it did.
+  def self.identity_id(user, key) = key && of(user).where(session_id: key).get(:user_identity_id)
+
   def self.latest_first(user) = of(user).order(Sequel.desc(:last_use), Sequel.desc(:id))
 
   def self.as_json(row, current_key)

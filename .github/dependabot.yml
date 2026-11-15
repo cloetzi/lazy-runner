@@ -1,0 +1,15 @@
+# Keeps the actions the workflows pin by commit at their latest release, in
+# one pull request a week. Its title is a Conventional Commit (ci(deps): ...),
+# as release-please reads them.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: ci
+      include: scope
+    groups:
+      actions:
+        patterns: ["*"]

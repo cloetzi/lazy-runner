@@ -159,6 +159,27 @@ describe "one user's data, kept from another" do
     _(Current.set(user: @someone) { theirs.update(note: "theirs") }.note).must_equal "theirs"
   end
 
+  # Blocks, steps and finishes are a user's through their parent, and set
+  # logs link a step by its id alone: none of them can be attached to, moved
+  # to or kept on another user's records.
+  it "saves or deletes a record kept through its parent only with a parent of the user's" do
+    mine = workout("cycle-1-workout-1")
+    _ { Block.create(workout_id: @their_workout.id, label: "Mine", position: 9, rounds: 1, rest_seconds: 0) }.must_raise Current::Mismatch
+    _ { Step.create(block_id: @their_step.block_id, exercise_id: exercise("goblet-squat").id, position: 9, reps: 5) }.must_raise Current::Mismatch
+    _ { Completion.create(session_id: @their_planned.id, finished_at: Time.now) }.must_raise Current::Mismatch
+    _ { mine.blocks.first.update(workout_id: @their_workout.id) }.must_raise Current::Mismatch
+
+    their_block = Block.everyone.with_pk(@their_step.block_id)
+    _ { their_block.update(label: "Mine now") }.must_raise Current::Mismatch
+    _ { Step.everyone.with_pk(@their_step.id).destroy }.must_raise Current::Mismatch
+    _(Current.set(user: @someone) { their_block.update(label: "Still theirs") }.label).must_equal "Still theirs"
+
+    session = Session.plan!(workout: mine, date: today, client_ref: "mine")
+    log = { session:, set_number: 1, status: "done" }
+    _ { SetLog.create(**log, step_id: @their_step.id) }.must_raise Current::Mismatch
+    _(SetLog.create(**log, step_id: mine.blocks.first.steps.first.id).step_id).must_equal mine.blocks.first.steps.first.id
+  end
+
   it "keeps every query to the signed-in user, without asking" do
     _(Session.with_pk(@their_done.id)).must_be_nil
     _(Step.with_pk(@their_step.id)).must_be_nil

@@ -41,11 +41,32 @@ module Database
       foreign_keys: true,
       synchronous: :normal,
       connect_sqls: ["PRAGMA journal_mode = WAL"],
-      # Waits for another process holding the lock (a backup, say) by
-      # sleeping in Ruby, which yields to other fibers, rather than in C.
-      after_connect: ->(connection) { connection.busy_handler_timeout = 5000 },
+      after_connect: lambda { |connection|
+        # Waits for another process holding the lock (a backup, say) by
+        # sleeping in Ruby, which yields to other fibers, rather than in C.
+        connection.busy_handler_timeout = 5000
+        keep_private(connection.filename)
+      },
       sql_log_level: :debug
     ).tap { it.transaction_mode = :immediate }
+  end
+
+  # The database holds password hashes and everyone's training data, so
+  # other users of the machine can't read its file, however an older release
+  # or a copy left it, nor the -wal and -shm files beside it (SQLite makes
+  # them with the database's permissions). A group the operator gave it (a
+  # backup job's) keeps its access, and new files have none (the umask).
+  # Files of someone else's are left as they are, and a file system that
+  # won't change modes leaves them too. Nothing for a database in memory.
+  def self.keep_private(file)
+    return if file.to_s.empty?
+
+    [file, "#{file}-wal", "#{file}-shm"].each do |path|
+      stat = File.stat(path)
+      File.chmod(stat.mode & ~0o007, path) if stat.owned? && stat.mode.anybits?(0o007)
+    rescue SystemCallError
+      next
+    end
   end
 
   # Runs the migrations db/migrate holds that the database lacks, after

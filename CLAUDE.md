@@ -66,7 +66,8 @@ then `BASE_URL=http://localhost:3999 SERVER_LOG=/tmp/e2e.log npm run test:e2e`.
   `ApplicationController` in `env["lazy_runner.user_id"]`, which sets
   `Current.user`. The owner invites everyone else (`Invite`, Settings →
   Users) and can reset a password to a temporary one, which leaves the user
-  only `/api/me` and changing it. With `OIDC_ISSUER` set (`lib/oidc.rb`),
+  only `/api/me` and changing it; from a shell, `rake users:reset_password`
+  does that for anyone, the owner included (`lib/tasks/users.rake`). With `OIDC_ISSUER` set (`lib/oidc.rb`),
   an OpenID Connect provider signs users in too (`/api/auth/oidc`,
   `user_identities`; tests run it against `test/fake_oidc_provider.rb`).
   Request tests sign in as `user` (the
