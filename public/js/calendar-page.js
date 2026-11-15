@@ -519,6 +519,7 @@ function writeNote(date, note = null) {
     coaches: knownCoaches(state.notes),
     onSave: (fields) => sendNote(note ? changeNoteRequest(note, fields) : noteRequest(fields)),
     onDelete: () => sendNote(deleteNoteRequest(note)),
+    onReply: (fields) => sendNote(noteRequest(fields)),
   });
 }
 

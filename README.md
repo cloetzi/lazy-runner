@@ -52,7 +52,8 @@ session offline, syncing when the connection returns.
   tap opens the day on the calendar), your goals and a journal of notes. You, a
   coach you name, or an agent over MCP write them; only you change goals, and
   an agent's proposed goal waits for you to accept or dismiss it. Notes dated
-  to a day show on the calendar.
+  to a day show on the calendar. Reply to a coach's note and the reply sits
+  under it, where the agent reads it too.
 - **Workout view:** open any workout from today's card or the picker to see every
   block, round, rest and step with its target, without starting it. Weights can be
   adjusted there with the same stepper as the player; they are remembered for the

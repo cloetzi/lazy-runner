@@ -51,7 +51,7 @@ class CoachNews
 
   # Each newest first.
   def changes = PlanChange.by_agent.not_undone.where(made_since).newest_first
-  def notes = CoachNote.by_agent.where(made_since).newest_first
+  def notes = CoachNote.by_agent.where(made_since).newest_first.eager(:replies)
   def goals = Goal.proposed.where(created_by: "llm").where(made_since).order(Sequel.desc(:id))
   def activities = Activity.where(created_by: "llm").where(made_since)
 

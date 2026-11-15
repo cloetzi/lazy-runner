@@ -78,6 +78,8 @@ function notesList(notes) {
         ${n.title ? `<p><strong>${escape(n.title)}</strong></p>` : ""}
         <p>${escape(n.body)}</p>
         <p class="muted small-print">${escape(`${authorLabel(n)} · ${writtenOn(n)}`)}</p>
+        ${n.replies?.length ? `<ul class="sheet-replies" aria-label="Replies">${n.replies.map((r) => `
+          <li><p>${escape(r.body)}</p><p class="muted small-print">${escape(`${authorLabel(r)} · ${writtenOn(r)}`)}</p></li>`).join("")}</ul>` : ""}
       </li>`).join("")}</ul>`;
 }
 
@@ -237,6 +239,7 @@ export function noteRow(note, attribute) {
         <span class="row-text">
           <span class="row-title">${escape(title)}</span>
           <span class="row-meta">${escape(`${authorLabel(note)}: ${note.body}`)}</span>
+          ${(note.replies ?? []).map((r) => `<span class="row-reply">${escape(`${authorLabel(r)}: ${r.body}`)}</span>`).join("")}
         </span>
       </button>
     </li>`;

@@ -2,7 +2,7 @@ module TrainerMcp
   class ListCoachNotes < CoachTool
     description <<~TEXT.squish
       Every note on the user's Coach tab, newest first: statuses, focus, concerns (open or resolved) and journal notes,
-      each saying who wrote it (`user` the person, `human` a coach they named, `llm` you or another agent).
+      each saying who wrote it (`user` the person, `human` a coach they named, `llm` you or another agent). The person's replies to a note come under it as `replies`, oldest first, not as notes of their own.
       get_coach_board shows only the latest; this is how to find a note to update_coach_note or delete_coach_notes.
       `author: llm` keeps yours. With `from` or `to`, only notes on a day in that range (about a session or activity on it, else dated to it): with only `from` 28 days on, with only `to` 28 days back, at most 366 days. `count` is how many match;
       pass `before` from the answer for the next page.
@@ -20,7 +20,7 @@ module TrainerMcp
     annotations(title: "List coach notes", **READ_ONLY)
 
     def self.answer(kind: nil, author: nil, from: nil, to: nil, before: nil, limit: 50)
-      notes = CoachNote.eager(:activity, session: :workout)
+      notes = CoachNote.threads.eager(:activity, session: :workout)
       notes = notes.of_kind(kind) if kind
       notes = notes.by(author) if author
       notes = notes.on_days(days(from, to)) if from || to

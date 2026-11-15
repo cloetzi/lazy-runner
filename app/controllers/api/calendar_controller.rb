@@ -35,7 +35,7 @@ module Api
       render json: {
         sessions: sessions.map { it.as_json.merge(change: changes.of(it)) },
         activities: Activity.where(date: days).in_order.all,
-        notes: CoachNote.eager(:activity, session: :workout).on_days(days).all,
+        notes: CoachNote.threads.eager(:activity, session: :workout).on_days(days).all,
         routines: routines.routines.map { it.as_json.merge(change: changes.of(it)) },
         routine_days: routines.days,
         plan_changes: changes.lines,

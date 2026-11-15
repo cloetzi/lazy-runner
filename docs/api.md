@@ -94,11 +94,13 @@ as null when it has no value (`nullable`).
   A concern stays open until `PATCH` sends `resolved: true`. `GET /api/coach`
   is the whole board with this week's sessions, activities, routines and
   routine days as plain lists, nothing summed; `GET /api/coach/notes` pages the journal with
-  `before`, filtered by `kind` and `author`. A note about a session or
+  `before`, filtered by `kind` and `author`. A reply (`reply_to_id`) is the
+  user's answer to a note they didn't write: it comes in its note's `replies`,
+  not as a note of its own, and goes when its note does. A note about a session or
   activity shows on its day wherever it moves (`/api/calendar`). Tidy up
   (`GET` counts, `POST /api/coach/tidy` deletes) clears the agent's notes
-  written before a day, keeping the current status and focus and the open
-  concerns.
+  written before a day, keeping the current status and focus, the open
+  concerns and the notes the user replied to.
 - **Plan changes** are recorded by the models (`GET /api/plan_changes`):
   every session or routine planned, moved, removed, changed or ended, by the
   user (`manual`) or an agent with a token (`llm`), with the fields before
@@ -243,7 +245,7 @@ change reaches every future session of it.
 | `plan_routine` | A weekly or one-off routine for a sport or a workout, always tentative, marked `created_by: llm`; distance in metres or with a unit |
 | `update_routine` | A routine the assistant planned (as `PATCH /api/routines/:id`, so a reschedule with days gone by starts a new one), with an optional `reason` |
 | `end_routine` | Ends a routine the assistant planned from today on, or deletes one without days gone by, with an optional `reason` |
-| `get_coach_board` | Goals (active, proposed, dismissed), the current status and focus, open concerns, the latest notes and this week, routine days included |
+| `get_coach_board` | Goals (active, proposed, dismissed), the current status and focus, open concerns, the latest notes with the user's replies, and this week, routine days included |
 | `list_coach_notes` | Every note, newest first, by kind, author or day, paged with `before` |
 | `write_coach_note` | A status, focus, concern or note, marked `author_kind: llm` and signed with the token's name (`author_name` sent is ignored); the same note again isn't written twice, and an agent writes at most 20 a day |
 | `update_coach_note` | Changes a note an agent wrote; the person's are theirs |

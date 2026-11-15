@@ -16,7 +16,9 @@ module TrainerMcp
       compact(
         note.as_json.slice(:id, :kind, :title, :body, :author_kind, :author_name, :date, :resolution).merge(
           about: note.about&.except(:date), written: day(note.created_at),
-          resolved: day(note.resolved_at)
+          resolved: day(note.resolved_at),
+          # The user's answers to it, oldest first.
+          replies: (note.replies.map { { id: it.id, body: it.body, written: day(it.created_at) } }.presence unless note.reply?)
         )
       )
     end

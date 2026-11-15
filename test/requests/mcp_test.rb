@@ -1222,6 +1222,23 @@ describe "MCP server" do
       _(call_tool("write_coach_note", kind: "note", body: "Note 0")["already_written"]).must_be_nil
     end
 
+    it "gives a note the person's replies, and doesn't list them on their own" do
+      concern = call_tool("write_coach_note", kind: "concern", title: "Strength slipping", body: "Two sessions missed. When suits you?")
+      reply = CoachNote.create(kind: "note", body: "Mornings, before the easy run.", author_kind: "user", reply_to_id: concern["id"])
+
+      board = call_tool("get_coach_board")
+      _(board["concerns"].first["replies"]).must_equal [{ "id" => reply.id, "body" => "Mornings, before the easy run.", "written" => "2026-11-04" }]
+      _(board["notes"]).must_be_empty
+      listed = call_tool("list_coach_notes")
+      _(listed["notes"].map { it["id"] }).must_equal [concern["id"]]
+      _(listed["count"]).must_equal 1
+      _(listed["notes"].first["replies"].map { it["id"] }).must_equal [reply.id]
+
+      refused = _ { call_tool("delete_coach_notes", note_ids: [concern["id"]]) }.must_raise(McpToolError)
+      _(refused.message).must_include "notes #{concern["id"]} have the person's replies"
+      _(CoachNote.where(id: reply.id).count).must_equal 1
+    end
+
     it "lists every note, newest first, by kind, author and day" do
       mine = call_tool("write_coach_note", kind: "note", body: "Long run Sunday", date: "2026-11-08")
       theirs = person_note("note", "Knee fine", date: "2026-11-03")

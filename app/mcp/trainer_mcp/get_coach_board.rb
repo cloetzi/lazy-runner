@@ -7,7 +7,7 @@ module TrainerMcp
       resolved), and this week (Monday to Sunday) as a plain list of sessions, activities, `routines` and their
       `routine_days` (as list_routines gives its routines and days: the runs and other sport planned, and how each day
       went) and the notes on its days (dated to one, or about one of its sessions or activities). Each
-      note says who wrote it: `user` (the person), `human` (a coach they named) or `llm` (you or another agent). Nothing is summed or scored: judge from the numbers and the notes.
+      note says who wrote it: `user` (the person), `human` (a coach they named) or `llm` (you or another agent). A note's `replies` are the person's answers to it, oldest first. Nothing is summed or scored: judge from the numbers and the notes.
       Read this first.
     TEXT
     annotations(title: "Get coach board", **READ_ONLY)

@@ -90,6 +90,8 @@ then `BASE_URL=http://localhost:3999 SERVER_LOG=/tmp/e2e.log npm run test:e2e`.
   that goes null when its target is deleted (a coach note's activity or
   session, a goal's `replaces`): a composite key would null `user_id` too,
   so it is a plain key and the model checks the target is the same user's.
+  A coach note's `reply_to_id` is plain too, so it could be added without
+  copying the table; the model checks it the same way.
   Every test runs as `user`
   (`Current.user` is set; `Current.set(user: other) { ... }` for another),
   and a query a request makes on a per-user table without `user_id` fails

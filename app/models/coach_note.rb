@@ -9,11 +9,15 @@
 # "You"), `human` (a coach without an account, named in `author_name`, written
 # on the user's account) or `llm` (an agent over MCP, maybe named too). A note
 # can be about a day, an activity or a session of the user's.
+#
+# A reply (`reply_to_id`) is the user's answer to a note they didn't write:
+# a plain note, about what its note is about, shown under it rather than in
+# the journal or on a day of its own. One level: a reply has no replies.
 class CoachNote < Record
   KINDS = %w[status focus concern note].freeze
   AUTHORS = %w[user human llm].freeze
   # What the app may send for a note.
-  FIELDS = %i[kind title body author_kind author_name date activity_id session_id].freeze
+  FIELDS = %i[kind title body author_kind author_name date activity_id session_id reply_to_id].freeze
   MAX_LENGTHS = { title: 200, body: 5000, author_name: 100, resolution: 2000 }.freeze
   # The most notes one page of the journal holds.
   PAGE = 20
@@ -28,8 +32,12 @@ class CoachNote < Record
   per_user
   many_to_one :activity
   many_to_one :session
+  many_to_one :reply_to, class: self
+  one_to_many :replies, class: self, key: :reply_to_id, order: :id
 
   dataset_module do
+    # Notes with their replies under them, the replies left out on their own.
+    def threads = where(reply_to_id: nil).eager(:replies)
     # Newest first: ids grow as notes are written.
     order :newest_first, Sequel.desc(:id)
     def of_kind(kind) = where(kind:)
@@ -61,14 +69,15 @@ class CoachNote < Record
     end
 
     # What "Tidy up" removes: an agent's notes in the journal written before
-    # `day` (the server's).
+    # `day` (the server's), but those the user replied to, whose replies would go too.
     def tidy_before(day)
       start = day.in_time_zone.to_time
-      journal.by_agent.where { created_at < start }
+      journal.by_agent.where { created_at < start }.exclude(id: CoachNote.exclude(reply_to_id: nil).select(:reply_to_id))
     end
   end
 
   def concern? = kind == "concern"
+  def reply? = !reply_to_id.nil?
   def resolved? = !resolved_at.nil?
 
   # Resolves a concern, saying how when given.
@@ -95,7 +104,8 @@ class CoachNote < Record
   def as_json(*)
     {
       id:, kind:, title:, body:, author_kind:, author_name:, date: date&.iso8601,
-      activity_id:, session_id:, about: about,
+      activity_id:, session_id:, about: about, reply_to_id:,
+      replies: reply? ? [] : replies.map(&:as_json),
       resolved_at:, resolution:, created_at:, updated_at:
     }
   end
@@ -132,11 +142,33 @@ class CoachNote < Record
     validates_presence :author_name if author_kind == "human"
     validates_presence :title if concern?
     MAX_LENGTHS.each { |column, length| validates_max_length length, column, allow_nil: true, message: "is longer than #{length} characters" }
+    validate_reply if reply? || column_changed?(:reply_to_id)
+    if !new? && author_kind == "user" && column_changed?(:author_kind) && !replies_dataset.empty?
+      errors.add(:author_kind, "can't be user: you replied to this note")
+    end
     # Another user's activity or session is not found, as a lookup would say.
     { activity_id: Activity, session_id: Session }.each do |column, model|
       next unless (new? || column_changed?(column)) && !self[column].nil?
 
       errors.add(column, "is not found") unless Record.id(self[column]) && !model.where(id: Record.id(self[column])).empty?
     end
+  end
+
+  private
+
+  # A reply answers a note the user didn't write, and is theirs: a plain
+  # note with no day or link of its own, under a note that isn't a reply.
+  def validate_reply
+    return errors.add(:reply_to_id, "can't be changed") if !new? && column_changed?(:reply_to_id)
+
+    if new?
+      target = Record.id(reply_to_id) && CoachNote.with_pk(Record.id(reply_to_id))
+      return errors.add(:reply_to_id, "is not found") unless target
+      errors.add(:reply_to_id, "is a reply; answer the note it replies to") if target.reply?
+      errors.add(:reply_to_id, "is your own note; edit it instead") if target.author_kind == "user"
+    end
+    errors.add(:kind, "must be note for a reply") unless kind == "note"
+    errors.add(:author_kind, "must be user for a reply") unless author_kind == "user"
+    %i[date activity_id session_id].each { errors.add(it, "is the note's, not a reply's") unless self[it].nil? }
   end
 end

@@ -37,6 +37,7 @@ erDiagram
     users ||--o{ coach_notes : "coached in"
     activities |o--o{ coach_notes : "noted on"
     sessions |o--o{ coach_notes : "noted on"
+    coach_notes |o--o{ coach_notes : "replied to"
     users ||--o{ routines : "means to"
     workouts |o--o{ routines : "run by"
     routines ||--o{ routine_days : "changed on"
@@ -291,6 +292,7 @@ erDiagram
         date date "the day it is about"
         int activity_id FK "set null when deleted"
         int session_id FK "set null when deleted"
+        int reply_to_id FK "the note a reply answers; deleted with it"
         datetime resolved_at "a concern's"
         text resolution
     }

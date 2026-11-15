@@ -1014,7 +1014,7 @@ components:
         position: { type: integer, minimum: 1 }
     CoachNote:
       type: object
-      required: [id, kind, title, body, author_kind, author_name, date, activity_id, session_id, about, resolved_at, resolution, created_at, updated_at]
+      required: [id, kind, title, body, author_kind, author_name, date, activity_id, session_id, about, reply_to_id, replies, resolved_at, resolution, created_at, updated_at]
       properties:
         id: { type: integer }
         kind: { type: string, enum: [status, focus, concern, note] }
@@ -1035,6 +1035,8 @@ components:
             id: { type: integer }
             date: { type: string, format: date }
             label: { type: string, nullable: true }
+        reply_to_id: { type: integer, nullable: true, description: "A reply's: the note it answers." }
+        replies: { type: array, description: "The user's replies to it, oldest first; empty on a reply.", items: { $ref: "#/components/schemas/CoachNote" } }
         resolved_at: { type: string, format: date-time, nullable: true, description: A concern's; null while open. }
         resolution: { type: string, nullable: true }
         created_at: { type: string, format: date-time }
@@ -1077,6 +1079,7 @@ components:
         date: { type: string, format: date, nullable: true }
         activity_id: { type: integer, nullable: true }
         session_id: { type: integer, nullable: true }
+        reply_to_id: { type: integer, nullable: true, description: "A reply to a note the user didn't write: kind note, author user, and no date, activity or session (its note's are shown)." }
     CoachNoteChange:
       type: object
       properties:
@@ -1088,6 +1091,7 @@ components:
         date: { type: string, format: date, nullable: true }
         activity_id: { type: integer, nullable: true }
         session_id: { type: integer, nullable: true }
+        reply_to_id: { type: integer, nullable: true, description: "Can't be changed: sending another answers 422." }
         resolved: { type: boolean, description: "A concern: true resolves it, false opens it again." }
         resolution: { type: string, nullable: true, description: How it was resolved. }
     CoachBoard:

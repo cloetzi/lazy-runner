@@ -67,7 +67,7 @@ module Api
     # @response 200 #/components/schemas/CoachNotes
     # @response 400 #/components/responses/BadRequest
     def notes
-      notes = Record.boolean(params[:journal]) ? CoachBoard.new.journal_notes : CoachNote.eager(:activity, session: :workout).newest_first
+      notes = Record.boolean(params[:journal]) ? CoachBoard.new.journal_notes : CoachNote.threads.eager(:activity, session: :workout).newest_first
       notes = notes.of_kind(list_param(:kind, CoachNote::KINDS)) if params[:kind].present?
       notes = notes.by(list_param(:author, CoachNote::AUTHORS)) if params[:author].present?
       if params[:before].present?
@@ -90,6 +90,9 @@ module Api
     #   with an `author_name` for a coach without an account. A note can be
     #   about a `date`, an `activity_id` or a `session_id` of the user's.
     #   An agent writes over MCP; `author_kind: llm` here answers 400.
+    #   `reply_to_id` makes it a reply to a note the user didn't write: a
+    #   plain note of theirs, shown under that note (its `replies`) rather
+    #   than on its own, and deleted with it.
     # @request #/components/schemas/CoachNoteInput
     # @response 201 #/components/schemas/CoachNote
     # @response 400 #/components/responses/BadRequest
@@ -153,7 +156,7 @@ module Api
 
     # How many of an agent's notes "Tidy up" would delete.
     # @description The agent's notes written before `before` (a day, in the
-    #   server's time zone), leaving the current status and focus and the
+    #   server's time zone), leaving those the user replied to, the current status and focus and the
     #   open concerns. Nothing is deleted.
     # @param before {Date} The first day whose notes stay, tomorrow at the latest.
     # @response 200 { count: Integer }
@@ -164,8 +167,8 @@ module Api
 
     # Delete an agent's notes written before a day.
     # @description The notes GET /api/coach/tidy counts: the agent's,
-    #   written before `before`, but the current status and focus and the
-    #   open concerns. The user's notes and a named coach's stay. `before`
+    #   written before `before`, but the current status and focus, the
+    #   open concerns and those the user replied to. The user's notes and a named coach's stay. `before`
     #   is tomorrow at the latest, so a note written now is never "older".
     # @request { before: Date }
     # @response 200 { deleted: Integer }

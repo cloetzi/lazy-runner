@@ -1710,3 +1710,21 @@ code.command { display: block; padding: var(--space-2) var(--space-3); overflow-
 .note-tile .icon { width: 1.25rem; height: 1.25rem; }
 .note-tile.small { width: 1.75rem; height: 1.75rem; border-radius: var(--radius-sm); }
 .note-tile.small .icon { width: 1rem; height: 1rem; }
+/* Replies under a coach note (#263): indented, oldest first. */
+.howto ul.note-replies, ul.note-replies {
+  list-style: none; margin: 0 0 0 var(--space-2); padding: 0 0 0 var(--space-4); border-left: 2px solid var(--border);
+  display: grid; gap: var(--space-2); font-size: inherit;
+}
+.note-reply { display: grid; gap: var(--space-1); }
+.note-reply p { margin: 0; }
+.replying-to {
+  margin: 0; padding: var(--space-2) var(--space-3); display: grid; gap: var(--space-1);
+  background: var(--bg); border-left: 2px solid var(--control-border); border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+}
+.replying-to p { margin: 0; }
+.replying-body { color: var(--muted); display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.reply-about { line-height: 1.75rem; }
+.agent-note .note-by { margin: 0; }
+.howto .sheet-notes ul.sheet-replies { list-style: none; margin: var(--space-1) 0 0 var(--space-1); padding: 0 0 0 var(--space-3); border-left: 2px solid var(--border); display: grid; gap: var(--space-2); }
+.sheet-notes .sheet-replies li { padding: 0; background: none; border: 0; border-radius: 0; }
+.row-reply { display: block; padding-left: var(--space-3); border-left: 2px solid var(--border); font-size: var(--text-sm); color: var(--text); white-space: normal; }

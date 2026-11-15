@@ -1,15 +1,15 @@
 import { mountNav, showCoachNews } from "./nav.js";
 import { getJson, loadProblem, offline, paths, sendChange, STALE_NOTE } from "./api.js";
 import { escape, icon } from "./html.js";
-import { localToday, shortDay, longDay, weekdayDay, STATUS_LABELS } from "./calendar.js";
+import { localToday, shortDay, weekdayDay, STATUS_LABELS } from "./calendar.js";
 import { STATE_LABELS, routineTitle, routineFacts } from "./routines.js";
 import { activityTitle, activityFacts, sportIcon, preferredDistanceUnit } from "./activities.js";
 import {
-  authorLabel, authorBadge, writtenOn, knownCoaches, weekDays, agentName, KIND_LABELS, JOURNAL_FILTERS, journalPath, tidyCountPath, tidyRequest,
+  authorLabel, writtenOn, knownCoaches, weekDays, agentName, KIND_LABELS, JOURNAL_FILTERS, journalPath, tidyCountPath, tidyRequest,
   noteRequest, changeNoteRequest, resolveRequest, deleteNoteRequest,
   addGoalRequest, changeGoalRequest, deleteGoalRequest, acceptRequest, dismissRequest, movedPosition,
 } from "./coach.js";
-import { openNoteSheet, openGoalSheet, openResolveSheet, openTidySheet, aboutChoices } from "./coach-sheets.js";
+import { openNoteSheet, openGoalSheet, openResolveSheet, openTidySheet, openReplySheet, repliesHtml, byline as author, aboutLabel, deleteQuestion, aboutChoices } from "./coach-sheets.js";
 import { newsGroups, hasNews, newsCount, seenRequest } from "./coach-news.js";
 import { undoButton, undoRequest } from "./plan-changes.js";
 
@@ -216,18 +216,9 @@ function newsCard() {
     </section>`;
 }
 
-function author(note) {
-  const badge = authorBadge(note);
-  return `<span class="author"><span class="author-badge ${note.author_kind}" aria-hidden="true">${badge.icon ? icon(badge.icon) : escape(badge.initials)}</span>` +
-    `<strong>${escape(authorLabel(note))}</strong><span class="muted"> · ${escape(writtenOn(note))}</span></span>`;
-}
-
 function aboutTag(note) {
   if (!note.about && !note.date) return "";
-  const label = note.about
-    ? `${note.about.label ?? (note.about.type === "activity" ? "Activity" : "Session")}, ${shortDay(note.about.date)}`
-    : longDay(note.date);
-  return `<span class="tag">${escape(label)}</span>`;
+  return `<span class="tag">${escape(aboutLabel(note))}</span>`;
 }
 
 function goalsCard({ goals, proposals }) {
@@ -338,8 +329,9 @@ function currentCard(kind, note) {
       <p class="current-body">${escape(note.body)}</p>
       <div class="current-foot">
         <p class="note-by">${author(note)}${note.replaces ? `<span class="muted"> · replaces ${escape(writtenOn(note.replaces))}</span>` : ""}</p>
-        <div class="entry-actions">${editButton(note)}</div>
-      </div>`
+        <div class="entry-actions">${replyButton(note)}${editButton(note)}</div>
+      </div>
+      ${replies(note)}`
     : `<p class="muted">${kind === "status" ? `Where things stand: written by you or your coach${state.agentSeen ? " or your coach agent" : ""}.` : "What to work on next."}</p>`;
   return `
     <section class="card coach-card" aria-labelledby="${kind}-title">
@@ -393,12 +385,19 @@ function noteItem(note, { concern = false } = {}) {
       <p class="entry-body">${escape(note.body)}</p>
       <p class="note-by">${author(note)} ${aboutTag(note)}</p>
       ${resolved ? `<p class="muted small-print">Resolved ${escape(writtenOn({ created_at: resolved }))}${note.resolution ? `: ${escape(note.resolution)}` : ""}</p>` : ""}
+      ${replies(note)}
       <div class="entry-actions">
         ${concern && !resolved ? `<button class="secondary small" data-resolve="${note.id}">Resolve</button>` : ""}
+        ${replyButton(note)}
         ${editButton(note)}
       </div>
     </li>`;
 }
+
+// A note the user didn't write takes a reply, which shows under it with
+// its own Edit.
+const replyButton = (note) => note.author_kind !== "user" ? `<button class="secondary small" data-reply="${note.id}">Reply</button>` : "";
+const replies = (note) => repliesHtml(note, (r) => ` <button class="quiet small" data-edit-reply="${r.id}" data-note="${note.id}" aria-label="Edit your reply">Edit</button>`);
 
 // An agent's note stays as it wrote it: it can only go.
 function editButton(note) {
@@ -474,6 +473,15 @@ function writeNote(kind, note = null) {
     coaches: knownCoaches(everyNote()),
     onSave: (fields) => change(note ? changeNoteRequest(note, fields) : noteRequest(fields)),
     onDelete: () => change(deleteNoteRequest(note)),
+  });
+}
+
+// A reply to `note`, or `reply` edited.
+function writeReply(note, reply = null) {
+  openReplySheet({
+    note, reply,
+    onSave: (fields) => change(reply ? changeNoteRequest(reply, fields) : noteRequest(fields)),
+    onDelete: () => change(deleteNoteRequest(reply)),
   });
 }
 
@@ -563,6 +571,11 @@ $("coach-board").addEventListener("click", (event) => {
   if (d.dismiss) return decide(dismissRequest({ id: d.dismiss }));
   if (d.write) return writeNote(d.write);
   if (d.editNote) return writeNote(null, find(d.editNote));
+  if (d.reply) return writeReply(find(d.reply));
+  if (d.editReply) {
+    const note = find(d.note);
+    return writeReply(note, note?.replies.find((r) => String(r.id) === d.editReply));
+  }
   if (d.resolve) {
     const note = find(d.resolve);
     return openResolveSheet({ note, onResolve: (resolution) => change(resolveRequest(note, resolution)) });
@@ -579,7 +592,7 @@ $("coach-board").addEventListener("click", (event) => {
     return decide(deleteGoalRequest({ id: d.deleteGoal }));
   }
   if (d.deleteNote) {
-    if (!confirm("Delete this note from the agent?")) return;
+    if (!confirm(deleteQuestion(find(d.deleteNote), "this note from the agent"))) return;
     return decide(deleteNoteRequest(find(d.deleteNote)));
   }
 });

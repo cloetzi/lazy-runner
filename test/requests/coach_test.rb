@@ -159,6 +159,61 @@ describe "coach API" do
       _(last_response.status).must_equal 204
     end
 
+    it "replies to an agent's note, under it everywhere it shows, and deletes the reply with it" do
+      session = Session.plan!(workout: Workout.first, date: Date.new(2026, 11, 5))
+      asked = CoachNote.create(kind: "note", body: "How did the step-ups feel?", author_kind: "llm", session_id: session.id)
+
+      post_json "/api/coach/notes", kind: "note", body: "Fine on the low step.", reply_to_id: asked.id
+      _(last_response.status).must_equal 201
+      reply = json
+      _(reply.slice("reply_to_id", "author_kind", "date", "session_id", "replies")).must_equal(
+        "reply_to_id" => asked.id, "author_kind" => "user", "date" => nil, "session_id" => nil, "replies" => []
+      )
+
+      get "/api/coach"
+      _(json["notes"].map { it["id"] }).must_equal [asked.id]
+      _(json["notes"].first["replies"].map { it["body"] }).must_equal ["Fine on the low step."]
+      _(json["week"]["notes"].map { it["id"] }).must_equal [asked.id]
+      get "/api/coach/notes"
+      _(json["notes"].map { it["id"] }).must_equal [asked.id]
+      get "/api/calendar?from=2026-11-02&to=2026-11-08"
+      _(json["notes"].map { it["id"] }).must_equal [asked.id]
+      _(json["notes"].first["replies"].map { it["id"] }).must_equal [reply["id"]]
+
+      patch_json "/api/coach/notes/#{reply["id"]}", body: "Fine on the low step, sore on the high one."
+      _(json["body"]).must_equal "Fine on the low step, sore on the high one."
+      delete "/api/coach/notes/#{asked.id}"
+      _(CoachNote.with_pk(reply["id"])).must_be_nil
+    end
+
+    it "keeps a reply to one level, on a note that isn't the user's, as a plain note of theirs" do
+      own = note("note", "Mine")
+      coach = CoachNote.create(kind: "note", body: "From Mara", author_kind: "human", author_name: "Mara")
+      reply = CoachNote.create(kind: "note", body: "Thanks", author_kind: "user", reply_to_id: coach.id)
+      other = Current.set(user: create_user("other")) { CoachNote.create(kind: "note", body: "Theirs", author_kind: "llm") }
+
+      [
+        [{ reply_to_id: own.id }, "reply_to_id", "is your own note; edit it instead"],
+        [{ reply_to_id: reply.id }, "reply_to_id", "is a reply; answer the note it replies to"],
+        [{ reply_to_id: other.id }, "reply_to_id", "is not found"],
+        [{ reply_to_id: coach.id, kind: "concern", title: "Hm" }, "kind", "must be note for a reply"],
+        [{ reply_to_id: coach.id, author_kind: "human", author_name: "Jo" }, "author_kind", "must be user for a reply"],
+        [{ reply_to_id: coach.id, date: "2026-11-03" }, "date", "is the note's, not a reply's"]
+      ].each do |fields, field, message|
+        post_json "/api/coach/notes", { kind: "note", body: "Hi" }.merge(fields)
+        _(last_response.status).must_equal 422
+        _(json["error"]["fields"][field]).must_include message
+      end
+
+      patch_json "/api/coach/notes/#{coach.id}", author_kind: "user"
+      _(last_response.status).must_equal 422
+      _(json["error"]["fields"]["author_kind"]).must_include "can't be user: you replied to this note"
+
+      patch_json "/api/coach/notes/#{reply.id}", reply_to_id: nil
+      _(last_response.status).must_equal 422
+      _(json["error"]["fields"]["reply_to_id"]).must_include "can't be changed"
+    end
+
     it "leaves writing as the agent to MCP" do
       post_json "/api/coach/notes", kind: "note", body: "I am a robot", author_kind: "llm"
 
@@ -283,6 +338,8 @@ describe "coach API" do
     it "counts and deletes the agent's notes written before a day, but what still says where things stand" do
       travel_to Time.utc(2026, 10, 20, 12)
       old = agent("note", "Copied 9 runs")
+      answered = agent("note", "How are the knees?")
+      reply = CoachNote.create(kind: "note", body: "Fine", author_kind: "user", reply_to_id: answered.id)
       old_status = agent("status", "Base block")
       resolved = agent("concern", "Shin").tap(&:resolve!)
       open_concern = agent("concern", "Left knee")
@@ -297,7 +354,7 @@ describe "coach API" do
 
       post_json "/api/coach/tidy", before: "2026-11-01"
       _(json).must_equal("deleted" => 3)
-      _(CoachNote.select_map(:id).sort).must_equal [open_concern, current_focus, yours, current_status, recent].map(&:id).sort
+      _(CoachNote.select_map(:id).sort).must_equal [answered, reply, open_concern, current_focus, yours, current_status, recent].map(&:id).sort
       _([old, old_status, resolved].map { CoachNote.where(id: it.id).count }).must_equal [0, 0, 0]
 
       get "/api/coach/tidy"

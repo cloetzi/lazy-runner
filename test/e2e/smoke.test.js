@@ -591,6 +591,11 @@ test("sets a goal on the Coach tab, writes a status, and accepts the agent's pro
     data: { jsonrpc: "2.0", id: 1, method: "tools/call", params: { name: "propose_goal", arguments: { title: "Core twice a week", reason: "Your back gets stiff on long runs" } } },
   });
   assert.equal(proposed.status(), 200);
+  const asked = await agent.post("/mcp", {
+    headers: { Accept: "application/json, text/event-stream", Host: new URL(BASE_URL).host, Authorization: `Bearer ${secret}` },
+    data: { jsonrpc: "2.0", id: 2, method: "tools/call", params: { name: "write_coach_note", arguments: { kind: "concern", title: "Strength slipping", body: "Two sessions missed. When suits you?" } } },
+  });
+  assert.equal(asked.status(), 200);
   await agent.dispose();
   await page.reload();
   // Waiting, it is one line; Review opens it, saying what Accept does.
@@ -601,6 +606,16 @@ test("sets a goal on the Coach tab, writes a status, and accepts the agent's pro
   await page.getByRole("button", { name: "Accept" }).click();
   await page.locator(".goal-list").getByText("Core twice a week").waitFor();
   assert.deepEqual((await getJson("/api/goals")).goals.map((g) => g.title), ["Ski season with quiet knees", "Core twice a week"]);
+
+  // The agent's concern takes a reply, which shows under it.
+  await page.locator("#concerns-title").locator("../..").getByRole("button", { name: "Reply" }).click();
+  const replySheet = page.locator("#reply-sheet");
+  await replySheet.getByText("Two sessions missed. When suits you?").waitFor();
+  await accessible(page, "the reply sheet");
+  await replySheet.locator('textarea[name="body"]').fill("Mornings, before the easy run.");
+  await replySheet.getByRole("button", { name: "Save reply" }).click();
+  await page.locator(".note-replies").getByText("Mornings, before the easy run.").waitFor();
+  assert.equal((await getJson("/api/coach")).concerns[0].replies[0].body, "Mornings, before the easy run.");
   assert.deepEqual(errors, []);
   await context.close();
 });

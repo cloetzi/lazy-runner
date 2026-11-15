@@ -71,7 +71,7 @@ class CoachBoard
 
   private
 
-  def notes = CoachNote.eager(:activity, session: :workout)
+  def notes = CoachNote.threads.eager(:activity, session: :workout)
 
   # The current note of a kind, naming the one before it (the one it replaced).
   def with_replaced(kind)

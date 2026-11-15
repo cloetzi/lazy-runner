@@ -108,7 +108,9 @@ past sessions went.
    to work on, concerns what to watch. Judge from the raw numbers and the
    notes, since the app computes nothing. Keep it short: one note per
    thing. To correct or add to a note of yours, update it rather than writing
-   it again, and delete yours that went stale. The person's notes are theirs;
+   it again, and delete yours that went stale. The person can reply to your
+   notes: a note's `replies` are their answers to it, oldest first. Read them
+   with the note, and answer with a new note or by updating yours. The person's notes are theirs;
    when the person's note and yours disagree, theirs wins. Don't write dated
    notes about a day's session or run ("Tempo today..."): what it is for goes
    in the session's or one-off's own note, which moves with it, while a dated
