@@ -8,9 +8,8 @@ module Api
     #   ten of the journal: every other note, the statuses and focus since
     #   replaced and the concerns resolved included. `week` is Monday to Sunday of `today` (the
     #   sender's own date, within a day of the server's): its sessions,
-    #   activities, dated notes, and routines with their days (as GET
-    #   /api/calendar gives them), as plain lists, with nothing summed or
-    #   scored.
+    #   activities, notes, and routines with their days, as GET
+    #   /api/calendar gives them: plain lists, with nothing summed or scored.
     # @param today? {Date} The sender's own date.
     # @response 200 #/components/schemas/CoachBoard
     # @response 400 #/components/responses/BadRequest
@@ -19,12 +18,14 @@ module Api
     end
 
     # The coach's notes, newest first, a page at a time.
-    # @description `kind` keeps one kind; `journal=true` keeps the journal
+    # @description `kind` keeps those kinds and `author` those authors (each
+    #   one or several, comma-separated); `journal=true` keeps the journal
     #   as GET /api/coach shows it (all but the current status and focus and
     #   the open concerns). `before` is a note id: the page holds the notes
     #   written before it. `next_before` is the id to ask with for the next
     #   page, null on the last one.
-    # @param kind? One of status, focus, concern, note.
+    # @param kind? Of status, focus, concern and note, such as `note,concern`.
+    # @param author? Of user, human and llm, such as `human,llm`.
     # @param journal? {Boolean} Only the journal.
     # @param before? {Integer} A note id; the notes written before it.
     # @param limit? {Integer} Notes a page, 1 to 100 (default 20).
@@ -32,11 +33,8 @@ module Api
     # @response 400 #/components/responses/BadRequest
     def notes
       notes = Record.boolean(params[:journal]) ? CoachBoard.new.journal_notes : CoachNote.eager(:activity, session: :workout).newest_first
-      if params[:kind].present?
-        raise BadRequest.param(:kind, "must be one of #{CoachNote::KINDS.join(", ")}") unless CoachNote::KINDS.include?(params[:kind])
-
-        notes = notes.of_kind(params[:kind])
-      end
+      notes = notes.of_kind(list_param(:kind, CoachNote::KINDS)) if params[:kind].present?
+      notes = notes.by(list_param(:author, CoachNote::AUTHORS)) if params[:author].present?
       if params[:before].present?
         before = Record.id(params[:before]) || raise(BadRequest.param(:before, "must be a note id"))
         notes = notes.where { id < before }
@@ -116,6 +114,50 @@ module Api
     def destroy_note
       CoachNote.find!(params[:id]).destroy
       head :no_content
+    end
+
+    # How many of an agent's notes "Tidy up" would delete.
+    # @description The agent's notes written before `before` (a day, in the
+    #   server's time zone), leaving the current status and focus and the
+    #   open concerns. Nothing is deleted.
+    # @param before {Date} The first day whose notes stay, tomorrow at the latest.
+    # @response 200 { count: Integer }
+    # @response 400 #/components/responses/BadRequest
+    def tidy_count
+      render json: { count: CoachNote.tidy_before(tidy_day).count }
+    end
+
+    # Delete an agent's notes written before a day.
+    # @description The notes GET /api/coach/tidy counts: the agent's,
+    #   written before `before`, but the current status and focus and the
+    #   open concerns. The user's notes and a named coach's stay. `before`
+    #   is tomorrow at the latest, so a note written now is never "older".
+    # @request { before: Date }
+    # @response 200 { deleted: Integer }
+    # @response 400 #/components/responses/BadRequest
+    def tidy
+      day = tidy_day
+      deleted = CoachNote.db.transaction { CoachNote.tidy_before(day).delete }
+      render json: { deleted: }
+    end
+
+    private
+
+    # The day Tidy up keeps notes from: tomorrow (the server's) at the
+    # latest, which covers a device a day ahead.
+    def tidy_day
+      day = DateRange.date(required!(:before), :before)
+      raise BadRequest.param(:before, "must be tomorrow or earlier") if day > Time.zone.today + 1
+
+      day
+    end
+
+    # A comma-separated list of `allowed` values.
+    def list_param(key, allowed)
+      values = params[key].to_s.split(",").map(&:strip)
+      raise BadRequest.param(key, "must be one or more of #{allowed.join(", ")}") if values.empty? || (values - allowed).any?
+
+      values
     end
   end
 end

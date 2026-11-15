@@ -32,15 +32,12 @@ class CoachBoard
   # The routines with days this week, and those days, read against the
   # board's today.
   def week_routines = @week_routines ||= RoutineCalendar.new(week, today: @today)
-  def week_notes = notes.dated(week).all
+  def week_notes = notes.on_days(week).all
 
   # The journal: every note but the current status and focus and the open
   # concerns (shown above it), newest first. The status and focus they
   # replaced, and the concerns resolved, are here.
-  def journal_notes
-    shown = %w[status focus].filter_map { current(it)&.id }
-    notes.exclude(id: shown).exclude(kind: "concern", resolved_at: nil).newest_first
-  end
+  def journal_notes = notes.journal.newest_first
 
   def journal = latest_journal.first
 

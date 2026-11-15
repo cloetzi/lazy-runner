@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
-  authorLabel, authorBadge, agentName, plannedBy, writtenDay, knownCoaches, weekDays, notesByDay, noteFields, goalFields,
+  authorLabel, authorBadge, agentName, plannedBy, writtenDay, knownCoaches, weekDays, notesByDay, notesAbout, howItFelt, journalPath, tidyRequest, noteFields, goalFields,
   noteRequest, changeNoteRequest, resolveRequest, reopenRequest, deleteNoteRequest,
   addGoalRequest, changeGoalRequest, acceptRequest, dismissRequest, movedPosition,
 } from "../../public/js/coach.js";
@@ -75,6 +75,29 @@ test("puts dated notes under their day, in the order written", () => {
   const days = notesByDay([note({ id: 2, date: "2026-11-03" }), note({ id: 1, date: "2026-11-03" }), note({ id: 3 })]);
   assert.deepEqual(Object.keys(days), ["2026-11-03"]);
   assert.deepEqual(days["2026-11-03"].map((n) => n.id), [1, 2]);
+});
+
+test("puts a note about a session or activity on its day, wherever it is now", () => {
+  const moved = note({ id: 4, date: "2026-11-03", about: { type: "session", id: 9, date: "2026-11-05" } });
+  const days = notesByDay([moved, note({ id: 5, about: { type: "activity", id: 2, date: "2026-11-02" } })]);
+  assert.deepEqual(Object.keys(days).sort(), ["2026-11-02", "2026-11-05"]);
+  // A move still queued takes the note along.
+  assert.deepEqual(Object.keys(notesByDay([moved], [{ id: 9, date: "2026-11-06" }])), ["2026-11-06"]);
+  assert.deepEqual(notesAbout([moved, note({ id: 6, about: { type: "session", id: 9, date: "2026-11-05" } }), note({ id: 7 })], "session", 9).map((n) => n.id), [6, 4]);
+  assert.deepEqual(notesAbout([moved], "session", null), []);
+});
+
+test("says how a done session felt", () => {
+  assert.equal(howItFelt({ rpe: 8, feedback: "too_hard", ended_early: true }), "RPE 8 · too hard · ended early");
+  assert.equal(howItFelt({ rpe: null, feedback: "right", ended_early: false }), "felt right");
+  assert.equal(howItFelt(null), "");
+});
+
+test("pages the journal under a filter, statuses and focus left to their own line", () => {
+  assert.equal(journalPath("all"), "/api/coach/notes?journal=true&limit=20&kind=note,concern");
+  assert.equal(journalPath("coach", 41), "/api/coach/notes?journal=true&limit=20&kind=note,concern&author=human,llm&before=41");
+  assert.equal(journalPath("nonsense"), journalPath("all"));
+  assert.deepEqual(tidyRequest("2026-11-01"), { method: "POST", path: "/api/coach/tidy", body: { before: "2026-11-01" } });
 });
 
 test("reads the note form: blanks left out of a new note, cleared on an edit", () => {

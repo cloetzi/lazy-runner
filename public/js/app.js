@@ -19,7 +19,7 @@ import { weightRequest, skipRequest, startRequest, setRequest, finishRequests, d
 import { createRunStore, restoredTimer } from "./run-store.js";
 import { markFor, longDay, localToday, moveRequest, removeRequest, STATUS_LABELS } from "./calendar.js";
 import { openSessionSheet, openLogActivitySheet, openRpeSheet, activityRow, editActivity, weekSummaryHtml } from "./calendar-sheets.js";
-import { plannedBy } from "./coach.js";
+import { plannedBy, notesAbout } from "./coach.js";
 import { queuedWeek } from "./week.js";
 import {
   withQueuedActivities, removedActivityIds, activityKey, preferredDistanceUnit, adoptServerDistanceUnit,
@@ -317,7 +317,7 @@ function renderToday() {
 function moveSession() {
   const session = state.today.session;
   openSessionSheet({
-    session, today: state.today.date,
+    session, today: state.today.date, notes: notesAbout(state.board?.week.notes ?? [], "session", session.id),
     on: {
       onMove: (date) => sendAndReload(moveRequest(session, date), $("move")),
       onSkip: skipToday,
@@ -429,7 +429,7 @@ function logActivity({ sport = "", about = "" } = {}) {
 function openTodayActivity(key) {
   const activity = todayActivities().find((a) => activityKey(a) === key);
   if (!activity) return;
-  editActivity({ activity, unit: state.distanceUnit, today: state.today.date, send: sendActivity });
+  editActivity({ activity, unit: state.distanceUnit, today: state.today.date, send: sendActivity, notes: notesAbout(state.board?.week.notes ?? [], "activity", activity.id) });
 }
 
 // Asks once how hard a new activity from elsewhere was, unless that is

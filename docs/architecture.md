@@ -160,7 +160,7 @@ flowchart LR
 Plain ES modules in `public/js/`, no framework, no build step. Pages:
 `index.html` (Today, Workouts, History, a workout, the player, by URL hash),
 `calendar.html` (a week, or a month on wide screens, with sessions,
-activities and dated coach notes), `coach.html` (goals, status, focus,
+activities and the coach's notes on its days), `coach.html` (goals, status, focus,
 this week, concerns and notes; `coach-page.js`, sheets in
 `coach-sheets.js`, shared with the Calendar), `library.html`
 (exercises), `equipment.html`, `settings.html` (with the account: sign

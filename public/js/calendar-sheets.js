@@ -6,7 +6,7 @@ import {
 } from "./activities.js";
 import { RPE_ANCHORS } from "./player.js";
 import { routeHash } from "./routes.js";
-import { KIND_LABELS, authorLabel, plannedBy } from "./coach.js";
+import { KIND_LABELS, authorLabel, plannedBy, writtenOn, howItFelt } from "./coach.js";
 import { weekSummary, summaryLine, watching } from "./week.js";
 
 // The calendar's sheets, used by the Calendar page and by Today: planning a
@@ -65,11 +65,27 @@ export function openPlanSheet({ date, workouts, onPlan }) {
   showSheet(dialog);
 }
 
+// The notes about a session or activity, newest first, each with who wrote
+// it and when: where the coach's reading meets what was planned and done.
+function notesList(notes) {
+  if (!notes.length) return "";
+  return `
+    <h3>Notes</h3>
+    <ul class="sheet-notes">${notes.map((n) => `
+      <li>
+        ${n.title ? `<p><strong>${escape(n.title)}</strong></p>` : ""}
+        <p>${escape(n.body)}</p>
+        <p class="muted small-print">${escape(`${authorLabel(n)} · ${writtenOn(n)}`)}</p>
+      </li>`).join("")}</ul>`;
+}
+
 // A session's sheet. A planned or missed one can move to a day of its week
 // (or this week's, once its day is gone), or Later to any date from today on;
 // it can be skipped or taken off the calendar. Any session opens its workout,
-// and a finished one its log. `on` holds onMove(date), onSkip() and onRemove().
-export function openSessionSheet({ session, today, on }) {
+// and a finished one its log; a done one opens with how it felt. `notes` are
+// the notes about it (notesAbout in coach.js). `on` holds onMove(date),
+// onSkip() and onRemove().
+export function openSessionSheet({ session, today, on, notes = [] }) {
   const dialog = sheet("session-sheet");
   const status = shownStatus(session, today);
   const can = movable(session);
@@ -77,6 +93,9 @@ export function openSessionSheet({ session, today, on }) {
   const facts = [longDay(session.date), STATUS_LABELS[status], minutes && `${minutes} min`].filter(Boolean);
   const choices = can ? moveChoices(session, today) : [];
   const logged = session.id != null && ["done", "in_progress", "skipped"].includes(status);
+  // A done session opens with how it felt, and the remark made on finishing.
+  const felt = status === "done" ? howItFelt(session.completion) : "";
+  const remark = status === "done" ? session.completion?.note : "";
   dialog.innerHTML = `
     <form method="dialog" class="howto session-sheet" novalidate>
       <header>
@@ -84,8 +103,11 @@ export function openSessionSheet({ session, today, on }) {
         <button class="icon-button" value="close" aria-label="Close">${icon("close")}</button>
       </header>
       <p class="muted">${facts.map(escape).join(" · ")}</p>
+      ${felt ? `<p class="session-felt"><strong>${escape(felt)}</strong></p>` : ""}
+      ${remark ? `<p class="session-remark">${escape(remark)}</p>` : ""}
       ${session.note ? `<p class="planner-note">${escape(session.note)}</p>` : ""}
       ${authorLine(plannedBy(session, today), "p")}
+      ${notesList(notes)}
       ${status === "missed" ? `<button class="primary" value="today">Do today</button>` : ""}
       ${can ? `
         <h3 id="move-label">Move to</h3>
@@ -155,9 +177,9 @@ export function activityRow(activity, unit, attribute, fulfils = null) {
 
 // Opens an activity's sheet, sending what is changed there with `send`
 // (which queues it in the outbox). `today` is the device's.
-export function editActivity({ activity, unit, today, send }) {
+export function editActivity({ activity, unit, today, send, notes = [] }) {
   openActivitySheet({
-    activity, unit, today,
+    activity, unit, today, notes,
     on: {
       onRpe: (rpe) => send(changeRequest(activity, { rpe }, today)),
       onNote: (note) => { if (note !== (activity.note ?? "")) send(changeRequest(activity, { note: note || null }, today)); },
@@ -295,8 +317,9 @@ export function openLogActivitySheet({ date, unit, onLog, sport = "", about = ""
 }
 
 // An activity's sheet: its numbers as they were sent, how hard it was, a
-// note, and Delete. `on` holds onRpe(rpe or null), onNote(text) and onDelete().
-export function openActivitySheet({ activity, unit, today, on }) {
+// note, the notes about it, and Delete. `on` holds onRpe(rpe or null),
+// onNote(text) and onDelete().
+export function openActivitySheet({ activity, unit, today, on, notes = [] }) {
   const dialog = sheet("activity-sheet");
   const facts = [
     ["Distance", formatDistance(activity.distance_m, unit)],
@@ -330,6 +353,7 @@ export function openActivitySheet({ activity, unit, today, on }) {
       <div class="sheet-actions">
         <button class="secondary small" value="note">Save note</button>
       </div>
+      ${notesList(notes)}
       <button class="link danger" value="delete">Delete the activity</button>
     </form>`;
   const form = dialog.querySelector("form");

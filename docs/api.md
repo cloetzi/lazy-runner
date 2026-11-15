@@ -94,7 +94,11 @@ as null when it has no value (`nullable`).
   A concern stays open until `PATCH` sends `resolved: true`. `GET /api/coach`
   is the whole board with this week's sessions, activities, routines and
   routine days as plain lists, nothing summed; `GET /api/coach/notes` pages the journal with
-  `before`.
+  `before`, filtered by `kind` and `author`. A note about a session or
+  activity shows on its day wherever it moves (`/api/calendar`). Tidy up
+  (`GET` counts, `POST /api/coach/tidy` deletes) clears the agent's notes
+  written before a day, keeping the current status and focus and the open
+  concerns.
 - **Weights** come back in the exercise's unit: the one the user's gear for
   it comes in (`unit` in `/api/equipment`, theirs to set). A weight sent in the other
   unit is converted and snapped to an owned weight. The `unit` setting

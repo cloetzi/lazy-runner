@@ -254,7 +254,57 @@ describe "coach API" do
 
       get "/api/coach/notes?kind=mood"
       _(last_response.status).must_equal 400
+      get "/api/coach/notes?kind=note,mood"
+      _(last_response.status).must_equal 400
       get "/api/coach/notes?limit=0"
+      _(last_response.status).must_equal 400
+    end
+
+    it "keeps several kinds, and the notes of some authors" do
+      mine = note("note", "Knee fine")
+      physio = note("note", "Ease the hills", author_kind: "human", author_name: "Sam")
+      agent = CoachNote.create(kind: "note", body: "Copied 9 runs", author_kind: "llm")
+      concern = note("concern", "Left knee")
+      note("status", "Base block")
+
+      get "/api/coach/notes?kind=note,concern"
+      _(json["notes"].map { it["id"] }).must_equal [concern.id, agent.id, physio.id, mine.id]
+      get "/api/coach/notes?kind=note&author=human,llm"
+      _(json["notes"].map { it["id"] }).must_equal [agent.id, physio.id]
+      get "/api/coach/notes?author=user,robot"
+      _(last_response.status).must_equal 400
+      _(json["error"]["fields"].keys).must_equal ["author"]
+    end
+  end
+
+  describe "tidy up" do
+    def agent(kind, body, **fields) = CoachNote.create(kind:, body:, author_kind: "llm", title: (body if kind == "concern"), **fields)
+
+    it "counts and deletes the agent's notes written before a day, but what still says where things stand" do
+      travel_to Time.utc(2026, 10, 20, 12)
+      old = agent("note", "Copied 9 runs")
+      old_status = agent("status", "Base block")
+      resolved = agent("concern", "Shin").tap(&:resolve!)
+      open_concern = agent("concern", "Left knee")
+      current_focus = agent("focus", "Hills")
+      yours = note("note", "Knee fine")
+      travel_to Time.utc(2026, 11, 4, 12)
+      current_status = agent("status", "Build block")
+      recent = agent("note", "Session B today")
+
+      get "/api/coach/tidy?before=2026-11-01"
+      _(json).must_equal("count" => 3)
+
+      post_json "/api/coach/tidy", before: "2026-11-01"
+      _(json).must_equal("deleted" => 3)
+      _(CoachNote.select_map(:id).sort).must_equal [open_concern, current_focus, yours, current_status, recent].map(&:id).sort
+      _([old, old_status, resolved].map { CoachNote.where(id: it.id).count }).must_equal [0, 0, 0]
+
+      get "/api/coach/tidy"
+      _(last_response.status).must_equal 400
+      post_json "/api/coach/tidy", before: "soon"
+      _(last_response.status).must_equal 400
+      post_json "/api/coach/tidy", before: "2026-11-06"
       _(last_response.status).must_equal 400
     end
   end
@@ -332,6 +382,21 @@ describe "coach API" do
     get "/api/calendar?from=2026-10-26&to=2026-11-08"
 
     _(json["notes"].map { it["id"] }).must_equal [dated.id]
+  end
+
+  it "puts a note about a session or activity on its day, wherever it moved" do
+    session = session_on(Date.new(2026, 11, 2))
+    activity, = Activity.log!({ date: "2026-11-03", sport: "run" })
+    about_session = note("note", "Heavy legs", session_id: session.id, date: Date.new(2026, 10, 20))
+    about_activity = note("note", "Felt easy", activity_id: activity.id)
+    session.update_columns(date: Date.new(2026, 11, 12))
+
+    get "/api/calendar?from=2026-11-09&to=2026-11-15"
+    _(json["notes"].map { it["id"] }).must_equal [about_session.id]
+    get "/api/calendar?from=2026-10-26&to=2026-11-08"
+    _(json["notes"].map { it["id"] }).must_equal [about_activity.id]
+    get "/api/calendar?from=2026-10-19&to=2026-10-25"
+    _(json["notes"]).must_equal []
   end
 
   it "keeps one user's goals and notes from another" do

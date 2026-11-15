@@ -1,11 +1,12 @@
 module Api
   class CalendarController < ApplicationController
     # Everything on the calendar in a date range: sessions, activities, notes and routine days.
-    # @description Flat lists, each by day and in order within a day:
+    # @description Flat lists, sessions and activities by day and in order within a day:
     #   `sessions` as GET /api/sessions gives them (a planned one on a day
     #   before today reads as `missed`), and `activities` as GET
-    #   /api/activities does, and the coach's `notes` dated to a day in it, in
-    #   the order written. `routine_days` are the days of `routines` that show
+    #   /api/activities does, and the coach's `notes` dated to a day in it or
+    #   about a session or activity on one (a note follows its session when
+    #   it moves), in the order written. `routine_days` are the days of `routines` that show
     #   in the range (see GET /api/routines), each with how it reads on
     #   `today`, the device's own date (taken within a day of the server's):
     #   tentative or confirmed from today on, missed before, done or skipped.
@@ -23,7 +24,7 @@ module Api
       render json: {
         sessions: Session.summarized.where(date: days).in_order.all,
         activities: Activity.where(date: days).in_order.all,
-        notes: CoachNote.eager(:activity, session: :workout).dated(days).all,
+        notes: CoachNote.eager(:activity, session: :workout).on_days(days).all,
         routines: routines.routines,
         routine_days: routines.days
       }

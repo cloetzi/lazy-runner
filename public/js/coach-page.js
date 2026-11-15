@@ -4,11 +4,11 @@ import { escape, icon } from "./html.js";
 import { localToday, dayName, shortDay, longDay, STATUS_LABELS, shownStatus } from "./calendar.js";
 import { activityTitle, activityFacts, sportIcon, preferredDistanceUnit } from "./activities.js";
 import {
-  authorLabel, authorBadge, writtenOn, knownCoaches, weekDays, KIND_LABELS,
+  authorLabel, authorBadge, writtenOn, knownCoaches, weekDays, KIND_LABELS, JOURNAL_FILTERS, journalPath, tidyCountPath, tidyRequest,
   noteRequest, changeNoteRequest, resolveRequest, deleteNoteRequest,
   addGoalRequest, changeGoalRequest, deleteGoalRequest, acceptRequest, dismissRequest, movedPosition,
 } from "./coach.js";
-import { openNoteSheet, openGoalSheet, openResolveSheet, aboutChoices } from "./coach-sheets.js";
+import { openNoteSheet, openGoalSheet, openResolveSheet, openTidySheet, aboutChoices } from "./coach-sheets.js";
 
 // The Coach tab: the goals that anchor everything (only the user changes
 // them; an agent's proposals wait here to be accepted or dismissed), the
@@ -25,8 +25,15 @@ const state = {
   board: null,
   stale: false,
   failed: null,
-  older: [], // journal notes paged in below the latest
-  olderNext: undefined, // the `before` for the next page; null when there is none
+  filter: "all", // the journal's filter, a key of JOURNAL_FILTERS
+  journal: null, // the journal's notes under the filter, paged in
+  journalNext: null, // the `before` for its next page; null when there is none
+  journalFailed: false, // the journal could not be read under the filter
+  loadingOlder: false,
+  journalAsk: 0, // the latest journal read, so an older answer arriving late is dropped
+  earlier: [], // the statuses and focus since replaced, folded into one line
+  earlierNext: null, // the `before` for their next page; null when there is none
+  earlierOpen: false,
   past: null, // achieved, dropped and dismissed goals, once asked for
 };
 
@@ -35,17 +42,46 @@ const unit = () => (storage ? preferredDistanceUnit(storage) : "km");
 
 async function load() {
   try {
-    const { data, stale } = await getJson(paths.coach(today()));
+    const [{ data, stale }] = await Promise.all([getJson(paths.coach(today())), loadJournal(), loadEarlier()]);
     state.board = data;
-    // The latest notes may have moved on: page the journal again from them.
-    state.older = [];
-    state.olderNext = undefined;
     state.stale = stale;
     state.failed = null;
   } catch (error) {
     state.failed = loadProblem("the coach board", error);
   }
   render();
+}
+
+// The journal's first page under the filter. The latest notes may have
+// moved on, so it starts again from them.
+async function loadJournal() {
+  const ask = ++state.journalAsk;
+  try {
+    const { data } = await getJson(journalPath(state.filter));
+    // Read again (another filter, or after a change) while this one loaded.
+    if (ask !== state.journalAsk) return;
+    state.journal = data.notes;
+    state.journalNext = data.next_before;
+    state.journalFailed = false;
+  } catch {
+    if (ask !== state.journalAsk) return;
+    state.journal = null;
+    state.journalFailed = true;
+  }
+}
+
+// The statuses and focus since replaced (the current ones are the board's),
+// a page at a time: `more` adds the next page.
+const EARLIER = "/api/coach/notes?journal=true&kind=status,focus&limit=100";
+async function loadEarlier(more = false) {
+  try {
+    const { data } = await getJson(more ? `${EARLIER}&before=${state.earlierNext}` : EARLIER);
+    state.earlier = more ? [...state.earlier, ...data.notes] : data.notes;
+    state.earlierNext = data.next_before;
+  } catch (error) {
+    if (more) alert(loadProblem("older notes", error, { hint: false }));
+    else state.earlier = [];
+  }
 }
 
 // Sends a change; the board is read again once it is saved. Resolves to the
@@ -239,22 +275,55 @@ function concernsCard({ concerns }) {
     </section>`;
 }
 
+// The journal: filters, the notes under the one picked, the earlier
+// statuses and focus folded into one line (under All), and Tidy up.
 function notesCard({ notes }) {
-  const all = [...notes, ...state.older];
-  const more = (state.olderNext === undefined ? state.board.notes_before : state.olderNext) != null;
+  const filters = `<div class="segmented journal-filters" role="group" aria-label="Show notes">${JOURNAL_FILTERS.map((f) =>
+    `<button type="button" data-filter="${f.key}" aria-pressed="${f.key === state.filter}">${escape(f.label)}</button>`).join("")}</div>`;
+  // Offline, or not read yet: the board's latest stand in under All.
+  const list = state.journal ?? (state.filter === "all" ? notes.filter((n) => n.kind === "note" || n.kind === "concern") : []);
+  const earlier = state.filter === "all" && state.earlier.length ? earlierLine() : "";
+  const loading = state.journal == null && state.filter !== "all";
+  const empty = loading ? (state.journalFailed ? "Could not load these notes." : "Loading…") : {
+    all: `Notes from you${state.agentSeen ? ", your coach and your coach agent" : " and your coach"} show here.`,
+    you: "Nothing from you yet.",
+    coach: "Nothing from your coach yet.",
+    concerns: "No resolved concerns yet; open ones are above.",
+  }[state.filter];
+  const actions = [
+    state.journal && state.journalNext != null && `<button class="secondary small" data-older${state.loadingOlder ? " disabled" : ""}>Older notes</button>`,
+    (list.length || state.earlier.length) && `<button class="link" data-tidy>Tidy up</button>`,
+  ].filter(Boolean);
   return `
     <section class="card coach-card" aria-labelledby="notes-title">
       <header class="coach-card-head"><h2 id="notes-title">Notes</h2><button class="primary small" data-write="note">Write a note</button></header>
-      ${all.length ? `<ul class="coach-entries">${all.map((n) => noteItem(n)).join("")}</ul>` : `<p class="muted">Notes from you${state.agentSeen ? ", your coach and your coach agent" : " and your coach"} show here.</p>`}
-      ${more ? `<button class="secondary small" data-older>Older notes</button>` : ""}
+      ${filters}
+      ${list.length ? `<ul class="coach-entries">${list.map((n) => noteItem(n)).join("")}</ul>` : `<p class="muted">${empty}</p>`}
+      ${earlier}
+      ${actions.length ? `<div class="journal-actions">${actions.join("")}</div>` : ""}
     </section>`;
+}
+
+// "Earlier status and focus, 3", opening to the notes themselves.
+function earlierLine() {
+  const count = `${state.earlier.length}${state.earlierNext != null ? "+" : ""}`;
+  const kinds = [...new Set(state.earlier.map((n) => n.kind))].sort().map((k) => KIND_LABELS[k].toLowerCase()).join(" and ");
+  return `
+    <div class="journal-earlier">
+      <button class="row earlier-toggle" data-earlier aria-expanded="${state.earlierOpen}">
+        <span class="row-text"><span class="row-title">Earlier ${escape(kinds)}, ${count}</span></span>
+        ${icon(state.earlierOpen ? "chevron-up" : "chevron-down")}
+      </button>
+      ${state.earlierOpen ? `<ul class="coach-entries">${state.earlier.map((n) => noteItem(n)).join("")}</ul>
+        ${state.earlierNext != null ? `<button class="secondary small" data-earlier-more>Older</button>` : ""}` : ""}
+    </div>`;
 }
 
 // ---------- Changes ----------
 
 const everyNote = () => {
   const b = state.board;
-  return [b.status, b.focus, ...b.concerns, ...b.notes, ...b.week.notes, ...state.older].filter(Boolean);
+  return [b.status, b.focus, ...b.concerns, ...b.notes, ...b.week.notes, ...(state.journal ?? []), ...state.earlier].filter(Boolean);
 };
 
 function writeNote(kind, note = null) {
@@ -291,15 +360,46 @@ async function decide(request) {
 
 // The journal's next page, written before the last one shown.
 async function older() {
-  const before = state.olderNext ?? state.board.notes_before;
+  if (state.loadingOlder || !state.journal) return;
+  const { filter: asked, journal } = state;
+  state.loadingOlder = true;
+  render();
   try {
-    const { data } = await getJson(`/api/coach/notes?journal=true&limit=20&before=${before}`);
-    state.older.push(...data.notes);
-    state.olderNext = data.next_before;
+    const { data } = await getJson(journalPath(asked, state.journalNext));
+    // The filter changed, or the journal was read again, while this loaded.
+    if (state.journal === journal) {
+      journal.push(...data.notes);
+      state.journalNext = data.next_before;
+    }
   } catch (error) {
-    alert(loadProblem("older notes", error, { hint: false }));
+    if (state.journal === journal) alert(loadProblem("older notes", error, { hint: false }));
+  } finally {
+    if (state.journal === journal) state.loadingOlder = false;
   }
   render();
+}
+
+async function filter(key) {
+  if (key === state.filter) return;
+  state.filter = key;
+  state.journal = null;
+  state.journalNext = null;
+  state.journalFailed = false;
+  state.loadingOlder = false;
+  render();
+  await loadJournal();
+  render();
+}
+
+// Tidy up: the agent's notes written before a day go, after a count.
+function tidy() {
+  openTidySheet({
+    count: async (before) => {
+      const { data, stale } = await getJson(tidyCountPath(before));
+      return { count: data.count, stale };
+    },
+    onTidy: (before) => change(tidyRequest(before)),
+  });
 }
 
 $("coach-board").addEventListener("click", (event) => {
@@ -320,6 +420,10 @@ $("coach-board").addEventListener("click", (event) => {
     return openResolveSheet({ note, onResolve: (resolution) => change(resolveRequest(note, resolution)) });
   }
   if (d.older !== undefined) return older();
+  if (d.filter) return filter(d.filter);
+  if (d.earlier !== undefined) { state.earlierOpen = !state.earlierOpen; return render(); }
+  if (d.earlierMore !== undefined) return loadEarlier(true).then(render);
+  if (d.tidy !== undefined) return tidy();
   if (d.past !== undefined) return loadPast();
   if (d.reactivate) return decide(changeGoalRequest({ id: d.reactivate }, { status: "active" }));
   if (d.deleteGoal) {

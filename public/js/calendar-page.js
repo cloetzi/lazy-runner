@@ -10,7 +10,7 @@ import {
 } from "./calendar.js";
 import { openPlanSheet, openSessionSheet, openAddSheet, openLogActivitySheet, activityRow, editActivity, noteRow, weekSummaryHtml } from "./calendar-sheets.js";
 import { openNoteSheet, aboutChoices } from "./coach-sheets.js";
-import { notesByDay, knownCoaches, noteRequest, changeNoteRequest, deleteNoteRequest, plannedBy, agentName } from "./coach.js";
+import { notesByDay, notesAbout, knownCoaches, noteRequest, changeNoteRequest, deleteNoteRequest, plannedBy, agentName } from "./coach.js";
 import {
   withQueuedActivities, removedActivityIds, byDay as activitiesByDay, sportIcon, activityTitle, activityKey, preferredDistanceUnit, adoptServerDistanceUnit,
   logRequest,
@@ -165,7 +165,7 @@ function shown() {
   const fulfils = new Map(routineDays.filter((d) => d.state === "done").map((d) => [String(d.activity_key ?? d.activity_id), routineTitle(routineOf(d))]));
   return {
     sessions, activities, next, routineDays, fulfils,
-    days: byDay(sessions), activityDays: activitiesByDay(activities), noteDays: notesByDay(state.notes), routineDayMap: routineDaysByDay(listed(routineDays)),
+    days: byDay(sessions), activityDays: activitiesByDay(activities), noteDays: notesByDay(state.notes, withQueued(state.sessions, queue, state.today)), routineDayMap: routineDaysByDay(listed(routineDays)),
   };
 }
 
@@ -481,14 +481,14 @@ function openRoutineDay(key) {
 function openActivity(key) {
   const activity = shown().activities.find((a) => activityKey(a) === key);
   if (!activity) return;
-  editActivity({ activity, unit: distanceUnit(), today: state.today, send });
+  editActivity({ activity, unit: distanceUnit(), today: state.today, send, notes: notesAbout(state.notes, "activity", activity.id) });
 }
 
 function open(key) {
   const session = find(key);
   if (!session) return;
   openSessionSheet({
-    session, today: state.today,
+    session, today: state.today, notes: notesAbout(state.notes, "session", session.id),
     on: {
       onMove: (date) => (date === state.today && session.status === "missed" ? doToday(key) : move(key, date)),
       onSkip: () => send(skipSessionRequest(session)),

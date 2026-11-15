@@ -1,6 +1,6 @@
 import { escape, icon, busy, showSheet } from "./html.js";
 import { NEEDS_CONNECTION, offline } from "./api.js";
-import { longDay } from "./calendar.js";
+import { longDay, addDays, localToday } from "./calendar.js";
 import { KINDS, KIND_LABELS, noteFields, goalFields, authorLabel } from "./coach.js";
 
 // The Coach tab's sheets, used by the Coach page and the Calendar: writing
@@ -237,6 +237,64 @@ export function openResolveSheet({ note, onResolve }) {
   const form = dialog.querySelector("form");
   saveOnSubmit(dialog, form, () => ({ fields: form.elements.resolution.value, problems: [] }), onResolve);
   showSheet(dialog);
+}
+
+// Tidy up: the agent's notes written before a day go, the current status
+// and focus and the open concerns kept. `count(before)` resolves to
+// { count, stale } (stale: answered from the offline cache); `onTidy(before)`
+// deletes them, resolving to a problem to show or nothing.
+export function openTidySheet({ count, onTidy }) {
+  const dialog = sheet("tidy-sheet");
+  const today = localToday();
+  dialog.innerHTML = `
+    <form class="howto" novalidate>
+      <header>
+        <h2>Tidy up the notes</h2>
+        <button class="icon-button" type="button" data-close aria-label="Close">${icon("close")}</button>
+      </header>
+      <p>Deletes the notes your coach agent wrote before a day. Yours and those of a coach you named stay, and so do the current status, the focus and open concerns.</p>
+      <label class="field"><span>Written before</span>
+        <input type="date" name="before" value="${addDays(today, -14)}" max="${today}" required>
+      </label>
+      <p class="tidy-count muted" aria-live="polite"></p>
+      <p class="form-error" role="alert" hidden></p>
+      <button class="primary" type="submit" disabled>Delete</button>
+    </form>`;
+  const form = dialog.querySelector("form");
+  const button = form.querySelector("button.primary");
+  const said = form.querySelector(".tidy-count");
+  let found = 0;
+  // The count for the day picked; an answer for an earlier pick is dropped.
+  const recount = async () => {
+    const before = form.elements.before.value;
+    found = 0;
+    button.disabled = true;
+    button.textContent = "Delete";
+    said.textContent = before ? "Counting…" : "";
+    if (!before) return;
+    try {
+      const { count: n, stale } = await count(before);
+      if (form.elements.before.value !== before) return;
+      if (stale) {
+        said.textContent = "Tidying up needs a connection.";
+        return;
+      }
+      found = n;
+      said.textContent = n === 0 ? `None of the agent's notes are from before ${longDay(before)}.`
+        : `${n === 1 ? "1 note" : `${n} notes`} from the agent, written before ${longDay(before)}.`;
+      if (n) button.textContent = n === 1 ? "Delete 1 note" : `Delete ${n} notes`;
+      button.disabled = n === 0;
+    } catch (error) {
+      if (form.elements.before.value === before) said.textContent = `Could not count them (${error.message}).`;
+    }
+  };
+  form.elements.before.addEventListener("change", recount);
+  saveOnSubmit(dialog, form, () => ({
+    fields: form.elements.before.value,
+    problems: found ? [] : ["Pick a day with notes from before it."],
+  }), onTidy);
+  showSheet(dialog);
+  recount();
 }
 
 // What a note can be about: the activities and sessions given, newest day first.

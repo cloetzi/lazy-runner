@@ -21,7 +21,8 @@ export function setsSummary(sets, unit) {
   }).join(" · ");
 }
 
-const FEEDBACK = { too_easy: "too easy", right: "felt right", too_hard: "too hard" };
+// How a session felt, as the finish form asked it.
+export const FEEDBACK = { too_easy: "too easy", right: "felt right", too_hard: "too hard" };
 
 // The line under a session: "26 min · felt right · RPE 6", or what is known
 // of it. `minutes` is null when the start or finish was not recorded.

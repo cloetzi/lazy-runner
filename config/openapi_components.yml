@@ -838,7 +838,7 @@ components:
       properties:
         sessions: { type: array, items: { $ref: "#/components/schemas/Session" } }
         activities: { type: array, items: { $ref: "#/components/schemas/Activity" } }
-        notes: { type: array, description: The coach's notes dated to a day in the range., items: { $ref: "#/components/schemas/CoachNote" } }
+        notes: { type: array, description: "The coach's notes on a day in the range: about a session or activity on it, else dated to it.", items: { $ref: "#/components/schemas/CoachNote" } }
         routines: { type: array, description: The routines with days in the range., items: { $ref: "#/components/schemas/Routine" } }
         routine_days: { type: array, description: "Their days that show in the range, by the day they show on.", items: { $ref: "#/components/schemas/RoutineDay" } }
     Routine:

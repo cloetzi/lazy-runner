@@ -37,8 +37,35 @@ class CoachNote < Record
     where :by_agent, author_kind: "llm"
     # Written since the start of the server's day.
     def written_today = where { created_at >= Time.zone.now.beginning_of_day.to_time }
-    # Notes about one of the days in `days`, by day, then in the order written.
-    def dated(days) = where(date: days).order(:date, :id)
+    # Notes that show on one of the days in `days`, in the order written:
+    # one about a session or activity on its day now (a note follows its
+    # session when it moves), any other on the day it is dated to.
+    def on_days(days)
+      where(
+        Sequel.|(
+          { session_id: nil, activity_id: nil, date: days },
+          { session_id: Session.where(date: days).select(:id) },
+          { activity_id: Activity.where(date: days).select(:id) }
+        )
+      ).order(:id)
+    end
+
+    # Notes by who wrote them: `user`, `human` or `llm`, one or several.
+    def by(authors) = where(author_kind: authors)
+
+    # The journal: every note but the current status and focus and the open
+    # concerns, which say where things stand.
+    def journal
+      current = %w[status focus].filter_map { CoachNote.of_kind(it).newest_first.get(:id) }
+      exclude(id: current).exclude(kind: "concern", resolved_at: nil)
+    end
+
+    # What "Tidy up" removes: an agent's notes in the journal written before
+    # `day` (the server's).
+    def tidy_before(day)
+      start = day.in_time_zone.to_time
+      journal.by_agent.where { created_at < start }
+    end
   end
 
   def concern? = kind == "concern"

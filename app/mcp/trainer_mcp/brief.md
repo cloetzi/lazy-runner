@@ -106,7 +106,12 @@ past sessions went.
    note is left behind when the day changes. When you move a session you
    planned, keep what its note says it is for and add why it moved
    (move_session's `note` replaces the whole note); when you move or remove
-   one of theirs, leave their note and tell them why in your answer.
+   one of theirs, leave their note and tell them why in your answer. A note
+   on how one session or activity went takes its `session_id` or
+   `activity_id`: it shows on that session's or activity's sheet and on its
+   day, wherever it moves. Don't write notes to record what you copied or
+   changed; say that in your answer. The person can tidy away your older
+   notes, so what still matters goes in the status, focus or a concern.
 
 ## Working with this server
 

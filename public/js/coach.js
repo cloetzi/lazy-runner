@@ -7,6 +7,7 @@
 // coach they name, or an agent (over MCP, never from here).
 
 import { weekOf, shortDay, localToday, addDays } from "./calendar.js";
+import { FEEDBACK } from "./history.js";
 
 export const KINDS = ["status", "focus", "concern", "note"];
 export const KIND_LABELS = { status: "Status", focus: "Focus", concern: "Concern", note: "Note" };
@@ -83,18 +84,62 @@ export function weekDays(week) {
     date,
     sessions: week.sessions.filter((s) => s.date === date),
     activities: week.activities.filter((a) => a.date === date),
-    notes: week.notes.filter((n) => n.date === date),
+    notes: week.notes.filter((n) => noteDay(n) === date),
   }));
 }
 
-// Dated notes by day: { "2026-11-03": [note, ...] }, in the order written.
-export function notesByDay(notes) {
+// The day a note shows on: its session's or activity's, wherever that is
+// now, else the day it is dated to (null for neither). `sessions` are the
+// sessions as shown, a move still queued included, so the note goes with it.
+export function noteDay(note, sessions = []) {
+  if (note.about?.type === "session") {
+    const session = sessions.find((s) => s.id === note.about.id);
+    if (session) return session.date;
+  }
+  return note.about?.date ?? note.date ?? null;
+}
+
+// Notes by the day they show on: { "2026-11-03": [note, ...] }, in the
+// order written. `sessions` as noteDay takes them.
+export function notesByDay(notes, sessions = []) {
   const days = {};
   for (const note of [...notes].sort((a, b) => a.id - b.id)) {
-    if (note.date) (days[note.date] ??= []).push(note);
+    const day = noteDay(note, sessions);
+    if (day) (days[day] ??= []).push(note);
   }
   return days;
 }
+
+// The notes about one session or activity (`type` "session" or
+// "activity"), newest first.
+export const notesAbout = (notes, type, id) =>
+  id == null ? [] : notes.filter((n) => n.about?.type === type && n.about.id === id).sort((a, b) => b.id - a.id);
+
+// How a done session felt, from its completion: "RPE 8 · too hard · ended
+// early", or "" when nothing was said.
+export function howItFelt(completion) {
+  if (!completion) return "";
+  return [completion.rpe && `RPE ${completion.rpe}`, FEEDBACK[completion.feedback], completion.ended_early && "ended early"].filter(Boolean).join(" · ");
+}
+
+// The journal's filters, each the query that keeps its notes. Statuses and
+// focus are left out: the journal folds the earlier ones into one line.
+export const JOURNAL_FILTERS = [
+  { key: "all", label: "All", query: "kind=note,concern" },
+  { key: "you", label: "Yours", query: "kind=note,concern&author=user" },
+  { key: "coach", label: "Your coach", query: "kind=note,concern&author=human,llm" },
+  { key: "concerns", label: "Concerns", query: "kind=concern" },
+];
+
+// A page of the journal under `filter` (a key of JOURNAL_FILTERS), written
+// before the note `before` when given.
+export function journalPath(filter, before = null) {
+  const { query } = JOURNAL_FILTERS.find((f) => f.key === filter) ?? JOURNAL_FILTERS[0];
+  return `/api/coach/notes?journal=true&limit=20&${query}${before == null ? "" : `&before=${before}`}`;
+}
+
+export const tidyCountPath = (before) => `/api/coach/tidy?before=${before}`;
+export const tidyRequest = (before) => ({ method: "POST", path: "/api/coach/tidy", body: { before } });
 
 // What the note form sends, from its values: blanks left out of a new note
 // and cleared (null) on an edit, "about" read as activity:3 or session:9.
