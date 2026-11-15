@@ -289,7 +289,7 @@ test("plans a weekly ride and a maybe-hike, and logging the hike ticks it off", 
   await ride.getByText("Maybe").waitFor();
   await ride.locator("button").click();
   await page.locator("#routine-day-sheet").getByRole("button", { name: "I'm going" }).click();
-  await ride.getByText("Going").waitFor();
+  await ride.getByText("Planned").waitFor();
 
   // A one-off hike today, as a maybe; Log it now links the activity to it.
   await page.locator(`[data-add="${today}"]`).click();

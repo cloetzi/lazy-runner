@@ -27,7 +27,7 @@ import {
 import { openEditor, leaveEditor } from "./editor.js";
 import {
   withActivities, listed, routineTitle, confirmRequest as confirmDayRequest, skipRequest as skipDayRequest,
-  moveRequest as moveDayRequest, resetRequest as resetDayRequest,
+  moveRequest as moveDayRequest, resetRequest as resetDayRequest, endRequest as endRoutineRequest,
 } from "./routines.js";
 import { routineRow, dayKey, openRoutineDaySheet } from "./routine-sheets.js";
 
@@ -353,7 +353,7 @@ function renderActivities() {
   const section = $("today-activities");
   section.hidden = false;
   section.innerHTML = `
-    ${plans.length ? `<h2>Planned today</h2>
+    ${plans.length ? `<h2>Also today</h2>
       <ul class="list day-sessions">${plans.map((d) => routineRow(d, todayRoutine(d), state.distanceUnit, "data-today-routine", state.today.date)).join("")}</ul>` : ""}
     ${list.length ? `<h2>Activities today</h2>
       <ul class="list day-sessions">${list.map((a) => activityRow(a, state.distanceUnit, "data-today-activity", fulfils.get(activityKey(a)))).join("")}</ul>` : ""}
@@ -381,6 +381,7 @@ function openTodayRoutine(key) {
       onMove: (date) => sendRoutineDay(moveDayRequest(day, date, today)),
       onLog: () => logActivity({ sport: routine.sport, about: `for ${routineTitle(routine)}` }),
       onEdit: () => { location.href = `/calendar.html#${day.on}`; },
+      onRemove: () => sendRoutineDay(endRoutineRequest(routine, today)),
     },
   });
 }

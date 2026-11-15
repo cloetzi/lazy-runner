@@ -511,6 +511,11 @@ body:not(.calendar-month) .calendar-key { display: none; }
 .day-title { margin: 0; font-size: var(--text-lg); }
 .day.today .day-title > span:first-child { color: var(--accent); }
 .day.past .day-title { color: var(--muted); }
+/* A day gone by in this week, folded to one line until tapped. */
+.folded-day { min-height: 2.75rem; gap: var(--space-3); padding: var(--space-1) 0; color: var(--muted); }
+.folded-date { flex: none; min-width: 3.5rem; font-weight: 700; }
+.folded-items { flex: 1; min-width: 0; font-size: var(--text-sm); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.week-days > li:has(> .folded) + li:has(> .folded) { margin-top: calc(-1 * var(--space-3)); }
 .day-head .icon-button { color: var(--accent); font-size: var(--text-xl); }
 .rest { margin: 0; padding: var(--space-3) var(--space-4); border: 1px dashed var(--border); border-radius: var(--radius-lg); }
 .list > li.cal-row { display: flex; align-items: center; gap: var(--space-2); padding-right: var(--space-3); }

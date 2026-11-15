@@ -14,8 +14,10 @@ export const WEEKDAY_SHORT = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 const WEEKDAY_PLURAL = ["Mondays", "Tuesdays", "Wednesdays", "Thursdays", "Fridays", "Saturdays", "Sundays"];
 export const EFFORTS = ["easy", "moderate", "hard"];
 
+// The words a routine day reads as, the same as a session's (one
+// vocabulary: Planned, Maybe, Done, Skipped, Missed).
 export const STATE_LABELS = {
-  tentative: "Maybe", confirmed: "Going", done: "Done", skipped: "Not this week", missed: "Didn't happen",
+  tentative: "Maybe", confirmed: "Planned", done: "Done", skipped: "Skipped", missed: "Missed",
 };
 
 // 1 for Monday to 7 for Sunday, as the server counts weekdays.

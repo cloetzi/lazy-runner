@@ -4,7 +4,7 @@ import { mountNav } from "./nav.js";
 import { getJson, sendChange, STALE_NOTE } from "./api.js";
 import { escape, icon, authorLine } from "./html.js";
 import {
-  addDays, addMonths, weekOf, monthWeeks, rangeFor, dayName, shortDay, longDay, weekLabel, monthLabel, localToday, isDate,
+  addDays, addMonths, weekOf, monthWeeks, rangeFor, dayName, shortDay, longDay, weekdayDay, weekLabel, monthLabel, localToday, isDate,
   byDay, upNext, markFor, movable, plannable, STATUS_LABELS,
   planRequest, moveRequest, skipSessionRequest, removeRequest, withQueued,
 } from "./calendar.js";
@@ -34,6 +34,9 @@ import { routineRow, routineChip, dayKey, openRoutineDaySheet, openRoutineSheet 
 // once. Notes and routines are sent straight away, as on the Coach page.
 
 const VIEW_KEY = "calendarView";
+// Set once the calendar has shown anything to this account: the page's
+// how-to line goes.
+const usedKey = () => `calendarUsed:${pageAccount(storage).id}`;
 const wide = matchMedia("(min-width: 60rem)");
 const $ = (id) => document.getElementById(id);
 const storage = (() => {
@@ -62,6 +65,8 @@ const state = {
   workouts: null, // what the plan sheet offers, loaded on first use
   load: 0, // the latest load, so an older answer arriving late is dropped
   loaded: null, // the range `sessions` is for, "from..to"
+  unfolded: new Set(), // days gone by in this week opened to show in full
+  toToday: true, // bring today into view once the week is drawn ("asked": Today was tapped)
 };
 
 const rangeKey = () => { const { from, to } = rangeFor(view(), state.focus); return `${from}..${to}`; };
@@ -88,6 +93,13 @@ async function load() {
     state.routineDays = range.data.routine_days ?? [];
     state.upcoming = upcoming.data;
     state.stale = range.stale || upcoming.stale;
+    if ([state.sessions, state.activities, state.notes, state.routineDays, state.upcoming].some((list) => list.length)) {
+      try {
+        storage.setItem(usedKey(), "1");
+      } catch {
+        // Storage full or refused: the line just stays.
+      }
+    }
     state.failed = null;
   } catch (error) {
     if (ticket !== state.load) return;
@@ -158,6 +170,8 @@ function render() {
   else if (state.stale) notes.push(STALE_NOTE);
   $("calendar-note").textContent = notes.join(" ");
   $("calendar-note").hidden = notes.length === 0;
+  // The how-to line is for an empty calendar; once there is anything, the title says enough.
+  document.querySelector(".calendar .tagline").hidden = storage.getItem(usedKey()) === "1";
 
   // A range not loaded yet shows nothing rather than a week of Rest.
   if (state.loaded !== rangeKey()) {
@@ -165,12 +179,63 @@ function render() {
   } else {
     const data = shown();
     $("calendar-body").innerHTML = current === "month" ? monthView(data) : weekView(data);
+    if (state.toToday) bringTodayIntoView();
   }
   renderSync();
 }
 
+// The week opens on today: the days gone by fold to one line each (a tap
+// opens one), and today scrolls up under the bar when the page opens.
+// A day with a missed session stays open, so its Do today is at hand.
 function weekView({ days, activityDays, noteDays, routineDayMap, fulfils, next }) {
-  return `<ol class="week-days">${weekOf(state.focus).map((date) => `<li>${dayCard(date, days[date] ?? [], activityDays[date] ?? [], next, { notes: noteDays[date], routineDays: routineDayMap[date], fulfils })}</li>`).join("")}</ol>`;
+  const week = weekOf(state.focus);
+  const thisWeek = week.includes(state.today);
+  return `<ol class="week-days">${week.map((date) => {
+    const parts = [days[date] ?? [], activityDays[date] ?? [], next, { notes: noteDays[date], routineDays: routineDayMap[date], fulfils }];
+    const missed = parts[0].some((s) => markFor(s, state.today, next) === "missed");
+    const folded = thisWeek && date < state.today && !missed && !state.unfolded.has(date);
+    return `<li>${folded ? foldedDay(date, ...parts) : dayCard(date, ...parts)}</li>`;
+  }).join("")}</ol>`;
+}
+
+// What is on a day, a phrase each ("Session A, done"), as the folded line
+// and the month's day label read it.
+function dayItems(sessions, activities, next, notes = [], routineDays = []) {
+  const by = (item) => (item?.created_by === "llm" ? `, by ${agentName(item)}` : "");
+  return [
+    ...sessions.map((s) => `${s.workout.title}, ${STATUS_LABELS[markFor(s, state.today, next)].toLowerCase()}${by(s)}`),
+    ...routineDays.map((d) => `${routineTitle(routineOf(d) ?? {})}, ${ROUTINE_LABELS[d.state].toLowerCase()}${by(routineOf(d))}`),
+    ...activities.map(activityTitle),
+    ...notes.map((n) => `note: ${n.title ?? n.body}`),
+  ];
+}
+
+// A day gone by in one line: "Mon 9 · Session A, done · Easy run, missed".
+function foldedDay(date, sessions, activities, next, { notes = [], routineDays = [] } = {}) {
+  const items = dayItems(sessions, activities, next, [], routineDays);
+  if (notes.length) items.push(notes.length === 1 ? "1 note" : `${notes.length} notes`);
+  return `
+    <section class="day past folded" data-date="${date}">
+      <button class="row folded-day" data-unfold="${date}" aria-expanded="false">
+        <span class="folded-date">${escape(weekdayDay(date))}</span>
+        <span class="folded-items">${escape(items.length ? items.join(" · ") : "Rest")}</span>
+        ${icon("chevron-down")}
+      </button>
+    </section>`;
+}
+
+// Scrolls today's card up to just under the page's bar, once.
+// Not when the page opened and the person has scrolled meanwhile (Today
+// asks for it), nor when today already starts on the first screen.
+function bringTodayIntoView() {
+  const asked = state.toToday === "asked";
+  state.toToday = false;
+  const day = document.querySelector(".week-days .day.today");
+  if (!day || (!asked && scrollY > 8)) return;
+  const box = day.getBoundingClientRect();
+  if (box.top >= 0 && box.top < innerHeight * 0.6) return;
+  const bar = Math.max(document.querySelector(".topbar")?.getBoundingClientRect().bottom ?? 0, 0);
+  scrollTo({ top: box.top + scrollY - bar - 8, behavior: "instant" });
 }
 
 // What the day's plus adds: a workout from today on, an activity up to today, or a note.
@@ -229,13 +294,7 @@ function monthView({ days, activityDays, noteDays, routineDayMap, fulfils, next 
     const routineDays = routineDayMap[date] ?? [];
     const classes = ["month-day", date.slice(0, 7) !== month && "outside", date === state.today && "today",
       date === state.focus && "selected", date < state.today && "past"].filter(Boolean).join(" ");
-    const by = (item) => (item?.created_by === "llm" ? `, by ${agentName(item)}` : "");
-    const items = [
-      ...sessions.map((s) => `${s.workout.title}, ${STATUS_LABELS[markFor(s, state.today, next)].toLowerCase()}${by(s)}`),
-      ...routineDays.map((d) => `${routineTitle(routineOf(d) ?? {})}, ${ROUTINE_LABELS[d.state].toLowerCase()}${by(routineOf(d))}`),
-      ...activities.map(activityTitle),
-      ...notes.map((n) => `note: ${n.title ?? n.body}`),
-    ];
+    const items = dayItems(sessions, activities, next, notes, routineDays);
     const label = `${longDay(date)}: ${items.length ? items.join("; ") : "rest"}`;
     return `
       <div class="${classes}" data-date="${date}">
@@ -392,6 +451,7 @@ function openRoutineDay(key) {
       onMove: (date) => tell(moveDayRequest(day, date, state.today)),
       onLog: () => logActivity(day.on, { sport: routine.sport, about: `for ${routineTitle(routine)}` }),
       onEdit: () => planRoutine({ date: day.on, routine }),
+      onRemove: () => tell(endRequest(routine, state.today)),
     },
   });
 }
@@ -448,7 +508,10 @@ function shift(direction) {
 
 $("calendar-prev").onclick = () => shift(-1);
 $("calendar-next").onclick = () => shift(1);
-$("calendar-today").onclick = () => goTo(localToday());
+$("calendar-today").onclick = () => {
+  state.toToday = "asked";
+  goTo(localToday());
+};
 $("calendar-switch").onclick = (event) => {
   const value = event.target.closest("[data-value]")?.dataset.value;
   if (!value || value === state.chosenView) return;
@@ -459,8 +522,15 @@ $("calendar-switch").onclick = (event) => {
 };
 
 $("calendar-body").addEventListener("click", (event) => {
-  const target = event.target.closest("[data-add], [data-open], [data-activity], [data-routine-day], [data-note], [data-do-today], [data-select], .month-day");
+  const target = event.target.closest("[data-add], [data-open], [data-activity], [data-routine-day], [data-note], [data-do-today], [data-unfold], [data-select], .month-day");
   if (!target) return;
+  if (target.dataset.unfold) {
+    state.unfolded.add(target.dataset.unfold);
+    render();
+    // Focus stays on the day just opened: its first entry, else its plus.
+    const day = document.querySelector(`.day[data-date="${target.dataset.unfold}"]`);
+    return (day?.querySelector(".day-sessions button") ?? day?.querySelector("[data-add]"))?.focus();
+  }
   if (target.dataset.add) return add(target.dataset.add);
   if (target.dataset.routineDay) return openRoutineDay(target.dataset.routineDay);
   if (target.dataset.note) return writeNote(null, state.notes.find((n) => String(n.id) === target.dataset.note));

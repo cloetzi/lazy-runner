@@ -2,9 +2,9 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
   isoWeekday, routineTitle, weekdaysLabel, routineFacts, dayState, sameSport, withActivities, byDay, listed, moveChoices,
-  confirmRequest, skipRequest, moveRequest, resetRequest, planRequest, changeRequest, endRequest, readRoutine,
+  confirmRequest, skipRequest, moveRequest, resetRequest, planRequest, changeRequest, endRequest, readRoutine, STATE_LABELS,
 } from "../../public/js/routines.js";
-import { weekOf } from "../../public/js/calendar.js";
+import { weekOf, STATUS_LABELS } from "../../public/js/calendar.js";
 import { removedActivityIds } from "../../public/js/activities.js";
 
 const run = { id: 1, title: null, sport: "run", workout: null, weekdays: [3, 6], minutes: 40, distance_m: 8000, effort: "easy" };
@@ -122,4 +122,10 @@ test("says what is missing from the routine sheet", () => {
     "Say what you'll do, such as run.", "Pick at least one day of the week.", "Give the time as whole minutes.", "Give the distance as a number of mi.",
   ]);
   assert.deepEqual(readRoutine(form({ what: "workout" }), "km").problems, ["Pick a workout."]);
+});
+
+test("routine days and sessions read in one vocabulary", () => {
+  assert.deepEqual(Object.values(STATE_LABELS), ["Maybe", "Planned", "Done", "Skipped", "Missed"]);
+  for (const state of ["done", "skipped", "missed"]) assert.equal(STATE_LABELS[state], STATUS_LABELS[state]);
+  assert.equal(STATE_LABELS.confirmed, STATUS_LABELS.planned);
 });

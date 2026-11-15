@@ -7,8 +7,9 @@ import {
 } from "./routines.js";
 
 // The routine sheets, used by the Calendar page and by Today: a day of a
-// routine in a day's list, its sheet (I'm going, Log it now, Not this week,
-// Move to, Edit the routine), and the sheet that plans or changes a
+// routine in a day's list, its sheet (I'm going, Log it now, Not this week
+// or Skip, Move to, Edit the routine, or Remove for a one-off), and the
+// sheet that plans or changes a
 // routine. Each is a dialog built on demand; they only ask, and the caller
 // sends the change.
 
@@ -53,14 +54,20 @@ export const dayKey = (day) => `${day.routine_id}:${day.date}`;
 // A day's sheet. A tentative day can be confirmed (I'm going), a confirmed
 // one made tentative again; a sport routine's day up to today can be logged
 // now, linked to it; an open day can be skipped or moved within its week (or
-// Later), a skipped one planned again. `on` holds onConfirm, onReset,
-// onLog, onSkip, onMove(date), onEdit and onEnd; one left out is not offered.
+// Later), a skipped one planned again. A weekly routine's day is skipped
+// "Not this week"; a one-off's is skipped, or taken off the calendar
+// (onRemove) while its day is still to come. `on` holds onConfirm, onReset,
+// onLog, onSkip, onMove(date), onEdit and onRemove; one left out is not offered.
 export function openRoutineDaySheet({ day, routine, unit, today, on }) {
   const dialog = sheet("routine-day-sheet");
   const open = ["tentative", "confirmed", "missed"].includes(day.state);
   const facts = [longDay(day.on), STATE_LABELS[day.state], day.moved && `moved from ${longDay(day.date)}`].filter(Boolean);
   const choices = open ? moveChoices(day, today, weekOf) : [];
   const canLog = routine.sport && open && day.on <= today;
+  const oneOff = routine.weekdays.length === 0;
+  // Only a one-off still wholly ahead is deleted; one whose own day has gone
+  // by would only be stopped (Routine#end!).
+  const canRemove = oneOff && on.onRemove && day.date >= today && day.on >= today && day.state !== "done";
   dialog.innerHTML = `
     <form method="dialog" class="howto routine-day-sheet" novalidate>
       <header>
@@ -75,7 +82,7 @@ export function openRoutineDaySheet({ day, routine, unit, today, on }) {
         ${day.state === "tentative" ? `<button class="primary" value="confirm">I'm going</button>` : ""}
         ${canLog ? `<button class="${day.state === "tentative" ? "secondary" : "primary"}" value="log">Log it now</button>` : ""}
         ${day.state === "confirmed" ? `<button class="secondary" value="reset">Maybe after all</button>` : ""}
-        ${open ? `<button class="secondary" value="skip">Not this week</button>` : ""}
+        ${open ? `<button class="secondary" value="skip">${oneOff ? "Skip" : "Not this week"}</button>` : ""}
         ${day.state === "skipped" && day.on >= today ? `<button class="secondary" value="reset">Plan it again</button>` : ""}
       </div>
       ${open && day.on >= today ? `
@@ -90,8 +97,9 @@ export function openRoutineDaySheet({ day, routine, unit, today, on }) {
         </div>` : ""}
       <div class="sheet-actions">
         ${routine.workout ? `<a class="button secondary small" href="/#workout/${routine.workout.id}">Open workout</a>` : ""}
-        ${on.onEdit ? `<button class="secondary small" value="edit">Edit the routine</button>` : ""}
+        ${on.onEdit ? `<button class="secondary small" value="edit">${oneOff ? "Edit" : "Edit the routine"}</button>` : ""}
       </div>
+      ${canRemove ? `<button class="link danger" value="remove">Remove from the calendar</button>` : ""}
     </form>`;
 
   const later = dialog.querySelector(".move-later");
@@ -118,6 +126,7 @@ export function openRoutineDaySheet({ day, routine, unit, today, on }) {
     if (answer === "log") on.onLog();
     if (answer === "skip") on.onSkip();
     if (answer === "edit") on.onEdit();
+    if (answer === "remove" && confirm(`Remove ${routineTitle(routine)} from the calendar?`)) on.onRemove();
     if (answer.startsWith("move:")) on.onMove(answer.slice(5));
   };
   dialog.returnValue = "";
