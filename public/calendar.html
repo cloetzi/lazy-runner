@@ -17,7 +17,10 @@
 <body>
   <main class="view calendar" id="calendar">
     <header class="brand">
-      <h1>Calendar</h1>
+      <div class="calendar-title">
+        <h1>Calendar</h1>
+        <button class="quiet small calendar-key-button" id="calendar-key" aria-haspopup="dialog"><svg class="icon" aria-hidden="true"><use href="/icons/sprite.svg#info"/></svg>Key</button>
+      </div>
       <p class="tagline">What you plan, and what you did. Tap a day's plus to plan a workout or a run, log an activity or write a note.</p>
     </header>
 
@@ -37,15 +40,6 @@
     <p class="muted calendar-note" id="calendar-note" hidden></p>
     <div class="calendar-body" id="calendar-body"><p class="muted">Loading…</p></div>
 
-    <ul class="calendar-key" aria-label="Key">
-      <li><span class="mark done"></span>Done</li>
-      <li><span class="mark next"></span>Up next</li>
-      <li><span class="mark planned"></span>Planned</li>
-      <li><span class="mark missed"></span>Missed</li>
-      <li><span class="mark skipped"></span>Skipped</li>
-      <li><span class="sport-tile tiny"><svg class="icon" aria-hidden="true"><use href="/icons/sprite.svg#sport-run"/></svg></span>Activity</li>
-      <li><span class="agent-dot"></span>Planned by your coach agent</li>
-    </ul>
 
     <p class="sync muted" id="sync" hidden></p>
     <div class="sync rejected" id="sync-rejected" role="alert" hidden></div>

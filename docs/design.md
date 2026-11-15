@@ -44,7 +44,7 @@ components, pages, player, figure.
 - **Colour roles**: orange has one job. *Action* is solid `--accent`, at most
   one per view or sheet (the first waiting proposal on Coach, the up-next
   workout's Start). *Now* is `--accent-ink` on `--accent-tint`: today, the
-  current nav item, the up-next badge. *Done* is `--success` (done marks, the
+  current nav item, the up-next badge. *Done* is `--success` (Today's done marks, the
   finish badge, achieved goals), *watch out* is `--warning` (sync problems,
   open concerns, changed gear), and `--danger` is for deleting and for
   errors.
@@ -103,9 +103,15 @@ components, pages, player, figure.
   focus to its heading.
 - **Accessibility in the smoke test**: `test/e2e/smoke.test.js` runs
   axe-core (WCAG A and AA, best practices) on the main screens and sheets.
-- **Calendar marks**: done filled in `--success`, planned outlined, up next
-  filled in `--accent`, missed dashed, skipped struck through (`.mark` in
-  `app.css`).
+- **Calendar marks**: one tile for every item, a session's with the
+  workouts icon, an activity's or a routine day's with its sport's
+  (`.sport-tile` in `app.css`): dashed is Maybe, outlined is Planned, filled
+  in `--accent` is Up next, filled in the text colour is Done, faded and
+  struck is Skipped or Missed; an agent's plan has a dot on the tile's
+  corner in the month. The Key sheet beside the page title explains them, from the week
+  and the month. The month grid takes the full width with the selected day
+  under it; its chips say what and how much ("Run 9.4 km", "Session B"),
+  and a cell under 6rem wide (a container query) shows the tiles alone.
 
 ## Exercise figures
 

@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
-  normalSport, sportFamily, sportIcon, sportLabel, activityTitle, KNOWN_SPORTS,
+  normalSport, sportFamily, sportIcon, sportLabel, activityTitle, activityChipLabel, KNOWN_SPORTS,
   formatDistance, formatClimb, formatDuration, activityFacts, distanceInMetres, climbInMetres, durationInSeconds,
   activityPath, logRequest, changeRequest, deleteRequest, withQueuedActivities, inOrder, byDay,
   rpeToAsk, readAsked, rememberAsked,
@@ -43,6 +43,15 @@ test("names an activity by its title, else its sport", () => {
   assert.equal(sportLabel(""), "Activity");
   assert.equal(activityTitle(imported()), "Run");
   assert.equal(activityTitle(imported({ title: "Lunch loop" })), "Lunch loop");
+});
+
+test("labels a month chip with the sport in a word and what was done", () => {
+  assert.equal(activityChipLabel(imported({ title: "Lunch loop", distance_m: 9400 }), "km"), "Run 9.4 km");
+  assert.equal(activityChipLabel(imported({ sport: "trail running", distance_m: 1609.344 }), "mi"), "Run 1.0 mi");
+  assert.equal(activityChipLabel(imported({ sport: "hiking", distance_m: null, moving_seconds: 11400 }), "km"), "Hike 3 h 10");
+  assert.equal(activityChipLabel(imported({ sport: "pilates", distance_m: null, moving_seconds: 3000 }), "km"), "Pilates 50 min");
+  assert.equal(activityChipLabel(imported({ sport: "pickleball", distance_m: null, moving_seconds: null, elapsed_seconds: 3600 }), "km"), "Pickleball 1 h 00");
+  assert.equal(activityChipLabel(imported({ sport: "pickleball", distance_m: null, moving_seconds: null, elapsed_seconds: null }), "km"), "Pickleball");
 });
 
 test("shows distances in km or mi, and climb in m or ft with them", () => {

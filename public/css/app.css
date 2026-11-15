@@ -741,10 +741,11 @@ button.step-name .icon { color: var(--muted); }
 .row.skipped .row-title { font-weight: 400; }
 #session-note { margin: 0; color: var(--muted); font-style: italic; }
 
-/* Calendar (calendar.html): a week of days on phones, a month grid with the
-   selected day beside it on wide screens. Session marks: done filled,
-   planned outlined, up next in the accent colour, missed dashed, skipped
-   struck through. */
+/* Calendar (calendar.html): a week of days on phones, and on wide screens
+   a month grid at the full width with the selected
+   day under it. Every item is a tile with one grammar of marks:
+   dashed Maybe, outlined Planned, accent Up next, filled Done, faded and
+   struck Skipped or Missed. The Key sheet explains them in both views. */
 .calendar-bar { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-3); }
 .calendar-nav { display: flex; align-items: center; gap: var(--space-1); flex: 1 1 auto; }
 .calendar-range { margin: 0; font-size: var(--text-lg); min-width: 0; text-align: center; flex: 1 1 auto; }
@@ -759,9 +760,21 @@ button.step-name .icon { color: var(--muted); }
 .mark.missed { border-style: dashed; }
 .mark.skipped { border-color: var(--muted); background: linear-gradient(135deg, transparent 43%, var(--muted) 43% 57%, transparent 57%); }
 .struck { text-decoration: line-through; color: var(--muted); }
-.calendar-key { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-4); font-size: var(--text-sm); color: var(--muted); }
-.calendar-key li { display: inline-flex; align-items: center; gap: var(--space-2); }
-body:not(.calendar-month) .calendar-key { display: none; }
+.calendar-title { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); }
+.calendar-key-button { color: var(--muted); }
+.calendar-key-button .icon { width: 1.25rem; height: 1.25rem; }
+/* The Key sheet. */
+#key-sheet .key-list { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr)); gap: var(--space-3) var(--space-4); }
+.key-list li { display: flex; align-items: center; gap: var(--space-3); }
+.key-list li > span:last-child { display: grid; }
+.key-list .muted { font-size: var(--text-sm); }
+.key-list > li > :first-child { flex: none; min-width: 2.25rem; }
+.key-tiles { display: flex; gap: var(--space-1); }
+.key-today {
+  display: inline-grid; place-items: center; width: 2.25rem; height: 2.25rem; border-radius: var(--radius-full);
+  background: var(--accent-tint); color: var(--accent-ink); font-weight: 700; font-size: var(--text-sm);
+}
+#key-sheet .howto > p { margin: var(--space-2) 0 0; font-size: var(--text-sm); }
 
 .week-days { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-4); }
 /* One column no wider than the day: a folded row's one-line text would
@@ -803,14 +816,17 @@ body:not(.calendar-month) .calendar-key { display: none; }
 .day-changes .quiet { font-size: var(--text-sm); }
 .day-changes .change-reason { flex-basis: 100%; }
 .cal-row[draggable="true"], .chip[draggable="true"] { cursor: grab; }
+.cal-row > .row > .sport-tile { align-self: center; }
 .dragging { opacity: 0.5; }
 .drop-target { outline: 2px dashed var(--accent); outline-offset: 2px; }
 
-.month { display: grid; grid-template-columns: minmax(0, 1fr) minmax(16rem, 20rem); gap: var(--space-5); align-items: start; }
+/* The grid takes the whole width, the selected day under it. */
+.month { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-5); align-items: start; }
 .month-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: var(--space-1); }
 .month-weekday { padding: 0 var(--space-2); font-size: var(--text-xs); font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
 .month-day {
-  min-height: 6.5rem; display: flex; flex-direction: column; gap: var(--space-1); padding: var(--space-1);
+  position: relative; container: day / inline-size;
+  min-height: 4.5rem; display: flex; flex-direction: column; gap: var(--space-1); padding: var(--space-1);
   background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); cursor: pointer; overflow: hidden;
 }
 @media (hover: hover) { .month-day:hover { border-color: var(--control-border); } }
@@ -818,26 +834,30 @@ body:not(.calendar-month) .calendar-key { display: none; }
 .month-day.outside .month-date { color: var(--muted); }
 .month-day.selected { border-color: var(--text); box-shadow: inset 0 0 0 1px var(--text); }
 .month-date {
-  align-self: flex-start; min-height: 2rem; min-width: 2rem; padding: 0 var(--space-1); border-radius: var(--radius-full);
+  align-self: flex-start; min-height: 1.75rem; min-width: 1.75rem; padding: 0 var(--space-1); border-radius: var(--radius-full);
   background: none; color: var(--text); font-size: var(--text-sm); font-weight: 700; font-variant-numeric: tabular-nums;
 }
 .month-day.today .month-date { background: var(--accent-tint); color: var(--accent-ink); }
-.chips { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-1); }
+.month-day.past:not(.today) .month-date { color: var(--muted); }
+.chips { list-style: none; margin: 0; padding: 0; display: grid; align-content: start; gap: var(--space-1); min-width: 0; }
 .chip {
-  display: flex; align-items: center; gap: var(--space-1); padding: 0 var(--space-1); border-radius: var(--radius-sm);
-  font-size: var(--text-xs); font-weight: 600; line-height: var(--leading); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  display: flex; align-items: center; gap: var(--space-1); min-width: 0; border-radius: var(--radius-sm);
+  font-size: var(--text-xs); font-weight: 600; line-height: var(--leading-tight); color: var(--text);
 }
-.chip .mark { width: var(--space-2); height: var(--space-2); }
-/* Planned by someone else: a dot in the chip's corner, explained in the key
-   and named in the day's label. */
-.chip.by-agent { position: relative; padding-right: var(--space-2); }
-.chip.by-agent::after, .agent-dot {
-  content: ""; width: 0.375rem; height: 0.375rem; border-radius: var(--radius-full); background: var(--accent-ink);
-}
-.chip.by-agent::after { position: absolute; top: 0.125rem; right: 0.125rem; }
-.agent-dot { display: inline-block; }
-.day-panel { position: sticky; top: var(--space-4); }
+.chip-label { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.chip[draggable="true"] { position: relative; z-index: 1; }
+.more-chip { color: var(--muted); padding-left: var(--space-1); }
 .day-panel .day-title { font-size: var(--text-xl); }
+/* A day too narrow for words (a 10 inch iPad, the iPad in portrait, a split
+   window): the tiles alone, in a row that wraps. The words are in the day's
+   name for a screen reader and in the day under the grid. */
+/* Room for three chips in a cell with words; a row with tiles alone is shorter. */
+@container day (min-width: 6rem) { .chips { min-height: calc(3 * 1.375rem + 2 * var(--space-1)); } }
+@container day (max-width: 5.99rem) {
+  .chips { display: flex; flex-wrap: wrap; gap: var(--space-1); }
+  .chip-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+  .more-chip .chip-label { position: static; width: auto; height: auto; clip-path: none; }
+}
 @media (min-width: 60rem) {
   .calendar-switch { display: inline-flex; }
   .calendar-nav { flex: 0 1 auto; }
@@ -853,27 +873,37 @@ body:not(.calendar-month) .calendar-key { display: none; }
 .sport-tile .icon { width: 1.4rem; height: 1.4rem; vertical-align: 0; }
 .sport-tile.small { width: 1.75rem; height: 1.75rem; vertical-align: middle; }
 .sport-tile.small .icon { width: 1.1rem; height: 1.1rem; }
-.sport-tile.tiny { width: 1rem; height: 1rem; border-radius: var(--radius-sm); }
-.sport-tile.tiny .icon { width: 0.75rem; height: 0.75rem; stroke-width: 2.5; }
 .activity-row .row { gap: var(--space-3); }
-.activity-chip { color: var(--text); }
 
-/* A routine's day: its tile outlined rather than filled until something
-   fulfils it, dashed while tentative (or gone by unfulfilled), in the accent
-   once confirmed. */
-.routine-tile { background: none; color: var(--text); border: 2px dashed var(--control-border); }
-.routine-tile.confirmed { border: 2px solid var(--accent); color: var(--accent); }
-.routine-tile.missed, .routine-tile.skipped { color: var(--muted); border-color: var(--border); }
-.routine-tile.done { background: var(--text); color: var(--surface); border-color: var(--text); }
-.routine-tile.tiny { border-width: 1px; }
+/* One tile for every item (CM7, C6). Filled is done (every
+   activity, a done session); the state shows on the same tile for a session
+   and a routine day. Never colour alone: dashed, outlined, faded and struck
+   each read without it, and the row says the word. */
+.sport-tile.tentative, .sport-tile.planned { background: none; color: var(--text); border: 2px dashed var(--control-border); }
+.sport-tile.planned { border-style: solid; }
+.sport-tile.next, .sport-tile.in_progress { background: var(--accent); color: var(--accent-text); }
+.sport-tile.missed, .sport-tile.skipped { background: none; color: var(--muted); border: 2px solid var(--border); }
+.sport-tile.missed::after, .sport-tile.skipped::after {
+  content: ""; position: absolute; inset: -2px; border-radius: inherit;
+  background: linear-gradient(to top right, transparent calc(50% - 1px), var(--muted) calc(50% - 1px) calc(50% + 1px), transparent calc(50% + 1px));
+}
+/* An agent planned it: a dot on the tile's corner (the Key explains it, the row names the agent). */
+.sport-tile { position: relative; }
+.tile-agent {
+  position: absolute; top: -0.25rem; right: -0.25rem; width: 0.5rem; height: 0.5rem; border-radius: var(--radius-full);
+  background: var(--accent-ink); box-shadow: 0 0 0 2px var(--surface);
+}
+/* A tile on a month chip. */
+.chip-tile { width: 1.375rem; height: 1.375rem; border-radius: var(--radius-sm); }
+.chip-tile .icon { width: 0.875rem; height: 0.875rem; stroke-width: 2.25; }
+.sport-tile.chip-tile:is(.tentative, .planned, .missed, .skipped) { border-width: 1.5px; }
+.chip-tile .tile-agent { top: -0.2rem; right: -0.2rem; width: 0.4rem; height: 0.4rem; }
+.note-tile.chip-tile { width: 1.375rem; height: 1.375rem; border-radius: var(--radius-sm); }
+.note-tile.chip-tile .icon { width: 0.875rem; height: 0.875rem; }
 .routine-row .row { gap: var(--space-3); }
 .routine-row.missed .row-title { color: var(--muted); }
-.routine-chip { color: var(--text); }
-.routine-chip.tentative { border: 1px dashed var(--control-border); }
-.routine-chip.confirmed { box-shadow: inset 0 0 0 1px var(--accent); }
-.routine-chip.missed { color: var(--muted); }
-.weekday-choices { grid-template-columns: repeat(7, minmax(0, 1fr)); }
 .routine-day-sheet h2 .sport-tile { margin-right: var(--space-1); }
+.weekday-choices { grid-template-columns: repeat(7, minmax(0, 1fr)); }
 
 /* The plan and session sheets (calendar-sheets.js) */
 .calendar-sheet .howto > p { margin: 0; }
@@ -1680,4 +1710,3 @@ code.command { display: block; padding: var(--space-2) var(--space-3); overflow-
 .note-tile .icon { width: 1.25rem; height: 1.25rem; }
 .note-tile.small { width: 1.75rem; height: 1.75rem; border-radius: var(--radius-sm); }
 .note-tile.small .icon { width: 1rem; height: 1rem; }
-.note-chip { color: var(--muted); font-style: italic; }

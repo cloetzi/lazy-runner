@@ -47,6 +47,21 @@ export function sportLabel(sport) {
 // What a row calls an activity: its title, else its sport.
 export const activityTitle = (activity) => activity.title || sportLabel(activity.sport);
 
+// Families whose every sport is the same thing under another name: their
+// chip says the family's word ("Run" for "trail running"). Any other sport
+// keeps its own name (pilates is not yoga).
+const ONE_WORD = new Set(["run", "ride", "hike", "walk", "swim"]);
+
+// What a month chip calls an activity: what and how much, as it was sent
+// ("Run 9.4 km", "Hike 3 h 10" without a distance); the title stays for the
+// day and the sheet.
+export function activityChipLabel(activity, unit) {
+  const family = sportFamily(activity.sport);
+  const what = ONE_WORD.has(family) ? sportLabel(family) : sportLabel(activity.sport);
+  const much = activity.distance_m != null ? formatDistance(activity.distance_m, unit) : formatDuration(activity.moving_seconds ?? activity.elapsed_seconds);
+  return [what, much].filter(Boolean).join(" ");
+}
+
 // "5.2 km" or "3.2 mi", one decimal (none from 100 on).
 export function formatDistance(metres, unit) {
   if (metres == null) return "";

@@ -20,11 +20,13 @@ function sheet(id) {
     document.body.appendChild(Object.assign(document.createElement("dialog"), { id, className: "sheet calendar-sheet" }));
 }
 
-// The tile a routine shows: its sport's icon (or the workouts icon), drawn
-// dashed while tentative and outlined in the accent once confirmed.
-function tile(routine, state, size = "") {
+// One grammar of marks for sessions, routine days and activities
+// (C6): dashed while Maybe, outlined once Planned, filled when Done, faded and
+// struck when Skipped or Missed. A confirmed day reads as Planned, like a session.
+// The tile a routine shows: its sport's icon (or the workouts icon), in its state.
+function tile(routine, state, size = "", agent = false) {
   const glyph = routine?.sport ? sportIcon(routine.sport) : "workouts";
-  return `<span class="sport-tile routine-tile ${state}${size ? ` ${size}` : ""}" aria-hidden="true">${icon(glyph)}</span>`;
+  return `<span class="sport-tile ${state === "confirmed" ? "planned" : state}${size ? ` ${size}` : ""}" aria-hidden="true">${icon(glyph)}${agent ? `<span class="tile-agent"></span>` : ""}</span>`;
 }
 
 // A day of a routine in a day's list. `attribute` names the data attribute a
@@ -37,7 +39,7 @@ export function routineRow(day, routine, unit, attribute, today, change = null) 
       <button class="row" ${attribute}="${escape(dayKey(day))}">
         ${tile(routine, day.state)}
         <span class="row-text">
-          <span class="row-title${day.state === "skipped" ? " struck" : ""}">${escape(routine ? routineTitle(routine) : "Routine")}</span>
+          <span class="row-title${day.state === "skipped" || day.state === "missed" ? " struck" : ""}">${escape(routine ? routineTitle(routine) : "Routine")}</span>
           <span class="row-meta">${meta}</span>
           ${routine?.note ? `<span class="row-note">${escape(routine.note)}</span>` : ""}
           ${changeHtml(change, { today, unit }) ?? authorLine(plannedBy(routine, today))}
@@ -47,9 +49,11 @@ export function routineRow(day, routine, unit, attribute, today, change = null) 
     </li>`;
 }
 
-// A day of a routine in the month grid, with a dot when someone else planned it.
+// A day of a routine in the month grid: its tile (with a dot when an agent
+// planned it) and its title; the planned distance and time are in the day under the grid.
 export function routineChip(day, routine) {
-  return `<li class="chip routine-chip ${day.state}${day.state === "skipped" ? " struck" : ""}${routine?.created_by === "llm" ? " by-agent" : ""}">${tile(routine, day.state, "tiny")}${escape(routine ? routineTitle(routine) : "Routine")}</li>`;
+  const gone = day.state === "skipped" || day.state === "missed";
+  return `<li class="chip routine-chip">${tile(routine, day.state, "chip-tile", routine?.created_by === "llm")}<span class="chip-label${gone ? " struck" : ""}">${escape(routine ? routineTitle(routine) : "Routine")}</span></li>`;
 }
 
 export const dayKey = (day) => `${day.routine_id}:${day.date}`;

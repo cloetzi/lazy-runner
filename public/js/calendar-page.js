@@ -2,7 +2,7 @@ import { createOutbox } from "./outbox.js";
 import { pageAccount, syncNote } from "./account.js";
 import { mountNav } from "./nav.js";
 import { getJson, loadProblem, paths, sendChange, STALE_NOTE, unreachable, offline } from "./api.js";
-import { escape, icon, authorLine, busy } from "./html.js";
+import { escape, icon, authorLine, busy, showSheet } from "./html.js";
 import {
   addDays, addMonths, weekOf, monthWeeks, rangeFor, dayName, shortDay, longDay, weekdayDay, weekLabel, monthLabel, localToday, isDate,
   byDay, upNext, markFor, movable, plannable, STATUS_LABELS,
@@ -13,6 +13,7 @@ import { openNoteSheet, aboutChoices } from "./coach-sheets.js";
 import { notesByDay, notesAbout, knownCoaches, noteRequest, changeNoteRequest, deleteNoteRequest, plannedBy, agentName } from "./coach.js";
 import {
   withQueuedActivities, removedActivityIds, byDay as activitiesByDay, sportIcon, activityTitle, activityKey, preferredDistanceUnit, adoptServerDistanceUnit,
+  activityChipLabel,
   logRequest,
 } from "./activities.js";
 import {
@@ -24,7 +25,7 @@ import { routineRow, routineChip, dayKey, openRoutineDaySheet, openRoutineSheet 
 import { changeHtml, undoButton, dayChangeLines, undoRequest, sessionChange as agentChange, routineChangeOn, changeShownOn, withoutUndo } from "./plan-changes.js";
 
 // The Calendar page. Phones show one week, Monday to Sunday, days top to
-// bottom; wide screens also have a month grid with the chosen day beside it,
+// bottom; wide screens also have a month grid with the chosen day under it,
 // where a planned session can be dragged to another day. Activities (runs,
 // rides, anything done) show beside the sessions, each with its sport's icon,
 // and the coach's notes dated to a day under them. Routine days (a run on
@@ -197,6 +198,10 @@ function render() {
     const data = shown();
     $("calendar-body").innerHTML = current === "month" ? monthView(data) : weekView(data);
     if (state.toToday) bringTodayIntoView();
+    if (state.showDay) {
+      state.showDay = false;
+      if (current === "month") showSelectedDay();
+    }
   }
   renderSync();
 }
@@ -312,9 +317,9 @@ function sessionRow(session, next) {
   return `
     <li class="cal-row${mark === "next" ? " is-next" : ""}" data-key="${escape(keyOf(session))}"${drag}>
       <button class="row" data-open="${escape(keyOf(session))}">
-        <span class="mark ${mark}" aria-hidden="true"></span>
+        ${sessionTile(session, mark)}
         <span class="row-text">
-          <span class="row-title${mark === "skipped" ? " struck" : ""}">${escape(session.workout.title)}</span>
+          <span class="row-title${mark === "skipped" || mark === "missed" ? " struck" : ""}">${escape(session.workout.title)}</span>
           <span class="row-meta">${meta}</span>
           ${session.note ? `<span class="row-note">${escape(session.note)}</span>` : ""}
           ${changeHtml(change, { today: state.today, unit: distanceUnit() }) ?? authorLine(plannedBy(session, state.today))}
@@ -327,7 +332,21 @@ function sessionRow(session, next) {
 
 const distanceUnit = () => preferredDistanceUnit(storage);
 
-// The month grid, with the selected day's sessions beside it.
+// A session's tile: the workouts icon in the session's state, as a routine
+// day's tile is drawn (CM7). `size` is "" in a day's list, "chip-tile" in the month.
+function sessionTile(session, mark, size = "") {
+  const agent = size && session.created_by === "llm";
+  return `<span class="sport-tile ${mark}${size ? ` ${size}` : ""}" aria-hidden="true">${icon("workouts")}${agent ? `<span class="tile-agent"></span>` : ""}</span>`;
+}
+
+const chip = (tile, label, { gone = false, key = null, drag = false } = {}) =>
+  `<li class="chip"${key ? ` data-key="${escape(key)}"` : ""}${drag ? ` draggable="true"` : ""}>${tile}<span class="chip-label${gone ? " struck" : ""}">${escape(label)}</span></li>`;
+
+const MAX_CHIPS = 3;
+
+// The month grid at the full width, the selected day under it (#253).
+// Each chip is a tile and what and how much; a cell too narrow for words
+// shows the tiles alone (a container query in app.css).
 function monthView({ days, activityDays, noteDays, routineDayMap, fulfils, next, changeDays, changeShown }) {
   const month = state.focus.slice(0, 7);
   const head = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((d) => `<span class="month-weekday" aria-hidden="true">${d}</span>`).join("");
@@ -340,20 +359,75 @@ function monthView({ days, activityDays, noteDays, routineDayMap, fulfils, next,
       date === state.focus && "selected", date < state.today && "past"].filter(Boolean).join(" ");
     const items = dayItems(sessions, activities, next, notes, routineDays, changeDays[date]);
     const label = `${longDay(date)}: ${items.length ? items.join("; ") : "rest"}`;
+    const chips = [
+      ...sessions.map((s) => {
+        const mark = markFor(s, state.today, next);
+        return chip(sessionTile(s, mark, "chip-tile"), s.workout.title, { gone: mark === "skipped" || mark === "missed", key: keyOf(s), drag: movable(s) });
+      }),
+      ...routineDays.map((d) => routineChip(d, routineOf(d))),
+      ...activities.map((a) => chip(`<span class="sport-tile done chip-tile" aria-hidden="true">${icon(sportIcon(a.sport))}</span>`, activityChipLabel(a, distanceUnit()))),
+      ...(notes.length ? [chip(`<span class="note-tile chip-tile" aria-hidden="true">${icon("coach")}</span>`, notes.length === 1 ? "Note" : `${notes.length} notes`)] : []),
+    ];
+    const shown = chips.length > MAX_CHIPS + 1 ? [...chips.slice(0, MAX_CHIPS), `<li class="chip more-chip"><span class="chip-label">+${chips.length - MAX_CHIPS} more</span></li>`] : chips;
     return `
       <div class="${classes}" data-date="${date}">
         <button class="month-date" data-select="${date}" aria-label="${escape(label)}" aria-pressed="${date === state.focus}">${Number(date.slice(8))}</button>
-        <ul class="chips">${sessions.map((s) => {
-          const mark = markFor(s, state.today, next);
-          return `<li class="chip${mark === "skipped" ? " struck" : ""}${s.created_by === "llm" ? " by-agent" : ""}" data-key="${escape(keyOf(s))}"${movable(s) ? ` draggable="true"` : ""}><span class="mark ${mark}" aria-hidden="true"></span>${escape(s.workout.title)}</li>`;
-        }).join("")}${routineDays.map((d) => routineChip(d, routineOf(d))).join("")}${activities.map((a) => `<li class="chip activity-chip"><span class="sport-tile tiny" aria-hidden="true">${icon(sportIcon(a.sport))}</span>${escape(activityTitle(a))}</li>`).join("")}${notes.length ? `<li class="chip note-chip">${notes.length === 1 ? "1 note" : `${notes.length} notes`}</li>` : ""}</ul>
+        <ul class="chips" aria-hidden="true">${shown.join("")}</ul>
       </div>`;
   }).join("");
   return `
     <div class="month">
       <div class="month-grid">${head}${cells}</div>
-      <aside class="card day-panel" aria-label="${escape(longDay(state.focus))}">${dayCard(state.focus, days[state.focus] ?? [], activityDays[state.focus] ?? [], next, { heading: "h2", notes: noteDays[state.focus], routineDays: routineDayMap[state.focus], fulfils, changes: changeDays[state.focus], changeShown })}</aside>
+      <section class="card day-panel" aria-label="${escape(longDay(state.focus))}">${dayCard(state.focus, days[state.focus] ?? [], activityDays[state.focus] ?? [], next, { heading: "h2", notes: noteDays[state.focus], routineDays: routineDayMap[state.focus], fulfils, changes: changeDays[state.focus], changeShown })}</section>
     </div>`;
+}
+
+// After a tap on a day, the day under the grid comes into view when it is
+// below the fold: its heading and first rows at the foot of the screen.
+function showSelectedDay() {
+  const panel = document.querySelector(".day-panel");
+  if (!panel) return;
+  const box = panel.getBoundingClientRect();
+  const wanted = Math.min(box.height, innerHeight * 0.45);
+  if (box.top + wanted <= innerHeight) return;
+  scrollBy({ top: box.top + wanted - innerHeight + 16, behavior: "instant" });
+}
+
+// The key, one sheet for the week and the month (C6): what each mark means.
+function openKeySheet() {
+  const dialog = document.getElementById("key-sheet") ??
+    document.body.appendChild(Object.assign(document.createElement("dialog"), { id: "key-sheet", className: "sheet calendar-sheet" }));
+  const tile = (classes, glyph) => `<span class="sport-tile ${classes}" aria-hidden="true">${icon(glyph)}</span>`;
+  const row = (mark, term, text) => `<li>${mark}<span><strong>${escape(term)}</strong><span class="muted">${escape(text)}</span></span></li>`;
+  dialog.innerHTML = `
+    <form method="dialog" class="howto">
+      <header>
+        <h2>What the marks mean</h2>
+        <button class="icon-button" value="close" aria-label="Close">${icon("close")}</button>
+      </header>
+      <h3>What it is</h3>
+      <ul class="key-list">
+        ${row(tile("done", "workouts"), "Strength session", "A workout from your programs")}
+        ${row(tile("done", "sport-run"), "Run, ride, hike and more", "Each sport has its icon")}
+        ${row(`<span class="note-tile" aria-hidden="true">${icon("coach")}</span>`, "Note", "From you or your coach")}
+      </ul>
+      <h3>Where it stands</h3>
+      <ul class="key-list">
+        ${row(tile("tentative", "sport-run"), "Maybe", "Dashed, not decided yet")}
+        ${row(tile("planned", "workouts"), "Planned", "Outlined, on the plan")}
+        ${row(tile("next", "workouts"), "Up next", "Filled orange, the next workout")}
+        ${row(tile("done", "workouts"), "Done", "Filled in")}
+        ${row(tile("skipped", "workouts"), "Skipped or missed", "Faded and struck through")}
+      </ul>
+      <h3>Also</h3>
+      <ul class="key-list">
+        ${row(`<span class="sport-tile planned" aria-hidden="true">${icon("sport-run")}<span class="tile-agent"></span></span>`, "Your coach agent planned it", "A dot in the month; the day names the agent")}
+        ${row(`<span class="key-today" aria-hidden="true">14</span>`, "Today", "The date in orange")}
+      </ul>
+      <p class="muted">A done run says what and how far: Run 9.4 km. Where a day is too narrow for words, the month shows the marks alone; the day under the grid names them.</p>
+    </form>`;
+  dialog.returnValue = "";
+  showSheet(dialog);
 }
 
 function renderSync() {
@@ -601,6 +675,8 @@ $("calendar-switch").onclick = (event) => {
   load();
 };
 
+$("calendar-key").onclick = openKeySheet;
+
 $("calendar-body").addEventListener("click", (event) => {
   const target = event.target.closest("[data-add], [data-open], [data-activity], [data-routine-day], [data-note], [data-do-today], [data-undo], [data-unfold], [data-select], .month-day");
   if (!target) return;
@@ -620,7 +696,10 @@ $("calendar-body").addEventListener("click", (event) => {
   if (target.dataset.doToday) return doToday(target.dataset.doToday);
   // A tap anywhere on a day of the month picks it.
   const date = target.dataset.select ?? target.dataset.date;
-  if (date) goTo(date);
+  if (date) {
+    state.showDay = true;
+    goTo(date);
+  }
 });
 
 // Dragging a planned session onto another day from today on moves it there.
