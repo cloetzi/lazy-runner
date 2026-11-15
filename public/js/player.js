@@ -3,6 +3,7 @@
 // of the session. Items are the screens from the player plan.
 
 import { amountText } from "./workout.js";
+import { shownValue } from "./weights.js";
 
 // Where Back goes: the step before, skipping rests, since a rest on its own
 // has nothing to redo.
@@ -297,6 +298,52 @@ export function unloggedExercises(items, from, end, logged = {}) {
     if (items[i]?.type === "exercise" && !logged?.[i]) indexes.push(i);
   }
   return indexes;
+}
+
+// What a screen reader says as the player moves to a step, once, and what
+// spoken cues will say later: "Goblet squat, set 2 of 3, 8 reps, 40 pounds",
+// "Rest, 60 seconds. Next: Straight-leg deadlift". `weight` is the weight in
+// the unit shown ({ value, unit }), if the step takes one; `switching` when
+// the step is the right side straight after the left.
+export function stepAnnouncement(item, { weight = null, next = null, switching = false } = {}) {
+  if (item.type === "rest") {
+    const rest = `Rest, ${spokenCount(item.seconds, "second")}`;
+    return next ? `${rest}. Next: ${next.exercise.name}` : rest;
+  }
+  const bits = [item.exercise.name];
+  if (item.side) bits.push(`${item.side} side`);
+  const set = setLabel(item);
+  if (set) bits.push(set.toLowerCase());
+  bits.push(spokenAmount(item));
+  bits.push(spokenWeight(weight, item.weights_held));
+  const sentence = bits.filter(Boolean).join(", ");
+  return switching ? `Switch sides. ${sentence}` : sentence;
+}
+
+// The big count as words: "8 reps", "45 seconds", or the step's note.
+export function spokenTarget(item, { phase, seconds = null } = {}) {
+  if (phase === "reps") return spokenAmount(item) || "Go";
+  return seconds == null ? "" : spokenCount(seconds, "second");
+}
+
+function spokenAmount(item) {
+  if (item.mode === "timed") return item.seconds ? spokenCount(item.seconds, "second") : "";
+  if (!item.reps) return item.note ?? "";
+  const reps = spokenCount(item.reps, "rep");
+  return item.exercise?.alternating ? `${reps} in total` : reps;
+}
+
+const UNIT_WORDS = { lb: "pound", kg: "kilogram" };
+
+// "40 pounds", or "10 pounds in each hand" for a pair.
+export function spokenWeight(weight, held = 1) {
+  if (!weight?.value) return "";
+  const amount = spokenCount(shownValue(weight.value), UNIT_WORDS[weight.unit] ?? weight.unit);
+  return held === 2 ? `${amount} in each hand` : amount;
+}
+
+function spokenCount(n, word) {
+  return `${n} ${n === 1 ? word : `${word}s`}`;
 }
 
 // "Set 2 of 3" for a block of more than one round, else nothing.

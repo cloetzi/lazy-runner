@@ -19,6 +19,7 @@
 <body>
   <section class="card" id="in-progress" aria-live="polite" hidden></section>
   <div class="toast" id="toast" role="status" hidden></div>
+  <p class="visually-hidden" id="announce" aria-live="polite"></p>
 
   <main id="home" class="view">
     <header class="brand">
@@ -110,7 +111,7 @@
       <h1 class="exercise" id="exercise-name"></h1>
       <p class="set-label" id="set-label" hidden></p>
       <p class="side" id="side" hidden></p>
-      <p class="target" id="target" role="button" tabindex="0" aria-label="Pause or resume the countdown"></p>
+      <p class="target" id="target"><span id="target-shown" aria-hidden="true"></span><span id="target-spoken" class="visually-hidden"></span></p>
       <p class="paused-note" id="paused-note" hidden>Paused</p>
       <div class="timer-actions" id="timer-actions" hidden>
         <button class="secondary small" id="pause">Pause</button>

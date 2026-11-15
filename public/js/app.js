@@ -8,7 +8,7 @@ import { openHowto, equipmentNames, loadEquipmentNames, knowsEquipmentNames } fr
 import { escape, icon, authorLine, busy, showSheet } from "./html.js";
 import { offlineToday } from "./offline.js";
 import { blockName, blockSummary, stepSummary, alternatingText, setWeight, includedKinds, framingFor, framePlan, gearList } from "./workout.js";
-import { previousIndex, switchesSides, mainActionLabel, tapAccepted, holdStatus, unloggedExercises, plannedExercise, swapRun, resumeChoice, sessionProgress, endsEarly, loggedFromServer, pickUpIndex, partEnd, setLabel, minutesLeft, tempoText, leadInSeconds, extraSeconds, upNextDetails, equipmentChanges, finishSummary, RPE_ANCHORS } from "./player.js";
+import { previousIndex, switchesSides, mainActionLabel, stepAnnouncement, spokenTarget, tapAccepted, holdStatus, unloggedExercises, plannedExercise, swapRun, resumeChoice, sessionProgress, endsEarly, loggedFromServer, pickUpIndex, partEnd, setLabel, minutesLeft, tempoText, leadInSeconds, extraSeconds, upNextDetails, equipmentChanges, finishSummary, RPE_ANCHORS } from "./player.js";
 import { openSwap, prefetchAlternatives } from "./swap.js";
 import { mountNav } from "./nav.js";
 import { parseRoute, routeHash, pageFor, isSessionView } from "./routes.js";
@@ -847,6 +847,7 @@ function goTo(index) {
   state.mainChangedAt = performance.now();
   saveRun();
   render();
+  announceStep();
 }
 
 function current() {
@@ -869,6 +870,7 @@ function togglePause() {
   state.timer = countdown.isRunning(state.timer)
     ? countdown.pause(state.timer, now)
     : countdown.start(state.timer, now);
+  announce(countdown.isRunning(state.timer) ? "Going again" : "Paused");
   saveRun();
   render();
 }
@@ -975,6 +977,7 @@ function tick() {
 function startWork() {
   startCountdown("work", current().seconds);
   state.mainChangedAt = performance.now();
+  announce("Go");
   // Emit the start beep immediately rather than on the next tick.
   beep("start");
   state.lastElapsed = 1;
@@ -1026,6 +1029,49 @@ function changeReps(delta) {
   render();
 }
 
+// The player draws ten times a second during a countdown. These touch the
+// page only where something differs, so a button under a finger is never
+// replaced mid-press and a screen reader isn't handed the same text again.
+const drawn = new WeakMap();
+function setText(id, text) {
+  const el = $(id);
+  if (el.textContent !== String(text)) el.textContent = text;
+}
+function setHtml(id, html) {
+  const el = $(id);
+  if (drawn.get(el) === html) return;
+  el.innerHTML = html;
+  drawn.set(el, html);
+}
+function setHidden(id, hidden) {
+  const el = $(id);
+  if (el.hidden !== hidden) el.hidden = hidden;
+}
+// Styles are compared with what was set, not read back: the browser rounds.
+function setStyle(id, property, value) {
+  const el = $(id);
+  const styles = drawn.get(el.style) ?? {};
+  if (styles[property] === value) return;
+  el.style[property] = value;
+  drawn.set(el.style, { ...styles, [property]: value });
+}
+
+// Says something once through the polite live region. It is emptied first
+// and filled a moment later, so the same words twice (a step resumed) and
+// words set as the player appears are both spoken.
+function announce(text) {
+  const region = $("announce");
+  region.textContent = "";
+  clearTimeout(state.announceTimer);
+  state.announceTimer = setTimeout(() => { region.textContent = text; }, 100);
+}
+
+// "Switch sides" shows on the right side's lead-in and for a moment after
+// moving on from the left.
+function switching(item, now = performance.now()) {
+  return item.side === "right" && (state.phase === "lead" || now < state.switchCueUntil);
+}
+
 function render() {
   const run = state.run;
   const item = current();
@@ -1034,65 +1080,81 @@ function render() {
   document.body.classList.toggle("resting", resting);
   const paused = !!state.timer && !countdown.isRunning(state.timer);
   document.body.classList.toggle("paused", paused);
-  $("paused-note").hidden = !paused;
-  $("timer-actions").hidden = !state.timer;
-  $("pause").textContent = paused ? "Resume" : "Pause";
-  $("more-time").hidden = !extraSeconds(state.phase);
-  $("more-time").textContent = `+${extraSeconds(state.phase)} s`;
-  $("target").setAttribute("aria-disabled", String(!state.timer));
+  setHidden("paused-note", !paused);
+  setHidden("timer-actions", !state.timer);
+  setText("pause", paused ? "Resume" : "Pause");
+  setHidden("more-time", !extraSeconds(state.phase));
+  setText("more-time", `+${extraSeconds(state.phase)} s`);
+  $("target").classList.toggle("pausable", !!state.timer);
 
-  $("progress-bar").style.width = `${(run.index / run.items.length) * 100}%`;
-  $("where").textContent = `${item.workout.title} · ${blockName(item.block.label)}`;
+  setStyle("progress-bar", "width", `${(run.index / run.items.length) * 100}%`);
+  setText("where", `${item.workout.title} · ${blockName(item.block.label)}`);
   const left = minutesLeft(run.items, run.index);
-  $("count").textContent = left > 1 ? `about ${left} min left` : "almost done";
+  setText("count", left > 1 ? `about ${left} min left` : "almost done");
 
+  const seconds = state.timer ? countdown.displaySeconds(state.timer, now) : null;
   const next = resting ? nextExercise() : null;
   if (resting) {
-    $("phase").textContent = "Rest";
+    setText("phase", "Rest");
     $("phase").classList.remove("switch");
-    $("exercise-name").textContent = next ? `Next: ${next.exercise.name}` : "Rest";
-    $("side").hidden = true;
-    $("set-label").hidden = true;
-    $("target").textContent = countdown.displaySeconds(state.timer, now);
+    setText("exercise-name", next ? `Next: ${next.exercise.name}` : "Rest");
+    setHidden("side", true);
+    setHidden("set-label", true);
+    renderTarget(seconds, spokenTarget(item, { phase: state.phase, seconds }));
     if (next) renderSteppers(next);
-    else $("adjust").hidden = true;
-    $("details").textContent = next ? upNextDetails(next, next.weight && formatWeight(next.weight, state.unit)) : "";
+    else setHidden("adjust", true);
+    setText("details", next ? upNextDetails(next, next.weight && formatWeight(next.weight, state.unit)) : "");
     renderGear(next, nextExerciseIndex());
-    $("cues").innerHTML = "";
+    setHtml("cues", "");
   } else {
-    const switching = item.side === "right" && (state.phase === "lead" || now < state.switchCueUntil);
-    $("phase").textContent = switching ? "Switch sides" : { lead: "Get ready", work: "Go", reps: "" }[state.phase] ?? "";
-    $("phase").classList.toggle("switch", switching);
-    $("exercise-name").textContent = item.exercise.name;
-    $("set-label").textContent = setLabel(item);
-    $("set-label").hidden = !setLabel(item);
-    $("side").hidden = !item.side;
-    $("side").textContent = item.side ? `${item.side === "left" ? "Left" : "Right"} side` : "";
-    $("target").textContent = state.phase === "reps" ? repsTarget(item) : countdown.displaySeconds(state.timer, now);
+    const switchingSides = switching(item, now);
+    setText("phase", switchingSides ? "Switch sides" : { lead: "Get ready", work: "Go", reps: "" }[state.phase] ?? "");
+    $("phase").classList.toggle("switch", switchingSides);
+    setText("exercise-name", item.exercise.name);
+    setText("set-label", setLabel(item));
+    setHidden("set-label", !setLabel(item));
+    setHidden("side", !item.side);
+    setText("side", item.side ? `${item.side === "left" ? "Left" : "Right"} side` : "");
+    renderTarget(state.phase === "reps" ? repsTarget(item) : seconds, spokenTarget(item, { phase: state.phase, seconds }));
     renderSteppers(item);
-    $("details").textContent = details(item);
+    setText("details", details(item));
     renderGear(item, run.index);
-    $("cues").innerHTML = item.exercise.cues.map((cue) => `<li>${escape(cue)}</li>`).join("");
+    setHtml("cues", item.exercise.cues.map((cue) => `<li>${escape(cue)}</li>`).join(""));
   }
 
   // A rest shows its own dial, never a figure: a moving figure reads as "do this now".
   renderFigure(resting ? null : item);
-  $("rest-dial").hidden = !resting;
-  if (resting) $("rest-arc").style.strokeDashoffset = -(1 - countdown.remainingMs(state.timer, now) / state.timer.totalMs);
-  $("howto-open").hidden = resting;
-  $("swap-open").hidden = resting;
+  setHidden("rest-dial", !resting);
+  if (resting) setStyle("rest-arc", "strokeDashoffset", String(-(1 - countdown.remainingMs(state.timer, now) / state.timer.totalMs)));
+  setHidden("howto-open", resting);
+  setHidden("swap-open", resting);
 
   const after = run.items[run.index + 1];
   // A rest already says what is next.
-  $("next").textContent = resting ? "" : after ? `Next: ${label(after)}` : "Last one";
+  setText("next", resting ? "" : after ? `Next: ${label(after)}` : "Last one");
 
   // A rest has one way forward: the main button, quiet and in the rest colour.
-  $("main-action").textContent = mainActionLabel(state.phase, next);
+  setText("main-action", mainActionLabel(state.phase, next));
   $("main-action").classList.toggle("rest-action", resting);
-  $("skip").hidden = resting;
+  setHidden("skip", resting);
   const framing = item.workout.kind !== "workout" && run.items.some((i) => i.workout.kind === "workout");
-  $("skip-part").hidden = !framing;
-  if (framing) $("skip-part").textContent = `Skip ${item.workout.title.toLowerCase()}`;
+  setHidden("skip-part", !framing);
+  if (framing) setText("skip-part", `Skip ${item.workout.title.toLowerCase()}`);
+}
+
+// The big count as it shows, and as words for a screen reader ("8 reps",
+// "45 seconds"), which reads the words alone.
+function renderTarget(shown, spoken) {
+  setText("target-shown", shown ?? "");
+  setText("target-spoken", spoken);
+}
+
+// The step as one sentence, said once as the player moves to it.
+function announceStep() {
+  const item = current();
+  if (item.type === "rest") return announce(stepAnnouncement(item, { next: nextExercise() }));
+  const weight = takesWeight(item) && item.weight ? inUnit(item.weight, state.unit) : null;
+  announce(stepAnnouncement(item, { weight, switching: switching(item) }));
 }
 
 // Keeps the same animation running across re-renders; swaps it when the
@@ -1149,12 +1211,12 @@ function prefetchSwaps() {
 function renderSteppers(item) {
   const weighted = takesWeight(item);
   const counted = state.phase === "reps" && !!item.reps;
-  $("adjust").hidden = !weighted && !counted;
-  $("weight-stepper").hidden = !weighted;
-  $("reps-stepper").hidden = !counted;
-  if (weighted) $("weight-value").textContent = shownWeight(item.weight);
+  setHidden("adjust", !weighted && !counted);
+  setHidden("weight-stepper", !weighted);
+  setHidden("reps-stepper", !counted);
+  if (weighted) setText("weight-value", shownWeight(item.weight));
   // What was actually done, the target until changed.
-  if (counted) $("reps-value").textContent = repsDone() === item.reps ? `did ${item.reps}` : `did ${repsDone()} of ${item.reps}`;
+  if (counted) setText("reps-value", repsDone() === item.reps ? `did ${item.reps}` : `did ${repsDone()} of ${item.reps}`);
 }
 
 function repsTarget(item) {
@@ -1175,10 +1237,9 @@ function details(item) {
 // Everything the exercise at `index` is done with, marked when it changes.
 function renderGear(item, index) {
   const names = item ? equipmentNames(item.equipment) : [];
-  const list = $("equipment");
-  list.hidden = names.length === 0;
-  list.classList.toggle("changed", names.length > 0 && equipmentChanges(state.run.items, index));
-  list.innerHTML = names.map((name) => `<li>${escape(name)}</li>`).join("");
+  setHidden("equipment", names.length === 0);
+  $("equipment").classList.toggle("changed", names.length > 0 && equipmentChanges(state.run.items, index));
+  setHtml("equipment", names.map((name) => `<li>${escape(name)}</li>`).join(""));
 }
 
 function label(item) {
@@ -1541,6 +1602,7 @@ function resume(run) {
     state.lastElapsed = saved.timer.elapsedMs;
     saveRun();
     render();
+    if (!countdown.isRunning(state.timer)) announce("Paused");
   }
 }
 
@@ -1752,13 +1814,10 @@ $("main-action").onclick = onMainAction;
 $("prev").onclick = () => state.run.skipping ? undoSkip() : goTo(previousIndex(state.run.items, state.run.index));
 $("skip").onclick = onSkip;
 $("quit").onclick = quit;
-// Tapping a countdown pauses or resumes it.
-$("target").onclick = togglePause;
-$("target").onkeydown = (event) => {
-  if (event.key !== "Enter" && event.key !== " ") return;
-  event.preventDefault();
-  togglePause();
-};
+// Tapping a countdown pauses or resumes it; the Pause button beside it does
+// the same for a keyboard or a screen reader.
+// A screen reader's activation (no pointer: detail 0) only reads it.
+$("target").onclick = (event) => { if (event.detail > 0) togglePause(); };
 $("pause").onclick = togglePause;
 $("more-time").onclick = moreTime;
 $("skip-part").onclick = skipPart;

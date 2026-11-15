@@ -1023,7 +1023,7 @@ body:has(#player:not([hidden])) .toast { top: var(--toast-top, calc(max(var(--sp
 .set-label { margin: 0; font-size: var(--text-xl); font-weight: 700; }
 
 /* Countdowns pause with the Pause button or a tap on the time; a paused one says so */
-#target[role="button"] { cursor: pointer; }
+#target.pausable { cursor: pointer; }
 .paused-note { margin: 0; font-size: var(--text-lg); font-weight: 700; color: var(--accent); }
 .timer-actions { display: flex; justify-content: center; flex-wrap: wrap; gap: var(--space-3); }
 .timer-actions button { min-width: 6rem; }

@@ -36,6 +36,10 @@ components, pages, player, figure.
   button waiting on the server is `busy()` (`html.js`). In the player the
   main button ignores a tap for 0.7 s after its meaning changes, and the
   session screens neither zoom on a double tap nor select text.
+- **The player speaks**: it redraws only what changed (`setText`, `setHtml`
+  in `app.js`), the count carries its unit for a screen reader, and each
+  step is said once in a polite live region (`stepAnnouncement` in
+  `player.js`, the sentence spoken cues will use).
 - **Layout**: phones get a bottom tab bar (Today, Calendar, Workouts,
   History) with Exercises, Equipment and Settings under More; from 60rem a
   sidebar (`nav.js`, `routes.js`).

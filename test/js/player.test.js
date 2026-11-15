@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { previousIndex, switchesSides, mainActionLabel, tapAccepted, TAP_GUARD_MS, holdStatus, MIN_HOLD_SECONDS, unloggedExercises, plannedExercise, swapExercise, swapRun, shortlist, SHORTLIST, resumeChoice, sessionProgress, endsEarly, loggedFromServer, pickUpIndex, partEnd, setLabel, minutesLeft, tempoText, leadInSeconds, GEAR_LEAD_IN, extraSeconds, upNextDetails, equipmentChanges, finishSummary } from "../../public/js/player.js";
+import { previousIndex, switchesSides, mainActionLabel, stepAnnouncement, spokenTarget, spokenWeight, tapAccepted, TAP_GUARD_MS, holdStatus, MIN_HOLD_SECONDS, unloggedExercises, plannedExercise, swapExercise, swapRun, shortlist, SHORTLIST, resumeChoice, sessionProgress, endsEarly, loggedFromServer, pickUpIndex, partEnd, setLabel, minutesLeft, tempoText, leadInSeconds, GEAR_LEAD_IN, extraSeconds, upNextDetails, equipmentChanges, finishSummary } from "../../public/js/player.js";
 
 const squat = { id: 1, name: "Goblet squat", equipment: ["dumbbell"], default_reps: 8, default_seconds: null };
 const deadlift = { id: 2, name: "Straight-leg deadlift", equipment: ["dumbbell"], default_reps: 12, default_seconds: null };
@@ -370,4 +370,37 @@ test("says what equipment to use only when it changes from the exercise before",
   assert.equal(equipmentChanges(items, 2), false);
   assert.equal(equipmentChanges(items, 3), true);
   assert.equal(equipmentChanges(items, 4), true);
+});
+
+test("says a step as one sentence for a screen reader", () => {
+  const squat2 = { ...set(squat, 2), block: { label: "A", round: 2, rounds: 3 } };
+  assert.equal(stepAnnouncement(squat2, { weight: { value: 40, unit: "lb" } }), "Goblet squat, set 2 of 3, 8 reps, 40 pounds");
+  assert.equal(stepAnnouncement({ ...squat2, weights_held: 2 }, { weight: { value: 10, unit: "lb" } }), "Goblet squat, set 2 of 3, 8 reps, 10 pounds in each hand");
+  assert.equal(stepAnnouncement({ ...set(plank, 1), mode: "timed", reps: null, seconds: 30, block: { label: "B", round: 1, rounds: 1 } }), "Plank, 30 seconds");
+  const right = { ...set(plank, 1), mode: "timed", reps: null, seconds: 20, side: "right", block: { label: "B", round: 1, rounds: 1 } };
+  assert.equal(stepAnnouncement(right, { switching: true }), "Switch sides. Plank, right side, 20 seconds");
+  assert.equal(stepAnnouncement({ ...set(squat, 1), reps: 1, block: { label: "C", round: 1, rounds: 1 } }), "Goblet squat, 1 rep");
+  assert.equal(stepAnnouncement({ ...set(squat, 1), reps: 10, exercise: { ...squat, alternating: true }, block: { label: "C", round: 1, rounds: 1 } }), "Goblet squat, 10 reps in total");
+});
+
+test("says a rest and what comes after it", () => {
+  assert.equal(stepAnnouncement({ type: "rest", seconds: 60 }, { next: set(deadlift, 1) }), "Rest, 60 seconds. Next: Straight-leg deadlift");
+  assert.equal(stepAnnouncement({ type: "rest", seconds: 60 }), "Rest, 60 seconds");
+});
+
+test("says the big count with its unit", () => {
+  assert.equal(spokenTarget(set(squat, 1), { phase: "reps" }), "8 reps");
+  assert.equal(spokenTarget({ ...set(squat, 1), reps: null, note: "To failure" }, { phase: "reps" }), "To failure");
+  assert.equal(spokenTarget({ ...set(squat, 1), reps: 10, exercise: { ...squat, alternating: true } }, { phase: "reps" }), "10 reps in total");
+  assert.equal(spokenTarget({ ...set(squat, 1), reps: null }, { phase: "reps" }), "Go");
+  assert.equal(spokenTarget(set(plank, 1), { phase: "work", seconds: 1 }), "1 second");
+  assert.equal(spokenTarget({ type: "rest", seconds: 60 }, { phase: "rest", seconds: 45 }), "45 seconds");
+});
+
+test("says a weight in words", () => {
+  assert.equal(spokenWeight({ value: 20, unit: "kg" }), "20 kilograms");
+  assert.equal(spokenWeight({ value: 1, unit: "lb" }), "1 pound");
+  assert.equal(spokenWeight({ value: 2.5, unit: "kg" }), "2.5 kilograms");
+  assert.equal(spokenWeight(null), "");
+  assert.equal(spokenWeight({ value: 0, unit: "lb" }), "");
 });

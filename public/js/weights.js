@@ -78,8 +78,12 @@ export function sameShownWeight(a, b, unit) {
 export function formatWeight(weight, unit) {
   if (!weight) return "";
   const shown = inUnit(weight, unit);
-  const value = Number.isInteger(shown.value) ? shown.value : Number(shown.value.toFixed(2));
-  return `${value} ${shown.unit}`;
+  return `${shownValue(shown.value)} ${shown.unit}`;
+}
+
+// A weight's number as shown: whole, or to two decimals at most.
+export function shownValue(value) {
+  return Number.isInteger(value) ? value : Number(value.toFixed(2));
 }
 
 function round(value) {
