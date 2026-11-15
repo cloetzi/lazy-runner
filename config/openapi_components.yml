@@ -198,7 +198,7 @@ components:
     AllowedWeights:
       type: array
       nullable: true
-      description: The owned weights to step through, in the exercise's unit; null when the equipment has no fixed weights.
+      description: The owned weights to step through, in the unit of the gear it is done with; null when the equipment has no fixed weights.
       items: { type: number }
     AnyWeight:
       type: object
@@ -460,7 +460,7 @@ components:
         tempo: { type: string, nullable: true, description: "3 or 4 digits, seconds per phase, such as 3110." }
         weight:
           nullable: true
-          description: The value and unit, or the value alone in the exercise's unit.
+          description: The value and unit, or the value alone in the unit of the gear the step is done with.
           oneOf:
             - { type: number, minimum: 0 }
             - type: object
@@ -468,7 +468,7 @@ components:
               additionalProperties: false
               properties:
                 value: { type: number, minimum: 0 }
-                unit: { allOf: [{ $ref: "#/components/schemas/Unit" }], description: "The exercise's unit if left out." }
+                unit: { allOf: [{ $ref: "#/components/schemas/Unit" }], description: "That of the gear the step is done with if left out." }
         weights_held: { type: integer, nullable: true, enum: [1, 2], description: When done with other gear than the exercise names. }
         per_side: { type: boolean, nullable: true, description: "Must match the exercise; its own if left out." }
         note: { type: string, nullable: true, maxLength: 500 }

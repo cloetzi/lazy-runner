@@ -3,7 +3,7 @@
 # Blocks are circuits: each round runs every step in order, per-side steps run
 # left then right, and the block's rest follows every round except the last.
 # Targets are resolved: a remembered weight wins over the seed value, in the
-# exercise's unit, and items that take a weight (`weight_unit`), set or not,
+# unit of the gear the step is done with, and items that take a weight (`weight_unit`), set or not,
 # carry the owned weights to step through.
 class PlayerPlan
   def initialize(workouts, weights: ExerciseWeight.as_hash(:exercise_id), fixed: Equipment.fixed)
@@ -24,12 +24,12 @@ class PlayerPlan
   # those with one, and those done with gear in set weights that have none yet.
   # The weight is one per exercise (ExerciseWeight), so an exercise done with
   # different gear in different steps steps through the owned weights of all
-  # of it (those in the first step's unit).
+  # of it, in the first step's unit.
   def targets
     weighted = items.select { it[:type] == "exercise" && it[:weight_unit] }
     weighted.group_by { it[:exercise][:id] }.map do |_, same|
       item = same.first
-      lists = same.select { it[:weight_unit] == item[:weight_unit] }.filter_map { it[:allowed_weights] }
+      lists = same.filter_map { |other| other[:allowed_weights]&.map { in_unit(it, other[:weight_unit], item[:weight_unit]) } }
       allowed = lists.flatten.uniq.sort unless lists.empty?
       item.slice(:weight, :weight_unit, :weights_held, :weight_equipment, :any_weight, :seed_weight, :equipment)
           .merge(allowed_weights: allowed, exercise: item[:exercise].slice(:id, :name))
@@ -41,6 +41,8 @@ class PlayerPlan
   end
 
   private
+
+  def in_unit(value, from, to) = Weights.convert({ value:, unit: from }, to)[:value]
 
   def workout_items(workout)
     workout.blocks.flat_map do |block|

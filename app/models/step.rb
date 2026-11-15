@@ -75,11 +75,20 @@ class Step < Record
     (equipment.empty? ? exercise.equipment : equipment).find(&:unit)
   end
 
-  # The unit its weights are kept in: that of its exercise's gear in set
-  # weights, else that of its own (a kettlebell for an exercise that names
-  # none), else the user's (Exercise#weight_unit).
+  # The unit its weights are kept in: that of the gear in set weights it is
+  # done with (its own, else its exercise's), so a goblet squat done with a
+  # kettlebell in kg reads in kg even while the exercise names dumbbells in
+  # lb (#197); else its exercise's (Exercise#weight_unit).
   def gear_unit
-    exercise.gear_unit || set_weight_gear&.then { UserEquipment.unit_of(it) } || Setting.unit
+    self.class.unit_for(equipment, exercise) || Setting.unit
+  end
+
+  # The unit of a step done with `items` (its own gear, none to follow the
+  # exercise): that of the first of them in set weights, else that of its
+  # exercise's (Exercise#gear_unit); nil when neither names any.
+  def self.unit_for(items, exercise)
+    gear = items.find(&:unit)
+    (gear && UserEquipment.unit_of(gear)) || exercise.gear_unit
   end
 
   # Whether it can carry a weight: it has one to start at, sets one of its

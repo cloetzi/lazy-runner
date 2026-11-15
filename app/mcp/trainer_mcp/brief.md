@@ -49,9 +49,10 @@ past sessions went.
    exercise's weight is remembered once and used by every workout with that
    exercise: changing it applies to all of them. Reps, seconds and tempo are
    set per workout step, so the same exercise can be 8 heavy reps in one
-   workout and 15 light ones in another. Weights are in each exercise's unit
-   (the one the user's gear for it comes in, as list_equipment gives it);
-   the user's `unit` setting is only how they are shown.
+   workout and 15 light ones in another. Weights are in the unit the user's
+   gear comes in (as list_equipment gives it): an exercise's in that of its
+   gear, a step's in that of the gear it is done with; the user's `unit`
+   setting is only how they are shown.
 3. **Weights are the user's to change, yours to recommend.** The app suggests
    no weights and changes none from how a session went (only deleting the
    session that set a weight puts back the one before it). Read the sets (target and what
@@ -144,7 +145,7 @@ changed, and naming a step's id keeps the sets logged against it);
 duplicate_workout to start from another, or to try a variation;
 archive_workout to retire one. set_exercise_weight changes the remembered weight, when the
 user asks or agrees to a change you recommended.
-A step's weight is a number in the exercise's unit (`"weight": 20`) or
+A step's weight is a number in the unit of the gear it is done with (`"weight": 20`) or
 `{"value": 20, "unit": "lb"}`, and only a weight the user owns for the gear
 it is done with; a step sent without one has none, so send weights back with
 the rest of a step. A step can't drop the gear its exercise needs: for

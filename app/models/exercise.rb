@@ -115,16 +115,16 @@ class Exercise < Record
     !!(weight || remembered || equipment.any?(&:unit))
   end
 
-  # A weight from a client, converted to the unit this exercise's gear in set
-  # weights comes in and snapped to an owned weight it rounds from. Without
-  # such gear it keeps the unit given: a step can be done with gear of its
-  # own (Step#gear_unit). Anything that is not a number in a known unit goes
-  # through as given, for validation to reject.
-  def in_weight_unit(value, unit)
+  # A weight from a client, converted to `target` (by default the unit this
+  # exercise's gear in set weights comes in; a step passes its own,
+  # Step#gear_unit) and snapped to an owned weight it rounds from. Without
+  # such gear it keeps the unit given. Anything that is not a number in a
+  # known unit goes through as given, for validation to reject.
+  def in_weight_unit(value, unit, target = gear_unit)
     number = value.is_a?(Numeric) ? value : Float(value, exception: false)
     return { value:, unit: } unless number && ExerciseWeight::UNITS.include?(unit)
 
-    target = gear_unit || unit
+    target ||= unit
     Weights.normalize({ value: number.to_f, unit: }, target, Equipment.owned_weights(target))
   end
 

@@ -474,6 +474,21 @@ describe "sessions API" do
       _(SetLog.find!(json["id"]).weight).must_equal({ value: 40.0, unit: "lb" })
     end
 
+    it "keeps a set in the unit of the gear its step is done with, and shows it so" do
+      inventory("kettlebell").update(unit: "kg", weights: [16, 24])
+      deadlift = step_for("cycle-1-workout-1", "straight-leg-deadlift")
+      deadlift.update(weight_value: 16, weight_unit: "kg")
+      session = create_session
+
+      post_json "/api/sessions/#{session.id}/sets", step_id: deadlift.id, set_number: 1, reps: 8, weight: { value: 16, unit: "kg" }
+
+      _(json["weight"]).must_equal({ "value" => 16.0, "unit" => "kg" })
+      _(json["target"]["weight"]).must_equal({ "value" => 16.0, "unit" => "kg" })
+      get "/api/sessions/#{session.id}"
+      sets = json["exercises"].find { it["exercise"]["slug"] == "straight-leg-deadlift" }["sets"]
+      _(sets.first["weight"]).must_equal({ "value" => 16.0, "unit" => "kg" })
+    end
+
     it "updates the same set when it is logged again" do
       session = create_session
       statuses = 2.times.map do |i|
@@ -918,7 +933,7 @@ describe "sessions API" do
         .must_equal [[[1, 8, 8], [2, 8, 8]], [[1, 15, 15], [2, 15, 15]]]
     end
 
-    it "gives weights in the exercise's unit, whatever they were logged in" do
+    it "gives weights in the unit of its step's gear, whatever they were logged in" do
       session = create_session
       SetLog.create(session:, step: squat, set_number: 1, reps: 8, weight_value: 20, weight_unit: "kg")
 

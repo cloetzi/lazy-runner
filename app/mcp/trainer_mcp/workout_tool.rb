@@ -18,7 +18,7 @@ module TrainerMcp
         weight: {
           type: %w[number object null],
           description: "The weight to start at while the exercise has no remembered weight; once it has one, that wins " \
-                       "(set_exercise_weight). Either a number in the exercise's unit, such as 20, or an object with " \
+                       "(set_exercise_weight). Either a number in the unit of the gear the step is done with, such as 20, or an object with " \
                        "its value, such as {\"value\": 20, \"unit\": \"lb\"}. Leave it out for none: a step sent " \
                        "without one has none. Use a weight the user owns for the gear the step is done with.",
           properties: { value: { type: "number", minimum: 0 }, unit: { type: "string", enum: ExerciseWeight::UNITS } },

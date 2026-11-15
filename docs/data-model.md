@@ -420,11 +420,15 @@ erDiagram
 
 ## Rules worth knowing
 
-- **One unit per exercise.** Weights for an exercise are kept in the unit
-  the user's gear for it comes in (`user_equipment.unit`, which follows the
-  lb/kg setting until weights are listed), else the setting; every stored
-  weight carries its unit and the API converts at the boundary
-  (`app/models/weights.rb`). The setting only changes what is shown.
+- **Weights are in the gear's unit.** A remembered weight is kept in the
+  unit the user's gear for the exercise comes in, a step's (and the sets
+  logged for it) in that of the gear the step is done with, a goblet squat
+  with a kettlebell in kg while the dumbbells are in lb (`user_equipment.unit`,
+  which follows the lb/kg setting until weights are listed; `Step#gear_unit`).
+  Every stored weight carries its unit and the API converts at the boundary
+  (`app/models/weights.rb`). Relabelling an item's unit relabels the step and
+  remembered weights that were one of its owned weights. The setting only
+  changes what is shown.
 - **Fixed-weight gear steps through owned weights** (`user_equipment.weights`);
   other gear steps by the increments in `config/coach.yml`.
 - **The calendar is the sessions table.** A planned session is a day on the

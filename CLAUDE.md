@@ -181,7 +181,8 @@ then `BASE_URL=http://localhost:3999 SERVER_LOG=/tmp/e2e.log npm run test:e2e`.
   weights: changing one is the user's or the coach agent's).
   `app/models/weights.rb` converts and compares weights: each exercise keeps
   them in the unit of the user's gear for it (`user_equipment.unit`, else the
-  lb/kg setting), converted at the API boundary. The stepper itself is
+  lb/kg setting) and each step in that of the gear it is done with
+  (`Step#gear_unit`), converted at the API boundary. The stepper itself is
   `public/js/weights.js`: fixed-weight equipment steps through the owned
   weights (`allowed_weights`), anything else by the increments.
 - `test/` Minitest (`test/requests`, `test/models`, `test/lib`); `test/js` node tests;

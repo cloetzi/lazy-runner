@@ -2,7 +2,8 @@
 # what was logged per exercise in the order it was done. A swap is grouped
 # under the exercise done and names the one planned. Like ExerciseHistory it
 # reads only the set logs, so editing the workout later does not change it,
-# and weights are in the exercise's unit. Load the session with
+# and weights are in the unit their target was logged in (that of the gear
+# the step was done with), else the exercise's. Load the session with
 # `set_logs: %i[exercise planned_exercise]` eager.
 class SessionDetail
   def initialize(session)
@@ -24,7 +25,9 @@ class SessionDetail
     logs = @session.set_logs.sort_by(&:id)
     logs.group_by { [it.step_ref || [it.block_label, it.planned_exercise_id], it.exercise_id] }.values.map do |sets|
       first = sets.first
-      unit = first.exercise.weight_unit
+      # The unit its target was logged in, that of the gear the step was done
+      # with then (#197), else its exercise's.
+      unit = sets.filter_map { it.target[:weight] }.first&.dig(:unit) || first.exercise.weight_unit
       {
         exercise: first.exercise.values.slice(:id, :slug, :name),
         instead_of: (first.planned_exercise.values.slice(:id, :slug, :name) if first.swapped?),

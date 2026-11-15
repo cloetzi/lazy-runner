@@ -327,6 +327,18 @@ describe "workouts API" do
       _(step["allowed_weights"]).must_equal [40.0]
     end
 
+    it "keeps a step's weight in the unit of the gear it is done with when gear comes in mixed units" do
+      inventory("kettlebell").update(unit: "kg", weights: [16, 24])
+      blocks = [{ label: "A", steps: [{ exercise_id: exercise("reverse-fly").id, reps: 8, equipment: ["kettlebell"], weights_held: 1, weight: { value: 16, unit: "kg" } }] }]
+
+      put_json "/api/workouts/#{copy.id}", blocks: blocks
+
+      step = json["blocks"].first["steps"].first
+      _(step["weight"]).must_equal({ "value" => 16.0, "unit" => "kg" })
+      _(step["weight_unit"]).must_equal "kg"
+      _(step["allowed_weights"]).must_equal [16.0, 24.0]
+    end
+
     it "changes nothing when any part is invalid" do
       before = structure
       blocks = structure

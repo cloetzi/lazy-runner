@@ -116,10 +116,13 @@ as null when it has no value (`nullable`).
   gave, so nothing made meanwhile is lost; only the user marks it): plan
   changes, notes, proposed goals and copied activities. `GET /api/me`
   counts them (`coach_unseen`) for the dot on the Coach tab.
-- **Weights** come back in the exercise's unit: the one the user's gear for
-  it comes in (`unit` in `/api/equipment`, theirs to set). A weight sent in the other
-  unit is converted and snapped to an owned weight. The `unit` setting
-  (`/api/settings`) only changes how weights are shown.
+- **Weights** come back in the unit the user's gear comes in (`unit` in
+  `/api/equipment`, theirs to set): an exercise's in that of its gear, a
+  step's (and the sets logged for it) in that of the gear it is done with. A
+  weight sent in the other unit is converted and snapped to an owned weight.
+  Changing an item's `unit` relabels the step and remembered weights that
+  were one of its owned weights. The `unit` setting (`/api/settings`) only
+  changes how weights are shown.
 - **The generic weight** (`weight`, `any_weight: true` in `/api/equipment`)
   is what an exercise needs when any dumbbell or kettlebell will do. It
   can't be changed: it is owned with any gear in set weights, its weights

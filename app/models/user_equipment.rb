@@ -57,6 +57,21 @@ class UserEquipment < Record.Model(:user_equipment)
     self.class.forget_units!
   end
 
+  # Relabelling the unit (20 lb dumbbells were 20 kg all along) relabels the
+  # weights that were one of the item's in the old unit: the steps done with
+  # it and the remembered weights of exercises it is the gear for (#197).
+  def after_update
+    super
+    return unless column_previously_changed?(:unit) && equipment.unit
+
+    was = column_previously_was(:unit) || Setting.unit
+    return if was == unit
+
+    owned = Array(column_previously_changed?(:weights) ? column_previously_was(:weights) : weights).map(&:to_f)
+    relabel_steps(was, owned)
+    relabel_remembered(was, owned)
+  end
+
   def after_destroy
     super
     self.class.forget_units!
@@ -73,5 +88,21 @@ class UserEquipment < Record.Model(:user_equipment)
 
     validates_includes ExerciseWeight::UNITS, :unit
     errors.add(:unit, "can only be set for equipment with weights, such as dumbbells") if equipment&.unit.nil?
+  end
+
+  private
+
+  # Steps whose weight unit comes from this item: its own gear's first in
+  # set weights, else its exercise's.
+  def relabel_steps(was, owned)
+    steps = Step.where(weight_unit: was, weight_value: owned).eager(:equipment, exercise: :equipment).all
+    ids = steps.select { (it.equipment.find(&:unit) || it.exercise.equipment.find(&:unit))&.id == equipment_id }.map(&:id)
+    Step.where(id: ids).update(weight_unit: unit, updated_at: Time.now) if ids.any?
+  end
+
+  def relabel_remembered(was, owned)
+    weights = ExerciseWeight.where(unit: was, value: owned).eager(exercise: :equipment).all
+    ids = weights.select { it.exercise.equipment.find(&:unit)&.id == equipment_id }.map(&:id)
+    ExerciseWeight.where(id: ids).update(unit:, updated_at: Time.now) if ids.any?
   end
 end

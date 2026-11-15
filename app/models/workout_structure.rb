@@ -16,7 +16,7 @@ require "securerandom"
 # loader. Blocks and steps left out are deleted, and their logged sets stay,
 # unlinked, since each carries what history needs. Fields left out take their
 # defaults: one round, no rest, no weight, the exercise's own equipment and
-# sides; a weight without a unit is in the exercise's unit.
+# sides; a weight without a unit is in that of the gear the step is done with.
 #
 # Everything is checked before anything is written. With one problem anywhere
 # nothing changes, and `Invalid` names each block and step at fault.
@@ -149,7 +149,8 @@ class WorkoutStructure
     # their link only while the step still means the same exercise.
     step = nil if step && exercise && step.exercise_id != exercise.id
     step ||= Step.new
-    value, unit = weight(attrs["weight"], exercise, path, where)
+    gear = equipment(attrs["equipment"], exercise, path, where)
+    value, unit = weight(attrs["weight"], exercise, gear, path, where)
     step.set(
       exercise:, position:,
       reps: attrs["reps"], duration_seconds: attrs["duration_seconds"],
@@ -158,7 +159,7 @@ class WorkoutStructure
       note: attrs["note"].to_s.strip.presence
     )
     collect(step, path, where)
-    [step, equipment(attrs["equipment"], exercise, path, where)]
+    [step, gear]
   end
 
   # The step's exercise id, its slug as `exercise`, or the id of the
@@ -181,11 +182,11 @@ class WorkoutStructure
     add("#{path}.#{key}", where, "names no exercise in the library", "Exercise #{value} is not in the library")
   end
 
-  # The step's weight as value and unit, kept in the exercise's unit as
-  # every weight of it is: one sent in the other unit is converted and
-  # snapped to an owned weight. Without a unit, it is in the exercise's.
-  # A number alone is the value, in the exercise's unit.
-  def weight(value, exercise, path, where)
+  # The step's weight as value and unit, kept in the unit of the gear it is
+  # done with (Step.unit_for, its own `gear` first): one sent in the other
+  # unit is converted and snapped to an owned weight. Without a unit, and
+  # for a number alone, it is in that unit.
+  def weight(value, exercise, gear, path, where)
     return [nil, nil] if value.nil?
 
     value = { "value" => value } if value.is_a?(Numeric)
@@ -199,7 +200,8 @@ class WorkoutStructure
     end
     return [value["value"], value["unit"]] if value["value"].nil? || exercise.nil?
 
-    weight = exercise.in_weight_unit(value["value"], value["unit"] || exercise.weight_unit)
+    unit = Step.unit_for(gear, exercise)
+    weight = exercise.in_weight_unit(value["value"], value["unit"] || unit || Setting.unit, unit)
     weight.values_at(:value, :unit)
   end
 

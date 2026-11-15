@@ -177,8 +177,8 @@ function nudge(value, direction, { step, min, max }) {
 }
 
 // Whether a step can carry a weight, and how: the unit it keeps weights in
-// (that of its exercise's gear in set weights, else of its own, as
-// Step#gear_unit, else `unit`)
+// (that of the gear in set weights it is done with, its own first, else of
+// its exercise's, as Step#gear_unit, else `unit`)
 // and the owned weights to step through (as Equipment.allowed_for: those of
 // the first owned item with set weights among what the step uses), empty to
 // step by bands. Null for a step done without weighted gear and no weight.
@@ -187,7 +187,7 @@ export function weightOptions(step, inventory = [], unit = "lb") {
   const gear = stepEquipment(step).map((slug) => items.get(slug)).filter(Boolean);
   if (!gear.some((item) => item.unit) && !step.weight) return null;
 
-  const own = step.exercise.equipment.map((slug) => items.get(slug)?.unit).find(Boolean) ?? gear.map((item) => item.unit).find(Boolean);
+  const own = gear.map((item) => item.unit).find(Boolean) ?? step.exercise.equipment.map((slug) => items.get(slug)?.unit).find(Boolean);
   const keptIn = step.weight?.unit ?? own ?? unit;
   const fixed = gear.find((item) => item.owned && item.weights?.length);
   const allowed = fixed ? [...new Set(fixed.weights.map((w) => convert(w, fixed.unit, keptIn)))].sort((a, b) => a - b) : [];

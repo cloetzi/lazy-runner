@@ -123,6 +123,21 @@ describe "equipment API" do
       _(json.slice("weights", "unit")).must_equal("weights" => [16, 24], "unit" => "lb")
     end
 
+    it "relabels the weights that were owned ones of an item when its unit changes" do
+      fly = exercise("reverse-fly")
+      ExerciseWeight.remember!(fly, 20, "lb")
+      step = step_for("cycle-1-workout-1", "reverse-fly")
+
+      patch_json "/api/equipment/#{equipment("dumbbell").id}", unit: "kg"
+
+      _(last_response.status).must_equal 200
+      _(step.refresh.weight).must_equal({ value: 10.0, unit: "kg" })
+      _(ExerciseWeight.first!(exercise_id: fly.id).weight).must_equal({ value: 20.0, unit: "kg" })
+      get "/api/workouts/#{step.block.workout_id}"
+      shown = json["blocks"].flat_map { it["steps"] }.find { it["id"] == step.id }
+      _(shown["target"]["weight"]).must_equal({ "value" => 20.0, "unit" => "kg" })
+    end
+
     it "follows the user's unit until weights are listed, then keeps theirs" do
       UserEquipment.where(equipment: equipment("kettlebell")).delete
       Setting.current.update(unit: "kg")

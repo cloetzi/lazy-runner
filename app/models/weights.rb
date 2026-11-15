@@ -1,7 +1,8 @@
 # Weight arithmetic shared by everything that stores or compares a weight.
-# Weights are { value:, unit: } hashes. Each exercise keeps its weights in one
-# unit (Exercise#weight_unit); anything given in the other unit is converted on
-# the way in, and snapped to an owned weight when it is that weight rounded.
+# Weights are { value:, unit: } hashes, kept in the unit of the gear they are
+# for (Exercise#weight_unit, Step#gear_unit); anything given in the other unit
+# is converted on the way in, and snapped to an owned weight when it is that
+# weight rounded.
 module Weights
   KG_PER_LB = 0.45359237
   # The app shows converted weights to the nearest 0.5 kg or lb, so anything

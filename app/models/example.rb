@@ -183,12 +183,14 @@ class Example
     ).tap { it.exercise = exercise }
   end
 
-  # The step's weight in its exercise's unit, snapped to the nearest owned
-  # weight for gear that comes in set weights; nil with none of it owned.
+  # The step's weight in the unit of the gear it is done with (Step.unit_for),
+  # snapped to the nearest owned weight for gear that comes in set weights;
+  # nil with none of it owned.
   def snapped(step, attrs, gear, library)
     return unless attrs["weight"]
 
-    weight = Weights.convert({ value: attrs["weight"].to_f, unit: attrs["unit"] || "lb" }, step.exercise.weight_unit)
+    unit = Step.unit_for(gear.filter_map { library.equipment[it] }, step.exercise) || Setting.unit
+    weight = Weights.convert({ value: attrs["weight"].to_f, unit: attrs["unit"] || "lb" }, unit)
     return weight unless gear.any? { library.equipment[it]&.unit }
 
     allowed = Equipment.allowed_for(gear, weight[:unit], library.fixed)

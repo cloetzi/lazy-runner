@@ -188,7 +188,9 @@ module Api
 
       # A swap names the exercise done instead.
       exercise = params[:exercise_id].present? ? Exercise.find!(params[:exercise_id]) : (linked&.exercise || shown[0])
-      weight = exercise.in_weight_unit(params.dig(:weight, :value), params.dig(:weight, :unit))
+      # In the unit of the gear the step is done with, unless swapped.
+      unit = linked && linked.exercise_id == exercise.id ? Step.unit_for(linked.equipment, exercise) : exercise.gear_unit
+      weight = exercise.in_weight_unit(params.dig(:weight, :value), params.dig(:weight, :unit), unit)
       attempts = 0
       begin
         log = SetLog.find_or_new(user_id: session.user_id, session_id: session.id, step_ref:, set_number: params[:set_number], side: params[:side].presence)
