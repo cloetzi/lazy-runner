@@ -8,7 +8,8 @@ one sweaty thumb, calm everywhere else.
 - **The player first.** One step per screen, a huge count, the exercise name
   and two to four cues, big Done and Skip buttons at the bottom, and a tap on
   the time to pause.
-  Navigation hides during a session.
+  Navigation hides during a session and in the workout editor, which has
+  its own header (Cancel, the name, Save) so a stray tap can't lose a draft.
 - **Never a dead end.** Today offers a workout to start, or, for an account
   with none yet, the example programs and the editor.
 - **Light and dark** follow `prefers-color-scheme`; both are checked for every

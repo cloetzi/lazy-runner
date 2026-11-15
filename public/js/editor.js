@@ -74,13 +74,14 @@ export async function openEditor(id, { unit, onSaved, cameFrom = "" }) {
     if (workout && !workout.data.editable) return renderReadOnly(workout.data);
     session.draft = workout ? draftFrom(workout.data) : newDraft("workout", session.defaultFrames);
     session.saved = saveRequest(session.draft).body;
-    $("edit-heading").textContent = workout ? `Edit ${workout.data.title}` : "New workout";
+    $("edit-heading").textContent = workout ? workout.data.title : "New workout";
     $("edit-tagline").textContent = workout
       ? "Changes are kept on this page until you save."
       : "Pick what kind it is, name it and add exercises. Nothing is kept until you save.";
     $("edit-save").hidden = false;
-    $("edit-save").textContent = workout ? "Save" : "Save workout";
+    $("edit-save").textContent = "Save";
     render();
+    showConnection();
   } catch (error) {
     if (editor === session) $("edit-form").innerHTML = `<p>${escape(loadProblem("the editor", error))}</p>`;
   }
@@ -378,6 +379,8 @@ function onInput(event) {
   const { draft } = editor;
   const value = event.target.value;
   if (field === "title" || field === "subtitle") draft[field] = value;
+  // The header names the workout as it is being renamed.
+  if (field === "title") $("edit-heading").textContent = value.trim() || (editor.routeId === "new" ? "New workout" : "Untitled");
   if (field === "warmup" || field === "cooldown") draft[field] = value === "" ? null : value === "none" ? "none" : Number(value);
   const where = event.target.dataset.key && locate(draft, event.target.dataset.key);
   if (!where) return;
@@ -521,6 +524,17 @@ function pick(title, onPick, current = null) {
 
 $("edit-form").addEventListener("click", onClick);
 $("edit-form").addEventListener("input", onInput);
+// The navigation, and its Offline note, is hidden in the editor: it says so
+// itself, since saving needs a connection.
+const OFFLINE_NOTE = "Offline: saving needs a connection. Your changes stay here.";
+function showConnection() {
+  if ($("edit").hidden) return;
+  const status = $("edit-status");
+  if (!navigator.onLine && !status.textContent) status.textContent = OFFLINE_NOTE;
+  if (navigator.onLine && status.textContent === OFFLINE_NOTE) status.textContent = "";
+}
+window.addEventListener("offline", showConnection);
+window.addEventListener("online", showConnection);
 $("edit-form").addEventListener("change", onInput);
 $("edit-save").onclick = save;
 // Leaves the editor for `hash`: back in the history when that is where it was

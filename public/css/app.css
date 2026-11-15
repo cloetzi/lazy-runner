@@ -839,10 +839,22 @@ button.link.danger { color: var(--danger); align-self: flex-start; padding: 0; }
 .inventory-item .status:empty { display: none; }
 
 /* Workout view: duplicating a built-in workout, editing your own. */
-.workout-own { gap: var(--space-3); margin-top: var(--space-4); }
-.workout-own h2, .workout-own p { margin: 0; }
-.workout-own h2 { font-size: var(--text-lg); }
-.workout-own .card-actions { flex-wrap: wrap; }
+/* A header with actions on the right of the back button: Edit and More on a workout. */
+.head-row { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); }
+.head-actions { display: flex; align-items: center; gap: var(--space-2); }
+.more-actions { position: relative; }
+.more-actions summary {
+  list-style: none; cursor: pointer; display: inline-flex; align-items: center; justify-content: center;
+  min-height: 2.75rem; min-width: 2.75rem; padding: 0 var(--space-2); border-radius: var(--radius-md);
+  background: var(--surface); color: var(--text); border: 1px solid var(--control-border);
+}
+.more-actions summary::-webkit-details-marker { display: none; }
+.more-actions-list {
+  position: absolute; right: 0; top: calc(100% + var(--space-1)); z-index: 20; min-width: 11rem;
+  display: grid; gap: var(--space-2); padding: var(--space-2);
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-md); box-shadow: var(--shadow-1);
+}
+.more-actions-list button { display: flex; align-items: center; gap: var(--space-2); justify-content: flex-start; width: 100%; }
 .new-workout { margin-top: var(--space-3); gap: var(--space-2); }
 
 /* Workout editor (editor.js): a card per block, each step a row that opens
@@ -895,16 +907,19 @@ button.link.danger { color: var(--danger); align-self: flex-start; padding: 0; }
 .editor-problems { margin: 0; padding: var(--space-2) var(--space-3) var(--space-2) var(--space-6); color: var(--danger); border-left: 3px solid var(--danger); font-weight: 600; }
 .editor-block.has-problems { border-color: var(--danger); }
 .editor-step.has-problems .row-title { color: var(--danger); }
-.editor-bar {
-  position: sticky; bottom: calc(var(--tabbar, env(safe-area-inset-bottom)) + var(--space-4)); z-index: 5;
-  display: grid; gap: var(--space-2);
+/* The editor's own header, fixed at the top: Cancel, the name, Save, and the
+   save status under them. The navigation is hidden while it is open. */
+.edit-bar {
+  position: sticky; top: 0; z-index: 10;
+  display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: var(--space-2) var(--space-3);
+  margin: calc(-1 * max(var(--space-4), env(safe-area-inset-top))) calc(-1 * max(var(--space-4), env(safe-area-inset-right))) 0 calc(-1 * max(var(--space-4), env(safe-area-inset-left)));
+  padding: max(var(--space-3), env(safe-area-inset-top)) max(var(--space-4), env(safe-area-inset-right)) var(--space-3) max(var(--space-4), env(safe-area-inset-left));
+  background: var(--bg); border-bottom: 1px solid var(--border);
 }
-.editor-bar p {
-  justify-self: center; margin: 0; padding: var(--space-1) var(--space-3); text-align: center;
-  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-full); box-shadow: var(--shadow-1);
-}
-.editor-bar p:empty { display: none; }
-#edit-save { min-height: 4rem; box-shadow: var(--shadow-1); }
+.edit-bar h1 { margin: 0; font-size: var(--text-lg); text-align: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.edit-bar #edit-status { grid-column: 1 / -1; justify-self: center; margin: 0; text-align: center; font-weight: 600; }
+.edit-bar #edit-status:empty { display: none; }
+#edit-tagline { margin: 0; }
 
 /* The exercise picker: the library in a sheet, found as on the Exercises page. */
 .picker input, .picker select {

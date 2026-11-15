@@ -420,6 +420,8 @@ test("builds a workout of your own in the editor and runs it", async () => {
   await form.locator("select[data-field=warmup]").selectOption("none");
   await form.locator("select[data-field=cooldown]").selectOption("none");
   await addExercise("Dead bug");
+  // The editor hides the navigation: no tap on a tab can leave the draft.
+  assert.equal(await page.locator(".tabbar").isVisible(), false);
   await accessible(page, "the editor");
   await addExercise("Push-up");
   // Push-ups first: the step's own up button, then fewer reps.
@@ -434,6 +436,13 @@ test("builds a workout of your own in the editor and runs it", async () => {
   const workout = await getJson(`/api/workouts/${id}`);
   assert.deepEqual(workout.blocks[0].steps.map((s) => [s.exercise.name, s.reps]), [["Push-up", 9], ["Dead bug", 10]]);
   assert.deepEqual([workout.warmup, workout.cooldown], ["none", "none"]);
+  // Edit is at the top; Duplicate and Delete are under More.
+  await page.locator("#workout-edit").waitFor();
+  await page.locator(".more-actions summary").click();
+  await page.locator('[data-own="duplicate"]').waitFor();
+  await accessible(page, "the workout view with More open");
+  await page.keyboard.press("Escape");
+  await page.locator('[data-own="duplicate"]').waitFor({ state: "hidden" });
 
   // Nothing to pick up, so no Get ready: the player starts.
   await page.locator("#workout-start").click();

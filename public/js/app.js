@@ -656,7 +656,7 @@ async function openWorkout(id) {
   $("workout-saved").textContent = state.workoutNote;
   state.workoutNote = "";
   $("workout-start").hidden = true;
-  $("workout-own").hidden = true;
+  $("workout-actions").hidden = true;
   $("workout-blocks").innerHTML = `<p class="muted">Loading…</p>`;
   show("workout", id);
   try {
@@ -683,27 +683,27 @@ function renderWorkout() {
   renderWorkoutOwn();
 }
 
-// A workout opens in the editor (editor.js), and can be deleted, which
-// archives it so its sessions stay in the history; a deleted one offers a
-// copy to edit.
+// At the top of the workout view: Edit, which opens the editor (editor.js),
+// and Duplicate and Delete under More. Deleting archives the workout so its
+// sessions stay in the history; a deleted one offers a copy to edit.
 function renderWorkoutOwn() {
   const workout = state.workout;
-  const own = $("workout-own");
-  own.hidden = false;
+  const actions = $("workout-actions");
+  actions.hidden = false;
   if (!workout.editable) {
-    own.innerHTML = `
-      <p class="muted">This workout was deleted; its sessions stay in the history.</p>
-      <div class="card-actions"><button class="secondary small" data-own="duplicate">Duplicate to edit</button></div>`;
+    $("workout-subtitle").textContent += " · Deleted: its sessions stay in the history";
+    actions.innerHTML = `<button class="secondary small" data-own="duplicate">Duplicate to edit</button>`;
     return;
   }
-  own.innerHTML = `
-    <h2>Your workout</h2>
-    <p class="muted">Change its name, warm-up and cool-down, and its blocks and exercises.</p>
-    <div class="card-actions">
-      <a class="button secondary small" href="${routeHash("edit", workout.id)}" id="workout-edit">Edit</a>
-      <button class="secondary small" data-own="duplicate">Duplicate</button>
-      <button class="secondary small" data-own="delete">Delete</button>
-    </div>`;
+  actions.innerHTML = `
+    <a class="button secondary small" href="${routeHash("edit", workout.id)}" id="workout-edit">Edit</a>
+    <details class="more-actions">
+      <summary title="More">${icon("more")}<span class="visually-hidden">More for this workout</span></summary>
+      <div class="more-actions-list">
+        <button class="secondary small" data-own="duplicate">Duplicate</button>
+        <button class="secondary small danger" data-own="delete">${icon("trash")}Delete</button>
+      </div>
+    </details>`;
 }
 
 // Editing a workout needs the server: a copy gets its id there.
@@ -1821,7 +1821,8 @@ function uniqueId() {
 function renderParked(view, note = "") {
   const box = $("in-progress");
   const run = state.parked;
-  box.hidden = !run || isSessionView(view);
+  // Not in the editor either: its buttons would leave the draft unasked.
+  box.hidden = !run || isSessionView(view) || view === "edit";
   if (box.hidden) return;
   $(view).prepend(box);
   const { exercises, done } = sessionProgress(run);
@@ -1920,7 +1921,10 @@ function show(view, id) {
   const entering = isSessionView(view) && location.hash !== hash;
   if (entering) history.pushState({ session: true }, "", hash);
   else if (location.hash !== hash) history.replaceState(null, "", hash);
+  // The session screens and the editor hide the navigation: one tap on a tab
+  // would leave a session, or a draft.
   if (isSessionView(view)) document.body.dataset.focus = "";
+  else if (view === "edit") document.body.dataset.focus = "edit";
   else document.body.removeAttribute("data-focus");
   nav.setCurrent(pageFor(view));
   renderParked(view);
@@ -2084,10 +2088,26 @@ $("sync-rejected").onclick = (event) => {
 
 $("workout-back").onclick = leaveWorkout;
 $("workout-start").onclick = () => startWorkout(state.workout.id);
-$("workout-own").onclick = (event) => {
+$("workout-actions").onclick = (event) => {
   const button = event.target.closest("button[data-own]");
-  if (button) onWorkoutOwn(button.dataset.own, button);
+  if (!button) return;
+  // The menu stays open while it works, so the button shows it is busy.
+  const menu = button.closest("details");
+  onWorkoutOwn(button.dataset.own, button).finally(() => menu?.removeAttribute("open"));
 };
+// The More menu closes on a tap anywhere else, or Escape.
+document.addEventListener("click", (event) => {
+  for (const menu of document.querySelectorAll("details.more-actions[open]")) {
+    if (!menu.contains(event.target)) menu.removeAttribute("open");
+  }
+});
+document.addEventListener("keydown", (event) => {
+  if (event.key !== "Escape") return;
+  const menu = document.querySelector("details.more-actions[open]");
+  if (!menu) return;
+  menu.removeAttribute("open");
+  menu.querySelector("summary").focus();
+});
 $("workout-blocks").onclick = (event) => {
   const button = event.target.closest("button[data-step], button[data-howto]");
   if (!button) return;

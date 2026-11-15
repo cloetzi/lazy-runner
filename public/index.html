@@ -48,7 +48,10 @@
 
   <main id="workout" class="view" hidden>
     <header class="brand">
-      <button class="back" id="workout-back"><svg class="icon" aria-hidden="true"><use href="/icons/sprite.svg#chevron-left"/></svg>Back</button>
+      <div class="head-row">
+        <button class="back" id="workout-back"><svg class="icon" aria-hidden="true"><use href="/icons/sprite.svg#chevron-left"/></svg>Back</button>
+        <div class="head-actions" id="workout-actions" hidden></div>
+      </div>
       <h1 id="workout-title"></h1>
       <p class="tagline" id="workout-subtitle"></p>
     </header>
@@ -57,20 +60,17 @@
     <div class="action-bar">
       <button class="primary" id="workout-start" hidden>Start this workout</button>
     </div>
-    <section class="card workout-own" id="workout-own" hidden></section>
   </main>
 
   <main id="edit" class="view" hidden>
-    <header class="brand">
-      <button class="back" id="edit-back"><svg class="icon" aria-hidden="true"><use href="/icons/sprite.svg#chevron-left"/></svg>Cancel</button>
+    <header class="edit-bar">
+      <button class="secondary small" id="edit-back">Cancel</button>
       <h1 id="edit-heading"></h1>
-      <p class="tagline" id="edit-tagline"></p>
+      <button class="primary small" id="edit-save" hidden>Save</button>
+      <p id="edit-status" role="status"></p>
     </header>
+    <p class="tagline" id="edit-tagline"></p>
     <div class="editor" id="edit-form"></div>
-    <div class="editor-bar">
-      <p class="muted" id="edit-status" role="status"></p>
-      <button class="primary" id="edit-save" hidden>Save</button>
-    </div>
   </main>
 
   <main id="ready" class="view" hidden>

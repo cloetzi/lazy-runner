@@ -140,8 +140,9 @@ then `BASE_URL=http://localhost:3999 SERVER_LOG=/tmp/e2e.log npm run test:e2e`.
   survive a lost connection; the running session is kept in localStorage.
   `nav.js` draws the navigation on every page from `routes.js`: a sidebar on
   wide screens, a bottom tab bar on phones with the rest under More.
-  Views on the home page have a URL hash, and the session screens hide the
-  navigation. The workout editor (`#edit/<id>`, `#edit/new`) keeps its draft
+  Views on the home page have a URL hash, and the session screens and the
+  editor hide the navigation (`body[data-focus]`). The workout editor
+  (`#edit/<id>`, `#edit/new`), with Cancel and Save in its own header, keeps its draft
   in `builder.js` and draws it in `editor.js`, saving the whole structure in
   one request. Settings live on the Settings page: lb or kg on the server
   (`/api/settings`, sent through the outbox, with a copy in localStorage),

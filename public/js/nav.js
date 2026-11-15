@@ -31,8 +31,9 @@ function checkAccount(options) {
 
 const storage = (() => { try { return localStorage; } catch { return null; } })();
 
-// A session screen is on (app.js sets data-focus, to an empty string).
-const inSession = () => document.body.hasAttribute("data-focus");
+// A session screen is on (app.js sets data-focus to an empty string; the
+// editor, which also hides the navigation, sets it to "edit").
+const inSession = () => document.body.dataset.focus === "";
 
 async function askAccount({ again = false } = {}) {
   if (again && inSession()) return;
@@ -115,7 +116,7 @@ function showOffline() {
 // The app shell. On wide screens a sidebar with every page stays on the
 // left. On phones a top bar names the page and a tab bar in thumb reach holds
 // the main pages, with the rest (Exercises, Equipment, Settings) under More.
-// Pages that run a session full screen hide it all with `body[data-focus]`.
+// The session screens and the editor hide it all with `body[data-focus]`.
 export function mountNav(current) {
   checkAccount();
   addEventListener("online", () => {
