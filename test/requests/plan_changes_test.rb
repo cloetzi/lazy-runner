@@ -124,6 +124,14 @@ describe "plan changes API" do
       _(shown["plan_changes"].map { it["action"] }).must_equal ["removed"]
     end
 
+    it "drops an item's change once the user changed it since" do
+      session = plan("2026-11-12")
+      as_agent(:patch, "/api/sessions/#{session["id"]}", date: "2026-11-14")
+      patch_json "/api/sessions/#{session["id"]}", date: "2026-11-13"
+
+      _(calendar["sessions"].find { it["id"] == session["id"] }["change"]).must_be_nil
+    end
+
     it "drops a move's line once the user moved the session again" do
       session = plan("2026-11-12")
       as_agent(:patch, "/api/sessions/#{session["id"]}", date: "2026-11-14")

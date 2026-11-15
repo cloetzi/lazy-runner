@@ -89,6 +89,7 @@ const SHELL = [
   "/js/nav.js",
   "/js/offline.js",
   "/js/outbox.js",
+  "/js/plan-changes.js",
   "/js/player.js",
   "/js/preferences.js",
   "/js/pwa.js",

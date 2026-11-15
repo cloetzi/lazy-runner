@@ -151,7 +151,9 @@ then `BASE_URL=http://localhost:3999 SERVER_LOG=/tmp/e2e.log npm run test:e2e`.
   with Today) draws the server's sessions and activities (`/api/calendar`)
   with the outbox's queued changes laid over them (`withQueued` in
   `calendar.js`, `withQueuedActivities` in `activities.js`), so a change made
-  offline shows at once. Activities keep what was sent (metres, seconds) and
+  offline shows at once. An agent's latest change to an item, and the
+  sessions it moved away from a day or removed, show with their reason and a
+  button that takes them back (`plan-changes.js`, sent at once). Activities keep what was sent (metres, seconds) and
   nothing derived; `activities.js` gives known sports their sprite icon.
   The Coach page (`coach-page.js`, sheets in `coach-sheets.js`, logic in
   `coach.js`) draws `/api/coach`: goals (only the user writes them; an

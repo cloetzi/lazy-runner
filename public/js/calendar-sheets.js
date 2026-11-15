@@ -9,6 +9,7 @@ import { rpePicker, toggleRpe, pickedRpe } from "./rpe-picker.js";
 import { routeHash } from "./routes.js";
 import { KIND_LABELS, authorLabel, plannedBy, writtenOn, howItFelt } from "./coach.js";
 import { weekSummary, summaryLine, watching } from "./week.js";
+import { changeHtml, undoButton } from "./plan-changes.js";
 
 // The calendar's sheets, used by the Calendar page and by Today: planning a
 // workout on a day, a session's own sheet to move, skip or remove it, and
@@ -84,9 +85,11 @@ function notesList(notes) {
 // (or this week's, once its day is gone), or Later to any date from today on;
 // it can be skipped or taken off the calendar. Any session opens its workout,
 // and a finished one its log; a done one opens with how it felt. `notes` are
-// the notes about it (notesAbout in coach.js). `on` holds onMove(date),
-// onSkip() and onRemove().
-export function openSessionSheet({ session, today, on, notes = [] }) {
+// the notes about it (notesAbout in coach.js). `change` is the latest change
+// an agent made to it, shown with its reason and, while it can be, the
+// button that takes it back (onUndo). `on` holds onMove(date), onSkip(),
+// onRemove() and onUndo().
+export function openSessionSheet({ session, today, on, notes = [], change = null }) {
   const dialog = sheet("session-sheet");
   const status = shownStatus(session, today);
   const can = movable(session);
@@ -107,7 +110,8 @@ export function openSessionSheet({ session, today, on, notes = [] }) {
       ${felt ? `<p class="session-felt"><strong>${escape(felt)}</strong></p>` : ""}
       ${remark ? `<p class="session-remark">${escape(remark)}</p>` : ""}
       ${session.note ? `<p class="planner-note">${escape(session.note)}</p>` : ""}
-      ${authorLine(plannedBy(session, today), "p")}
+      ${changeHtml(change, { today, tag: "p" }) ?? authorLine(plannedBy(session, today), "p")}
+      ${on.onUndo ? undoButton(change, session.workout.title, { sheet: true }) : ""}
       ${notesList(notes)}
       ${status === "missed" ? `<button class="primary" value="today">Do today</button>` : ""}
       ${can ? `
@@ -151,6 +155,7 @@ export function openSessionSheet({ session, today, on, notes = [] }) {
     if (answer === "today") on.onMove(today);
     if (answer === "skip") on.onSkip();
     if (answer === "remove") on.onRemove();
+    if (answer === "undo") on.onUndo();
   };
   dialog.returnValue = "";
   showSheet(dialog);

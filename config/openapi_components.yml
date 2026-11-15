@@ -852,7 +852,7 @@ components:
       type: object
       required: [change]
       properties:
-        change: { allOf: [{ $ref: "#/components/schemas/PlanChange" }], nullable: true, description: "The latest change an agent made to it, not taken back; null if none." }
+        change: { allOf: [{ $ref: "#/components/schemas/PlanChange" }], nullable: true, description: "The latest change an agent made to it, not taken back, while no change of the user's came after it; null if none." }
     PlanChange:
       type: object
       required: [id, changed_by, agent_name, item_kind, session_id, routine_id, title, action, from_date, to_date, was, now, reason, batch, undoes_id, undone_by_id, undoable, created_at]

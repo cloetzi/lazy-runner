@@ -148,7 +148,8 @@ class PlanChange < Record
   end
 
   # What the calendar shows of the changes an agent made, not taken back:
-  # each session's and routine's latest (`of`), and a line for every session
+  # each session's and routine's latest, while no change of the user's came
+  # after it (`of`), and a line for every session
   # moved away from a day in `days` or removed from it, from this week on
   # (`lines`), each as its JSON with whether it can be taken back.
   class Calendar
@@ -168,7 +169,7 @@ class PlanChange < Record
 
     def of(item)
       change = (item.is_a?(Session) ? @sessions[item.id] : @routines[item.id])
-      change&.as_json(lookup: @lookup)
+      change.as_json(lookup: @lookup) if change && @lookup.latest?(change)
     end
 
     def lines = @lines.map { it.as_json(lookup: @lookup) }

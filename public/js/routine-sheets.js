@@ -3,6 +3,7 @@ import { NEEDS_CONNECTION, offline } from "./api.js";
 import { longDay, weekdayDay, weekOf } from "./calendar.js";
 import { KNOWN_SPORTS, sportIcon, sportLabel, formatDistance } from "./activities.js";
 import { plannedBy } from "./coach.js";
+import { changeHtml, undoButton } from "./plan-changes.js";
 import {
   WEEKDAY_SHORT, EFFORTS, STATE_LABELS, isoWeekday, routineTitle, routineFacts, moveChoices, readRoutine,
 } from "./routines.js";
@@ -28,7 +29,7 @@ function tile(routine, state, size = "") {
 
 // A day of a routine in a day's list. `attribute` names the data attribute a
 // tap is looked up by, holding "<routine id>:<date>". `today` is the page's.
-export function routineRow(day, routine, unit, attribute, today) {
+export function routineRow(day, routine, unit, attribute, today, change = null) {
   const meta = [STATE_LABELS[day.state], ...(routine ? routineFacts(routine, unit).slice(1) : []), day.moved && `moved from ${weekdayDay(day.date)}`]
     .filter(Boolean).map(escape).join(" · ");
   return `
@@ -39,9 +40,10 @@ export function routineRow(day, routine, unit, attribute, today) {
           <span class="row-title${day.state === "skipped" ? " struck" : ""}">${escape(routine ? routineTitle(routine) : "Routine")}</span>
           <span class="row-meta">${meta}</span>
           ${routine?.note ? `<span class="row-note">${escape(routine.note)}</span>` : ""}
-          ${authorLine(plannedBy(routine, today))}
+          ${changeHtml(change, { today, unit }) ?? authorLine(plannedBy(routine, today))}
         </span>
       </button>
+      ${undoButton(change, routine && routineTitle(routine))}
     </li>`;
 }
 
@@ -57,9 +59,12 @@ export const dayKey = (day) => `${day.routine_id}:${day.date}`;
 // now, linked to it; an open day can be skipped or moved within its week (or
 // Later), a skipped one planned again. A weekly routine's day is skipped
 // "Not this week"; a one-off's is skipped, or taken off the calendar
-// (onRemove) while its day is still to come. `on` holds onConfirm, onReset,
-// onLog, onSkip, onMove(date), onEdit and onRemove; one left out is not offered.
-export function openRoutineDaySheet({ day, routine, unit, today, on }) {
+// (onRemove) while its day is still to come. `change` is the latest change
+// an agent made to the routine, shown with its reason and, while it can be,
+// the button that takes it back (onUndo). `on` holds onConfirm, onReset,
+// onLog, onSkip, onMove(date), onEdit, onRemove and onUndo; one left out is
+// not offered.
+export function openRoutineDaySheet({ day, routine, unit, today, on, change = null }) {
   const dialog = sheet("routine-day-sheet");
   const open = ["tentative", "confirmed", "missed"].includes(day.state);
   const facts = [longDay(day.on), STATE_LABELS[day.state], day.moved && `moved from ${longDay(day.date)}`].filter(Boolean);
@@ -78,7 +83,8 @@ export function openRoutineDaySheet({ day, routine, unit, today, on }) {
       <p class="muted">${facts.map(escape).join(" · ")}</p>
       <p>${escape(routineFacts(routine, unit).join(" · "))}</p>
       ${routine.note ? `<p class="planner-note">${escape(routine.note)}</p>` : ""}
-      ${authorLine(plannedBy(routine, today), "p")}
+      ${changeHtml(change, { today, unit, tag: "p" }) ?? authorLine(plannedBy(routine, today), "p")}
+      ${on.onUndo ? undoButton(change, routineTitle(routine), { sheet: true }) : ""}
       <div class="sheet-actions">
         ${day.state === "tentative" ? `<button class="primary" value="confirm">I'm going</button>` : ""}
         ${canLog ? `<button class="${day.state === "tentative" ? "secondary" : "primary"}" value="log">Log it now</button>` : ""}
@@ -127,6 +133,7 @@ export function openRoutineDaySheet({ day, routine, unit, today, on }) {
     if (answer === "log") on.onLog();
     if (answer === "skip") on.onSkip();
     if (answer === "edit") on.onEdit();
+    if (answer === "undo") on.onUndo();
     if (answer === "remove" && confirm(`Remove ${routineTitle(routine)} from the calendar?`)) on.onRemove();
     if (answer.startsWith("move:")) on.onMove(answer.slice(5));
   };

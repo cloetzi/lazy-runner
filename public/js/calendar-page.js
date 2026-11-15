@@ -1,8 +1,8 @@
 import { createOutbox } from "./outbox.js";
 import { pageAccount, syncNote } from "./account.js";
 import { mountNav } from "./nav.js";
-import { getJson, loadProblem, paths, sendChange, STALE_NOTE, unreachable } from "./api.js";
-import { escape, icon, authorLine } from "./html.js";
+import { getJson, loadProblem, paths, sendChange, STALE_NOTE, unreachable, offline } from "./api.js";
+import { escape, icon, authorLine, busy } from "./html.js";
 import {
   addDays, addMonths, weekOf, monthWeeks, rangeFor, dayName, shortDay, longDay, weekdayDay, weekLabel, monthLabel, localToday, isDate,
   byDay, upNext, markFor, movable, plannable, STATUS_LABELS,
@@ -21,6 +21,7 @@ import {
   changeRequest as changeRoutineRequest, endRequest,
 } from "./routines.js";
 import { routineRow, routineChip, dayKey, openRoutineDaySheet, openRoutineSheet } from "./routine-sheets.js";
+import { changeHtml, undoButton, dayChangeLines, undoRequest, sessionChange as agentChange, routineChangeOn, changeShownOn, withoutUndo } from "./plan-changes.js";
 
 // The Calendar page. Phones show one week, Monday to Sunday, days top to
 // bottom; wide screens also have a month grid with the chosen day beside it,
@@ -59,6 +60,8 @@ const state = {
   notes: [], // the shown range's coach notes
   routines: [], // the routines with days in the shown range
   routineDays: [], // their days, as the server read them on state.today
+  planChanges: [], // the sessions an agent moved away from a day shown or removed from it
+  undoing: false, // an undo is on its way
   upcoming: [], // planned and under way from today on, for what is up next
   board: null, // GET /api/coach: the goals, focus and concerns the week header shows
   stale: false,
@@ -97,6 +100,7 @@ async function load() {
     state.notes = range.data.notes ?? [];
     state.routines = range.data.routines ?? [];
     state.routineDays = range.data.routine_days ?? [];
+    state.planChanges = range.data.plan_changes ?? [];
     // Distances show in the unit the server keeps (set on any device), with
     // this device's copy until it answers.
     if (range.data.distance_unit) adoptServerDistanceUnit(storage, range.data.distance_unit, { queued: outbox.queued(), stale: range.stale });
@@ -156,6 +160,9 @@ function shown() {
   const fulfils = new Map(routineDays.filter((d) => d.state === "done").map((d) => [String(d.activity_key ?? d.activity_id), routineTitle(routineOf(d))]));
   return {
     sessions, activities, next, routineDays, fulfils,
+    // In the month only the chosen day's list shows, with its lines.
+    changeShown: changeShownOn(listed(routineDays).filter((d) => view() === "week" || d.on === state.focus), routineOf),
+    changeDays: dayChangeLines(state.planChanges.map((c) => withoutUndo(c, state.stale)), view() === "month" ? { from: state.focus, to: state.focus } : { from, to }),
     days: byDay(sessions), activityDays: activitiesByDay(activities), noteDays: notesByDay(state.notes, withQueued(state.sessions, queue, state.today)), routineDayMap: routineDaysByDay(listed(routineDays)),
   };
 }
@@ -196,7 +203,7 @@ function render() {
 // The week opens on today: the days gone by fold to one line each (a tap
 // opens one), and today scrolls up under the bar when the page opens.
 // A day with a missed session stays open, so its Do today is at hand.
-function weekView({ sessions, activities, routineDays, days, activityDays, noteDays, routineDayMap, fulfils, next }) {
+function weekView({ sessions, activities, routineDays, days, activityDays, noteDays, routineDayMap, fulfils, next, changeDays, changeShown }) {
   const week = weekOf(state.focus);
   const thisWeek = week.includes(state.today);
   const header = `<section class="card week-summary" aria-label="${escape(thisWeek ? "This week" : weekLabel(state.focus, state.today))}">${weekSummaryHtml({
@@ -204,7 +211,7 @@ function weekView({ sessions, activities, routineDays, days, activityDays, noteD
     when: thisWeek ? "current" : week[0] > state.today ? "future" : "past",
   })}</section>`;
   return `${header}<ol class="week-days">${week.map((date) => {
-    const parts = [days[date] ?? [], activityDays[date] ?? [], next, { notes: noteDays[date], routineDays: routineDayMap[date], fulfils }];
+    const parts = [days[date] ?? [], activityDays[date] ?? [], next, { notes: noteDays[date], routineDays: routineDayMap[date], fulfils, changes: changeDays[date], changeShown }];
     const missed = parts[0].some((s) => markFor(s, state.today, next) === "missed");
     const folded = thisWeek && date < state.today && !missed && !state.unfolded.has(date);
     return `<li>${folded ? foldedDay(date, ...parts) : dayCard(date, ...parts)}</li>`;
@@ -213,19 +220,20 @@ function weekView({ sessions, activities, routineDays, days, activityDays, noteD
 
 // What is on a day, a phrase each ("Session A, done"), as the folded line
 // and the month's day label read it.
-function dayItems(sessions, activities, next, notes = [], routineDays = []) {
+function dayItems(sessions, activities, next, notes = [], routineDays = [], changes = []) {
   const by = (item) => (item?.created_by === "llm" ? `, by ${agentName(item)}` : "");
   return [
     ...sessions.map((s) => `${s.workout.title}, ${STATUS_LABELS[markFor(s, state.today, next)].toLowerCase()}${by(s)}`),
     ...routineDays.map((d) => `${routineTitle(routineOf(d) ?? {})}, ${ROUTINE_LABELS[d.state].toLowerCase()}${by(routineOf(d))}`),
     ...activities.map(activityTitle),
     ...notes.map((n) => `note: ${n.title ?? n.body}`),
+    ...changes.map((c) => c.text),
   ];
 }
 
 // A day gone by in one line: "Mon 9 · Session A, done · Easy run, missed".
-function foldedDay(date, sessions, activities, next, { notes = [], routineDays = [] } = {}) {
-  const items = dayItems(sessions, activities, next, [], routineDays);
+function foldedDay(date, sessions, activities, next, { notes = [], routineDays = [], changes = [] } = {}) {
+  const items = dayItems(sessions, activities, next, [], routineDays, changes);
   if (notes.length) items.push(notes.length === 1 ? "1 note" : `${notes.length} notes`);
   return `
     <section class="day past folded" data-date="${date}">
@@ -257,7 +265,7 @@ const addLabel = (date) => (date > state.today ? "Plan a workout, run or routine
 // One day: its name, a plus to plan a workout (from today on), log an
 // activity (up to today) or write a note, its sessions in order, then its
 // activities and notes, or Rest.
-function dayCard(date, sessions, activities, next, { heading = "h3", notes = [], routineDays = [], fulfils = new Map() } = {}) {
+function dayCard(date, sessions, activities, next, { heading = "h3", notes = [], routineDays = [], fulfils = new Map(), changes = [], changeShown = new Set() } = {}) {
   const classes = ["day", date === state.today && "today", date < state.today && "past"].filter(Boolean).join(" ");
   const plan = `<button class="icon-button" data-add="${date}" aria-label="${escape(`${addLabel(date)} on ${longDay(date)}`)}">${icon("plus")}</button>`;
   return `
@@ -267,15 +275,33 @@ function dayCard(date, sessions, activities, next, { heading = "h3", notes = [],
         ${plan}
       </header>
       ${sessions.length || activities.length || routineDays.length
-        ? `<ul class="list day-sessions">${sessions.map((s) => sessionRow(s, next)).join("")}${routineDays.map((d) => routineRow(d, routineOf(d), distanceUnit(), "data-routine-day", state.today)).join("")}${activities.map((a) => activityRow(a, distanceUnit(), "data-activity", fulfils.get(String(activityKey(a))))).join("")}${notes.map((n) => noteRow(n, "data-note")).join("")}</ul>`
+        ? `<ul class="list day-sessions">${sessions.map((s) => sessionRow(s, next)).join("")}${routineDays.map((d) => routineRow(d, routineOf(d), distanceUnit(), "data-routine-day", state.today, changeShown.has(d) ? routineChange(d) : null)).join("")}${activities.map((a) => activityRow(a, distanceUnit(), "data-activity", fulfils.get(String(activityKey(a))))).join("")}${notes.map((n) => noteRow(n, "data-note")).join("")}</ul>`
         : `${notes.length ? `<ul class="list day-sessions">${notes.map((n) => noteRow(n, "data-note")).join("")}</ul>` : ""}<p class="rest muted">Rest</p>`}
+      ${changes.length ? `<ul class="day-changes">${changes.map(dayChangeRow).join("")}</ul>` : ""}
     </section>`;
 }
+
+// A session an agent moved away from the day or removed from it, in one
+// muted line, with Put it back while it can be.
+function dayChangeRow(line) {
+  return `
+    <li>
+      <span>${escape(line.text)}</span>
+      ${line.undo ? undoButton(line.undo, undefined, { classes: "link" }) : ""}
+      ${line.reason ? `<span class="change-reason">${escape(line.reason)}</span>` : ""}
+    </li>`;
+}
+
+// The latest change an agent made to a day's routine or to a session, with
+// no undo on a copy kept on the device.
+const routineChange = (day) => withoutUndo(routineChangeOn(day, routineOf(day)), state.stale);
+const sessionChange = (session) => withoutUndo(agentChange(session), state.stale);
 
 const keyOf = (session) => session.id != null ? String(session.id) : session.client_ref;
 
 function sessionRow(session, next) {
   const mark = markFor(session, state.today, next);
+  const change = sessionChange(session);
   const meta = [STATUS_LABELS[mark], session.workout.estimated_minutes && `${session.workout.estimated_minutes} min`, session.pending && "not synced yet"]
     .filter(Boolean).map(escape).join(" · ");
   const drag = movable(session) ? ` draggable="true"` : "";
@@ -287,17 +313,18 @@ function sessionRow(session, next) {
           <span class="row-title${mark === "skipped" ? " struck" : ""}">${escape(session.workout.title)}</span>
           <span class="row-meta">${meta}</span>
           ${session.note ? `<span class="row-note">${escape(session.note)}</span>` : ""}
-          ${authorLine(plannedBy(session, state.today))}
+          ${changeHtml(change, { today: state.today, unit: distanceUnit() }) ?? authorLine(plannedBy(session, state.today))}
         </span>
       </button>
       ${mark === "missed" ? `<button class="secondary small" data-do-today="${escape(keyOf(session))}">Do today</button>` : ""}
+      ${undoButton(change, session.workout.title)}
     </li>`;
 }
 
 const distanceUnit = () => preferredDistanceUnit(storage);
 
 // The month grid, with the selected day's sessions beside it.
-function monthView({ days, activityDays, noteDays, routineDayMap, fulfils, next }) {
+function monthView({ days, activityDays, noteDays, routineDayMap, fulfils, next, changeDays, changeShown }) {
   const month = state.focus.slice(0, 7);
   const head = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((d) => `<span class="month-weekday" aria-hidden="true">${d}</span>`).join("");
   const cells = monthWeeks(state.focus).flat().map((date) => {
@@ -307,7 +334,7 @@ function monthView({ days, activityDays, noteDays, routineDayMap, fulfils, next 
     const routineDays = routineDayMap[date] ?? [];
     const classes = ["month-day", date.slice(0, 7) !== month && "outside", date === state.today && "today",
       date === state.focus && "selected", date < state.today && "past"].filter(Boolean).join(" ");
-    const items = dayItems(sessions, activities, next, notes, routineDays);
+    const items = dayItems(sessions, activities, next, notes, routineDays, changeDays[date]);
     const label = `${longDay(date)}: ${items.length ? items.join("; ") : "rest"}`;
     return `
       <div class="${classes}" data-date="${date}">
@@ -321,7 +348,7 @@ function monthView({ days, activityDays, noteDays, routineDayMap, fulfils, next 
   return `
     <div class="month">
       <div class="month-grid">${head}${cells}</div>
-      <aside class="card day-panel" aria-label="${escape(longDay(state.focus))}">${dayCard(state.focus, days[state.focus] ?? [], activityDays[state.focus] ?? [], next, { heading: "h2", notes: noteDays[state.focus], routineDays: routineDayMap[state.focus], fulfils })}</aside>
+      <aside class="card day-panel" aria-label="${escape(longDay(state.focus))}">${dayCard(state.focus, days[state.focus] ?? [], activityDays[state.focus] ?? [], next, { heading: "h2", notes: noteDays[state.focus], routineDays: routineDayMap[state.focus], fulfils, changes: changeDays[state.focus], changeShown })}</aside>
     </div>`;
 }
 
@@ -434,6 +461,39 @@ async function sendRoutine(request) {
   return problem;
 }
 
+// Takes an agent's change back, now (not queued: it answers whether it
+// could). Either way the calendar is read again, so a change that could no
+// longer be taken back (the agent changed it again meanwhile) shows as it is.
+async function undo(change) {
+  // One at a time: a second tap while the first is on its way would only
+  // hear that it was taken back already.
+  if (!change || state.undoing) return;
+  state.undoing = true;
+  try {
+    const problem = await sendChange(undoRequest(change, state.today));
+    if (!problem || !offline()) await load();
+    if (problem) alert(problem);
+  } finally {
+    state.undoing = false;
+  }
+}
+
+// A data-undo button, busy while its change is taken back.
+async function undoFrom(button) {
+  busy(button);
+  try {
+    await undo(changeById(button.dataset.undo));
+  } finally {
+    if (button.isConnected) busy(button, false);
+  }
+}
+
+// The change behind a data-undo button: on a session, a routine or a day's line.
+function changeById(id) {
+  const items = [...state.sessions, ...state.routines].map((item) => item.change);
+  return [...items, ...state.planChanges].find((change) => change && String(change.id) === id);
+}
+
 const tell = async (request) => {
   const problem = await sendRoutine(request);
   if (problem) alert(problem);
@@ -455,8 +515,9 @@ function openRoutineDay(key) {
   const day = shown().routineDays.find((d) => dayKey(d) === key);
   const routine = day && routineOf(day);
   if (!routine) return;
+  const change = routineChange(day);
   openRoutineDaySheet({
-    day, routine, unit: distanceUnit(), today: state.today,
+    day, routine, unit: distanceUnit(), today: state.today, change,
     on: {
       onConfirm: () => tell(confirmRequest(day, state.today)),
       onReset: () => tell(resetRequest(day, state.today)),
@@ -465,6 +526,7 @@ function openRoutineDay(key) {
       onLog: () => logActivity(day.on, { sport: routine.sport, about: `for ${routineTitle(routine)}` }),
       onEdit: () => planRoutine({ date: day.on, routine }),
       onRemove: () => tell(endRequest(routine, state.today)),
+      onUndo: () => undo(change),
     },
   });
 }
@@ -479,11 +541,12 @@ function open(key) {
   const session = find(key);
   if (!session) return;
   openSessionSheet({
-    session, today: state.today, notes: notesAbout(state.notes, "session", session.id),
+    session, today: state.today, notes: notesAbout(state.notes, "session", session.id), change: sessionChange(session),
     on: {
       onMove: (date) => (date === state.today && session.status === "missed" ? doToday(key) : move(key, date)),
       onSkip: () => send(skipSessionRequest(session)),
       onRemove: () => send(removeRequest(session)),
+      onUndo: () => undo(sessionChange(session)),
     },
   });
 }
@@ -535,8 +598,9 @@ $("calendar-switch").onclick = (event) => {
 };
 
 $("calendar-body").addEventListener("click", (event) => {
-  const target = event.target.closest("[data-add], [data-open], [data-activity], [data-routine-day], [data-note], [data-do-today], [data-unfold], [data-select], .month-day");
+  const target = event.target.closest("[data-add], [data-open], [data-activity], [data-routine-day], [data-note], [data-do-today], [data-undo], [data-unfold], [data-select], .month-day");
   if (!target) return;
+  if (target.dataset.undo) return undoFrom(target);
   if (target.dataset.unfold) {
     state.unfolded.add(target.dataset.unfold);
     render();

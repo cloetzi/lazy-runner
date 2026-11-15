@@ -14,7 +14,8 @@ module Api
     #   with only `from` the range runs 28 days on, with only `to` 28 days
     #   back. A range is at most 366 days, so a month grid fits.
     #   Each session and routine carries `change`, the latest change an
-    #   agent made to it that was not taken back (null if none), with
+    #   agent made to it that was not taken back, while the user has not
+    #   changed it since (null if none), with
     #   whether it can be taken back now (`undoable`). `plan_changes` are
     #   the sessions an agent moved away from a day in the range or removed
     #   from it, not taken back, for the days of this week on (until their
