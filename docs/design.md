@@ -31,6 +31,11 @@ components, pages, player, figure.
 - **Components**: `.card`, `.list` / `.row`, `.segmented` (pressed state in
   `aria-pressed`), `.icon-button`, `.badge`, `.tag`. Icons come from
   `public/icons/sprite.svg` through `icon()` in `public/js/html.js`.
+- **Taps register once**: every button, row and tab shows it is pressed at
+  once (`:active`), hover styles apply only where a pointer hovers, and a
+  button waiting on the server is `busy()` (`html.js`). In the player the
+  main button ignores a tap for 0.7 s after its meaning changes, and the
+  session screens neither zoom on a double tap nor select text.
 - **Layout**: phones get a bottom tab bar (Today, Calendar, Workouts,
   History) with Exercises, Equipment and Settings under More; from 60rem a
   sidebar (`nav.js`, `routes.js`).

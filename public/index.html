@@ -92,7 +92,6 @@
       <span class="player-where"><span id="where"></span> <span id="count" class="muted"></span></span>
       <span class="player-actions">
         <button class="link" id="quit">End session</button>
-        <button class="link" id="skip-part" hidden></button>
       </span>
     </header>
 
@@ -140,7 +139,10 @@
     </section>
 
     <footer class="player-bottom">
-      <p class="next muted" id="next"></p>
+      <div class="player-next">
+        <p class="next muted" id="next"></p>
+        <button class="secondary small" id="skip-part" hidden></button>
+      </div>
       <div class="controls">
         <button class="secondary" id="prev" aria-label="Previous step"><svg class="icon" aria-hidden="true"><use href="/icons/sprite.svg#chevron-left"/></svg><span class="label">Back</span></button>
         <button class="primary" id="main-action">Done</button>

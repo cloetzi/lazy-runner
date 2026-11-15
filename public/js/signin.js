@@ -1,6 +1,6 @@
 import { errorMessage, send } from "./api.js";
 import { adoptAccount, checkSignedIn, inviteToken, nextPath, oidcOutcome, signInHref, signOut, startOidc, welcomeHref, whoIsSignedIn } from "./account.js";
-import { escape } from "./html.js";
+import { escape, busy } from "./html.js";
 
 // The sign-in page. It signs you in; on a fresh install it creates the
 // owner account with the setup code from the server's log; with an invite
@@ -52,7 +52,7 @@ function wire(form, path, extra = {}) {
   form.addEventListener("submit", async (event) => {
     event.preventDefault();
     error.hidden = true;
-    button.disabled = true;
+    busy(button);
     const body = { ...Object.fromEntries(new FormData(form)), ...extra };
     try {
       const response = await send(path, { body });
@@ -77,7 +77,7 @@ function wire(form, path, extra = {}) {
       error.textContent = "Can't reach the server. Check the connection and try again.";
     }
     error.hidden = false;
-    button.disabled = false;
+    busy(button, false);
   });
 }
 
@@ -113,13 +113,13 @@ function offerOidc(form, provider, body) {
   block.hidden = false;
   button.onclick = async () => {
     error.hidden = true;
-    button.disabled = true;
+    busy(button);
     try {
       location.assign(await startOidc({ ...body, next }));
     } catch (failure) {
       error.textContent = failure instanceof TypeError ? "Can't reach the server. Check the connection and try again." : failure.message;
       error.hidden = false;
-      button.disabled = false;
+      busy(button, false);
     }
   };
 }

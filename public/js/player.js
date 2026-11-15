@@ -23,11 +23,29 @@ export function switchesSides(items, index) {
 }
 
 // The main button's label. A set is done when you say so: reps, or a hold
-// ended early. A lead-in or a rest can be cut short. Every countdown pauses
-// with the Pause button beside it, or by tapping the time.
-export function mainActionLabel(phase) {
+// ended early. A lead-in can be cut short, and a rest has this one way
+// forward, named for what comes next ("Start set 2 now"; a first set may
+// be another exercise or block, so "End rest now"). Every countdown
+// pauses with the Pause button beside it, or by tapping the time.
+export function mainActionLabel(phase, next = null) {
   if (phase === "reps" || phase === "work") return "Done";
+  if (phase === "rest") return next?.block.round > 1 ? `Start set ${next.block.round} now` : "End rest now";
   return "Start";
+}
+
+// The main button changes meaning in place (Start becomes Done, Done brings
+// up a rest), so a tap within TAP_GUARD_MS of a change is the second half of
+// a double tap and is ignored.
+export const TAP_GUARD_MS = 700;
+export function tapAccepted(changedAt, now) {
+  return changedAt == null || now - changedAt >= TAP_GUARD_MS;
+}
+
+// A hold ended before MIN_HOLD_SECONDS (or before the whole hold, when it is
+// shorter) was not done: it is logged skipped.
+export const MIN_HOLD_SECONDS = 3;
+export function holdStatus(held, planned) {
+  return held >= Math.min(MIN_HOLD_SECONDS, planned ?? MIN_HOLD_SECONDS) ? "done" : "skipped";
 }
 
 // Seconds the button beside a countdown adds: more time to set up, or a
@@ -269,6 +287,16 @@ export function partEnd(items, index) {
   let end = index;
   while (end < items.length && items[end].workout?.id === part) end += 1;
   return end;
+}
+
+// The exercise screens from `from` up to `end` not logged yet: what
+// skipping a warm-up or cool-down marks skipped once its undo has passed.
+export function unloggedExercises(items, from, end, logged = {}) {
+  const indexes = [];
+  for (let i = from; i < end; i++) {
+    if (items[i]?.type === "exercise" && !logged?.[i]) indexes.push(i);
+  }
+  return indexes;
 }
 
 // "Set 2 of 3" for a block of more than one round, else nothing.

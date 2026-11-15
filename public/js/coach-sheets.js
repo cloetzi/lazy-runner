@@ -1,4 +1,4 @@
-import { escape, icon } from "./html.js";
+import { escape, icon, busy } from "./html.js";
 import { longDay } from "./calendar.js";
 import { KINDS, KIND_LABELS, noteFields, goalFields, authorLabel } from "./coach.js";
 
@@ -31,13 +31,13 @@ function saveOnSubmit(dialog, form, read, save) {
     const { fields, problems } = read();
     if (problems.length) return show(problems.join(" "));
     const button = form.querySelector("button.primary");
-    button.disabled = true;
+    busy(button);
     try {
       const problem = await save(fields);
       if (problem) show(problem);
       else dialog.close();
     } finally {
-      button.disabled = false;
+      busy(button, false);
     }
   });
 }

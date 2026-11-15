@@ -19,6 +19,13 @@ let api;
 // The owner's cookies, for every browser context and the API checks.
 let signedIn;
 
+// The main button ignores a tap just after its meaning changes (a double
+// tap), so a quick test waits that out as a person would.
+async function tapMain(page) {
+  await page.waitForTimeout(750);
+  await page.locator("#main-action").click();
+}
+
 // The server may still be installing gems or migrating when this starts.
 async function serverUp({ timeout = 300_000 } = {}) {
   const until = Date.now() + timeout;
@@ -124,12 +131,16 @@ test("runs Workout 1, finishes offline and syncs once back online", async () => 
   await page.locator("#workout-start").click();
   await page.locator("#ready-go").click();
 
-  // The warm-up comes first; skip the rest of it in one go.
+  // The warm-up comes first; skip the rest of it in one go, which can be undone.
   await page.locator("#skip-part").click();
   await page.locator("#player").getByText("Goblet squat", { exact: true }).waitFor();
-  await page.locator("#main-action").click(); // goblet squat, set 1
+  await page.locator("#toast").getByRole("button", { name: "Undo" }).click();
+  await page.locator("#skip-part").waitFor(); // back in the warm-up
+  await page.locator("#skip-part").click();
+  await page.locator("#player").getByText("Goblet squat", { exact: true }).waitFor();
+  await tapMain(page); // goblet squat, set 1
   await page.locator("#player").getByText("Straight-leg deadlift", { exact: true }).waitFor();
-  await page.locator("#main-action").click(); // deadlift, set 1
+  await tapMain(page); // deadlift, set 1
 
   const sessionId = await eventually(async () => {
     const sessions = await getJson("/api/sessions");
@@ -148,8 +159,12 @@ test("runs Workout 1, finishes offline and syncs once back online", async () => 
   await page.locator("#paused-note").waitFor({ state: "hidden" });
 
   await context.setOffline(true);
-  await page.locator("#skip").click(); // the rest
-  await page.locator("#main-action").click(); // goblet squat, set 2, logged offline
+  // A rest has one way forward, named for it.
+  assert.equal(await page.locator("#skip").isHidden(), true);
+  assert.equal(await page.locator("#main-action").textContent(), "Start set 2 now");
+  await tapMain(page); // the rest
+  await page.locator("#player").getByText("Goblet squat", { exact: true }).waitFor();
+  await tapMain(page); // goblet squat, set 2, logged offline
   await page.locator("#quit").click();
   await page.locator('#end-sheet button[value="finish"]').click();
   await page.locator('[data-feedback="right"]').click();
@@ -344,9 +359,9 @@ test("builds a workout of your own in the editor and runs it", async () => {
   // Nothing to pick up, so no Get ready: the player starts.
   await page.locator("#workout-start").click();
   await page.locator("#player").getByText("Push-up", { exact: true }).waitFor();
-  await page.locator("#main-action").click();
+  await tapMain(page);
   await page.locator("#player").getByText("Dead bug", { exact: true }).waitFor();
-  await page.locator("#main-action").click();
+  await tapMain(page);
   await page.locator("#finish-save").click();
   await page.locator("#finish-done").waitFor();
 

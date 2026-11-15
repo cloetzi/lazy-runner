@@ -1,5 +1,5 @@
 import { getJson, send, errorMessage } from "./api.js";
-import { escape } from "./html.js";
+import { escape, busy } from "./html.js";
 
 // The example programs, drawn in a list with an Import button each: on the
 // Settings page and the welcome screen. An imported one says so and offers
@@ -62,7 +62,7 @@ export function mountExamples({ list, error, done }) {
     if (copy && !confirm(`You have ${button.dataset.name} already. Import another copy?`)) return;
     showError(null);
     done.hidden = true;
-    button.disabled = true;
+    busy(button);
     try {
       const response = await send(`/api/examples/${encodeURIComponent(button.dataset.import)}/import`, { body: copy ? { copy: true } : {} });
       const json = await response.json().catch(() => null);
@@ -72,7 +72,7 @@ export function mountExamples({ list, error, done }) {
     } catch {
       showError("Couldn't reach the server. Try again when you're online.");
     } finally {
-      button.disabled = false;
+      busy(button, false);
       load();
     }
   };

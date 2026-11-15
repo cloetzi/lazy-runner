@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { previousIndex, switchesSides, mainActionLabel, plannedExercise, swapExercise, swapRun, shortlist, SHORTLIST, resumeChoice, sessionProgress, endsEarly, loggedFromServer, pickUpIndex, partEnd, setLabel, minutesLeft, tempoText, leadInSeconds, GEAR_LEAD_IN, extraSeconds, upNextDetails, equipmentChanges, finishSummary } from "../../public/js/player.js";
+import { previousIndex, switchesSides, mainActionLabel, tapAccepted, TAP_GUARD_MS, holdStatus, MIN_HOLD_SECONDS, unloggedExercises, plannedExercise, swapExercise, swapRun, shortlist, SHORTLIST, resumeChoice, sessionProgress, endsEarly, loggedFromServer, pickUpIndex, partEnd, setLabel, minutesLeft, tempoText, leadInSeconds, GEAR_LEAD_IN, extraSeconds, upNextDetails, equipmentChanges, finishSummary } from "../../public/js/player.js";
 
 const squat = { id: 1, name: "Goblet squat", equipment: ["dumbbell"], default_reps: 8, default_seconds: null };
 const deadlift = { id: 2, name: "Straight-leg deadlift", equipment: ["dumbbell"], default_reps: 12, default_seconds: null };
@@ -37,7 +37,38 @@ test("finishes a set with Done and cuts a lead-in or a rest short", () => {
   assert.equal(mainActionLabel("reps"), "Done");
   assert.equal(mainActionLabel("work"), "Done");
   assert.equal(mainActionLabel("lead"), "Start");
-  assert.equal(mainActionLabel("rest"), "Start");
+  assert.equal(mainActionLabel("rest", set(squat, 2)), "Start set 2 now");
+  assert.equal(mainActionLabel("rest", { ...set(squat, 1), block: { label: "B", round: 1, rounds: 1 } }), "End rest now");
+  // A first set comes after another exercise or block: not a "set 1" to start again.
+  assert.equal(mainActionLabel("rest", { ...set(squat, 1), block: { label: "B", round: 1, rounds: 3 } }), "End rest now");
+  assert.equal(mainActionLabel("rest"), "End rest now");
+});
+
+test("ignores the main button for a moment after its meaning changes", () => {
+  assert.equal(TAP_GUARD_MS, 700);
+  assert.equal(tapAccepted(null, 5), true);
+  assert.equal(tapAccepted(1000, 1000), false);
+  assert.equal(tapAccepted(1000, 1699), false);
+  assert.equal(tapAccepted(1000, 1700), true);
+  assert.equal(tapAccepted(1000, 5000), true);
+});
+
+test("logs a hold ended in its first seconds as skipped, not done", () => {
+  assert.equal(MIN_HOLD_SECONDS, 3);
+  assert.equal(holdStatus(0, 30), "skipped");
+  assert.equal(holdStatus(2, 30), "skipped");
+  assert.equal(holdStatus(3, 30), "done");
+  assert.equal(holdStatus(25, 30), "done");
+  // A hold shorter than the minimum counts once it is all held.
+  assert.equal(holdStatus(2, 2), "done");
+  assert.equal(holdStatus(1, 2), "skipped");
+});
+
+test("lists the exercise screens a skipped part leaves unlogged", () => {
+  const items = [set(squat, 1), { type: "rest", seconds: 60 }, set(squat, 2), set(deadlift, 1), set(plank, 1)];
+  assert.deepEqual(unloggedExercises(items, 0, 4), [0, 2, 3]);
+  assert.deepEqual(unloggedExercises(items, 0, 4, { 0: "done" }), [2, 3]);
+  assert.deepEqual(unloggedExercises(items, 2, 2), []);
 });
 
 test("adds more time to a lead-in or a rest, never to a hold", () => {

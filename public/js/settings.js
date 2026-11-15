@@ -5,7 +5,7 @@ import { preferredDistanceUnit, setPreferredDistanceUnit, adoptServerDistanceUni
 import { createOutbox } from "./outbox.js";
 import { storedAccount, pageAccount, signOut, signOutHere, deviceName, startOidc, oidcOutcome } from "./account.js";
 import { getJson, send, errorMessage } from "./api.js";
-import { escape } from "./html.js";
+import { escape, busy } from "./html.js";
 import { mountNav } from "./nav.js";
 import { mountExamples } from "./example-list.js";
 
@@ -155,7 +155,7 @@ passwordForm.onsubmit = async (event) => {
   const { password, new_password, sign_out_others } = passwordForm.elements;
   const others = sign_out_others.checked;
   showError(error, null);
-  button.disabled = true;
+  busy(button);
   try {
     const response = await send("/api/auth/change-password", {
       body: { ...(hasPassword ? { password: password.value } : {}), new_password: new_password.value, sign_out_others: others },
@@ -175,7 +175,7 @@ passwordForm.onsubmit = async (event) => {
   } catch {
     showError(error, "Couldn't reach the server. Try again when you're online.");
   } finally {
-    button.disabled = false;
+    busy(button, false);
   }
 };
 
@@ -330,9 +330,9 @@ $("invite-list").onclick = async (event) => {
 };
 
 $("new-invite").onclick = async () => {
-  $("new-invite").disabled = true;
+  busy($("new-invite"));
   const json = await ownerSend("/api/invites", { body: {} });
-  $("new-invite").disabled = false;
+  busy($("new-invite"), false);
   if (!json) return;
   reveal($("new-invite-link"), new URL(json.path, location.origin).href);
   loadUsers();
@@ -404,12 +404,12 @@ $("link-identity").onclick = async () => {
   const button = $("link-identity");
   const error = $("identities").querySelector(".form-error");
   showError(error, null);
-  button.disabled = true;
+  busy(button);
   try {
     location.assign(await startOidc({ next: "/settings.html" }));
   } catch (failure) {
     showError(error, failure instanceof TypeError ? "Couldn't reach the server. Try again when you're online." : failure.message);
-    button.disabled = false;
+    busy(button, false);
   }
 };
 
@@ -498,7 +498,7 @@ tokenForm.onsubmit = async (event) => {
   const error = tokenForm.querySelector(".form-error");
   const button = tokenForm.querySelector("button[type=submit]");
   showError(error, null);
-  button.disabled = true;
+  busy(button);
   try {
     const response = await send("/api/account/tokens", { body: { name: tokenForm.elements.name.value } });
     const json = await response.json().catch(() => null);
@@ -514,7 +514,7 @@ tokenForm.onsubmit = async (event) => {
   } catch {
     showError(error, "Couldn't reach the server. Try again when you're online.");
   } finally {
-    button.disabled = false;
+    busy(button, false);
   }
 };
 

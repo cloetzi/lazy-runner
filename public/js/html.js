@@ -15,3 +15,11 @@ export function icon(name, label) {
 export function authorLine(text, tag = "span") {
   return text ? `<${tag} class="author-line">${icon("agent")}<span>${escape(text)}</span></${tag}>` : "";
 }
+
+// A button waiting on the server: disabled, with the busy spinner (app.css)
+// beside its label. `busy(button, false)` gives it back.
+export function busy(button, on = true) {
+  button.disabled = on;
+  if (on) button.setAttribute("aria-busy", "true");
+  else button.removeAttribute("aria-busy");
+}

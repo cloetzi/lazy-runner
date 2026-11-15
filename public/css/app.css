@@ -196,7 +196,7 @@ button.link .icon { margin-right: var(--space-1); }
   min-width: 3rem; min-height: 3rem; padding: 0; display: inline-grid; place-items: center;
   background: none; color: var(--text); font-size: var(--text-lg);
 }
-.icon-button:hover { background: var(--bg); }
+@media (hover: hover) { .icon-button:hover { background: var(--bg); } }
 a.link { display: inline-flex; align-items: center; padding: 0 var(--space-4); }
 
 button.small { min-height: 2.75rem; font-size: var(--text-md); padding: 0 var(--space-3); }
@@ -208,6 +208,28 @@ a.button {
 a.button.secondary { background: var(--surface); color: var(--text); border: 1px solid var(--control-border); }
 a.button.small { min-height: 2.75rem; font-size: var(--text-md); padding: 0 var(--space-3); }
 
+/* Every tap shows at once: pressed darkens or lightens the control with a
+   wash of its own text colour (both schemes), and buttons give a little.
+   iOS applies :active only with a touch listener on the page (pwa.js). */
+button:active:not(:disabled), a.button:active, a.row:active, .tab:active, .sidebar a:active {
+  --press: color-mix(in srgb, currentColor 14%, transparent);
+  background-image: linear-gradient(var(--press), var(--press));
+}
+button:active:not(:disabled):not(.row), a.button:active { transform: scale(0.98); }
+/* Kept low in specificity, so a component can disable differently. */
+:where(button):disabled:not([aria-busy="true"]) { opacity: 0.5; cursor: not-allowed; }
+/* Waiting on the server: the label stays and a small spinner says so. */
+button[aria-busy="true"] { cursor: progress; }
+button[aria-busy="true"]::after {
+  content: ""; display: inline-block; width: 0.9em; height: 0.9em; margin-left: var(--space-2); vertical-align: -0.125em;
+  border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%; animation: spin 0.8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) {
+  button:active:not(:disabled), a.button:active { transform: none; }
+  button[aria-busy="true"]::after { animation-duration: 2.4s; }
+}
+
 /* Segmented control: a track of choices, the chosen one raised. Solid accent
    is kept for the main action, so "chosen" never looks like "press me". */
 .segmented {
@@ -218,7 +240,7 @@ a.button.small { min-height: 2.75rem; font-size: var(--text-md); padding: 0 var(
   min-height: 2.75rem; padding: 0 var(--space-3); border-radius: var(--radius-sm);
   background: transparent; color: var(--muted); font-size: var(--text-md);
 }
-.segmented button:hover { color: var(--text); }
+@media (hover: hover) { .segmented button:hover { color: var(--text); } }
 .segmented [aria-pressed="true"] {
   background: var(--surface); color: var(--text); font-weight: 700;
   box-shadow: 0 0 0 1px var(--control-border), 0 1px 3px rgb(0 0 0 / 0.2);
@@ -249,7 +271,7 @@ a.button.small { min-height: 2.75rem; font-size: var(--text-md); padding: 0 var(
   display: flex; align-items: center; gap: var(--space-3); width: 100%; min-height: 3.5rem;
   padding: var(--space-3) var(--space-4); border-radius: 0; background: none; color: inherit; text-align: left; text-decoration: none;
 }
-button.row:hover { background: var(--bg); }
+@media (hover: hover) { button.row:hover { background: var(--bg); } }
 .row-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: var(--space-1); }
 .row-title { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-1) var(--space-2); font-size: var(--text-md); font-weight: 700; }
 .row-meta { font-size: var(--text-sm); color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -369,7 +391,7 @@ body.with-nav:not([data-focus]) { height: auto; min-height: 100%; padding-bottom
   display: flex; align-items: center; min-height: 3.25rem; padding: 0 var(--space-4); border-radius: var(--radius-md);
   color: var(--text); text-decoration: none; font-size: var(--text-lg); font-weight: 600;
 }
-.sidebar a:hover { background: var(--bg); }
+@media (hover: hover) { .sidebar a:hover { background: var(--bg); } }
 .sidebar a[aria-current] { background: var(--accent-tint); color: var(--text); font-weight: 700; box-shadow: inset 3px 0 0 var(--accent); }
 .sidebar ul.sidebar-secondary { margin-top: var(--space-3); padding-top: var(--space-3); border-top: 1px solid var(--border); }
 .sidebar-secondary a { font-size: var(--text-md); font-weight: 500; color: var(--muted); min-height: 2.75rem; }
@@ -449,7 +471,7 @@ button.step-name {
   background: none; font-size: var(--text-md); font-weight: 700; color: var(--text); text-align: left;
 }
 button.step-name .icon { color: var(--muted); }
-button.step-name:hover .icon { color: var(--text); }
+@media (hover: hover) { button.step-name:hover .icon { color: var(--text); } }
 .steps .stepper { font-size: var(--text-lg); }
 .steps .stepper button { min-width: 3rem; min-height: 3rem; font-size: var(--text-xl); }
 .steps .stepper span { min-width: 4.5rem; }
@@ -537,7 +559,7 @@ body:not(.calendar-month) .calendar-key { display: none; }
   min-height: 6.5rem; display: flex; flex-direction: column; gap: var(--space-1); padding: var(--space-1);
   background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); cursor: pointer; overflow: hidden;
 }
-.month-day:hover { border-color: var(--control-border); }
+@media (hover: hover) { .month-day:hover { border-color: var(--control-border); } }
 .month-day.outside { background: var(--bg); }
 .month-day.outside .month-date { color: var(--muted); }
 .month-day.selected { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
@@ -722,7 +744,7 @@ button.link.danger { color: var(--danger); align-self: flex-start; padding: 0; }
 .editor-label { flex: 1 1 auto; min-width: 0; }
 .editor-label input { font-weight: 700; font-size: var(--text-lg); }
 .editor-moves { display: flex; flex: none; }
-.icon-button:disabled { color: var(--border); cursor: default; background: none; }
+.icon-button:disabled { color: var(--border); cursor: default; background: none; opacity: 1; }
 .icon-button.danger, button.secondary.danger { color: var(--danger); }
 .editor-settings { display: flex; flex-wrap: wrap; align-items: flex-start; gap: var(--space-3) var(--space-5); }
 .editor-setting { display: grid; gap: var(--space-1); }
@@ -808,6 +830,11 @@ button.link.danger { color: var(--danger); align-self: flex-start; padding: 0; }
 
 /* The player is exactly one screen tall: the stage is the only part that
    gives way, so the controls never leave the screen and the page never scrolls. */
+/* Fast taps on − and + change the weight, never zoom; a long press on the
+   count or a cue selects nothing. */
+#ready, #player, #finish, .stepper { touch-action: manipulation; }
+#player .stage, #player .player-bottom, .stepper { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+
 #player:not([hidden]) {
   height: 100dvh; min-height: 0;
   display: grid; grid-template-rows: auto auto minmax(0, 1fr) auto;
@@ -816,8 +843,8 @@ button.link.danger { color: var(--danger); align-self: flex-start; padding: 0; }
 
 .player-top { display: flex; justify-content: space-between; align-items: center; gap: var(--space-3); font-size: var(--text-md); }
 .player-where { min-width: 0; }
-.player-actions { display: flex; flex-direction: column; align-items: flex-end; flex: none; }
-.player-actions button.link { min-height: 2.25rem; padding: 0 var(--space-1); font-size: var(--text-md); }
+.player-actions { display: flex; align-items: center; flex: none; }
+.player-actions button.link { min-height: 2.75rem; padding: 0 var(--space-2); font-size: var(--text-md); }
 
 .stage {
   min-height: 0;
@@ -854,9 +881,20 @@ body.resting .target, body.resting .phase { color: var(--rest); }
 .player-gear.changed li { border-color: var(--accent-bright); background: var(--accent-tint); color: var(--accent-ink); }
 
 .player-bottom { display: flex; flex-direction: column; gap: var(--space-3); }
+/* What comes next, and Skip warm-up beside Skip, away from End session. */
+.player-next { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: var(--space-2) var(--space-4); }
 .next { margin: 0; text-align: center; }
+.player-next:has(#skip-part:not([hidden])) { justify-content: space-between; }
+.player-next:has(#skip-part:not([hidden])) .next { text-align: left; }
+#skip-part { margin-left: auto; }
 .controls { display: grid; grid-template-columns: minmax(4.5rem, auto) 1fr minmax(4.5rem, auto); gap: var(--space-3); }
 .controls .primary { min-height: 5rem; }
+/* A rest has one way forward, quiet and in the rest colour; it takes Skip's place. */
+.controls:has(#skip[hidden]) #main-action { grid-column: 2 / -1; }
+.controls .primary.rest-action {
+  background: color-mix(in srgb, var(--rest) 14%, var(--surface)); color: var(--text);
+  border: 2px solid var(--rest); font-size: var(--text-lg);
+}
 .controls .secondary { padding: 0 var(--space-3); white-space: nowrap; }
 .controls .icon { width: 1.1em; height: 1.1em; }
 /* On the narrowest phones Back and Skip are their chevrons (each has an aria-label). */
@@ -927,12 +965,17 @@ body.paused .rest-dial .pause-bars { display: inline; }
 #end-sheet::backdrop { background: var(--scrim); }
 #end-sheet p { margin: 0; }
 #end-sheet .choices { display: grid; gap: var(--space-3); margin-top: var(--space-3); }
+/* The toast clears the tab bar; in the player it sits under the top bar,
+   clear of the controls under the thumb. */
 .toast {
-  position: fixed; left: 50%; bottom: max(var(--space-4), env(safe-area-inset-bottom)); transform: translateX(-50%);
-  width: max-content; max-width: calc(100vw - 2rem); z-index: 10;
+  position: fixed; left: 50%; bottom: calc(max(var(--tabbar, 0px), env(safe-area-inset-bottom)) + var(--space-3)); transform: translateX(-50%);
+  width: max-content; max-width: calc(100vw - 2rem); z-index: 40;
   display: flex; align-items: center; gap: var(--space-4); padding: var(--space-2) var(--space-2) var(--space-2) var(--space-5);
   background: var(--text); color: var(--bg); border-radius: var(--radius-lg);
 }
+
+body[data-focus] .toast { bottom: max(var(--space-4), env(safe-area-inset-bottom)); }
+body:has(#player:not([hidden])) .toast { top: var(--toast-top, calc(max(var(--space-4), env(safe-area-inset-top)) + 4.5rem)); bottom: auto; }
 
 /* Today's parts: the warm-up and cool-down can be left out */
 .list > li.part-row { display: flex; align-items: center; padding-left: var(--space-4); }

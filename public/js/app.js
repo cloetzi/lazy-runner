@@ -5,10 +5,10 @@ import { pageAccount, signInHref, syncNote } from "./account.js";
 import { stepTargetWeight, sameWeight, sameShownWeight, inUnit, preferredUnit, adoptServerUnit, formatWeight, formatLoad } from "./weights.js";
 import { createFigure } from "./figure-view.js";
 import { openHowto, equipmentNames, loadEquipmentNames, knowsEquipmentNames } from "./howto.js";
-import { escape, icon, authorLine } from "./html.js";
+import { escape, icon, authorLine, busy } from "./html.js";
 import { offlineToday } from "./offline.js";
 import { blockName, blockSummary, stepSummary, alternatingText, setWeight, includedKinds, framingFor, framePlan, gearList } from "./workout.js";
-import { previousIndex, switchesSides, mainActionLabel, plannedExercise, swapRun, resumeChoice, sessionProgress, endsEarly, loggedFromServer, pickUpIndex, partEnd, setLabel, minutesLeft, tempoText, leadInSeconds, extraSeconds, upNextDetails, equipmentChanges, finishSummary, RPE_ANCHORS } from "./player.js";
+import { previousIndex, switchesSides, mainActionLabel, tapAccepted, holdStatus, unloggedExercises, plannedExercise, swapRun, resumeChoice, sessionProgress, endsEarly, loggedFromServer, pickUpIndex, partEnd, setLabel, minutesLeft, tempoText, leadInSeconds, extraSeconds, upNextDetails, equipmentChanges, finishSummary, RPE_ANCHORS } from "./player.js";
 import { openSwap, prefetchAlternatives } from "./swap.js";
 import { mountNav } from "./nav.js";
 import { parseRoute, routeHash, pageFor, isSessionView } from "./routes.js";
@@ -551,7 +551,7 @@ async function sendWorkout(method, path, body) {
 
 async function onWorkoutOwn(action, button) {
   const workout = state.workout;
-  button.disabled = true;
+  busy(button);
   try {
     if (action === "duplicate") {
       await saveWeights();
@@ -567,7 +567,7 @@ async function onWorkoutOwn(action, button) {
   } catch (error) {
     alert(`Could not change the workout (${error.message}).`);
   } finally {
-    button.disabled = false;
+    busy(button, false);
   }
 }
 
@@ -816,6 +816,8 @@ function beginPlayer() {
 
 function goTo(index) {
   const run = state.run;
+  // Moving on lets a skipped warm-up or cool-down go ahead.
+  settleSkip();
   if (index < 0) index = 0;
   if (index >= run.items.length) return showFinish();
 
@@ -841,6 +843,7 @@ function goTo(index) {
     stopTimer();
     state.phase = "reps";
   }
+  state.mainChangedAt = performance.now();
   saveRun();
   render();
 }
@@ -871,13 +874,16 @@ function togglePause() {
 
 function onMainAction() {
   unlock();
+  // The second tap of a double tap would act on the button's new meaning.
+  if (!tapAccepted(state.mainChangedAt, performance.now())) return;
   if (state.phase === "reps") {
     logSet(current(), "done");
     goTo(state.run.index + 1);
   } else if (state.phase === "work") {
-    // A hold ended early counts as done, for the seconds held.
+    // A hold ended early counts as done, for the seconds held; one ended
+    // straight away was not done.
     const held = Math.round(countdown.elapsed(state.timer, performance.now()) / 1000);
-    logSet(current(), "done", { seconds: held });
+    logSet(current(), holdStatus(held, current().seconds), { seconds: held });
     goTo(state.run.index + 1);
   } else if (state.phase === "lead") {
     startWork();
@@ -890,18 +896,55 @@ function onMainAction() {
   }
 }
 
-// Skips what is left of the warm-up or cool-down in one go, logging its
-// sets as skipped.
+// Skips what is left of the warm-up or cool-down in one go. Its sets are
+// logged skipped once the undo has had its chance: when the toast goes, or
+// as soon as the session moves on. Skipping the last part goes straight to
+// the finish, so those are logged at once.
 function skipPart() {
   const run = state.run;
-  const end = partEnd(run.items, run.index);
-  for (let i = run.index; i < end; i++) {
-    if (run.items[i].type === "exercise" && !run.logged?.[i]) logSet(run.items[i], "skipped", { index: i });
+  const from = run.index;
+  const end = partEnd(run.items, from);
+  const title = current().workout.title;
+  if (end >= run.items.length) {
+    logSkipped(run, { from, end });
+    return goTo(end);
   }
   goTo(end);
+  run.skipping = { from, end };
+  saveRun();
+  state.skipTimer = setTimeout(settleSkip, UNDO_DISCARD_MS);
+  showToast(`${title} skipped.`, "Undo", undoSkip, "skip");
+}
+
+// The skip waiting on its undo, taken off the run.
+function takeSkip() {
+  const skipping = state.run?.skipping;
+  if (!skipping) return null;
+  clearTimeout(state.skipTimer);
+  delete state.run.skipping;
+  if ($("toast").dataset.kind === "skip") hideToast();
+  return skipping;
+}
+
+function logSkipped(run, { from, end }) {
+  unloggedExercises(run.items, from, end, run.logged).forEach((i) => logSet(run.items[i], "skipped", { index: i }));
+}
+
+function settleSkip() {
+  const skipping = takeSkip();
+  if (!skipping) return;
+  logSkipped(state.run, skipping);
+  saveRun();
+}
+
+function undoSkip() {
+  const skipping = takeSkip();
+  if (skipping) goTo(skipping.from);
 }
 
 function onSkip() {
+  // Skip takes the place the rest's button had a moment ago.
+  if (!tapAccepted(state.mainChangedAt, performance.now())) return;
   if (current().type === "exercise") logSet(current(), "skipped");
   goTo(state.run.index + 1);
 }
@@ -930,6 +973,7 @@ function tick() {
 
 function startWork() {
   startCountdown("work", current().seconds);
+  state.mainChangedAt = performance.now();
   // Emit the start beep immediately rather than on the next tick.
   beep("start");
   state.lastElapsed = 1;
@@ -943,6 +987,8 @@ function moreTime() {
 }
 
 function logSet(item, status, { index = state.run.index, seconds = item.seconds } = {}) {
+  // A skipped part is logged before what comes after it.
+  settleSkip();
   outbox.enqueue(setRequest(state.run, item, status, { reps: state.run.reps[index] ?? item.reps, seconds }));
   (state.run.logged ??= {})[index] = status;
   sync();
@@ -999,10 +1045,10 @@ function render() {
   const left = minutesLeft(run.items, run.index);
   $("count").textContent = left > 1 ? `about ${left} min left` : "almost done";
 
+  const next = resting ? nextExercise() : null;
   if (resting) {
     $("phase").textContent = "Rest";
     $("phase").classList.remove("switch");
-    const next = nextExercise();
     $("exercise-name").textContent = next ? `Next: ${next.exercise.name}` : "Rest";
     $("side").hidden = true;
     $("set-label").hidden = true;
@@ -1039,8 +1085,10 @@ function render() {
   // A rest already says what is next.
   $("next").textContent = resting ? "" : after ? `Next: ${label(after)}` : "Last one";
 
-  $("main-action").textContent = mainActionLabel(state.phase);
-  $("skip").innerHTML = `<span class="label">${resting ? "Skip rest" : "Skip"}</span>${icon("chevron-right")}`;
+  // A rest has one way forward: the main button, quiet and in the rest colour.
+  $("main-action").textContent = mainActionLabel(state.phase, next);
+  $("main-action").classList.toggle("rest-action", resting);
+  $("skip").hidden = resting;
   const framing = item.workout.kind !== "workout" && run.items.some((i) => i.workout.kind === "workout");
   $("skip-part").hidden = !framing;
   if (framing) $("skip-part").textContent = `Skip ${item.workout.title.toLowerCase()}`;
@@ -1165,6 +1213,8 @@ function quit() {
     </form>`;
   sheet.returnValue = "keep";
   sheet.addEventListener("close", () => {
+    // Keep going keeps a skip's undo; ending the session lets it go ahead.
+    if (sheet.returnValue !== "keep") settleSkip();
     if (sheet.returnValue === "finish") return finishEarly(state.run);
     if (sheet.returnValue === "discard") return discardRun(state.run);
     if (running) togglePause();
@@ -1220,8 +1270,11 @@ function completeDiscard(run) {
   if (savedRun()?.id === run.id) clearRun();
 }
 
-function showToast(text, action, onAction) {
+function showToast(text, action, onAction, kind = "") {
   const toast = $("toast");
+  toast.dataset.kind = kind;
+  // In the player it sits just under the top bar, however tall that is.
+  if (!$("player").hidden) toast.style.setProperty("--toast-top", `${$("player").querySelector(".player-top").getBoundingClientRect().bottom + 8}px`);
   toast.innerHTML = `<span>${escape(text)}</span><button class="secondary small">${escape(action)}</button>`;
   toast.querySelector("button").onclick = () => {
     hideToast();
@@ -1237,6 +1290,7 @@ function hideToast() {
 // ---------- Finish ----------
 
 function showFinish() {
+  settleSkip();
   const run = state.run;
   stopTimer();
   releaseWakeLock();
@@ -1444,14 +1498,14 @@ function sessionExerciseRow(entry) {
 // queued: the user sees right away whether it worked.
 async function deleteSession(button) {
   if (!confirm(`Delete ${button.dataset.label} and every set logged in it? This cannot be undone.`)) return;
-  button.disabled = true;
+  busy(button);
   try {
     const response = await send(`/api/sessions/${button.dataset.delete}`, { method: "DELETE" });
     if (!response.ok && response.status !== 404) throw new Error(`HTTP ${response.status}`);
-    button.disabled = false;
+    busy(button, false);
     go(routeHash("history"));
   } catch (error) {
-    button.disabled = false;
+    busy(button, false);
     alert(`Could not delete the session (${error.message}).`);
   }
 }
@@ -1693,7 +1747,8 @@ function safeStorage() {
 // ---------- Wiring ----------
 
 $("main-action").onclick = onMainAction;
-$("prev").onclick = () => goTo(previousIndex(state.run.items, state.run.index));
+// Back straight after skipping a part undoes the skip.
+$("prev").onclick = () => state.run.skipping ? undoSkip() : goTo(previousIndex(state.run.items, state.run.index));
 $("skip").onclick = onSkip;
 $("quit").onclick = quit;
 // Tapping a countdown pauses or resumes it.
@@ -1838,7 +1893,8 @@ window.addEventListener("popstate", onPopState);
 // Another tab queued or sent changes: show the queue as it is now.
 window.addEventListener("storage", (event) => { if (event.key === "outbox") renderSync(); });
 window.addEventListener("hashchange", route);
-window.addEventListener("pagehide", () => { saveRun(); saveWeights(); });
+// A skip waiting on its undo goes ahead: the page may not come back.
+window.addEventListener("pagehide", () => { settleSkip(); saveRun(); saveWeights(); });
 setInterval(tick, TICK_MS);
 setInterval(sync, SYNC_EVERY_MS);
 

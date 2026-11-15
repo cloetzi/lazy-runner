@@ -1,5 +1,5 @@
 import { getJson, errorMessage, send, STALE_NOTE } from "./api.js";
-import { escape, icon } from "./html.js";
+import { escape, icon, busy } from "./html.js";
 import { createFigure } from "./figure-view.js";
 import { openHowto, equipmentNames, learnEquipmentNames } from "./howto.js";
 import { formatWeight, sameShownWeight } from "./weights.js";
@@ -384,7 +384,7 @@ async function save() {
   if (!session?.draft) return;
   const request = saveRequest(session.draft);
   const button = $("edit-save");
-  button.disabled = true;
+  busy(button);
   $("edit-status").textContent = "Saving…";
   try {
     const response = await send(request.path, { method: request.method, body: request.body });
@@ -406,7 +406,7 @@ async function save() {
   } catch {
     if (editor === session) $("edit-status").textContent = "Not saved: saving needs a connection. Your changes are still here.";
   } finally {
-    button.disabled = false;
+    busy(button, false);
   }
 }
 
