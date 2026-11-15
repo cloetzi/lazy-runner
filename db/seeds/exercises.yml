@@ -794,6 +794,43 @@
         hold: 0.5
         move: 1.5
 
+# Form reference: https://catalystathletics.com/exercise/743/Single-Leg-RDL/
+- slug: single-leg-hinge
+  name: Single-leg hinge
+  category: strength
+  areas: [legs, hips]
+  pattern: hinge
+  unilateral: true
+  default_reps: 8
+  cues:
+    - Stand on one leg, soft knee
+    - Reach the hands down as the free leg goes back
+    - Hips stay square to the floor
+  instructions:
+    - Stand on one leg with a soft knee, arms hanging in front of you.
+    - Hinge at the hip, reaching the hands forward and down as the free leg goes straight back.
+    - Keep the back flat and the hips square, and stop when the body is about level or the hamstring is tight.
+    - Drive through the standing foot to come upright, then balance before the next rep.
+  mistakes:
+    - Rounding the back to reach lower
+    - The hip of the free leg turning up to the ceiling
+  # Left side: the near leg stands, the free foot just off the floor. The
+  # single-leg deadlift without the weight, timed to the 3111 tempo used in
+  # the program.
+  animation:
+    anchor: ankle_near
+    accent: [torso, thigh_far, shin_far]
+    highlight: [thigh_near, hip]
+    still: 1
+    keyframes:
+      - pose: { torso: -90, neck: 0, thigh_near: 88, shin_near: 92, foot_near: 0, thigh_far: 98, shin_far: 140, foot_far: 40, upper_arm_near: 84, forearm_near: 82, upper_arm_far: 86, forearm_far: 84 }
+        at: [104, 182]
+        hold: 1
+        move: 3
+      - pose: { torso: -8, neck: 5, thigh_near: 72, shin_near: 96, thigh_far: 172, shin_far: 172, foot_far: 85, upper_arm_near: 78, forearm_near: 74, upper_arm_far: 80, forearm_far: 76 }
+        hold: 1
+        move: 1
+
 # Form reference: https://www.acefitness.org/resources/everyone/exercise-library/126/single-arm-row/
 - slug: single-arm-single-leg-row
   name: Single-arm single-leg row
@@ -989,6 +1026,42 @@
       - pose: { torso: -80, thigh_near: 20.3, shin_near: 99.2, thigh_far: 101.3, shin_far: -132.8, foot_far: 200, upper_arm_near: 95, forearm_near: 92, upper_arm_far: 92, forearm_far: 90 }
         hold: 0.3
         move: 1.2
+
+# Form reference: https://catalystathletics.com/exercise/174/Split-Squat/
+- slug: split-squat
+  name: Split squat
+  category: strength
+  areas: [legs]
+  pattern: lunge
+  unilateral: true
+  default_reps: 8
+  cues:
+    - Long stride, back heel up
+    - Drop the back knee straight down
+    - Push up through the front heel
+  instructions:
+    - Stand in a long stride, front foot flat and the back foot up on its toes, feet hip-width apart.
+    - Hands on the hips, chest up and the weight mostly on the front foot.
+    - Lower the back knee straight down towards the floor until the front thigh is about level.
+    - Push up through the front heel to the top, keeping the front knee over the toes, and repeat before changing legs.
+  mistakes:
+    - The front knee caving in or the front heel lifting
+    - Leaning forward over the front thigh
+  # Left side: the near leg is in front. Both feet stay put; the back knee
+  # stops just above the floor. Timed to the 3111 tempo used in the program.
+  animation:
+    anchor: ankle_near
+    accent: [thigh_near, shin_near]
+    highlight: [thigh_near, hip]
+    still: 1
+    keyframes:
+      - pose: { torso: -88, neck: 0, thigh_near: 58, shin_near: 97, foot_near: 0, thigh_far: 107.4, shin_far: 143.6, foot_far: 62, upper_arm_near: 110, forearm_near: 50, upper_arm_far: 106, forearm_far: 46 }
+        at: [126, 182]
+        hold: 1
+        move: 3
+      - pose: { torso: -84, thigh_near: 4, shin_near: 94, thigh_far: 70.7, shin_far: -170.7, foot_far: 48 }
+        hold: 1
+        move: 1
 
 # Form reference: https://www.acefitness.org/resources/everyone/exercise-library/12/bent-over-row/
 - slug: two-arm-row
@@ -1259,6 +1332,42 @@
       - pose: { foot_near: 50 }
         hold: 1
         move: 2
+
+# Form reference: https://www.acefitness.org/resources/everyone/exercise-library/73/standing-calf-raises-wall/
+- slug: floor-calf-raise
+  name: Floor calf raise
+  category: strength
+  areas: [legs]
+  unilateral: true
+  default_reps: 12
+  cues:
+    - One foot, a hand on the wall
+    - Rise all the way onto the toes
+    - Lower slowly to the floor
+  instructions:
+    - Stand on one foot facing a wall, a hand on it for balance and the other foot lifted behind you.
+    - Keep the standing knee straight but not locked and the weight over the big toe.
+    - Rise as high as you can onto the toes in about a second.
+    - Lower slowly, over two to three seconds, until the heel touches the floor, then rise again.
+  mistakes:
+    - Bouncing off the heel at the bottom
+    - Rolling out onto the little toe
+  # Left side: the near foot stands. The single-leg calf raise without the
+  # step, so the heel stops at the floor. Slow on the way down.
+  animation:
+    anchor: toe_near
+    accent: [shin_near, foot_near]
+    highlight: [shin_near]
+    props: [{ type: wall, x: 156 }]
+    still: 1
+    keyframes:
+      - pose: { torso: -90, neck: 0, thigh_near: 90, shin_near: 90, foot_near: 0, thigh_far: 100, shin_far: 150, foot_far: 100, upper_arm_near: 10, forearm_near: -10, upper_arm_far: 92, forearm_far: 90 }
+        at: [112, 182]
+        hold: 0.5
+        move: 1
+      - pose: { foot_near: 40 }
+        hold: 1
+        move: 2.5
 
 # Form reference: https://catalystathletics.com/exercise/474/Lateral-Lunge/
 - slug: lateral-lunge

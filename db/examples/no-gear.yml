@@ -1,0 +1,83 @@
+# An example program for someone with no gear at all: a floor and a wall.
+# The format is described in home-strength.yml. There are no weights to step
+# up, so the description says how to make it harder.
+
+name: No-gear strength
+description: Two sessions of about 25 minutes that need nothing but the floor and a wall, alternating. Knee-protecting leg strength for runners, plus core and upper body. Each session starts with its own warm-up block. There is nothing to pull on, so the W and T raises do the upper back's work. When every round feels easy, add 2 reps to a set, or take a fourth count on the way down.
+workouts:
+  - slug: no-gear-a
+    kind: workout
+    title: Session A
+    subtitle: Knees and core
+    blocks:
+      - label: Warm-up
+        steps:
+          - { exercise: glute-bridge-single-leg-lift, reps: 16 }
+          - { exercise: side-plank-knee-leg-raise, reps: 8, per_side: true }
+          - { exercise: open-books, reps: 8, per_side: true }
+          - { exercise: wall-angels-wall-sit, reps: 10 }
+      - label: A
+        rounds: 3
+        rest_seconds: 60
+        steps:
+          - { exercise: split-squat, reps: 8, per_side: true, tempo: "3111" }
+          - { exercise: push-up, reps: 8, note: "8 to 10, knees down if form slips" }
+      - label: B
+        rounds: 2
+        rest_seconds: 45
+        steps:
+          - { exercise: lateral-lunge, reps: 8, per_side: true }
+          - { exercise: single-leg-hinge, reps: 8, per_side: true }
+          - { exercise: w-raise-hinge, reps: 12 }
+      - label: C
+        rounds: 2
+        rest_seconds: 30
+        steps:
+          - { exercise: floor-calf-raise, reps: 12, per_side: true }
+          - { exercise: side-plank, seconds: 25, per_side: true }
+          - { exercise: dead-bug, reps: 10 }
+
+  - slug: no-gear-b
+    kind: workout
+    title: Session B
+    subtitle: Hinge, hips and ski legs
+    blocks:
+      - label: Warm-up
+        steps:
+          - { exercise: dead-bug, reps: 10 }
+          - { exercise: open-books, reps: 8, per_side: true }
+          - { exercise: w-raise-hinge, reps: 12 }
+          - { exercise: half-kneel-quad-stretch, seconds: 20, per_side: true }
+      - label: A
+        rounds: 3
+        rest_seconds: 60
+        steps:
+          - { exercise: single-leg-hinge, reps: 8, per_side: true, tempo: "3111" }
+          - { exercise: wall-sit, seconds: 40 }
+      - label: B
+        rounds: 2
+        rest_seconds: 45
+        steps:
+          - { exercise: split-squat, reps: 10, per_side: true }
+          - { exercise: push-up, reps: 8, tempo: "3111" }
+          - { exercise: t-raise-hinge, reps: 12 }
+      - label: C
+        rounds: 2
+        rest_seconds: 30
+        steps:
+          - { exercise: floor-calf-raise, reps: 12, per_side: true }
+          - { exercise: plank, seconds: 40 }
+          - { exercise: side-plank-knee-leg-raise, reps: 8, per_side: true }
+
+  - slug: no-gear-cooldown
+    kind: cooldown
+    title: Cool-down
+    subtitle: Five stretches, 30 seconds each
+    blocks:
+      - label: A
+        steps:
+          - { exercise: half-kneel-quad-stretch, seconds: 30, per_side: true }
+          - { exercise: seated-hamstring-stretch, seconds: 30, per_side: true }
+          - { exercise: pigeon-stretch, seconds: 30, per_side: true }
+          - { exercise: calf-stretch, seconds: 30, per_side: true }
+          - { exercise: chest-stretch-wall, seconds: 30, per_side: true }

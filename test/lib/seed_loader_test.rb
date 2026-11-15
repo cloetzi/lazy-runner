@@ -13,7 +13,7 @@ describe SeedLoader do
   def seed(name) = YAML.safe_load_file(Rage.root.join("db/seeds", name))
 
   it "loads every exercise and piece of equipment, and no programs" do
-    _(Exercise.count).must_equal 41
+    _(Exercise.count).must_equal 44
     _(Equipment.current.count).must_equal seed("equipment.yml").size
 
     someone = create_user("someone", bare: true)

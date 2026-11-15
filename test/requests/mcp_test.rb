@@ -268,7 +268,7 @@ describe "MCP server" do
     it "lists the example programs, and which are imported" do
       examples = call_tool("list_examples")["examples"]
 
-      _(examples.map { it["slug"] }).must_equal %w[cycle-1 home-strength]
+      _(examples.map { it["slug"] }).must_equal %w[cycle-1 home-strength no-gear]
       _(examples.first["workouts"].map { it["slug"] }).must_include "cycle-1-workout-1"
       _(examples.map { it["imported"] }.uniq).must_equal [true]
     end

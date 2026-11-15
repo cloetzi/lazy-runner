@@ -13,7 +13,7 @@ describe Example do
   def step(workout_slug, exercise_slug) = step_for(workout_slug, exercise_slug)
 
   it "lists the examples with their workouts, minutes and gear" do
-    _(Example.all.map(&:slug)).must_equal %w[cycle-1 home-strength]
+    _(Example.all.map(&:slug)).must_equal %w[cycle-1 home-strength no-gear]
 
     cycle = Example.find!("cycle-1").as_json
     _(cycle[:name]).must_equal "Cycle 1"
@@ -39,6 +39,19 @@ describe Example do
       _(main.framed.map(&:example_slug)).must_equal %w[cycle-1-warmup cycle-1-workout-1 cycle-1-cooldown]
       _(main.read_only_reason).must_be_nil
       _(Example.find!("home-strength").import!.workouts.map(&:kind)).must_equal %w[workout workout cooldown]
+    end
+  end
+
+  it "has one that needs no gear, so it imports for someone who owns nothing as written" do
+    _(Example.find!("no-gear").as_json[:equipment]).must_be_empty
+    as_new_user do
+      program = Example.find!("no-gear").import!
+
+      _(program.workouts.map(&:kind)).must_equal %w[workout workout cooldown]
+      steps = program.workouts.flat_map { it.blocks.flat_map(&:steps) }
+      _(steps.flat_map { it.exercise.equipment_slugs }).must_be_empty
+      _(steps.size).must_equal 29
+      _(step("no-gear-a", "split-squat").values.slice(:reps, :tempo, :per_side)).must_equal(reps: 8, tempo: "3111", per_side: true)
     end
   end
 

@@ -30,7 +30,7 @@ session offline, syncing when the connection returns.
   is a rest day that offers to bring the next planned session forward, else the
   next workout in the rotation. A new account, with nothing to train yet, is
   pointed at the example programs.
-- **Example programs:** ready-made programs (Cycle 1, Home strength) to import
+- **Example programs:** ready-made programs (Cycle 1, Home strength, No-gear strength) to import
   on Settings. An imported program is yours to change, and its weights snap to
   the gear you own.
 - **Calendar:** plan a workout on any day from today on, with an optional note,

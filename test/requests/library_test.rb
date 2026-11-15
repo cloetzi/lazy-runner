@@ -8,7 +8,7 @@ describe "library API" do
       get "/api/exercises"
 
       _(last_response.status).must_equal 200
-      _(json.size).must_equal 41
+      _(json.size).must_equal 44
       _(json.find { it["slug"] == "plank" }["cues"]).must_include "Elbows under shoulders"
     end
 
@@ -26,7 +26,7 @@ describe "library API" do
 
       get "/api/exercises"
 
-      _(json.size).must_equal 40
+      _(json.size).must_equal 43
       _(json.map { it["slug"] }).wont_include "plank"
     end
   end
@@ -154,7 +154,7 @@ describe "library API" do
       Program.first!(example_slug: "cycle-1").workouts.each(&:archive!)
       get "/api/workouts"
 
-      _(json.map { it["name"] }).must_equal ["Home strength"]
+      _(json.map { it["name"] }).must_equal ["Home strength", "No-gear strength"]
     end
 
     it "lists every workout by program with its exercises and equipment" do

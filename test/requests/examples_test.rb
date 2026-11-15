@@ -11,13 +11,13 @@ describe "example programs API" do
       get "/api/examples"
 
       _(last_response.status).must_equal 200
-      _(json.map { it["slug"] }).must_equal %w[cycle-1 home-strength]
+      _(json.map { it["slug"] }).must_equal %w[cycle-1 home-strength no-gear]
       cycle = json.first
       _(cycle.slice("name", "imported")).must_equal("name" => "Cycle 1", "imported" => false)
       _(cycle["workouts"].map { it.slice("slug", "kind") }.first).must_equal("slug" => "cycle-1-warmup", "kind" => "warmup")
       _(cycle["workouts"].map { it["estimated_minutes"] }).must_be(:all?, Integer)
       _(cycle["equipment"]).must_include "kettlebell"
-      session_a = json.last["workouts"].first
+      session_a = json.find { it["slug"] == "home-strength" }["workouts"].first
       _(session_a["exercises"].first(2)).must_equal [exercise("glute-bridge-single-leg-lift").name, exercise("side-plank-knee-leg-raise").name]
       _(session_a["exercises"]).must_equal session_a["exercises"].uniq
     end
@@ -25,7 +25,7 @@ describe "example programs API" do
     it "marks what the user imported" do
       get "/api/examples"
 
-      _(json.map { it["imported"] }).must_equal [true, true]
+      _(json.map { it["imported"] }).must_equal [true, true, true]
     end
   end
 
