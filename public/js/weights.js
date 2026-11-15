@@ -70,6 +70,16 @@ export function inUnit(weight, unit) {
   return { value: Math.round(value / CONVERTED_TO_NEAREST) * CONVERTED_TO_NEAREST, unit };
 }
 
+// Whether two weights, in any units, are the same piece of gear: within
+// Weights::TOLERANCE on the server (a quarter of a kilo), so a 16 kg
+// kettlebell is the 35 lb weight it was converted to.
+const GEAR_TOLERANCE = { kg: 0.25, lb: 0.25 / KG_PER_LB };
+export function sameGearWeight(a, b) {
+  if (!a || !b) return !a && !b;
+  const value = a.unit === b.unit ? b.value : a.unit === "kg" ? b.value * KG_PER_LB : b.value / KG_PER_LB;
+  return Math.abs(a.value - value) <= GEAR_TOLERANCE[a.unit];
+}
+
 // Whether two weights look the same once shown in `unit`.
 export function sameShownWeight(a, b, unit) {
   return formatWeight(a, unit) === formatWeight(b, unit);

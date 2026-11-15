@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { blockName, blockSummary, stepSummary, setWeight, includedKinds, framingFor, framePlan, gearList } from "../../public/js/workout.js";
+import { blockName, blockSummary, stepSummary, setWeight, includedKinds, framingFor, framePlan, gearList, carrierOf } from "../../public/js/workout.js";
 
 const step = (overrides = {}) => ({
   per_side: false, tempo: null, note: null, suggestion: null,
@@ -130,4 +130,45 @@ test("gives a weight with no gear named a row of its own, last, and none without
     ["dumbbell", null, ["Row"]],
     [null, 20, ["Push-up"]],
   ]);
+});
+
+const anyWeight = { slug: "weight", carriers: [{ value: 10, equipment: "dumbbell" }, { value: 20, equipment: "dumbbell" }, { value: 40, equipment: "kettlebell" }] };
+
+test("names the gear that carries a weight, following the weight as it steps", () => {
+  const squat = { weight: { value: 40, unit: "lb" }, weight_unit: "lb", weight_equipment: "kettlebell", any_weight: anyWeight };
+  assert.equal(carrierOf(squat), "kettlebell");
+  assert.equal(carrierOf(squat, { value: 20, unit: "lb" }), "dumbbell");
+  assert.equal(carrierOf(squat, { value: 9.07, unit: "kg" }), "dumbbell");
+  assert.equal(carrierOf(squat, null), "weight");
+  assert.equal(carrierOf(squat, { value: 30, unit: "lb" }), "weight");
+  // A 16 kg kettlebell in a lb plan is 35.27 lb; a remembered 35 lb is it.
+  const mixed = { ...squat, any_weight: { slug: "weight", carriers: [{ value: 35.27, equipment: "kettlebell" }] } };
+  assert.equal(carrierOf(mixed, { value: 35, unit: "lb" }), "kettlebell");
+  assert.equal(carrierOf(mixed, { value: 16, unit: "kg" }), "kettlebell");
+  assert.equal(carrierOf({ weight: { value: 20, unit: "lb" }, weight_equipment: "dumbbell", any_weight: null }), "dumbbell");
+});
+
+test("lists an exercise done with any weight under the gear that carries it, and a pair once", () => {
+  const item = (name, equipment) => ({ type: "exercise", exercise: { name }, equipment });
+  const items = [item("Goblet squat", ["weight"]), item("Row", ["dumbbell"]), item("Curl", ["dumbbell"]), item("Pull-over", ["weight"])];
+  const target = (name, weight, held, equipment, any = null) => ({ exercise: { name }, weight: weight && { value: weight, unit: "lb" }, weight_unit: "lb", weights_held: held, weight_equipment: equipment, any_weight: any, equipment: [any ? "weight" : equipment] });
+  const rows = gearList(items, [
+    target("Goblet squat", 40, 1, "kettlebell", anyWeight),
+    target("Row", 10, 2, "dumbbell"),
+    target("Curl", 10, 1, "dumbbell"),
+    target("Pull-over", 20, 1, "dumbbell", anyWeight),
+  ]);
+
+  assert.deepEqual(rows.map((row) => [row.equipment, row.load && [row.load.held, row.load.weight.value], row.exercises]), [
+    // In order of first use: the squat comes first, with any weight.
+    ["kettlebell", [1, 40], ["Goblet squat"]],
+    ["dumbbell", [2, 10], ["Row", "Curl"]],
+    ["dumbbell", [1, 20], ["Pull-over"]],
+  ]);
+});
+
+test("keeps any weight with no weight set under its own name", () => {
+  const items = [{ type: "exercise", exercise: { name: "Goblet squat" }, equipment: ["weight"] }];
+  const rows = gearList(items, [{ exercise: { name: "Goblet squat" }, weight: null, weight_unit: "lb", weights_held: 1, weight_equipment: "weight", any_weight: anyWeight, equipment: ["weight"] }]);
+  assert.deepEqual(rows.map((row) => [row.equipment, row.unset, row.exercises]), [["weight", true, ["Goblet squat"]]]);
 });

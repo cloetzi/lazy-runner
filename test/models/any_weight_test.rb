@@ -44,6 +44,16 @@ describe "the generic weight" do
     _(items.map { it[:weight_equipment] }).must_equal %w[kettlebell weight]
   end
 
+  it "says which owned item carries each weight the stepper moves through" do
+    step = Step.new(reps: 8).tap { it.exercise = exercise("goblet-squat") }
+
+    _(step.any_weight).must_equal({ slug: "weight", carriers: [
+      { value: 10.0, equipment: "dumbbell" }, { value: 20.0, equipment: "dumbbell" }, { value: 40.0, equipment: "kettlebell" }
+    ] })
+    row = Step.new(reps: 8).tap { it.exercise = exercise("two-arm-row") }
+    _(row.any_weight).must_be_nil
+  end
+
   it "keeps its weights in the unit all the gear comes in, else the user's" do
     inventory("dumbbell").update(unit: "kg", weights: [4, 8])
     inventory("kettlebell").update(unit: "kg", weights: [16])

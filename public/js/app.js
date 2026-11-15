@@ -7,7 +7,7 @@ import { createFigure } from "./figure-view.js";
 import { openHowto, equipmentNames, loadEquipmentNames, knowsEquipmentNames } from "./howto.js";
 import { escape, icon, authorLine, busy, showSheet } from "./html.js";
 import { offlineToday } from "./offline.js";
-import { blockName, blockSummary, stepSummary, alternatingText, setWeight, includedKinds, framingFor, framePlan, gearList } from "./workout.js";
+import { blockName, blockSummary, stepSummary, alternatingText, setWeight, includedKinds, framingFor, framePlan, gearList, carrierOf } from "./workout.js";
 import { previousIndex, switchesSides, mainActionLabel, stepAnnouncement, spokenTarget, tapAccepted, holdStatus, unloggedExercises, plannedExercise, swapRun, resumeChoice, sessionProgress, endsEarly, loggedFromServer, pickUpIndex, partEnd, setLabel, minutesLeft, tempoText, leadInSeconds, extraSeconds, upNextDetails, equipmentChanges, finishSummary, RPE_ANCHORS } from "./player.js";
 import { openSwap, prefetchAlternatives } from "./swap.js";
 import { mountNav } from "./nav.js";
@@ -623,6 +623,8 @@ function stepRow(step, ref) {
 
 // Shown for a step that takes a weight but has none (yet, or on purpose).
 const NO_WEIGHT = "no weight";
+// A weight with no gear named, as the generic gear is called.
+const ANY_WEIGHT = "Any weight";
 
 // A weight as the steppers and the finish screen show it, "no weight" for none.
 function shownWeight(weight) {
@@ -770,12 +772,14 @@ function showReady() {
   saveRun();
   $("ready-title").textContent = run.title;
   // Everything the session needs, one row each, with what it is for.
+  // Rows to tick off while fetching; nothing is kept.
   const gear = gearList(run.items, run.targets);
   $("ready-pickup").innerHTML = gear.map((row) => `
-    <li class="row"><span class="row-text">
+    <li><label class="row check-row"><input type="checkbox"><span class="row-text">
       <span class="row-title">${escape(gearTitle(row))}</span>
       <span class="row-meta">${escape(row.exercises.join(", "))}</span>
-    </span></li>`).join("");
+    </span></label></li>`).join("");
+  $("ready-go").textContent = startLabel(run.items[run.index] ?? run.items[0]);
   $("ready-need").hidden = gear.length === 0;
   $("ready-weights").hidden = run.targets.length === 0;
   $("ready-targets").innerHTML = run.targets.map((t, i) => {
@@ -788,10 +792,17 @@ function showReady() {
 
 // A Get ready row: the equipment, with the load to pick up when it carries one.
 function gearTitle(row) {
-  const name = row.equipment ? equipmentNames([row.equipment])[0] : "Weight";
-  if (row.load) return `${name}: ${formatLoad(row.load.weight, row.load.held, state.unit)}`;
-  if (row.unset) return `${name}: no weight set`;
+  const name = row.equipment ? equipmentNames([row.equipment])[0] : ANY_WEIGHT;
+  if (row.load) return `${name}, ${row.load.held === 2 ? formatLoad(row.load.weight, 2, state.unit) : formatWeight(row.load.weight, state.unit)}`;
+  if (row.unset) return `${name}, no weight set`;
   return name;
+}
+
+// Get ready's primary, named for what it starts: "Start warm-up",
+// "Start Workout 1" (a session picked up starts where it left off).
+function startLabel(first) {
+  const { kind, title } = first.workout;
+  return { warmup: "Start warm-up", cooldown: "Start cool-down" }[kind] ?? `Start ${title}`;
 }
 
 // The user's answer to a suggestion is saved straight away; it is not a
@@ -1135,7 +1146,8 @@ function render() {
     renderTarget(seconds, spokenTarget(item, { phase: state.phase, seconds }));
     if (next) renderSteppers(next);
     else setHidden("adjust", true);
-    setText("details", next ? upNextDetails(next, next.weight && formatWeight(next.weight, state.unit)) : "");
+    // The stepper names the load; the line says the rest.
+    setText("details", next ? upNextDetails(next, null) : "");
     renderGear(next, nextExerciseIndex());
     setHtml("cues", "");
   } else {
@@ -1246,7 +1258,7 @@ function renderSteppers(item) {
   setHidden("adjust", !weighted && !counted);
   setHidden("weight-stepper", !weighted);
   setHidden("reps-stepper", !counted);
-  if (weighted) setText("weight-value", shownWeight(item.weight));
+  if (weighted) setText("weight-value", loadLine(item));
   // What was actually done, the target until changed.
   if (counted) setText("reps-value", repsDone() === item.reps ? `did ${item.reps}` : `did ${repsDone()} of ${item.reps}`);
 }
@@ -1266,9 +1278,31 @@ function details(item) {
   return bits.join(" · ");
 }
 
-// Everything the exercise at `index` is done with, marked when it changes.
+// The thing to pick up, named and following the weight as it steps:
+// "Kettlebell, 40 lb", "Dumbbells, 2 × 10 lb"; "no weight" with none.
+function loadLine(item) {
+  if (!item.weight) return NO_WEIGHT;
+  const slug = carries(item) ? carrierOf(item) : null;
+  const load = item.weights_held === 2 ? formatLoad(item.weight, 2, state.unit) : formatWeight(item.weight, state.unit);
+  return slug ? `${equipmentNames([slug])[0]}, ${load}` : load;
+}
+
+// Whether the gear named for a weight is gear in set weights (any weight,
+// dumbbells), not, say, the bench a weighted step-up is done on.
+function carries(item) {
+  return !!(item.any_weight || item.allowed_weights);
+}
+
+// The gear the load line doesn't already name.
+function otherGear(item) {
+  if (!takesWeight(item) || !item.weight || !carries(item)) return item.equipment ?? [];
+  const named = new Set([carrierOf(item), item.any_weight?.slug]);
+  return (item.equipment ?? []).filter((slug) => !named.has(slug));
+}
+
+// Everything else the exercise at `index` is done with, marked when it changes.
 function renderGear(item, index) {
-  const names = item ? equipmentNames(item.equipment) : [];
+  const names = item ? equipmentNames(otherGear(item)) : [];
   setHidden("equipment", names.length === 0);
   $("equipment").classList.toggle("changed", names.length > 0 && equipmentChanges(state.run.items, index));
   setHtml("equipment", names.map((name) => `<li>${escape(name)}</li>`).join(""));

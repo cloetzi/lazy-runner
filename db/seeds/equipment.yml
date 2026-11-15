@@ -15,7 +15,7 @@
 - slug: stability_ball
   name: Stability ball
 - slug: weight
-  name: Weight
+  name: Any weight
   unit: lb
   any_weight: true
 - slug: dumbbell

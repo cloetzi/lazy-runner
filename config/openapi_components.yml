@@ -194,6 +194,21 @@ components:
       nullable: true
       description: The owned weights to step through, in the exercise's unit; null when the equipment has no fixed weights.
       items: { type: number }
+    AnyWeight:
+      type: object
+      nullable: true
+      description: For a step done with the generic weight ("Any weight"), its slug and which owned gear carries each weight the stepper moves through, in the step's unit; null for anything else.
+      required: [slug, carriers]
+      properties:
+        slug: { type: string }
+        carriers:
+          type: array
+          items:
+            type: object
+            required: [value, equipment]
+            properties:
+              value: { type: number }
+              equipment: { type: string, description: The equipment slug of the owned gear with that weight. }
     WeightSteps:
       type: object
       description: >-
@@ -525,7 +540,7 @@ components:
     PlanExerciseItem:
       type: object
       description: One set of a step, for one side.
-      required: [type, mode, workout, block, step_id, side, reps, seconds, tempo, weight, weight_unit, weights_held, weight_equipment, allowed_weights, seed_weight, suggestion, note, equipment, exercise]
+      required: [type, mode, workout, block, step_id, side, reps, seconds, tempo, weight, weight_unit, weights_held, weight_equipment, allowed_weights, any_weight, seed_weight, suggestion, note, equipment, exercise]
       properties:
         type: { type: string, enum: [exercise] }
         mode: { type: string, enum: [timed, reps] }
@@ -541,6 +556,7 @@ components:
         weights_held: { type: integer, nullable: true }
         weight_equipment: { type: string, nullable: true, description: The equipment slug that carries the weight. }
         allowed_weights: { $ref: "#/components/schemas/AllowedWeights" }
+        any_weight: { $ref: "#/components/schemas/AnyWeight" }
         seed_weight: { allOf: [{ $ref: "#/components/schemas/Weight" }], nullable: true }
         suggestion: { allOf: [{ $ref: "#/components/schemas/Suggestion" }], nullable: true }
         note: { type: string, nullable: true }
@@ -559,12 +575,13 @@ components:
     PlanTarget:
       type: object
       description: One exercise that takes a weight, for the get-ready screen; its weight is null while none is set.
-      required: [weight, weight_unit, weights_held, weight_equipment, seed_weight, suggestion, equipment, allowed_weights, exercise]
+      required: [weight, weight_unit, weights_held, weight_equipment, any_weight, seed_weight, suggestion, equipment, allowed_weights, exercise]
       properties:
         weight: { allOf: [{ $ref: "#/components/schemas/Weight" }], nullable: true }
         weight_unit: { type: string, enum: [lb, kg] }
         weights_held: { type: integer }
         weight_equipment: { type: string, nullable: true }
+        any_weight: { $ref: "#/components/schemas/AnyWeight" }
         seed_weight: { allOf: [{ $ref: "#/components/schemas/Weight" }], nullable: true }
         suggestion: { allOf: [{ $ref: "#/components/schemas/Suggestion" }], nullable: true }
         equipment: { type: array, items: { type: string } }

@@ -146,6 +146,10 @@ test("runs Workout 1, finishes offline and syncs once back online", async () => 
   await page.locator("#workout-start").click();
   await page.locator("#ready-go").waitFor();
   await accessible(page, "Get ready");
+  // Start is on screen without scrolling, named for what it starts.
+  assert.equal(await page.locator("#ready-go").textContent(), "Start warm-up");
+  const start = await page.locator("#ready-go").boundingBox();
+  assert.ok(start.y + start.height <= page.viewportSize().height, "Start is below the fold");
   await page.locator("#ready-go").click();
 
   // The warm-up comes first; skip the rest of it in one go, which can be undone.

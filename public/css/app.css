@@ -318,7 +318,38 @@ button[aria-busy="true"]::after {
   border-bottom: 1px solid var(--border); padding-bottom: var(--space-2);
 }
 .targets .suggestion, .targets .suggestion-actions { grid-column: 1 / -1; }
-.ready-section { display: grid; gap: var(--space-2); }
+/* One action bar: pinned to the bottom of the screen (above the tab bar),
+   the page's background behind it and a hairline on top, so nothing shows
+   through. It sits at the end of the page, so the last row scrolls clear of
+   it. Back on the left, the primary named for what happens. */
+.action-bar {
+  position: sticky; bottom: var(--tabbar, 0px); z-index: 5;
+  display: flex; gap: var(--space-3);
+  margin: 0 calc(-1 * var(--space-4)); padding: var(--space-3) var(--space-4) max(var(--space-3), env(safe-area-inset-bottom));
+  background: var(--bg); border-top: 1px solid var(--border);
+}
+.action-bar .primary { flex: 1; min-height: 4.5rem; }
+.view > .action-bar { margin-top: auto; }
+/* The session screens hide the tab bar. */
+body[data-focus] .action-bar { bottom: 0; }
+.action-bar .secondary { min-width: 6rem; }
+.action-bar:not(:has(> :not([hidden]))) { display: none; }
+/* Above the tab bar, which keeps the safe area itself. */
+body.with-nav:not([data-focus]) .action-bar { padding-bottom: var(--space-3); }
+/* Sits on the view's bottom padding rather than above it. */
+.view:has(> .action-bar:last-child) { padding-bottom: 0; }
+
+.ready-section { display: grid; gap: var(--space-2); align-content: start; }
+.ready-columns { display: grid; gap: var(--space-5); }
+/* Landscape on a tablet: what to fetch beside the weights, Start in reach. */
+@media (min-width: 60rem) and (orientation: landscape) {
+  .ready-columns { grid-template-columns: repeat(auto-fit, minmax(20rem, 1fr)); align-items: start; }
+  #ready { max-width: var(--wide); }
+}
+/* Gear rows to tick off on the walk to the shelf; nothing is saved. */
+.check-row { cursor: pointer; }
+.check-row input { width: 1.5rem; height: 1.5rem; margin: 0; flex: none; accent-color: var(--accent); }
+.check-row:has(input:checked) .row-title { text-decoration: line-through; color: var(--muted); }
 .ready-section h2 { margin: var(--space-2) 0 0; font-size: var(--text-sm); text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
 .changes li {
   display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: var(--space-2);
@@ -447,6 +478,7 @@ body[data-focus] .more-sheet, body[data-focus] .scrim, body[data-focus] .skip-li
   body.with-nav:not([data-focus]) { padding-left: var(--sidebar); }
   /* Content starts at the same x on every page, a gutter from the sidebar. */
   body.with-nav:not([data-focus]) .view { margin: 0; padding-left: var(--space-6); padding-right: var(--space-6); }
+  body.with-nav:not([data-focus]) .view > .action-bar { margin: 0 calc(-1 * var(--space-6)); padding-inline: var(--space-6); padding-bottom: max(var(--space-3), env(safe-area-inset-bottom)); }
   /* Grids widen only beside the sidebar; below it every page keeps the
      measure, so a page title starts at the same x on every tab. */
   body.with-nav:not([data-focus]) :is(.calendar, .library, #workouts) { max-width: var(--wide); }
@@ -529,7 +561,7 @@ button.step-name .icon { color: var(--muted); }
   .steps li .suggestion, .steps li .suggestion-actions { grid-column: 1 / -1; }
 }
 #workout-saved { margin: 0; text-align: center; min-height: 1.2em; }
-#workout-start { min-height: 4.5rem; position: sticky; bottom: calc(var(--tabbar, env(safe-area-inset-bottom)) + var(--space-4)); box-shadow: var(--shadow-1); }
+#workout-start { min-height: 4.5rem; }
 
 /* Finish */
 .finish-head { display: flex; align-items: center; gap: var(--space-3); }
@@ -1046,6 +1078,9 @@ body:has(#player:not([hidden])) .toast { top: var(--toast-top, calc(max(var(--sp
 
 /* Countdowns pause with the Pause button or a tap on the time; a paused one says so */
 #target.pausable { cursor: pointer; }
+/* The load line names the gear ("Kettlebell, 40 lb"): room for it, so the
+   buttons stay put as the weight steps. */
+#weight-stepper span { min-width: 10rem; }
 .paused-note { margin: 0; font-size: var(--text-lg); font-weight: 700; color: var(--accent); }
 .timer-actions { display: flex; justify-content: center; flex-wrap: wrap; gap: var(--space-3); }
 .timer-actions button { min-width: 6rem; }

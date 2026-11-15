@@ -41,6 +41,9 @@ components, pages, player, figure.
   button waiting on the server is `busy()` (`html.js`). In the player the
   main button ignores a tap for 0.7 s after its meaning changes, and the
   session screens neither zoom on a double tap nor select text.
+- **One action bar** (`.action-bar`): the screen's primary pinned to the
+  bottom over the page background, at the end of the page so the last row
+  scrolls clear of it; Get ready and the workout view use it.
 - **The player speaks**: it redraws only what changed (`setText`, `setHtml`
   in `app.js`), the count carries its unit for a screen reader, and each
   step is said once in a polite live region (`stepAnnouncement` in

@@ -84,7 +84,7 @@ class Exercise < Record
     movement ||= (areas & other.areas).any? ? "Works the same area" : "Same kind of exercise"
     shared = equipment.select { other.equipment_slugs.include?(it.slug) }
     gear = if other.equipment_slugs.empty? then "no equipment"
-           elsif shared.any? then "same #{shared.map { it.name.downcase }.join(" and ")}"
+           elsif shared.any? then "same #{shared.map { it.any_weight ? "weight" : it.name.downcase }.join(" and ")}"
            else other.equipment.map { it.name.downcase }.join(" and ")
            end
     side = ("one side at a time" if other.unilateral && !unilateral) || ("alternating sides" if other.alternating && !alternating) ||

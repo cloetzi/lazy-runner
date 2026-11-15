@@ -278,6 +278,19 @@ describe "GET /api/today" do
     _(items["straight-leg-deadlift"]["weight_equipment"]).must_equal "kettlebell"
   end
 
+  it "names the gear that carries each weight of a step done with any weight" do
+    get "/api/today?date=2026-10-19&workout_id=#{workout("cycle-1-workout-1").id}"
+    squat = json["plan"]["items"].find { it["exercise"] && it["exercise"]["slug"] == "goblet-squat" }
+    dumbbells = json["plan"]["items"].find { it["weight_unit"] && it["equipment"] == ["dumbbell"] }
+    target = json["plan"]["targets"].find { it["exercise"]["name"] == "Goblet squat" }
+
+    _(squat["any_weight"]["slug"]).must_equal "weight"
+    _(squat["any_weight"]["carriers"].to_h { [it["value"], it["equipment"]] }).must_equal({ 10.0 => "dumbbell", 20.0 => "dumbbell", 40.0 => "kettlebell" })
+    _(target["any_weight"]).must_equal squat["any_weight"]
+    _(dumbbells["weight_equipment"]).must_equal "dumbbell"
+    _(dumbbells["any_weight"]).must_be_nil
+  end
+
   it "lists nothing logged without a session" do
     get "/api/today?date=2026-10-19"
 

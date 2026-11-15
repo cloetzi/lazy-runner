@@ -111,6 +111,11 @@ class Step < Record
     Equipment.allowed_for(equipment_needed, gear_unit, fixed)
   end
 
+  # Which owned gear carries each of those weights, for the generic weight.
+  def any_weight(fixed = Equipment.fixed)
+    Equipment.any_weight_for(equipment_needed, gear_unit, fixed)
+  end
+
   def estimated_seconds
     work = timed? ? duration_seconds : (reps || 1) * seconds_per_rep
     sides * work + SETUP_SECONDS

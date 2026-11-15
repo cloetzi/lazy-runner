@@ -372,6 +372,14 @@ test("says what equipment to use only when it changes from the exercise before",
   assert.equal(equipmentChanges(items, 4), true);
 });
 
+test("counts a change of the gear carrying any weight as a change", () => {
+  const anyWeight = { slug: "weight", carriers: [{ value: 20, equipment: "dumbbell" }, { value: 40, equipment: "kettlebell" }] };
+  const generic = (weight) => ({ ...set(squat, 1), equipment: ["weight"], any_weight: anyWeight, weight: { value: weight, unit: "lb" } });
+  assert.equal(equipmentChanges([generic(40), generic(20)], 1), true);
+  assert.equal(equipmentChanges([generic(40), generic(40)], 1), false);
+  assert.equal(equipmentChanges([{ ...set(squat, 1), equipment: ["dumbbell"] }, generic(20)], 1), false);
+});
+
 test("says a step as one sentence for a screen reader", () => {
   const squat2 = { ...set(squat, 2), block: { label: "A", round: 2, rounds: 3 } };
   assert.equal(stepAnnouncement(squat2, { weight: { value: 40, unit: "lb" } }), "Goblet squat, set 2 of 3, 8 reps, 40 pounds");

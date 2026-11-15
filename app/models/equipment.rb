@@ -89,6 +89,19 @@ class Equipment < Record
     item&.weights_in&.map { Weights.convert(it, unit)[:value] }&.uniq&.sort
   end
 
+  # For something done with the generic weight: its slug and, for each weight
+  # the stepper moves through (in `unit`), the owned item that carries it
+  # (the first in catalogue order, as `carrying` picks), so the player can
+  # name what to pick up as the weight steps. Nil for anything else.
+  def self.any_weight_for(slugs, unit, fixed = self.fixed)
+    slug = slugs.find { fixed[it] }
+    item = fixed[slug]
+    return unless item.is_a?(AnyWeight)
+
+    carriers = item.rows.flat_map { |row| row.weights_in.map { [Weights.convert(it, unit)[:value], row.equipment.slug] } }
+    { slug:, carriers: carriers.uniq(&:first).sort_by(&:first).map { |value, equipment| { value:, equipment: } } }
+  end
+
   # The slug of the first owned item (in catalogue order) that has `weight`,
   # leaving out `except`: the gear to pick up for it.
   def self.carrying(weight, fixed = self.fixed, except: nil)

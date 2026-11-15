@@ -53,7 +53,9 @@
     </header>
     <div class="workout-blocks" id="workout-blocks"></div>
     <p class="muted" id="workout-saved" aria-live="polite"></p>
-    <button class="primary" id="workout-start" hidden>Start this workout</button>
+    <div class="action-bar">
+      <button class="primary" id="workout-start" hidden>Start this workout</button>
+    </div>
     <section class="card workout-own" id="workout-own" hidden></section>
   </main>
 
@@ -71,9 +73,11 @@
   </main>
 
   <main id="ready" class="view" hidden>
-    <section class="card">
+    <header class="brand">
       <p class="muted">Get ready</p>
       <h1 id="ready-title"></h1>
+    </header>
+    <div class="ready-columns">
       <section class="ready-section" id="ready-need">
         <h2>You'll need</h2>
         <ul class="list" id="ready-pickup"></ul>
@@ -82,9 +86,11 @@
         <h2>Weights today</h2>
         <ul class="targets" id="ready-targets"></ul>
       </section>
-      <button class="primary" id="ready-go">Ready</button>
-      <button class="link" id="ready-back">Back</button>
-    </section>
+    </div>
+    <div class="action-bar">
+      <button class="secondary" id="ready-back">Back</button>
+      <button class="primary" id="ready-go">Start</button>
+    </div>
   </main>
 
   <main id="player" class="view" hidden>

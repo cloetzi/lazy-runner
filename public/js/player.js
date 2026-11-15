@@ -2,7 +2,7 @@
 // the switch-sides cue, the main button and swapping an exercise for the rest
 // of the session. Items are the screens from the player plan.
 
-import { amountText } from "./workout.js";
+import { amountText, gearOf } from "./workout.js";
 import { shownValue } from "./weights.js";
 
 // Where Back goes: the step before, skipping rests, since a rest on its own
@@ -92,10 +92,11 @@ function needsNewGear(before, item) {
 }
 
 // Whether the exercise at `index` uses other equipment than the exercise
-// before it (rests aside), so "With: ..." is only said when it changes.
+// before it (rests aside), so "With: ..." is only said when it changes. Any
+// weight counts as the gear carrying it: kettlebell to dumbbells is a change.
 export function equipmentChanges(items, index) {
   const before = items.slice(0, index).findLast((item) => item.type === "exercise");
-  return !before || String(before.equipment ?? []) !== String(items[index]?.equipment ?? []);
+  return !before || !items[index] || String(gearOf(before)) !== String(gearOf(items[index]));
 }
 
 // The exercise the program planned for this item, even when swapped.

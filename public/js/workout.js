@@ -1,7 +1,7 @@
 // Pure helpers for the workout view (GET /api/workouts/:id): how a block and
 // a step read, and changing an exercise's weight everywhere it appears.
 
-import { inUnit } from "./weights.js";
+import { inUnit, sameGearWeight } from "./weights.js";
 
 // "Block A" for a lettered block, a named one ("Warm-up") as it is.
 export function blockName(label) {
@@ -77,11 +77,32 @@ export function framePlan(plan, kinds) {
   return { items, equipment, targets: plan.targets.filter((target) => exercises.has(target.exercise.id)) };
 }
 
+// The gear that carries `weight` for a step, target or player item: for one
+// done with any weight, the owned item that has that weight (the plan says
+// which, `any_weight.carriers`), so the name follows the weight as it steps;
+// otherwise the gear the plan named. Null with no gear named.
+export function carrierOf(thing, weight = thing.weight) {
+  const carriers = thing.any_weight?.carriers;
+  if (!carriers) return thing.weight_equipment ?? null;
+  if (!weight) return thing.any_weight.slug;
+  const unit = thing.weight_unit ?? weight.unit;
+  return carriers.find((carrier) => sameGearWeight({ value: carrier.value, unit }, weight))?.equipment ?? thing.any_weight.slug;
+}
+
+// What an item is done with, the generic weight named as the gear that
+// carries it: what the user actually picks up.
+export function gearOf(item) {
+  const generic = item.any_weight?.slug;
+  return [...new Set((item.equipment ?? []).map((slug) => slug === generic ? carrierOf(item) : slug))];
+}
+
 // What to put next to the mat, from a framed plan: one row per piece of
 // equipment the session needs, in order of first use, each with the
-// exercises it is for. Gear that carries a weight gets a row per load (how
-// many of which weight), and one for its exercises with no weight set yet.
-// Weights for steps done with no gear named go last, under equipment null.
+// exercises it is for. Gear that carries a weight gets a row per weight (as
+// many as the most any exercise holds), and one for its exercises with no
+// weight set yet. An exercise done with any weight is listed under the gear
+// that carries its weight, not again under "Any weight". Weights for steps
+// done with no gear named go last, under equipment null.
 export function gearList(items, targets) {
   const uses = new Map(); // slug -> exercise names, in order
   for (const item of items) {
@@ -92,26 +113,39 @@ export function gearList(items, targets) {
     }
   }
   const carried = new Map(); // slug -> rows for its weighted exercises
+  const elsewhere = new Map(); // generic slug -> names carried by real gear
+  const carriers = new Map(); // generic slug -> the real gear carrying them
   for (const target of targets) {
     // A weight with no gear named (a weighted push-up) is picked up as "a
     // weight"; without one there is nothing to pick up.
-    const slug = target.weight_equipment ?? target.equipment?.[0] ?? null;
+    const slug = (target.any_weight ? carrierOf(target) : target.weight_equipment) ?? target.equipment?.[0] ?? null;
     if (!slug && !target.weight) continue;
     if (!slug) uses.set(null, uses.get(null) ?? []);
+    const generic = target.any_weight?.slug;
+    if (generic && generic !== slug) {
+      (elsewhere.get(generic) ?? elsewhere.set(generic, new Set()).get(generic)).add(target.exercise.name);
+      (carriers.get(generic) ?? carriers.set(generic, new Set()).get(generic)).add(slug);
+    }
     const rows = carried.get(slug) ?? carried.set(slug, []).get(slug);
     const held = target.weights_held ?? 1;
     const weight = target.weight ?? null;
+    // One row per weight: a pair is fetched either way.
     const same = (row) => weight
-      ? row.load && row.load.held === held && row.load.weight.value === weight.value && row.load.weight.unit === weight.unit
+      ? row.load && row.load.weight.value === weight.value && row.load.weight.unit === weight.unit
       : row.unset;
     const row = rows.find(same) ?? rows[rows.push({ equipment: slug, load: weight && { held, weight }, unset: !weight, exercises: [] }) - 1];
+    if (row.load) row.load.held = Math.max(row.load.held, held);
     row.exercises.push(target.exercise.name);
   }
-  return [...uses].flatMap(([slug, names]) => {
+  // Gear that only carries any weight takes the generic's place in the order.
+  const order = [...uses.keys()].flatMap((slug) => [...(carriers.get(slug) ?? [])].filter((c) => !uses.has(c)).concat([slug]));
+  return [...new Set(order)].flatMap((slug) => {
+    const names = uses.get(slug) ?? [];
     // Loads to pick up first, then what has no weight set yet.
     const rows = (carried.get(slug) ?? []).sort((a, b) => a.unset - b.unset);
-    const covered = new Set(rows.flatMap((row) => row.exercises));
+    const covered = new Set([...rows.flatMap((row) => row.exercises), ...(elsewhere.get(slug) ?? [])]);
     const rest = names.filter((name) => !covered.has(name));
+    if (!rows.length && !rest.length) return [];
     return rest.length || !rows.length ? [...rows, { equipment: slug, load: null, unset: false, exercises: rest }] : rows;
   });
 }
