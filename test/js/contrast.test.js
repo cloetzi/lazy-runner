@@ -58,7 +58,7 @@ const pairs = [
   ["--text", "--bg", 4.5, "the player's count, paused or not"],
   ["--focus", "--surface", 3, "focus ring on cards"],
   ["--focus", "--bg", 3, "focus ring on the page"],
-  ["--rest", "--bg", 3, "pause bars on the rest dial"],
+  ["--rest", "--bg", 3, "the rest ring"],
 ];
 
 // Parts of the figure drawn over each other must stay apart. The accent

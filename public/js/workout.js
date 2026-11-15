@@ -25,7 +25,7 @@ export function amountText({ reps, seconds, perSide, alternating }) {
   return amount ? `${amount}, alternating sides` : "alternating sides";
 }
 
-// How an alternating exercise's reps split, also the player's line under "10×".
+// How an alternating exercise's reps split, also the player's line under the count.
 export function alternatingText(reps) {
   return reps % 2 === 0 ? `in total, ${reps / 2} each side` : "in total, alternating sides";
 }

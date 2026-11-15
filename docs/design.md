@@ -5,9 +5,10 @@ one sweaty thumb, calm everywhere else.
 
 ## Principles
 
-- **The player first.** One step per screen, a huge count, the exercise name
-  and two to four cues, big Done and Skip buttons at the bottom, and a tap on
-  the time to pause.
+- **The player first.** One step per screen: the count is the screen, inside
+  a ring that drains, with the exercise name, a badge for the phase and the
+  side, two cues, big Done and Skip buttons at the bottom, and a tap on the
+  count to pause.
   Navigation hides during a session and in the workout editor, which has
   its own header (Cancel, the name, Save) so a stray tap can't lose a draft.
 - **Never a dead end.** Today offers a workout to start, or, for an account
@@ -106,12 +107,30 @@ left side and mirrored for the right; the moving limb is accented and the
 target muscle highlighted.
 `library.html?review` lays out every exercise for review.
 
-In the player the figure sits above the text; on a short screen it gives way
-first, then the cues. In landscape on a tablet or computer (at least 60rem
-wide and 30rem tall) it sits beside the text instead, as tall as the stage,
-and stays. Either way the drawing is scaled whole into its frame and never
-overlaps the text.
+## The player
 
-A rest never shows a figure: its place holds the rest dial, a ring in
-`--rest` that drains with the countdown around a slowly breathing disc
-(still under reduced motion, dimmed with pause bars when paused).
+The stage is a size container: the ring, the name and the figure are
+measured against the room it has, not the window.
+
+- **The count in its ring**, about a third of the stage's height in a column
+  and as tall as the stage in landscape. The ring drains for holds, lead-ins
+  and rests; a set of reps shows its number without one but keeps the place.
+  Longer counts and words step down a size (`data-len`) to stay inside.
+- **One colour per phase**, on the ring and the phase badge, which always
+  says its word: neutral for Get ready, the accent tint for Go and Switch
+  sides, `--rest` for Rest. The side is a badge with a large L or R; the set
+  is a badge too.
+- **Fixed places**: the figure is a fixed share of the stage and the badge
+  row keeps its height, so the ring doesn't move between phases. When the
+  stage runs out of room the cues at the bottom go first (cut whole, never
+  in half), then the figure shrinks down to 10rem; under that it is hidden
+  rather than shrunk to a stamp. As a last resort the stage scrolls, with a
+  shadow at the edge that has more.
+- **Landscape on a tablet or computer** (at least 60rem wide and 30rem tall):
+  three columns, the figure with one cue, the ring as tall as the stage
+  allows, and the name, badges, buttons and steppers beside it.
+- **The progress bar fills by time**, not by screens (`progressAt`).
+
+A rest shows the next exercise as a still figure (a moving one reads as "do
+this now"), its ring in `--rest` around a slowly breathing core (still under
+reduced motion), dimmed when paused, with "Paused" in place of the unit.

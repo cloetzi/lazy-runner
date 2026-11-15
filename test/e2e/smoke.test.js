@@ -145,6 +145,16 @@ async function getJson(path) {
   return response.json();
 }
 
+async function fitsOnScreen(page, { width, height }) {
+  const count = await page.locator("#count-box").boundingBox();
+  const main = await page.locator("#main-action").boundingBox();
+  const at = `at ${width}×${height}`;
+  assert.ok(count.y >= 0 && count.y + count.height <= main.y, `the count is cut or under the main button ${at}`);
+  assert.ok(main.y + main.height <= height, `the main button is off screen ${at}`);
+  assert.ok(count.x >= 0 && count.x + count.width <= width, `the count is cut at the side ${at}`);
+  assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), `the page scrolls sideways ${at}`);
+}
+
 // Waits for the outbox to empty into the server, which it does on its own
 // once the browser is back online.
 async function eventually(check, { timeout = 15_000 } = {}) {
@@ -180,6 +190,12 @@ test("runs Workout 1, finishes offline and syncs once back online", async () => 
   await page.locator("#skip-part").click();
   await page.locator("#player").getByText("Goblet squat", { exact: true }).waitFor();
   await accessible(page, "the player");
+  // A set of reps with its weight stepper fits at Split View sizes too.
+  for (const size of [{ width: 507, height: 1024 }, { width: 585, height: 746 }]) {
+    await page.setViewportSize(size);
+    await fitsOnScreen(page, size);
+  }
+  await page.setViewportSize({ width: 390, height: 844 });
   await tapMain(page); // goblet squat, set 1
   await page.locator("#player").getByText("Straight-leg deadlift", { exact: true }).waitFor();
   await tapMain(page); // deadlift, set 1
@@ -189,9 +205,25 @@ test("runs Workout 1, finishes offline and syncs once back online", async () => 
     return sessions.find((s) => s.workout.id === workout.id && s.status === "in_progress" && s.sets_done === 2)?.id;
   });
 
-  // A rest shows its dial where the figure goes, not an exercise animation.
-  await page.locator("#rest-dial").waitFor();
-  assert.equal(await page.locator("#figure").isHidden(), true);
+  // A rest says so on its badge, drains its ring in the rest colour and
+  // shows the next exercise standing still, never moving.
+  await page.locator('#player[data-phase="rest"]').waitFor();
+  assert.equal(await page.locator("#phase").textContent(), "Rest");
+  assert.equal(await page.locator("#ring").isVisible(), true);
+
+  // At iPad Split View sizes the count in its ring and the main button are on
+  // screen, apart, with nothing to scroll sideways. The taller one has room
+  // for the figure: the next exercise, standing still.
+  for (const size of [{ width: 507, height: 1024 }, { width: 585, height: 746 }]) {
+    await page.setViewportSize(size);
+    await fitsOnScreen(page, size);
+  }
+  await page.setViewportSize({ width: 507, height: 1024 });
+  await page.locator("#figure svg").waitFor();
+  const still = await page.locator("#figure").innerHTML();
+  await page.waitForTimeout(400);
+  assert.equal(await page.locator("#figure").innerHTML(), still, "the next exercise moves during the rest");
+  await page.setViewportSize({ width: 390, height: 844 });
 
   // Every countdown has a visible Pause button that turns into Resume.
   await page.locator("#pause").click();

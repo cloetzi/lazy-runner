@@ -31,7 +31,8 @@ export function switchesSides(items, index) {
 export function mainActionLabel(phase, next = null) {
   if (phase === "reps" || phase === "work") return "Done";
   if (phase === "rest") return next?.block.round > 1 ? `Start set ${next.block.round} now` : "End rest now";
-  return "Start";
+  // A lead-in counts down by itself; the button cuts it short.
+  return "Start now";
 }
 
 // The main button changes meaning in place (Start becomes Done, Done brings
@@ -392,6 +393,15 @@ function itemSeconds(item) {
 export function minutesLeft(items, index) {
   const seconds = items.slice(index).reduce((sum, item) => sum + itemSeconds(item), 0);
   return Math.ceil(seconds / 60);
+}
+
+// How far through the session the screen at `index` is, 0 to 1, by the
+// expected time rather than the number of screens: a warm-up of many short
+// stretches doesn't race and the main work doesn't crawl.
+export function progressAt(items, index) {
+  const total = items.reduce((sum, item) => sum + itemSeconds(item), 0);
+  if (!total) return 0;
+  return items.slice(0, index).reduce((sum, item) => sum + itemSeconds(item), 0) / total;
 }
 
 // A tempo written out: "2111" -> "2 s down · 1 s pause · 1 s up · 1 s at

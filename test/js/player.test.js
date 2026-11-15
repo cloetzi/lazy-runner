@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { previousIndex, switchesSides, mainActionLabel, stepAnnouncement, spokenTarget, spokenWeight, tapAccepted, TAP_GUARD_MS, holdStatus, MIN_HOLD_SECONDS, unloggedExercises, plannedExercise, swapExercise, swapRun, shortlist, SHORTLIST, resumeChoice, sessionProgress, endsEarly, loggedFromServer, pickUpIndex, partEnd, setLabel, minutesLeft, tempoText, leadInSeconds, GEAR_LEAD_IN, extraSeconds, upNextDetails, equipmentChanges, finishSummary, framingLine, itemPart, swapTargets } from "../../public/js/player.js";
+import { previousIndex, switchesSides, mainActionLabel, stepAnnouncement, spokenTarget, spokenWeight, tapAccepted, TAP_GUARD_MS, holdStatus, MIN_HOLD_SECONDS, unloggedExercises, plannedExercise, swapExercise, swapRun, shortlist, SHORTLIST, resumeChoice, sessionProgress, endsEarly, loggedFromServer, pickUpIndex, partEnd, setLabel, minutesLeft, progressAt, tempoText, leadInSeconds, GEAR_LEAD_IN, extraSeconds, upNextDetails, equipmentChanges, finishSummary, framingLine, itemPart, swapTargets } from "../../public/js/player.js";
 
 const squat = { id: 1, name: "Goblet squat", equipment: ["dumbbell"], default_reps: 8, default_seconds: null };
 const deadlift = { id: 2, name: "Straight-leg deadlift", equipment: ["dumbbell"], default_reps: 12, default_seconds: null };
@@ -36,7 +36,7 @@ test("cues a switch only from the left side to the right side of the same set", 
 test("finishes a set with Done and cuts a lead-in or a rest short", () => {
   assert.equal(mainActionLabel("reps"), "Done");
   assert.equal(mainActionLabel("work"), "Done");
-  assert.equal(mainActionLabel("lead"), "Start");
+  assert.equal(mainActionLabel("lead"), "Start now");
   assert.equal(mainActionLabel("rest", set(squat, 2)), "Start set 2 now");
   assert.equal(mainActionLabel("rest", { ...set(squat, 1), block: { label: "B", round: 1, rounds: 1 } }), "End rest now");
   // A first set comes after another exercise or block: not a "set 1" to start again.
@@ -335,6 +335,17 @@ test("estimates the minutes left the way the server estimates a workout", () => 
   assert.equal(minutesLeft(items, 2), 1);
   assert.equal(minutesLeft(items, 3), 0);
   assert.equal(minutesLeft([set(squat, 1, { tempo: null, reps: 10 })], 0), 1);
+});
+
+test("fills the progress bar by expected time, not by screens", () => {
+  const stretch = { type: "exercise", mode: "timed", seconds: 20, side: "left", block: { round: 1, rounds: 1 } };
+  const items = [stretch, stretch, set(squat, 1, { tempo: "3010" }), rest(1)];
+
+  // 25 + 25 + 42 + 60 seconds
+  assert.equal(progressAt(items, 0), 0);
+  assert.equal(progressAt(items, 2), 50 / 152);
+  assert.equal(progressAt(items, 4), 1);
+  assert.equal(progressAt([], 0), 0);
 });
 
 test("writes a tempo out", () => {

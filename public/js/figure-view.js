@@ -15,8 +15,6 @@ export function createFigure(container, animation, { mirror = false, label = "",
   // The box size in canvas units, for frames that draw every figure at one scale.
   svg.style.setProperty("--figure-w", box[2]);
   svg.style.setProperty("--figure-h", box[3]);
-  // Its shape, for a frame that sizes itself to the figure (the player's).
-  container.style.setProperty("--figure-aspect", box[2] / box[3]);
   svg.setAttribute("role", "img");
   if (label) svg.setAttribute("aria-label", label);
   container.replaceChildren(svg);

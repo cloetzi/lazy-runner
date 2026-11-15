@@ -107,47 +107,56 @@
       </span>
     </header>
 
+    <!-- The figure; the name, the phase and the count in its ring, then what
+         to do with it; the cues. On a tablet in landscape the figure and the
+         cues share a column beside the text, otherwise all is one column. -->
     <section class="stage">
       <div class="figure-box" id="figure" hidden></div>
-      <div class="figure-box rest-dial" id="rest-dial" hidden aria-hidden="true">
-        <svg viewBox="0 0 100 100">
-          <circle class="track" cx="50" cy="50" r="42"/>
-          <circle class="arc" id="rest-arc" cx="50" cy="50" r="42" pathLength="1"/>
-          <circle class="core" cx="50" cy="50" r="26"/>
-          <g class="pause-bars"><rect x="41" y="40" width="6" height="20" rx="2"/><rect x="53" y="40" width="6" height="20" rx="2"/></g>
-        </svg>
-      </div>
       <div class="stage-text">
-      <p class="phase" id="phase"></p>
-      <h1 class="exercise" id="exercise-name"></h1>
-      <p class="set-label" id="set-label" hidden></p>
-      <p class="side" id="side" hidden></p>
-      <p class="target" id="target"><span id="target-shown" aria-hidden="true"></span><span id="target-spoken" class="visually-hidden"></span></p>
-      <p class="paused-note" id="paused-note" hidden>Paused</p>
-      <div class="timer-actions" id="timer-actions" hidden>
-        <button class="secondary small" id="pause">Pause</button>
-        <button class="secondary small" id="more-time" hidden>+10 s</button>
-      </div>
-      <div class="adjust" id="adjust" hidden>
-        <div class="stepper" id="weight-stepper" hidden>
-          <button class="secondary" id="weight-down" aria-label="Less weight"><svg class="icon" aria-hidden="true"><use href="/icons/sprite.svg#minus"/></svg></button>
-          <span id="weight-value"></span>
-          <button class="secondary" id="weight-up" aria-label="More weight"><svg class="icon" aria-hidden="true"><use href="/icons/sprite.svg#plus"/></svg></button>
+        <h1 class="exercise" id="exercise-name"></h1>
+        <!-- The phase, side and set as badges: each says its word, and the
+             phase's colour is carried by the ring as well. -->
+        <div class="badges">
+          <p class="phase-badge" id="phase"></p>
+          <p class="side-badge" id="side" hidden></p>
+          <p class="set-badge" id="set-label" hidden></p>
         </div>
-        <div class="stepper" id="reps-stepper" hidden>
-          <button class="secondary" id="reps-down" aria-label="Fewer reps"><svg class="icon" aria-hidden="true"><use href="/icons/sprite.svg#minus"/></svg></button>
-          <span id="reps-value"></span>
-          <button class="secondary" id="reps-up" aria-label="More reps"><svg class="icon" aria-hidden="true"><use href="/icons/sprite.svg#plus"/></svg></button>
+        <!-- The count, inside a ring that drains for holds, lead-ins and rests.
+             It keeps its place and size in every phase; a tap pauses a countdown. -->
+        <div class="count-box" id="count-box">
+          <svg class="ring" id="ring" viewBox="0 0 100 100" aria-hidden="true">
+            <circle class="core" cx="50" cy="50" r="40"/>
+            <circle class="track" cx="50" cy="50" r="46"/>
+            <circle class="arc" id="ring-arc" cx="50" cy="50" r="46" pathLength="1"/>
+          </svg>
+          <p class="target" id="target"><span id="target-shown" aria-hidden="true"></span><span id="target-spoken" class="visually-hidden"></span></p>
+          <p class="count-unit" id="count-unit" aria-hidden="true"></p>
+          <p class="paused-note" id="paused-note" hidden>Paused</p>
         </div>
+        <div class="stage-actions">
+          <span class="timer-actions" id="timer-actions" hidden>
+            <button class="secondary" id="pause">Pause</button>
+            <button class="secondary" id="more-time">+10 s</button>
+          </span>
+          <button class="quiet small" id="howto-open"><svg class="icon" aria-hidden="true"><use href="/icons/sprite.svg#info"/></svg>How to</button>
+          <button class="quiet small" id="swap-open"><svg class="icon" aria-hidden="true"><use href="/icons/sprite.svg#swap"/></svg>Swap</button>
+        </div>
+        <div class="adjust" id="adjust" hidden>
+          <div class="stepper" id="weight-stepper" hidden>
+            <button class="secondary" id="weight-down" aria-label="Less weight"><svg class="icon" aria-hidden="true"><use href="/icons/sprite.svg#minus"/></svg></button>
+            <span id="weight-value"></span>
+            <button class="secondary" id="weight-up" aria-label="More weight"><svg class="icon" aria-hidden="true"><use href="/icons/sprite.svg#plus"/></svg></button>
+          </div>
+          <div class="stepper" id="reps-stepper" hidden>
+            <button class="secondary" id="reps-down" aria-label="Fewer reps"><svg class="icon" aria-hidden="true"><use href="/icons/sprite.svg#minus"/></svg></button>
+            <span id="reps-value"></span>
+            <button class="secondary" id="reps-up" aria-label="More reps"><svg class="icon" aria-hidden="true"><use href="/icons/sprite.svg#plus"/></svg></button>
+          </div>
+        </div>
+        <p class="details" id="details"></p>
+        <ul class="equipment-list player-gear" id="equipment" aria-label="Equipment" hidden></ul>
       </div>
-      <p class="details" id="details"></p>
-      <ul class="equipment-list player-gear" id="equipment" aria-label="Equipment" hidden></ul>
       <ul class="cues" id="cues"></ul>
-      <div class="stage-links">
-        <button class="quiet small" id="howto-open"><svg class="icon" aria-hidden="true"><use href="/icons/sprite.svg#info"/></svg>How to</button>
-        <button class="quiet small" id="swap-open"><svg class="icon" aria-hidden="true"><use href="/icons/sprite.svg#swap"/></svg>Swap</button>
-      </div>
-      </div>
     </section>
 
     <footer class="player-bottom">

@@ -50,10 +50,8 @@
   --text-lg: 1.25rem;
   --text-xl: 1.5rem;
   --text-2xl: 2rem;
-  --display-1: clamp(3.5rem, 18vw, 8rem);       /* the player's count */
-  --display-1-compact: clamp(3rem, 13vw, 6.5rem); /* the count beside a figure */
   --display-2: clamp(2rem, 7vw, 3.5rem);        /* the player's exercise name */
-  --text-cue: clamp(1.1rem, 3.5vw, 1.5rem);
+  --text-cue: clamp(1.1rem, 3.5cqw, 1.75rem); /* the stage's width */
   --leading: 1.45;
   --leading-tight: 1.15;
 
@@ -1057,32 +1055,166 @@ body:not(.calendar-month) .calendar-key { display: none; }
 .player-actions { display: flex; align-items: center; flex: none; }
 .player-actions .quiet { padding: 0 var(--space-2); }
 
+/* The stage: the figure, then the name, the badges, the count in its ring
+   and what to do with it, then the cues. It is a size container, so the
+   ring and the name are measured against the room the stage has. On a phone
+   and in portrait it is one column (the text's wrapper is `contents`); in
+   landscape on a tablet the text sits beside the figure and cues (below). */
 .stage {
+  container: stage / size;
   min-height: 0;
-  /* Last resort on the smallest phones: the middle scrolls, the controls stay. */
+  /* Last resort on the smallest screens: the middle scrolls, the controls
+     stay, and a shadow at an edge says there is more. */
   overflow-y: auto;
   overscroll-behavior: contain;
   display: flex;
   flex-direction: column;
-  justify-content: safe center;
   text-align: center;
   gap: var(--space-2);
+  --scroll-shade: color-mix(in srgb, var(--text) 22%, transparent);
+  background:
+    linear-gradient(var(--bg) 40%, transparent) top / 100% var(--space-6) no-repeat local,
+    linear-gradient(transparent, var(--bg) 60%) bottom / 100% var(--space-6) no-repeat local,
+    radial-gradient(farthest-side at 50% 0, var(--scroll-shade), transparent) top / 100% var(--space-3) no-repeat scroll,
+    radial-gradient(farthest-side at 50% 100%, var(--scroll-shade), transparent) bottom / 100% var(--space-3) no-repeat scroll;
+}
+.stage-text { display: contents; }
+.stage-text > * { flex: none; }
+.stage-text > p:empty, .cues:empty { display: none; }
+
+/* The name never drops below the badges' size. */
+.exercise { margin: 0; font-size: max(var(--text-xl), min(var(--display-2), 6cqh)); line-height: 1.1; text-wrap: balance; }
+.details { margin: 0; font-size: var(--text-lg); color: var(--muted); }
+
+/* The phase, the side and the set: each a badge with its word, in one row
+   that keeps its height when a set of reps shows none. */
+.badges { display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: var(--space-2); min-height: var(--control-md); }
+.badges > p {
+  margin: 0; display: inline-flex; align-items: center; gap: var(--space-2);
+  min-height: var(--control-sm); padding: 0 var(--space-4);
+  border: 2px solid var(--control-border); border-radius: var(--radius-full);
+  background: var(--surface); font-size: var(--text-xl); font-weight: 700; line-height: 1.1;
+}
+#player:is([data-phase="work"], [data-phase="switch"]) .phase-badge { background: var(--accent-tint); border-color: var(--accent-ink); color: var(--accent-ink); }
+#player[data-phase="rest"] .phase-badge { background: color-mix(in srgb, var(--rest) 14%, var(--surface)); border-color: var(--rest); }
+/* The side as a large letter in a disc, and the word. */
+.badges > .side-badge { border-color: var(--text); padding-left: var(--space-1); }
+.side-letter {
+  display: grid; place-items: center; width: 1.9em; height: 1.9em; margin-block: var(--space-1);
+  border-radius: var(--radius-full); background: var(--text); color: var(--bg); font-size: 1.15em; font-weight: 800;
 }
 
-.phase { margin: 0; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); font-weight: 600; }
-.exercise { margin: 0; font-size: var(--display-2); line-height: 1.1; }
-.phase.switch { color: var(--accent); font-size: var(--text-xl); }
-.side { margin: 0; font-size: var(--text-xl); font-weight: 700; color: var(--accent); }
-.target { margin: var(--space-2) 0; font-size: min(var(--display-1), 12dvh); font-weight: 800; font-variant-numeric: tabular-nums; line-height: 1; }
-.details { margin: 0; font-size: var(--text-lg); color: var(--muted); }
-.cues { list-style: none; margin: var(--space-4) 0 0; padding: 0; font-size: var(--text-cue); display: flex; flex-direction: column; gap: var(--space-2); }
-.stage-links { display: flex; flex-wrap: wrap; justify-content: center; }
+/* The count in its ring: a third of the stage's height in a column, the
+   room left beside the figure in landscape. The ring drains in the phase's
+   colour (the text colour for a lead-in, the accent for work, the rest colour for a
+   rest); a set of reps has no ring but keeps the place. */
+.stage-text { --ring: min(32cqh, 72cqw, 26rem); }
+.count-box {
+  --ring-colour: var(--text);
+  position: relative; flex: none; width: var(--ring); height: var(--ring); margin: 0 auto;
+  display: grid; grid-template-rows: auto auto; place-content: center; justify-items: center;
+}
+#player:is([data-phase="work"], [data-phase="switch"]) .count-box { --ring-colour: var(--accent-bright); }
+#player[data-phase="rest"] .count-box { --ring-colour: var(--rest); }
+.count-box.pausable { cursor: pointer; }
+.ring { position: absolute; inset: 0; width: 100%; height: 100%; }
+.ring circle { fill: none; stroke-width: 6; }
+/* The track is a faint tint of the ring's own colour, so what has drained
+   stays clearly apart from what is left in every scheme. */
+.ring .track { stroke: color-mix(in srgb, var(--ring-colour) 18%, var(--bg)); }
+.ring .arc { stroke: var(--ring-colour); stroke-linecap: round; stroke-dasharray: 1; transform: rotate(-90deg); transform-origin: center; transition: stroke-dashoffset 100ms linear; }
+/* A rest's core breathes slowly; paused, the ring dims. */
+.ring .core { fill: var(--ring-colour); stroke: none; opacity: 0; transform-origin: center; }
+#player[data-phase="rest"] .ring .core { opacity: 0.14; animation: breathe 8s ease-in-out infinite; }
+body.paused .ring :is(.track, .arc) { opacity: 0.4; }
+body.paused .ring .core { animation-play-state: paused; }
+@keyframes breathe { from, to { transform: scale(0.82); } 50% { transform: scale(1); } }
+@media (prefers-reduced-motion: reduce) {
+  #player[data-phase="rest"] .ring .core { animation: none; }
+  .ring .arc { transition: none; }
+}
+.target { position: relative; margin: 0; font-size: calc(var(--ring) * 0.42); font-weight: 800; font-variant-numeric: tabular-nums; line-height: 1; }
+/* Longer counts and words step down so they stay inside the ring. */
+.target[data-len="3"] { font-size: calc(var(--ring) * 0.32); }
+.target[data-len="5"] { font-size: calc(var(--ring) * 0.2); }
+.target[data-len="long"] { max-width: calc(var(--ring) * 0.72); font-size: max(var(--text-lg), calc(var(--ring) * 0.1)); line-height: 1.15; }
+#player[data-phase="rest"] .target { color: var(--rest); }
+/* The unit, or "Paused" in its place, so the count never moves. */
+.count-unit, .paused-note {
+  position: relative; grid-row: 2; grid-column: 1; min-height: 1lh; margin: var(--space-1) 0 0;
+  font-size: max(var(--text-md), calc(var(--ring) * 0.075)); font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted);
+}
+.paused-note { color: var(--text); }
 
-body.resting .target, body.resting .phase { color: var(--rest); }
+/* Pause and +10 s, then How to and Swap. */
+.stage-actions { display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: var(--space-2) var(--space-3); }
+.timer-actions:not([hidden]) { display: contents; }
+.timer-actions button { min-width: 6.5rem; }
+.stage-actions .quiet { color: var(--muted); }
 
-/* Make room for the figure in the player so the controls stay on screen. */
-.stage:has(.figure-box:not([hidden])) .target { font-size: min(var(--display-1-compact), 10dvh); margin: var(--space-1) 0; }
-.stage:has(.figure-box:not([hidden])) .cues { margin-top: var(--space-2); }
+.cues { list-style: none; margin: 0; padding: 0; font-size: var(--text-cue); display: flex; flex-direction: column; gap: var(--space-2); }
+/* At most two cues on the stage (How to has them all). A cue that doesn't
+   fit whole wraps into a second column, out of sight, rather than showing
+   cut in half; a flex line keeps at least one item, so an empty first one
+   lets even the first cue go. */
+.cues li:nth-child(n+3) { display: none; }
+.stage .cues { flex: 0 1000000 auto; min-height: 0; overflow: hidden; flex-wrap: wrap; }
+.stage .cues li { width: 100%; }
+.stage .cues::before { content: ""; width: 100%; margin-bottom: calc(-1 * var(--space-2)); }
+
+/* The figure is as tall as a share of the stage, the same in every phase, so
+   nothing under it moves: when the stage runs out of room the cues at the
+   bottom give way first, then the figure, down to 10rem. It is scaled whole
+   into its frame. Where it can't
+   be about 10rem tall it is hidden rather than shrunk to a stamp, and the
+   cues go on the shortest stages. */
+#player .figure-box { position: relative; flex: 0 1000 auto; height: clamp(10rem, 30cqh, 22rem); min-height: 10rem; max-width: 40rem; max-height: none; }
+#player .figure-box .figure { position: absolute; inset: 0; width: 100%; height: 100%; }
+@container stage (max-height: 600px) {
+  #player .stage .figure-box { display: none; }
+  .stage-text { --ring: min(40cqh, 72cqw); }
+}
+@container stage (max-height: 520px) {
+  .stage .cues { display: none; }
+}
+/* On a phone the badges step down a size so they keep to one row. */
+@container stage (max-width: 30rem) {
+  .badges { gap: var(--space-1); min-height: var(--control-sm); }
+  .badges > p { font-size: var(--text-md); padding: 0 var(--space-2); }
+  .badges > .side-badge { padding-left: var(--space-1); }
+  .side-letter { width: 1.7em; height: 1.7em; margin-block: 0.15rem; }
+}
+
+/* Landscape on a tablet or a computer: three columns, the figure with one
+   cue under it, the count in its ring as tall as the stage allows, and the
+   name, the badges and the rest beside it. The text column's rows have fixed places;
+   the ring spans them all, with free rows above and below that take what
+   the ring leaves over, so the text sits level with its middle. */
+@media (orientation: landscape) and (min-width: 60rem) and (min-height: 30rem) {
+  #player { max-width: var(--wide); }
+  .stage { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 2.2fr); grid-template-rows: minmax(0, 1fr) auto; gap: var(--space-3) var(--space-6); }
+  #player .stage .figure-box { display: block; grid-column: 1; grid-row: 1; width: 100%; height: auto; max-width: none; min-height: 0; margin: 0; }
+  .stage .cues li:nth-child(n+2) { display: none; }
+  #player .stage .cues:not(:empty) { display: flex; grid-column: 1; grid-row: 2; }
+  .stage-text {
+    display: grid; grid-column: 2; grid-row: 1 / -1; min-width: 0; min-height: 0; align-content: center; text-align: left;
+    grid-template-columns: var(--ring) minmax(0, 1fr); grid-template-rows: 1fr repeat(6, auto) 1fr;
+    column-gap: var(--space-6);
+  }
+  .stage-text > * { grid-column: 2; margin-block: var(--space-1); }
+  .stage-text > .exercise { grid-row: 2; font-size: max(var(--text-xl), min(var(--display-2), 9cqh)); }
+  .stage-text > .badges { grid-row: 3; justify-content: flex-start; }
+  .stage-text > .stage-actions { grid-row: 4; justify-content: flex-start; }
+  .stage-text > .adjust { grid-row: 5; justify-content: flex-start; }
+  .stage-text > .details { grid-row: 6; }
+  .stage-text > .player-gear { grid-row: 7; justify-content: flex-start; }
+  .stage-text > .count-box { grid-column: 1; grid-row: 1 / -1; align-self: center; margin: 0; }
+  .stage-text { --ring: min(88cqh, 30cqw, 30rem); }
+  /* A strip too short for a figure worth seeing: How to still shows it. */
+  @container stage (max-height: 18rem) {
+    #player .stage .figure-box { display: none; }
+  }
+}
 
 .adjust { display: flex; justify-content: center; flex-wrap: wrap; gap: var(--space-2) var(--space-4); }
 /* What the exercise is done with: every item, shown on each exercise; a
@@ -1094,7 +1226,7 @@ body.resting .target, body.resting .phase { color: var(--rest); }
 .player-bottom { display: flex; flex-direction: column; gap: var(--space-3); }
 /* What comes next, and Skip warm-up beside Skip, away from End session. */
 .player-next { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: var(--space-2) var(--space-4); }
-.next { margin: 0; text-align: center; }
+.next { margin: 0; min-height: 1lh; text-align: center; }
 .player-next:has(#skip-part:not([hidden])) { justify-content: space-between; }
 .player-next:has(#skip-part:not([hidden])) .next { text-align: left; }
 #skip-part { margin-left: auto; }
@@ -1106,6 +1238,7 @@ body.resting .target, body.resting .phase { color: var(--rest); }
   border: 2px solid var(--rest); font-size: var(--text-lg);
 }
 .controls .secondary { padding: 0 var(--space-3); white-space: nowrap; }
+.controls #main-action { padding-inline: var(--space-2); }
 .controls .icon { width: 1.1em; height: 1.1em; }
 /* On the narrowest phones Back and Skip are their chevrons (each has an aria-label). */
 @media (max-width: 359px) {
@@ -1143,24 +1276,6 @@ body.resting .target, body.resting .phase { color: var(--rest); }
 .figure circle.glow { fill: var(--glow); stroke: none; }
 .figure circle.outline { fill: var(--figure-bg, var(--bg)); stroke: none; }
 .card .figure { --figure-bg: var(--surface); }
-/* The rest dial takes the figure's place: the ring drains as the rest runs
-   out and the core breathes slowly; paused, it dims and shows pause bars. */
-.rest-dial { height: min(18rem, 28dvh); }
-.rest-dial svg { display: block; width: 100%; height: 100%; }
-.rest-dial circle { fill: none; stroke-width: 6; }
-.rest-dial .track { stroke: var(--border); }
-.rest-dial .arc { stroke: var(--rest); stroke-linecap: round; stroke-dasharray: 1; transform: rotate(-90deg); transform-origin: center; transition: stroke-dashoffset 100ms linear; }
-.rest-dial .core { fill: var(--rest); stroke: none; opacity: 0.18; transform-origin: center; animation: breathe 8s ease-in-out infinite; }
-.rest-dial .pause-bars { fill: var(--rest); display: none; }
-body.paused .rest-dial .track, body.paused .rest-dial .arc { opacity: 0.4; }
-body.paused .rest-dial .core { opacity: 0.07; }
-body.paused .rest-dial .core { animation-play-state: paused; }
-body.paused .rest-dial .pause-bars { display: inline; }
-@keyframes breathe { from, to { transform: scale(0.82); } 50% { transform: scale(1); } }
-@media (prefers-reduced-motion: reduce) {
-  .rest-dial .core { animation: none; }
-  .rest-dial .arc { transition: none; }
-}
 .figure-box.placeholder { display: grid; place-items: center; border: 2px dashed var(--border); border-radius: var(--radius-md); color: var(--muted); height: 8rem; }
 
 /* A session left from before, shown above the pages until resumed or ended */
@@ -1196,17 +1311,9 @@ body:has(#player:not([hidden])) .toast { top: var(--toast-top, calc(max(var(--sp
 .part-toggle { width: 1.5rem; height: 1.5rem; margin: 0; flex: none; }
 .left-out .row-title { text-decoration: line-through; color: var(--muted); }
 
-/* Which set, under the exercise name, readable from the mat */
-.set-label { margin: 0; font-size: var(--text-xl); font-weight: 700; }
-
-/* Countdowns pause with the Pause button or a tap on the time; a paused one says so */
-#target.pausable { cursor: pointer; }
 /* The load line names the gear ("Kettlebell, 40 lb"): room for it, so the
    buttons stay put as the weight steps. */
 #weight-stepper span { min-width: 10rem; }
-.paused-note { margin: 0; font-size: var(--text-lg); font-weight: 700; color: var(--accent); }
-.timer-actions { display: flex; justify-content: center; flex-wrap: wrap; gap: var(--space-3); }
-.timer-actions button { min-width: 6rem; }
 
 /* Get ready: what to pick up, and a compact stepper per weighted exercise */
 #ready-pickup .row-meta { white-space: normal; }
@@ -1220,57 +1327,12 @@ body:has(#player:not([hidden])) .toast { top: var(--toast-top, calc(max(var(--sp
 #ready-targets .stepper button { min-width: var(--control-sm); min-height: var(--control-sm); }
 #ready-targets .stepper span { min-width: 6rem; }
 
-/* Short screens: the stage gives way in order, figure first (above), then the
-   cues (at most two, none under 720px tall: How to has them all). */
-.cues li:nth-child(n+3) { display: none; }
-@media (max-height: 720px) {
-  .stage { gap: var(--space-1); }
-  .cues { display: none; }
-  .stage .exercise { font-size: min(var(--display-2), 5dvh); }
-}
-/* Too short for a figure above the text (landscape on a tablet puts it
-   beside, below): How to still shows it. */
-@media (max-height: 700px) {
-  #player .figure-box { display: none; }
-}
-.stage-links .quiet { color: var(--muted); }
 /* The weight and reps steppers share one row in the player. */
 .adjust .stepper { font-size: var(--text-lg); gap: var(--space-1); }
 .adjust .stepper button { min-width: var(--control-sm); min-height: var(--control-sm); }
 .adjust .stepper span { min-width: 3.5rem; white-space: nowrap; }
 @media (max-width: 400px) {
   .adjust { column-gap: var(--space-2); }
-}
-/* The figure gives way first, then the cues (cut at the bottom); the rest
-   keeps its size. Empty lines take no room. The text is one box only in two
-   columns (below); otherwise its lines are the stage's own. */
-.stage-text { display: contents; }
-.stage > *, .stage-text > * { flex: none; }
-.stage > .figure-box { flex: 0 1000 auto; min-height: 4.5rem; }
-/* A cue that doesn't fit whole wraps into a second column, out of sight,
-   rather than showing cut in half. */
-.stage-text > .cues { flex: 0 1 auto; min-height: 0; overflow: hidden; flex-wrap: wrap; }
-.stage-text > .cues li { width: 100%; }
-/* A flex line keeps at least one item: an empty first one lets even the
-   first cue wrap out of sight. */
-.stage-text > .cues::before { content: ""; width: 100%; margin-bottom: calc(-1 * var(--space-2)); }
-.stage-text > p:empty, .stage-text > .cues:empty { display: none; }
-/* The player's figure is as tall as its shape needs at the frame's width,
-   and is scaled whole into whatever height it is given: never cut, never
-   over the text. */
-#player .figure-box:not(.rest-dial) { position: relative; aspect-ratio: var(--figure-aspect, 1.5); }
-#player .figure-box .figure { position: absolute; inset: 0; width: 100%; height: 100%; }
-
-/* Landscape on a tablet or a computer: the figure on the left, as tall as the
-   stage, the text beside it. Neither gives way to the other, so the figure
-   stays on screens too short for it above the text (but not on a strip). */
-@media (orientation: landscape) and (min-width: 60rem) and (min-height: 30rem) {
-  #player { max-width: var(--wide); }
-  .stage { flex-direction: row; align-items: stretch; gap: var(--space-6); }
-  #player .stage > .figure-box { display: block; flex: 1 1 0; height: auto; aspect-ratio: auto; max-width: none; max-height: none; min-height: 0; margin: 0; }
-  .stage-text { display: flex; flex-direction: column; justify-content: safe center; gap: var(--space-2); flex: 1.25 1 0; min-width: 0; min-height: 0; }
-  .stage-text .exercise { font-size: min(var(--display-2), 6.5dvh); }
-  #player .stage-text > .cues:not(:empty) { display: flex; }
 }
 .player-where > span { display: block; }
 
