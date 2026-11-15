@@ -56,15 +56,20 @@ export function extraSeconds(phase) {
   return { lead: 10, rest: 15 }[phase] ?? 0;
 }
 
-// What a rest says about the exercise after it: "Set 2 of 3 · 8 reps ·
-// 40 lb · left side first". `weight` is the weight as shown, if any.
-export function upNextDetails(item, weight) {
-  const bits = [setLabel(item)];
-  bits.push(amountText({
+// What a rest says above the exercise after it: "Up next · set 2 of 3".
+export function upNextLabel(item) {
+  const set = setLabel(item);
+  return set ? `Up next · ${set.toLowerCase()}` : "Up next";
+}
+
+// And under its name: "8 reps each side · 2 s down · up fast · left side
+// first". The load has its own line.
+export function upNextDetails(item) {
+  const bits = [amountText({
     reps: item.mode === "timed" ? null : item.reps, seconds: item.mode === "timed" ? item.seconds : null,
     perSide: !!item.side, alternating: item.exercise?.alternating,
-  }));
-  bits.push(weight);
+  })];
+  if (item.mode !== "timed") bits.push(tempoText(item.tempo));
   if (item.side) bits.push(`${item.side} side first`);
   return bits.filter(Boolean).join(" · ");
 }
@@ -135,7 +140,15 @@ export function swapRun(run, index, alternative) {
   for (const [i, status] of Object.entries(run.logged ?? {})) {
     if (moved[i] < moved[Number(i) + 1]) logged[moved[i]] = status;
   }
-  return { ...run, items, logged };
+  // Reps changed on a set that stays move with it; a swapped set starts
+  // again from its new target.
+  const reps = {};
+  for (const [i, done] of Object.entries(run.reps ?? {})) {
+    const item = run.items[i];
+    const swapped = Number(i) >= index && item?.type === "exercise" && plannedExercise(item).id === plannedId;
+    if (!swapped && moved[i] < moved[Number(i) + 1]) reps[moved[i]] = done;
+  }
+  return { ...run, items, logged, ...(run.reps ? { reps } : {}) };
 }
 
 // The sides an item becomes: a two-sided set splits into left and right, and
@@ -346,6 +359,14 @@ export function stepAnnouncement(item, { weight = null, next = null, switching =
 }
 
 // The big count as words: "8 reps", "45 seconds", or the step's note.
+// A set of reps counts what was done, the target until changed: the unit
+// under the number ("reps", or "of 8" once changed) and the words a screen
+// reader says for it.
+export function repsCount(item, done) {
+  if (done !== item.reps) return { unit: `of ${item.reps}`, spoken: `${done} of ${item.reps} reps` };
+  return { unit: item.reps === 1 ? "rep" : "reps", spoken: spokenAmount(item) };
+}
+
 export function spokenTarget(item, { phase, seconds = null } = {}) {
   if (phase === "reps") return spokenAmount(item) || "Go";
   return seconds == null ? "" : spokenCount(seconds, "second");

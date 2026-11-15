@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { previousIndex, switchesSides, mainActionLabel, stepAnnouncement, spokenTarget, spokenWeight, tapAccepted, TAP_GUARD_MS, holdStatus, MIN_HOLD_SECONDS, unloggedExercises, plannedExercise, swapExercise, swapRun, shortlist, SHORTLIST, resumeChoice, sessionProgress, endsEarly, loggedFromServer, pickUpIndex, partEnd, setLabel, minutesLeft, progressAt, tempoText, leadInSeconds, GEAR_LEAD_IN, extraSeconds, upNextDetails, equipmentChanges, finishSummary, framingLine, itemPart, swapTargets } from "../../public/js/player.js";
+import { previousIndex, switchesSides, mainActionLabel, stepAnnouncement, spokenTarget, spokenWeight, tapAccepted, TAP_GUARD_MS, holdStatus, MIN_HOLD_SECONDS, unloggedExercises, plannedExercise, swapExercise, swapRun, shortlist, SHORTLIST, resumeChoice, sessionProgress, endsEarly, loggedFromServer, pickUpIndex, partEnd, setLabel, minutesLeft, progressAt, tempoText, leadInSeconds, GEAR_LEAD_IN, extraSeconds, repsCount, upNextLabel, upNextDetails, equipmentChanges, finishSummary, framingLine, itemPart, swapTargets } from "../../public/js/player.js";
 
 const squat = { id: 1, name: "Goblet squat", equipment: ["dumbbell"], default_reps: 8, default_seconds: null };
 const deadlift = { id: 2, name: "Straight-leg deadlift", equipment: ["dumbbell"], default_reps: 12, default_seconds: null };
@@ -79,9 +79,11 @@ test("adds more time to a lead-in or a rest, never to a hold", () => {
 });
 
 test("says what comes after a rest", () => {
-  assert.equal(upNextDetails(set(squat, 2, { side: "left" }), "40 lb"), "Set 2 of 2 · 8 reps each side · 40 lb · left side first");
-  assert.equal(upNextDetails(set({ ...squat, alternating: true }, 1, { reps: 10, block: { round: 1, rounds: 1 } }), null), "10 reps in total, 5 each side");
-  assert.equal(upNextDetails(set(plank, 1, { mode: "timed", reps: null, seconds: 45, block: { round: 1, rounds: 1 } }), null), "45 s");
+  assert.equal(upNextLabel(set(squat, 2)), "Up next · set 2 of 2");
+  assert.equal(upNextLabel(set(squat, 1, { block: { round: 1, rounds: 1 } })), "Up next");
+  assert.equal(upNextDetails(set(squat, 2, { side: "left", tempo: "3010" })), "8 reps each side · 3 s down · 1 s up · left side first");
+  assert.equal(upNextDetails(set({ ...squat, alternating: true }, 1, { reps: 10, block: { round: 1, rounds: 1 } })), "10 reps in total, 5 each side · 3 s down · 1 s up");
+  assert.equal(upNextDetails(set(plank, 1, { mode: "timed", reps: null, seconds: 45, block: { round: 1, rounds: 1 } })), "45 s");
 });
 
 test("uses the chosen lead-in when moving on with the same gear, and at most 5 s after a rest or between sets", () => {
@@ -233,6 +235,21 @@ test("keeps the logged marks on their items when a swap adds sides", () => {
   assert.equal(run.items.length, 4);
   assert.deepEqual(run.logged, { 0: "done" });
   assert.deepEqual(swapRun({ items, logged: { 0: "done", 2: "skipped" } }, 1, { ...lunge, weight: null }).logged, { 0: "done", 3: "skipped" });
+});
+
+test("moves changed reps with their sets when a swap adds sides, and drops them on the swapped sets", () => {
+  const items = [set(squat, 1), set(plank, 1, { step_id: 12 }), set(squat, 2), set(plank, 2, { step_id: 12 })];
+  const run = swapRun({ items, logged: {}, reps: { 0: 6, 2: 7, 3: 5 } }, 2, { ...lunge, weight: null });
+
+  assert.deepEqual(run.items.map((i) => i.exercise.id), [1, 3, 4, 4, 3]);
+  assert.deepEqual(run.reps, { 0: 6, 4: 5 });
+});
+
+test("counts a set of reps as done, the target until changed", () => {
+  const squats = set(squat, 1, { reps: 8 });
+  assert.deepEqual(repsCount(squats, 8), { unit: "reps", spoken: "8 reps" });
+  assert.deepEqual(repsCount(squats, 7), { unit: "of 8", spoken: "7 of 8 reps" });
+  assert.deepEqual(repsCount(set(squat, 1, { reps: 1 }), 1), { unit: "rep", spoken: "1 rep" });
 });
 
 test("shortlists alternatives that train the same or a similar movement, the session's own last", () => {

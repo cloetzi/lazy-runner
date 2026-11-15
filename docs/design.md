@@ -129,8 +129,16 @@ measured against the room it has, not the window.
 - **Landscape on a tablet or computer** (at least 60rem wide and 30rem tall):
   three columns, the figure with one cue, the ring as tall as the stage
   allows, and the name, badges, buttons and steppers beside it.
+- **A set of reps** counts what was done: − and + of 4rem either side of
+  the number, which reads "7" over "of 8" once changed.
+- **The load line** is a card of its own: the gear and its weight
+  ("Kettlebell, 40 lb"), then − and + at `--control-md`.
 - **The progress bar fills by time**, not by screens (`progressAt`).
 
-A rest shows the next exercise as a still figure (a moving one reads as "do
-this now"), its ring in `--rest` around a slowly breathing core (still under
-reduced motion), dimmed when paused, with "Paused" in place of the unit.
+A rest prepares the next set: "Up next · set 2 of 3" over the exercise's
+name, its reps and tempo, its load line, and How to and Swap for it (both
+pause the rest, and Resume carries on; a swap there changes the sets to come
+and stays in the rest). The figure is that exercise standing still (a
+moving one reads as "do this now"); the ring is in `--rest` around a slowly
+breathing core (still under reduced motion), dimmed when paused, with
+"Paused" in place of the unit.

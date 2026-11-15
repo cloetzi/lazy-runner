@@ -1084,6 +1084,8 @@ body:not(.calendar-month) .calendar-key { display: none; }
 
 /* The name never drops below the badges' size. */
 .exercise { margin: 0; font-size: max(var(--text-xl), min(var(--display-2), 6cqh)); line-height: 1.1; text-wrap: balance; }
+/* In a rest, above the name of what is coming: "Up next · set 2 of 3". */
+.up-next { margin: 0; font-size: var(--text-lg); font-weight: 600; color: var(--muted); }
 .details { margin: 0; font-size: var(--text-lg); color: var(--muted); }
 
 /* The phase, the side and the set: each a badge with its word, in one row
@@ -1117,6 +1119,26 @@ body:not(.calendar-month) .calendar-key { display: none; }
 #player:is([data-phase="work"], [data-phase="switch"]) .count-box { --ring-colour: var(--accent-bright); }
 #player[data-phase="rest"] .count-box { --ring-colour: var(--rest); }
 .count-box.pausable { cursor: pointer; }
+/* A set of reps: − and + either side of the number, which counts what was
+   done; the box may grow wider than the ring for them. */
+.count-step { grid-row: 1 / span 2; align-self: center; position: relative; width: 4rem; min-width: 4rem; height: 4rem; padding: 0; }
+.count-step .icon { width: 1.6rem; height: 1.6rem; }
+#reps-down { grid-column: 1; }
+#reps-up { grid-column: 3; }
+.count-box.counting { width: auto; min-width: var(--ring); column-gap: var(--space-3); }
+.count-box.counting .target { font-size: calc(var(--ring) * 0.36); }
+.count-box.counting .target:is([data-len="3"], [data-len="5"]) { font-size: calc(var(--ring) * 0.26); }
+
+/* The load line: the gear and its weight, then − and +, in a card of its
+   own so the stepper reads as the weight's. */
+.load-line {
+  display: flex; align-items: center; gap: var(--space-2); width: 100%; max-width: 30rem; margin-inline: auto;
+  padding: var(--space-2) var(--space-2) var(--space-2) var(--space-4);
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg);
+}
+.load-value { flex: 1; min-width: 0; text-align: left; font-size: var(--text-lg); font-weight: 700; }
+.load-line button { width: var(--control-md); min-width: var(--control-md); height: var(--control-md); padding: 0; flex: none; }
+.load-line .icon { width: 1.4rem; height: 1.4rem; }
 .ring { position: absolute; inset: 0; width: 100%; height: 100%; }
 .ring circle { fill: none; stroke-width: 6; }
 /* The track is a faint tint of the ring's own colour, so what has drained
@@ -1133,7 +1155,7 @@ body.paused .ring .core { animation-play-state: paused; }
   #player[data-phase="rest"] .ring .core { animation: none; }
   .ring .arc { transition: none; }
 }
-.target { position: relative; margin: 0; font-size: calc(var(--ring) * 0.42); font-weight: 800; font-variant-numeric: tabular-nums; line-height: 1; }
+.target { position: relative; grid-column: 2; margin: 0; font-size: calc(var(--ring) * 0.42); font-weight: 800; font-variant-numeric: tabular-nums; line-height: 1; }
 /* Longer counts and words step down so they stay inside the ring. */
 .target[data-len="3"] { font-size: calc(var(--ring) * 0.32); }
 .target[data-len="5"] { font-size: calc(var(--ring) * 0.2); }
@@ -1141,7 +1163,7 @@ body.paused .ring .core { animation-play-state: paused; }
 #player[data-phase="rest"] .target { color: var(--rest); }
 /* The unit, or "Paused" in its place, so the count never moves. */
 .count-unit, .paused-note {
-  position: relative; grid-row: 2; grid-column: 1; min-height: 1lh; margin: var(--space-1) 0 0;
+  position: relative; grid-row: 2; grid-column: 2; min-height: 1lh; margin: var(--space-1) 0 0;
   font-size: max(var(--text-md), calc(var(--ring) * 0.075)); font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted);
 }
 .paused-note { color: var(--text); }
@@ -1183,6 +1205,8 @@ body.paused .ring .core { animation-play-state: paused; }
   .badges > p { font-size: var(--text-md); padding: 0 var(--space-2); }
   .badges > .side-badge { padding-left: var(--space-1); }
   .side-letter { width: 1.7em; height: 1.7em; margin-block: 0.15rem; }
+  .load-line { padding-left: var(--space-3); }
+  .load-value { font-size: var(--text-md); text-wrap: balance; }
 }
 
 /* Landscape on a tablet or a computer: three columns, the figure with one
@@ -1198,17 +1222,19 @@ body.paused .ring .core { animation-play-state: paused; }
   #player .stage .cues:not(:empty) { display: flex; grid-column: 1; grid-row: 2; }
   .stage-text {
     display: grid; grid-column: 2; grid-row: 1 / -1; min-width: 0; min-height: 0; align-content: center; text-align: left;
-    grid-template-columns: var(--ring) minmax(0, 1fr); grid-template-rows: 1fr repeat(6, auto) 1fr;
+    grid-template-columns: minmax(var(--ring), max-content) minmax(0, 1fr); grid-template-rows: 1fr repeat(7, auto) 1fr;
     column-gap: var(--space-6);
   }
   .stage-text > * { grid-column: 2; margin-block: var(--space-1); }
-  .stage-text > .exercise { grid-row: 2; font-size: max(var(--text-xl), min(var(--display-2), 9cqh)); }
-  .stage-text > .badges { grid-row: 3; justify-content: flex-start; }
-  .stage-text > .stage-actions { grid-row: 4; justify-content: flex-start; }
-  .stage-text > .adjust { grid-row: 5; justify-content: flex-start; }
-  .stage-text > .details { grid-row: 6; }
-  .stage-text > .player-gear { grid-row: 7; justify-content: flex-start; }
-  .stage-text > .count-box { grid-column: 1; grid-row: 1 / -1; align-self: center; margin: 0; }
+  /* The details sit under the name here: beside the ring they move nothing. */
+  .stage-text > .up-next { grid-row: 2; }
+  .stage-text > .exercise { grid-row: 3; font-size: max(var(--text-xl), min(var(--display-2), 9cqh)); }
+  .stage-text > .details { grid-row: 4; }
+  .stage-text > .badges { grid-row: 5; justify-content: flex-start; }
+  .stage-text > .load-line { grid-row: 6; margin-inline: 0; }
+  .stage-text > .stage-actions { grid-row: 7; justify-content: flex-start; }
+  .stage-text > .player-gear { grid-row: 8; justify-content: flex-start; }
+  .stage-text > .count-box { grid-column: 1; grid-row: 1 / -1; align-self: center; justify-self: center; margin: 0; }
   .stage-text { --ring: min(88cqh, 30cqw, 30rem); }
   /* A strip too short for a figure worth seeing: How to still shows it. */
   @container stage (max-height: 18rem) {
@@ -1216,7 +1242,6 @@ body.paused .ring .core { animation-play-state: paused; }
   }
 }
 
-.adjust { display: flex; justify-content: center; flex-wrap: wrap; gap: var(--space-2) var(--space-4); }
 /* What the exercise is done with: every item, shown on each exercise; a
    change of gear from the exercise before is marked in the accent. */
 .player-gear { justify-content: center; }
@@ -1311,10 +1336,6 @@ body:has(#player:not([hidden])) .toast { top: var(--toast-top, calc(max(var(--sp
 .part-toggle { width: 1.5rem; height: 1.5rem; margin: 0; flex: none; }
 .left-out .row-title { text-decoration: line-through; color: var(--muted); }
 
-/* The load line names the gear ("Kettlebell, 40 lb"): room for it, so the
-   buttons stay put as the weight steps. */
-#weight-stepper span { min-width: 10rem; }
-
 /* Get ready: what to pick up, and a compact stepper per weighted exercise */
 #ready-pickup .row-meta { white-space: normal; }
 #ready-targets li { align-items: center; }
@@ -1327,13 +1348,6 @@ body:has(#player:not([hidden])) .toast { top: var(--toast-top, calc(max(var(--sp
 #ready-targets .stepper button { min-width: var(--control-sm); min-height: var(--control-sm); }
 #ready-targets .stepper span { min-width: 6rem; }
 
-/* The weight and reps steppers share one row in the player. */
-.adjust .stepper { font-size: var(--text-lg); gap: var(--space-1); }
-.adjust .stepper button { min-width: var(--control-sm); min-height: var(--control-sm); }
-.adjust .stepper span { min-width: 3.5rem; white-space: nowrap; }
-@media (max-width: 400px) {
-  .adjust { column-gap: var(--space-2); }
-}
 .player-where > span { display: block; }
 
 /* Today's "Getting set up" card: a row per step, ticked off as it is done. */

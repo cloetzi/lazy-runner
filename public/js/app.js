@@ -10,7 +10,7 @@ import { escape, icon, authorLine, busy, showSheet } from "./html.js";
 import { offlineToday } from "./offline.js";
 import { setupRows, setupLeft } from "./setup.js";
 import { blockName, blockSummary, stepSummary, alternatingText, setWeight, includedKinds, framingFor, framePlan, gearList, carrierOf } from "./workout.js";
-import { previousIndex, switchesSides, mainActionLabel, stepAnnouncement, spokenTarget, tapAccepted, holdStatus, unloggedExercises, plannedExercise, swapRun, resumeChoice, sessionProgress, endsEarly, loggedFromServer, pickUpIndex, partEnd, setLabel, minutesLeft, tempoText, leadInSeconds, extraSeconds, progressAt, upNextDetails, equipmentChanges, finishSummary, framingLine, swapTargets } from "./player.js";
+import { previousIndex, switchesSides, mainActionLabel, stepAnnouncement, spokenTarget, tapAccepted, holdStatus, unloggedExercises, plannedExercise, swapRun, resumeChoice, sessionProgress, endsEarly, loggedFromServer, pickUpIndex, partEnd, setLabel, minutesLeft, tempoText, leadInSeconds, extraSeconds, progressAt, repsCount, upNextLabel, upNextDetails, equipmentChanges, finishSummary, framingLine, swapTargets } from "./player.js";
 import { rpeOptions, toggleRpe } from "./rpe-picker.js";
 import { openSwap, prefetchAlternatives, forgetAlternatives } from "./swap.js";
 import { mountNav } from "./nav.js";
@@ -1343,7 +1343,7 @@ function repsDone() {
 // picked while setting up.
 function changeWeight(direction) {
   const run = state.run;
-  const at = current().type === "rest" ? nextExerciseIndex() : run.index;
+  const at = shownIndex();
   const item = run.items[at];
   const weight = stepTargetWeight(item.weight, item.equipment, direction, run.weightSteps, item.allowed_weights, item.weight_unit);
   if (sameWeight(weight, item.weight)) return;
@@ -1436,14 +1436,15 @@ function render() {
   if ($("player").dataset.phase !== phase) $("player").dataset.phase = phase;
   setText("phase", { lead: "Get ready", work: "Go", rest: "Rest", switch: "Switch sides" }[phase] ?? "");
   setHidden("phase", phase === "reps");
+  // A rest prepares the next set: what it is, how much, the load to pick up.
+  setHidden("up-next", !next);
+  if (next) setText("up-next", upNextLabel(next));
   if (resting) {
-    setText("exercise-name", next ? `Next: ${next.exercise.name}` : "Rest");
+    setText("exercise-name", next ? next.exercise.name : "Rest");
     setHidden("side", true);
     setHidden("set-label", true);
-    if (next) renderSteppers(next);
-    else setHidden("adjust", true);
-    // The stepper names the load; the line says the rest.
-    setText("details", next ? upNextDetails(next, null) : "");
+    renderLoadLine(next);
+    setText("details", next ? upNextDetails(next) : "");
     renderGear(next, nextExerciseIndex());
     setHtml("cues", "");
   } else {
@@ -1453,16 +1454,24 @@ function render() {
     setHidden("side", !item.side);
     // The side as a large letter as well as the word.
     setHtml("side", item.side ? `<span class="side-letter" aria-hidden="true">${item.side === "left" ? "L" : "R"}</span>${item.side === "left" ? "Left" : "Right"} side` : "");
-    renderSteppers(item);
+    renderLoadLine(item);
     setText("details", details(item));
     renderGear(item, run.index);
     setHtml("cues", item.exercise.cues.map((cue) => `<li>${escape(cue)}</li>`).join(""));
   }
-  const shown = state.phase === "reps" && !resting ? repsTarget(item) : seconds;
+  // A set of reps counts what was done, the target until changed: "7" over
+  // "of 8", with − and + either side.
+  const counting = state.phase === "reps" && !resting && !!item.reps;
+  setHidden("reps-down", !counting);
+  setHidden("reps-up", !counting);
+  $("count-box").classList.toggle("counting", counting);
+  const count = counting ? repsCount(item, repsDone()) : null;
+  // A set with no reps to log shows its note ("max"), or "Go".
+  const shown = counting ? repsDone() : state.phase === "reps" && !resting ? item.note ?? "Go" : seconds;
   // A countdown keeps the size of its longest number all the way down.
   const longest = state.timer ? String(Math.ceil(state.timer.totalMs / 1000)) : "";
-  renderTarget(shown, spokenTarget(item, { phase: state.phase, seconds }), longest);
-  const unit = state.timer ? (seconds === 1 ? "second" : "seconds") : item.reps ? (item.reps === 1 ? "rep" : "reps") : "";
+  renderTarget(shown, count?.spoken ?? spokenTarget(item, { phase: state.phase, seconds }), longest);
+  const unit = state.timer ? (seconds === 1 ? "second" : "seconds") : count?.unit ?? "";
   setText("count-unit", paused ? "" : unit);
 
   // The ring drains for holds, lead-ins and rests; a set of reps has none,
@@ -1473,8 +1482,9 @@ function render() {
   // A rest shows the next exercise standing still: a moving figure reads
   // as "do this now".
   renderFigure(resting ? next : item, { still: resting });
-  setHidden("howto-open", resting);
-  setHidden("swap-open", resting);
+  // In a rest, How to and Swap are for the exercise coming up.
+  setHidden("howto-open", resting && !next);
+  setHidden("swap-open", resting && !next);
 
   const after = run.items[run.index + 1];
   // A rest already says what is next.
@@ -1533,17 +1543,29 @@ function clearFigure() {
   $("figure").hidden = true;
 }
 
+// The set How to, Swap and the load line act on: in a rest, the one coming up.
+function shownIndex() {
+  return current().type === "rest" ? nextExerciseIndex() : state.run.index;
+}
+
+function shownExercise() {
+  return state.run.items[shownIndex()];
+}
+
 // Pauses a running countdown while the how-to is open; Resume carries on.
 function showHowto() {
-  const item = current();
+  const item = shownExercise();
   if (state.timer && countdown.isRunning(state.timer)) togglePause();
   openHowto(item.exercise, { mirror: item.side === "right", tempo: item.tempo });
 }
 
 // Swapping pauses a running countdown, like the how-to; picking an exercise
-// restarts the current set with it.
+// restarts the current set with it. In a rest it swaps the exercise coming
+// up, and the rest carries on.
 function showSwap() {
-  const item = current();
+  const resting = current().type === "rest";
+  const index = shownIndex();
+  const item = state.run.items[index];
   if (state.timer && countdown.isRunning(state.timer)) togglePause();
   openSwap({
     planned: plannedExercise(item),
@@ -1551,8 +1573,11 @@ function showSwap() {
     inSession: new Set(state.run.items.filter((i) => i.type === "exercise").map((i) => i.exercise.id)),
     unit: state.unit,
     onPick: (exercise) => {
-      Object.assign(state.run, swapRun(state.run, state.run.index, exercise));
-      goTo(state.run.index);
+      Object.assign(state.run, swapRun(state.run, index, exercise));
+      if (!resting) return goTo(state.run.index);
+      saveRun();
+      render();
+      announceStep();
     },
   });
 }
@@ -1561,21 +1586,13 @@ function prefetchSwaps() {
   prefetchAlternatives(state.run.items.filter((i) => i.type === "exercise").map((i) => plannedExercise(i).id));
 }
 
-function renderSteppers(item) {
-  const weighted = takesWeight(item);
-  const counted = state.phase === "reps" && !!item.reps;
-  setHidden("adjust", !weighted && !counted);
+// The load line: what to pick up and its weight, with its stepper.
+function renderLoadLine(item) {
+  const weighted = !!item && takesWeight(item);
   setHidden("weight-stepper", !weighted);
-  setHidden("reps-stepper", !counted);
   if (weighted) setText("weight-value", loadLine(item));
-  // What was actually done, the target until changed.
-  if (counted) setText("reps-value", repsDone() === item.reps ? `did ${item.reps}` : `did ${repsDone()} of ${item.reps}`);
 }
 
-function repsTarget(item) {
-  if (item.reps) return String(item.reps);
-  return item.note ?? "Go";
-}
 
 function details(item) {
   const bits = [];
@@ -2241,7 +2258,7 @@ $("quit").onclick = quit;
 // Tapping a countdown pauses or resumes it; the Pause button beside it does
 // the same for a keyboard or a screen reader.
 // A screen reader's activation (no pointer: detail 0) only reads it.
-$("count-box").onclick = (event) => { if (event.detail > 0) togglePause(); };
+$("count-box").onclick = (event) => { if (event.detail > 0 && !event.target.closest("button")) togglePause(); };
 $("pause").onclick = togglePause;
 $("more-time").onclick = moreTime;
 $("skip-part").onclick = skipPart;

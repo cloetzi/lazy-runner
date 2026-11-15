@@ -196,6 +196,13 @@ test("runs Workout 1, finishes offline and syncs once back online", async () => 
     await fitsOnScreen(page, size);
   }
   await page.setViewportSize({ width: 390, height: 844 });
+  // − and + beside the count log what was done: "7" over "of 8".
+  const planned = Number(await page.locator("#target-shown").textContent());
+  await page.locator("#reps-down").click();
+  assert.equal(await page.locator("#target-shown").textContent(), String(planned - 1));
+  assert.equal(await page.locator("#count-unit").textContent(), `of ${planned}`);
+  await page.locator("#reps-up").click();
+  assert.equal(await page.locator("#count-unit").textContent(), "reps");
   await tapMain(page); // goblet squat, set 1
   await page.locator("#player").getByText("Straight-leg deadlift", { exact: true }).waitFor();
   await tapMain(page); // deadlift, set 1
@@ -233,12 +240,23 @@ test("runs Workout 1, finishes offline and syncs once back online", async () => 
   await page.locator("#pause").click();
   await page.locator("#paused-note").waitFor({ state: "hidden" });
 
+  // The rest prepares the next set: what it is, and How to for it, which
+  // pauses the rest while it is open.
+  assert.equal(await page.locator("#up-next").textContent(), "Up next · set 2 of 3");
+  assert.equal(await page.locator("#exercise-name").textContent(), "Goblet squat");
+  await page.locator("#howto-open").click();
+  await page.locator("#howto").getByRole("heading", { name: "Goblet squat" }).waitFor();
+  await page.locator("#howto").getByRole("button", { name: "Close" }).click();
+  await page.locator("#paused-note").waitFor();
+  await page.locator("#pause").click();
+
   await context.setOffline(true);
   // A rest has one way forward, named for it.
   assert.equal(await page.locator("#skip").isHidden(), true);
   assert.equal(await page.locator("#main-action").textContent(), "Start set 2 now");
   await tapMain(page); // the rest
-  await page.locator("#player").getByText("Goblet squat", { exact: true }).waitFor();
+  await page.locator('#player[data-phase="reps"]').waitFor();
+  assert.equal(await page.locator("#exercise-name").textContent(), "Goblet squat");
   await tapMain(page); // goblet squat, set 2, logged offline
   await page.locator("#quit").click();
   await page.locator('#end-sheet button[value="finish"]').waitFor();
