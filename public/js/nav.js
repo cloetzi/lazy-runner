@@ -51,6 +51,9 @@ async function askAccount({ again = false } = {}) {
   showOffline();
   const { switched } = await adoptAccount(me.user, { storage, caches: globalThis.caches });
   if (switched) return location.reload();
+  // For a page that drew from the stored account before there was one
+  // (Settings, after Safari cleared the site's data).
+  dispatchEvent(new CustomEvent("lazy-runner:account", { detail: me.user }));
   showUser(me.user.username);
   showCoachNews(me.coachUnseen, asked);
   setTimeout(ahead, AHEAD_AFTER_MS);

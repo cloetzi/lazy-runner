@@ -658,6 +658,12 @@ test("makes an API token on Settings that an assistant signs in to /mcp with", a
 
 test("invites a second user, who is welcomed and sees none of the owner's things", async () => {
   const owner = await ownerPage();
+  // With no account kept on the device (Safari cleared the site's data),
+  // People still opens once the server says who is signed in.
+  await owner.page.goto("/settings.html#account");
+  // Once nav.js has stored the account (it names the user), not before.
+  await owner.page.waitForFunction(() => document.querySelector(".nav-user-name")?.textContent);
+  await owner.page.evaluate(() => localStorage.removeItem("account"));
   await owner.page.goto("/settings.html#users");
   await owner.page.locator("#user-list").getByText(OWNER.username).waitFor();
   await owner.page.locator('#new-invite-form input[name="label"]').fill("For a friend");

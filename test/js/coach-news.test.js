@@ -30,7 +30,7 @@ test("says what each agent did, a line each, the latest agent first", () => {
     ],
     notes: [{ kind: "status", author_name: "Coach agent", created_at: at(10) }, { kind: "status", author_name: "Coach agent", created_at: at(10) }, { kind: "note", author_name: "Coach agent", created_at: at(10) }, { kind: "note", author_name: "Coach agent", created_at: at(10) }],
     goals: [{ agent_name: "Coach agent", created_at: at(10) }, { agent_name: null, created_at: at(10) }],
-    activities: [{ agent_name: "Coach agent", count: 8, from: "2026-10-27", to: "2026-11-15", sources: ["Garmin"], created_at: at(8) }],
+    activities: [{ agent_name: "Coach agent", count: 8, from: "2026-10-27", to: "2026-11-15", sources: ["garmin"], created_at: at(8) }],
   };
   const groups = newsGroups(news, { today });
   assert.deepEqual(groups.map((g) => g.who), ["Coach agent", "Trainer"]);

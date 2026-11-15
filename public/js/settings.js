@@ -110,8 +110,7 @@ function showError(element, message) {
   element.hidden = !message;
 }
 
-function renderAccount() {
-  const account = storedAccount(storage);
+function renderAccount(account = storedAccount(storage)) {
   $("account-who").innerHTML = account ? `Signed in as <strong>${escape(account.username)}</strong>.` : "Signed in.";
 }
 
@@ -421,6 +420,9 @@ function openSection(hash, { scroll = true } = {}) {
   else scrollTo(0, 0);
 }
 
+// Whether the reader has moved between sections themselves.
+let wandered = false;
+
 // A phone goes into a section and back out, a step in the history each; the
 // tabs and the list beside the section switch in place.
 document.querySelector(".settings-sections").onclick = (event) => {
@@ -430,6 +432,7 @@ document.querySelector(".settings-sections").onclick = (event) => {
   if (phone.matches) history.pushState({ fromList: true }, "", link.hash);
   else history.replaceState(null, "", link.hash);
   followed = location.hash;
+  wandered = true;
   openSection(link.hash);
   if (phone.matches) {
     const heading = $(`${link.dataset.section}-title`);
@@ -442,6 +445,7 @@ for (const button of document.querySelectorAll("[data-back]")) {
     if (history.state?.fromList) return history.back();
     history.pushState(null, "", location.pathname + location.search);
     followed = "";
+    wandered = true;
     openSection("");
   };
 }
@@ -450,6 +454,7 @@ let followed = location.hash;
 const follow = () => {
   if (location.hash === followed) return;
   followed = location.hash;
+  wandered = true;
   openSection(location.hash);
 };
 addEventListener("popstate", follow);
@@ -461,6 +466,25 @@ phone.onchange = () => openSection(main.dataset.open ? `#${main.dataset.open}` :
 let usersLoaded = Promise.resolve();
 showPeople(!storage || Boolean(storedAccount(storage)?.owner));
 if (peopleShown) usersLoaded = loadUsers();
+
+// The device may not know the account yet (a first load after Safari
+// cleared the site's data): once nav.js has heard it from the server, draw
+// it again, and give the owner People, opening it if the address asked.
+// Once only: a 403 from the users list has the last word.
+const askedFor = location.hash;
+let peopleOffered = peopleShown;
+addEventListener("lazy-runner:account", ({ detail: user }) => {
+  renderAccount(user);
+  if (!user.owner || peopleOffered) return;
+  peopleOffered = true;
+  showPeople(true);
+  loadUsers();
+  if (!wandered && target(askedFor)?.section.id === "people") {
+    history.replaceState(null, "", askedFor);
+    followed = askedFor;
+    openSection(askedFor);
+  }
+});
 
 // ---------- Signing in with the OIDC provider ----------
 

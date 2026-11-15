@@ -1,7 +1,7 @@
 module TrainerMcp
   class UpdateEquipment < Tool
     description <<~TEXT.squish
-      Change the user's equipment inventory, as Settings → Equipment does: whether they own an item, and for
+      Change the user's equipment inventory, as the Equipment page does: whether they own an item, and for
       fixed-weight items (dumbbells, kettlebells) the weights they own and the unit those come in. Fields left out
       are kept; `weights` replaces the list. Use it only for what the user tells you they have (a stool that works as
       a step is the step), and say what you changed. Owning an item opens up the exercises that need it in

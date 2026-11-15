@@ -8,6 +8,7 @@
 import { shortDay } from "./calendar.js";
 import { AGENT_NAME, writtenDay } from "./coach.js";
 import { dayNear, fieldChanges, undoLabel } from "./plan-changes.js";
+import { sourceLabel } from "./activities.js";
 
 // "an activity", "8 activities".
 const plural = (count, one, many = `${one}s`) => (count === 1 ? `${/^[aeiou]/.test(one) ? "an" : "a"} ${one}` : `${count} ${many}`);
@@ -84,7 +85,7 @@ export function newsGroups(news, { today, unit = "km" } = {}) {
       if (item) items.push(item);
     }
     for (const copied of g.copied) {
-      const from = copied.sources.length ? ` from ${listed(copied.sources)}` : "";
+      const from = copied.sources.length ? ` from ${listed(copied.sources.map(sourceLabel))}` : "";
       items.push({ text: `Copied ${plural(copied.count, "activity", "activities")}${from}, ${span(copied.from, copied.to)}`, href: calendarHref(copied.to), title: "them", undo: null });
     }
     const wrote = ["status", "focus", "concern", "note"].map((kind) => {

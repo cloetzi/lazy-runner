@@ -764,7 +764,9 @@ button.step-name .icon { color: var(--muted); }
 body:not(.calendar-month) .calendar-key { display: none; }
 
 .week-days { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-4); }
-.day { display: grid; gap: var(--space-2); border-radius: var(--radius-lg); }
+/* One column no wider than the day: a folded row's one-line text would
+   otherwise widen it past a phone's screen. */
+.day { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-2); border-radius: var(--radius-lg); }
 .day-head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); min-height: var(--control-sm); }
 .day-title { margin: 0; font-size: var(--text-lg); }
 .day.today .day-title > span:first-child {
@@ -1384,7 +1386,7 @@ body.paused .ring .core { animation-play-state: paused; }
 .player-bottom { display: flex; flex-direction: column; gap: var(--space-3); }
 /* What comes next, and Skip warm-up beside Skip, away from End session. */
 .player-next { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: var(--space-2) var(--space-4); }
-.next { margin: 0; min-height: 1lh; text-align: center; }
+.player-next .next { margin: 0; min-height: 1lh; text-align: center; }
 .player-next:has(#skip-part:not([hidden])) { justify-content: space-between; }
 .player-next:has(#skip-part:not([hidden])) .next { text-align: left; }
 #skip-part { margin-left: auto; }
