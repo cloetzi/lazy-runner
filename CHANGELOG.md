@@ -1,5 +1,30 @@
 # Changelog
 
+## [0.8.0](https://github.com/cloetzi/lazy-runner/compare/v0.7.0...v0.8.0) (2026-11-16)
+
+
+### ⚠ BREAKING CHANGES
+
+* POST /api/sessions/:id/complete no longer answers `suggestions`, and a `today` that isn't a date is refused on every route.
+
+### Bug Fixes
+
+* **api:** refuse a wrongly typed token scope and an agent's reply with the right error ([#18](https://github.com/cloetzi/lazy-runner/issues/18)) ([6e9b373](https://github.com/cloetzi/lazy-runner/commit/6e9b37368fb56a1276c78b39b82c3260c77e6165)), closes [#3](https://github.com/cloetzi/lazy-runner/issues/3)
+* **deps:** lock file maintenance ([#19](https://github.com/cloetzi/lazy-runner/issues/19)) ([d8ebbf0](https://github.com/cloetzi/lazy-runner/commit/d8ebbf0186a40e7065dd949fd327881b04e774de))
+* **deps:** update gems ([#10](https://github.com/cloetzi/lazy-runner/issues/10)) ([755de8b](https://github.com/cloetzi/lazy-runner/commit/755de8bec9cfb3218c7ceef0daf33c498578f80f))
+* **outbox:** park a change only for the app's own bug answer ([#16](https://github.com/cloetzi/lazy-runner/issues/16)) ([d810613](https://github.com/cloetzi/lazy-runner/commit/d810613644ecbbfd56555bdc631ac8255bb8f19c)), closes [#2](https://github.com/cloetzi/lazy-runner/issues/2)
+* **pwa:** escape by default with html templates ([#22](https://github.com/cloetzi/lazy-runner/issues/22)) ([1c710bf](https://github.com/cloetzi/lazy-runner/commit/1c710bfb9176c997a45cf54b36260761007c8aed)), closes [#7](https://github.com/cloetzi/lazy-runner/issues/7)
+
+
+### Performance Improvements
+
+* **workouts:** read the workout list in a fixed number of queries, and audit the gems in CI ([#20](https://github.com/cloetzi/lazy-runner/issues/20)) ([1753e1d](https://github.com/cloetzi/lazy-runner/commit/1753e1de21e01848d0c6a3ed596bdfa3f81a247e)), closes [#6](https://github.com/cloetzi/lazy-runner/issues/6) [#9](https://github.com/cloetzi/lazy-runner/issues/9)
+
+
+### Code Refactoring
+
+* Current.today, one Refusal class, session rules on the models, coverage ([#21](https://github.com/cloetzi/lazy-runner/issues/21)) ([95d9374](https://github.com/cloetzi/lazy-runner/commit/95d93746e023693531927d9ecab491afcf56024d)), closes [#8](https://github.com/cloetzi/lazy-runner/issues/8)
+
 ## [0.7.0](https://github.com/cloetzi/lazy-runner/compare/v0.6.0...v0.7.0) (2026-11-16)
 
 
