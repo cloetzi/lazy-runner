@@ -4,7 +4,7 @@
   "include-component-in-tag": false,
   "bump-minor-pre-major": true,
   "initial-version": "0.1.0",
-  "bootstrap-sha": "919c877e5340684fd4330e75f04461e90f80f2ca",
+  "bootstrap-sha": "e1f775a6f8ee2e210ee5ad1aa1f62572de052fe4",
   "packages": {
     ".": {
       "package-name": "lazy-runner"
