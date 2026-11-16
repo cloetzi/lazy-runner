@@ -22,7 +22,7 @@ module TrainerMcp
     annotations(title: "List plan changes", **READ_ONLY)
 
     def self.answer(since: nil, by: nil)
-      today = Time.zone.today
+      today = Current.today
       from = since ? days(since, since).begin : today - PlanChange::DEFAULT_DAYS
       raise Problem, "since must be today (#{today.iso8601}) or earlier" if from > today
       raise Problem, "since must be within #{DateRange::MAX_DAYS} days of today" if (today - from).to_i >= DateRange::MAX_DAYS

@@ -30,7 +30,7 @@ module Api
     # @response 400 #/components/responses/BadRequest
     def show
       days = DateRange.resolve(params[:from], params[:to])
-      today = client_today
+      today = Current.today
       routines = RoutineCalendar.new(days, today:)
       sessions = Session.summarized.where(date: days).in_order.all
       changes = PlanChange::Calendar.new(days, sessions:, routines: routines.routines, today:)

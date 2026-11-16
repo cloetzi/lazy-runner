@@ -15,9 +15,24 @@ class Session < Record
   PLAN_LIMIT = 28
   MAX_NOTE = 2000
 
+  # Statuses a change may set; done comes with the finish (Completion).
+  SETTABLE_STATUSES = %w[planned in_progress skipped].freeze
+
   # Asked to move or remove a session that is no longer planned: it has
   # started, was skipped or is done.
-  class Settled < StandardError; end
+  class Settled < Refusal; end
+
+  # A status a change can't set.
+  class StatusRefused < Refusal
+    refuses_with :bad_request
+
+    def initialize(message, problem)
+      @problem = problem
+      super(message)
+    end
+
+    def details = { fields: { status: [@problem] } }
+  end
 
   # One of several sessions planned at once that can't be planned; `index`
   # counts from 0 in the order given.
@@ -94,7 +109,7 @@ class Session < Record
 
     # Sessions that read as one of `statuses` on `today`, missed included: a
     # planned one is missed before today and planned from today on.
-    def with_status(statuses, today: Time.zone.today)
+    def with_status(statuses, today: Current.today)
       conditions = statuses.map do |status|
         case status
         when "missed" then Sequel.&({ status: "planned" }, Sequel[:date] < today)
@@ -130,6 +145,12 @@ class Session < Record
     raise ArgumentError, "unknown status: #{unknown.join(", ")}" if unknown.any?
 
     statuses
+  end
+
+  # Refuses a status a session can't be given directly.
+  def self.settable!(status)
+    problem = "must be one of #{SETTABLE_STATUSES.join(", ")}"
+    raise StatusRefused.new("status #{problem}", problem) unless SETTABLE_STATUSES.include?(status)
   end
 
   # Adds a session on a day at `position` (last by default); the sessions
@@ -171,11 +192,11 @@ class Session < Record
   end
 
   # The day planning and status checks count from: the client's own when it
-  # sent one (see ApplicationController#client_today), else the server's.
+  # sent one (Current.today), unless set to read it as of another day.
   attr_writer :today
 
   def today
-    @today || Time.zone.today
+    @today || Current.today
   end
 
   # When it happened on its day, as `after` orders it: its finish, else its
@@ -187,6 +208,44 @@ class Session < Record
   # The status it reads as: planned on a day before `today` is missed.
   def shown_status(today = self.today)
     status == "planned" && date < today ? "missed" : status
+  end
+
+  # Changes what `changes` names: `status` (one of SETTABLE_STATUSES, with
+  # `started_at`, the device's start), `part_kinds`, `note`, and a move
+  # (`date`, `position`), saved together so a session made planned again is
+  # checked on its new day. Planned again, it hasn't started; started, it
+  # keeps its first start. Its own day and place given back (a client
+  # resending what it read) are no move, so they don't refuse a settled
+  # session's other changes.
+  def change!(changes)
+    changes = changes.dup
+    move = changes.extract!(:date, :position)
+    given_start = changes.delete(:started_at)
+    if changes.key?(:status)
+      status = changes[:status]
+      if status == "done"
+        raise StatusRefused.new("finish a session with POST /api/sessions/:id/complete", "is set by POST /api/sessions/:id/complete")
+      end
+
+      Session.settable!(status)
+      changes[:started_at] =
+        case status
+        when "planned" then nil
+        when "skipped" then started_at
+        else started_at || given_start || Time.now
+        end
+      # Picking a run up again marks it active, so it holds its workout.
+      resumed = status == "in_progress" && self.status == "in_progress"
+    end
+    move.delete(:date) if move[:date] == date
+    move.delete(:position) if move[:position] == position && !move.key?(:date)
+
+    db.transaction do
+      set(changes)
+      move.any? ? move!(**move) : save_changes
+      update_columns(updated_at: Time.now) if resumed
+    end
+    self
   end
 
   # Moves a planned (or missed) session to another day from today on (last

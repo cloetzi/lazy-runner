@@ -46,9 +46,8 @@ module Api
     # @response 409 #/components/responses/Conflict
     # @response 422 #/components/responses/Invalid
     def create
-      today = client_today
       unless params.key?(:activities)
-        activity, outcome = Activity.log!(params, today:)
+        activity, outcome = Activity.log!(params)
         return render json: activity, status: outcome == :created ? :created : :ok
       end
 
@@ -56,7 +55,7 @@ module Api
       raise BadRequest.param(:activities, "must be a list") unless list.is_a?(Array)
       raise BadRequest.param(:activities, "must hold at most #{Activity::BATCH_LIMIT} activities") if list.size > Activity::BATCH_LIMIT
 
-      render json: { activities: Activity.log_all!(list, today:).map(&:first) }
+      render json: { activities: Activity.log_all!(list).map(&:first) }
     end
 
     # Change an activity.
@@ -71,7 +70,6 @@ module Api
     # @response 422 #/components/responses/Invalid
     def update
       activity = Activity.find!(params[:id])
-      activity.today = client_today
       activity.update(params.slice(*Activity::CHANGEABLE))
       render json: activity
     end

@@ -34,7 +34,9 @@ class Record
 
   # Asked for by id, and there is none. One class for every model: rescue
   # Record::NotFound.
-  class NotFound < StandardError
+  class NotFound < Refusal
+    refuses_with :not_found
+
     attr_reader :resource, :id
 
     def initialize(model, id, message = "#{model} #{id} not found")
@@ -42,13 +44,17 @@ class Record
       @id = id
       super(message)
     end
+
+    def details = { resource:, id: }
   end
 
   # Asked of an agent (an API token's request or MCP call: Current.agent_name)
   # what only the user does, in the app: accepting a goal, erasing history,
   # changing what the user wrote. The models refuse it themselves, so the
   # REST API and the MCP tools can't drift apart.
-  class UserOnly < StandardError; end
+  class UserOnly < Refusal
+    refuses_with :forbidden
+  end
 
   def self.user_only!(message)
     raise UserOnly, message if Current.agent_name

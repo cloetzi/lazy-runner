@@ -144,14 +144,15 @@ describe SeedLoader do
       _(error.message).must_equal "plank: unknown equipment 'treadmill'"
     end
 
-    # On a fresh install, where no step keeps the exercise in the library.
-    it "stops at an example program naming an exercise the library no longer has" do
+    # On a fresh install, where no step keeps the exercise in the library:
+    # the check the test suite runs (test/models/example_test.rb) fails.
+    it "leaves an example program naming an exercise the library no longer has to the examples' check" do
       User.dataset.delete
       exercises = seed("exercises.yml").reject { it["slug"] == "goblet-squat" }
+      load_seeds_with("exercises.yml" => exercises)
 
-      error = _ { load_seeds_with("exercises.yml" => exercises) }.must_raise Example::Error
+      error = _ { Example.check_all! }.must_raise Example::Error
       _(error.message).must_equal "cycle-1: cycle-1-workout-1 A: unknown exercise 'goblet-squat'"
-      _(exercise("goblet-squat").retired).must_equal false
     end
 
     it "loads nothing when the seed is broken" do

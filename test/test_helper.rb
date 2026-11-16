@@ -3,6 +3,15 @@
 ENV["RAGE_ENV"] = "test"
 
 require "bundler/setup"
+# Before the app loads, so every file of it is counted. Reported, with no
+# threshold: a number to watch, not a gate.
+if ENV["COVERAGE"]
+  require "simplecov"
+  SimpleCov.start do
+    enable_coverage :branch
+    add_filter %w[/test/ /config/ /db/]
+  end
+end
 require "minitest/autorun"
 require "rack/test"
 require "json"

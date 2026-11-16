@@ -480,7 +480,6 @@ components:
         target: { description: "From GET; ignored." }
         weight_unit: { description: "From GET; ignored." }
         allowed_weights: { description: "From GET; ignored." }
-        suggestion: { description: "From an older GET; ignored." }
     BlockInput:
       type: object
       description: A block as the builder writes it; one from GET /api/workouts/:id fits as it is.
@@ -696,12 +695,6 @@ components:
       properties:
         session: { $ref: "#/components/schemas/Session" }
         completion: { $ref: "#/components/schemas/Completion" }
-        suggestions:
-          type: array
-          items: { type: object }
-          maxItems: 0
-          deprecated: true
-          description: Always empty; kept for a page still on a release from before the app stopped suggesting weights.
     History:
       type: object
       required: [from, to, sessions, weeks]

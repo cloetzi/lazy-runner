@@ -23,7 +23,7 @@ handy for people too.
 ```sh
 bundle install
 bundle exec rage s          # dev server on http://localhost:3000 (migrates and seeds on boot)
-bundle exec rake test       # Ruby tests (Minitest)
+bundle exec rake test       # Ruby tests (Minitest); COVERAGE=1 for coverage/ (CI reports it)
 bundle exec rubocop         # lint (.rubocop.yml); -a fixes what is safe to fix
 bundle exec bundle-audit check --update  # locked gems against known advisories
 npm test                    # player logic tests (node:test, no dependencies)

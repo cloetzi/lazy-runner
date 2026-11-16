@@ -26,7 +26,7 @@ class Routine < Record
 
   # Asked to change a day or a routine in a way its history doesn't allow:
   # a day already done, a one-off on a day gone by, an ended routine.
-  class Settled < StandardError; end
+  class Settled < Refusal; end
 
   per_user
   include AgentSigned
@@ -60,7 +60,7 @@ class Routine < Record
   # says otherwise. `confirmed` makes a one-off's day confirmed in the same
   # write ("Planned" rather than "Maybe").
   # `agent_name` names the agent of one planned again by an undo.
-  def self.plan!(attributes, today: Time.zone.today, created_by: "manual", confirmed: false, agent_name: nil)
+  def self.plan!(attributes, today: Current.today, created_by: "manual", confirmed: false, agent_name: nil)
     routine = new(created_by:, agent_name:, today:)
     routine.set(attributes.to_h.transform_keys(&:to_sym).slice(*FIELDS))
     routine.starts_on ||= today
@@ -77,11 +77,11 @@ class Routine < Record
   end
 
   # The day routine and day changes count from: the client's own when it sent
-  # one (ApplicationController#client_today), else the server's.
+  # one (Current.today), unless a calendar reads it as of another day.
   attr_writer :today
 
   def today
-    @today || Time.zone.today
+    @today || Current.today
   end
 
   def one_off? = weekdays.empty?

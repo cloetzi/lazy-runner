@@ -17,6 +17,9 @@ class Current < ActiveSupport::CurrentAttributes
   # change an undo takes back, and whether to record nothing (a routine day
   # confirmed or made tentative again is a state, not a plan change).
   attribute :plan_batch, :plan_reason, :plan_undo, :plan_quiet
+  # The user's own today when the request or tool call gave one (within a
+  # day of the server's); Current.today reads it.
+  attribute :client_today
 
   class Missing < StandardError; end
   # A record saved or deleted while someone else is signed in.
@@ -25,4 +28,8 @@ class Current < ActiveSupport::CurrentAttributes
   # The user, or an error when nobody is signed in: for code that must never
   # run for nobody.
   def self.user! = user || raise(Missing, "no user is signed in")
+
+  # The day planning, missed sessions and routine days count from: the
+  # user's own when the request or tool call sent one, else the server's (TZ).
+  def self.today = client_today || Time.zone.today
 end

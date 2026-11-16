@@ -29,9 +29,9 @@ class CoachNote < Record
   AGENT_DAILY_LIMIT = 20
 
   # Asked to resolve a note that isn't a concern.
-  class NotAConcern < StandardError; end
+  class NotAConcern < Refusal; end
   # An agent's note past AGENT_DAILY_LIMIT.
-  class DailyLimit < StandardError; end
+  class DailyLimit < Refusal; end
 
   per_user
   many_to_one :activity

@@ -26,7 +26,7 @@ module TrainerMcp
       range = days(from, to, back: BACK)
       calendar = RoutineCalendar.new(range)
       {
-        today: Time.zone.today.iso8601, from: range.begin.iso8601, to: range.end.iso8601,
+        today: Current.today.iso8601, from: range.begin.iso8601, to: range.end.iso8601,
         routines: calendar.routines.map { shown(it) },
         days: calendar.days.map { shown_day(it) },
         counts: calendar.days.map(&:state).tally

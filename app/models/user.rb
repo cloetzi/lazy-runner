@@ -7,7 +7,7 @@
 class User < Record
   # A change the owner can't make: removing themselves or the last owner,
   # or resetting their own password (they change it under Account).
-  class Refused < StandardError; end
+  class Refused < Refusal; end
 
   # A temporary password: 16 characters from the setup code's alphabet, in
   # groups of four (about 78 bits).

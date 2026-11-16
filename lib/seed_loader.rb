@@ -28,8 +28,6 @@ class SeedLoader
       exercises = load_exercises(equipment)
       prune_exercises(exercises.keys)
       prune_equipment(equipment.keys)
-      # The examples name the library by slug: one it no longer fits stops the boot.
-      Example.check_all!
     end
   end
 

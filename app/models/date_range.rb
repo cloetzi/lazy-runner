@@ -37,7 +37,7 @@ module DateRange
   # to today by default and from today on with `back: 0`. One given: 28 days
   # on from `from`, or back from `to`. Future dates are fine; a range runs at
   # most 366 days.
-  def self.resolve(from, to, back: nil, today: Time.zone.today)
+  def self.resolve(from, to, back: nil, today: Current.today)
     span = DAYS - 1
     to = date(to, :to) if to.present?
     from = from.present? ? date(from, :from) : to&.-(span)

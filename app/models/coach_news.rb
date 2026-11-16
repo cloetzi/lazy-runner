@@ -12,9 +12,9 @@ class CoachNews
 
   # `today` is the device's, which undo counts from; the two weeks are the
   # server's, as GET /api/me counts them.
-  def initialize(user, today: Time.zone.today)
+  def initialize(user, today: Current.today)
     @today = today
-    @since = user.coach_seen_at || (Time.zone.today - DEFAULT_DAYS).in_time_zone.to_time
+    @since = user.coach_seen_at || (@today - DEFAULT_DAYS).in_time_zone.to_time
   end
 
   # How many things are news: the dot's count.

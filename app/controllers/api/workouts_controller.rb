@@ -145,7 +145,7 @@ module Api
     # The whole workout, as `show` gives it.
     def show_workout(id, status: :ok)
       workout = Workout.expanded.find!(id)
-      render json: workout.detail.merge(changes: PlanChange.standing(workout_ids: [workout.id], today: client_today)), status:
+      render json: workout.detail.merge(changes: PlanChange.standing(workout_ids: [workout.id])), status:
     end
 
     # The structure is required; an empty one is for WorkoutStructure to refuse.

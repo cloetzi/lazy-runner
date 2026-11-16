@@ -751,7 +751,7 @@ describe "sessions API" do
       _(json["completion"]["feedback"]).must_equal "right"
       _(json["completion"]["finished_at"]).wont_be_nil
       _(json["completion"]["ended_early"]).must_equal false
-      _(json["suggestions"]).must_equal []
+      _(json.keys).wont_include "suggestions"
     end
 
     it "keeps a session ended early, marked as such" do

@@ -26,6 +26,13 @@ jobs:
         with:
           bundler-cache: true
       - run: bundle exec rake test
+        env:
+          COVERAGE: "1"
+      # Reported, not enforced: the numbers on the run's summary page.
+      - name: Coverage
+        run: |
+          ruby -rjson -e 'r = JSON.parse(File.read("coverage/.last_run.json"))["result"]
+                          puts "Ruby coverage: #{r["line"]}% of lines, #{r["branch"]}% of branches"' | tee -a "$GITHUB_STEP_SUMMARY"
 
   # Only the development group: RuboCop and bundler-audit don't load the app.
   lint:

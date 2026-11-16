@@ -3,6 +3,7 @@
 /log/*
 !/log/.keep
 /tmp/
+/coverage/
 /vendor/bundle/
 .bundle/
 /node_modules/

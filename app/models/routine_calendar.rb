@@ -37,7 +37,7 @@ class RoutineCalendar
   end
 
   # How one day of `routine` reads.
-  def self.day(routine, date, today: Time.zone.today)
+  def self.day(routine, date, today: Current.today)
     on = Session.first(routine_id: routine.id, routine_date: date)&.date ||
          RoutineDay.first(routine_id: routine.id, date:)&.moved_to || date
     new(on..on, today:).days.find { it.routine.id == routine.id && it.date == date } ||
@@ -46,7 +46,7 @@ class RoutineCalendar
 
   attr_reader :range, :today
 
-  def initialize(range, today: Time.zone.today)
+  def initialize(range, today: Current.today)
     @range = range
     @today = today
   end
