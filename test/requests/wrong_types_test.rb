@@ -234,8 +234,23 @@ describe "wrongly typed parameters" do
       get "/api/version"
 
       _(last_response.status).must_equal 503
+      _(last_response.headers["retry-after"]).must_equal "5"
       _(json["error"]["code"]).must_equal "unavailable"
     end
+
+    AppVersion.define_singleton_method(:version) { raise Sequel::PoolTimeout, "timeout: 5.0" }
+    get "/api/version"
+    _(last_response.status).must_equal 503
+
+    # A bug while handling one is a bug.
+    AppVersion.define_singleton_method(:version) do
+      raise SQLite3::BusyException, "database is locked"
+    rescue SQLite3::BusyException
+      nil.upcase
+    end
+    get "/api/version"
+    _(last_response.status).must_equal 500
+    _(json["error"]["code"]).must_equal "server_error"
   ensure
     AppVersion.define_singleton_method(:version, version)
   end

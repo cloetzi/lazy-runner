@@ -33,8 +33,8 @@
 // change behind it. So when the app itself answers that it hit a bug (a 500
 // with its `server_error` code, not a proxy's 502/503/504, nor the app's 503
 // for a locked or full database) while it is reachable (a GET /api/version
-// right after succeeds), the head entry gets a strike, and after three within
-// an hour it is parked: set aside with the server's answer, together with
+// right after succeeds), the head entry gets a strike, and after three, each
+// within an hour of the last, it is parked: set aside with the server's answer, together with
 // the queued changes that refer to it, while the rest carries on. The user
 // sees the parked changes in Settings and retries or discards them.
 
@@ -51,7 +51,7 @@ const KEEP_REJECTED = 50;
 const KEEP_RESULTS = 10;
 // Server errors, with the server reachable, before a change is parked.
 export const PARK_AFTER = 3;
-// The time from a change's first strike in which the others must come, else
+// The time after a change's last strike in which the next must come, else
 // the count starts again: failures days apart are not one bug.
 export const STRIKE_WINDOW_MS = 60 * 60 * 1000;
 
@@ -224,10 +224,12 @@ export function createOutbox({
     refresh();
     if (!same(data.queue[0], entry)) return false;
     const at = now();
-    const recent = same(data.strikes?.entry, entry) && Date.parse(at) - Date.parse(data.strikes.since ?? at) <= STRIKE_WINDOW_MS;
+    // A strike kept from before strikes had a time (`last` missing) starts again.
+    const gap = Date.parse(at) - Date.parse(data.strikes?.last);
+    const recent = same(data.strikes?.entry, entry) && gap >= 0 && gap <= STRIKE_WINDOW_MS;
     const count = recent ? data.strikes.count + 1 : 1;
     if (count < PARK_AFTER) {
-      data.strikes = { entry, count, since: recent ? data.strikes.since : at };
+      data.strikes = { entry, count, last: at };
       save();
       return false;
     }
@@ -371,7 +373,7 @@ export function createOutbox({
         if (!group) return run();
         data.parked = data.parked.filter((g) => g !== group);
         data.queue.unshift(...group.entries);
-        data.strikes = { entry: group.entries[0], count: PARK_AFTER - 1, since: now() };
+        data.strikes = { entry: group.entries[0], count: PARK_AFTER - 1, last: now() };
         data.parking = false;
         save();
         return run();

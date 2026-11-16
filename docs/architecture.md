@@ -221,10 +221,12 @@ rows, the welcome's week plan), `api.js`, `account.js`. The rest (`app.js`,
    created with a `client_ref`, and later requests name it as `{ref}` until
    the server gives it an id, so sets and the finish can be logged offline.
    Retries are safe: sessions by `client_ref`, sets by their unique key.
-   A change the server keeps failing on (three 5xx answers while
-   `/api/version` answers) is parked with the ones that build on it, so the
-   rest carries on; Today says so, and Settings, Account lists it with Try
-   again and Discard.
+   A change the server keeps failing on (three 500 `server_error` answers
+   while `/api/version` answers, each within an hour of the last) is parked
+   with the ones that build on it, so the rest carries on; Today says so, and
+   Settings, Account lists it with Try again and Discard. A proxy's 502/503/504
+   and the app's 503 `unavailable` (a locked or full database) are waited out
+   like an outage.
 4. `POST /api/sessions/:id/complete` stores the finish (RPE, how the weights
    felt, a note) for the user and the coach agent to go by; the app changes
    no weight from it.
