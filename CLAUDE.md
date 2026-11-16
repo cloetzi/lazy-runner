@@ -196,8 +196,8 @@ included; no Docker per test run. How:
 
 ## Workflow
 
-- Work is tracked as GitHub issues under the v1 milestone, one per slice. PRs
-  reference their issue with `Closes #N`; keep the issue current if scope changes.
+- Work is tracked as GitHub issues, one per slice. PRs reference their issue
+  with `Closes #N`; keep the issue current if scope changes.
 - The v1 spec is the source of truth for scope; out-of-scope ideas go into new
   issues rather than the current PR.
 - Before a PR merges, run the code-review skill on it, triage the findings,
