@@ -13,7 +13,7 @@ module Api
     # @response 200 #/components/schemas/Setup
     # @response 400 #/components/responses/BadRequest
     def show
-      today = client_today
+      today = Current.today
       user = Current.user!
       render json: {
         gear: !UserEquipment.where(owned: true).empty?,

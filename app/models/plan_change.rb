@@ -38,7 +38,7 @@ class PlanChange < Record
   DEFAULT_DAYS = 14
 
   # Asked to take back a change that can't be: the message says why.
-  class NotUndoable < StandardError; end
+  class NotUndoable < Refusal; end
 
   per_user
   json_columns was: nil, now: nil
@@ -216,7 +216,7 @@ class PlanChange < Record
   # can be taken back. What the workout page and Get ready show. With
   # `untrained`, only while nothing was trained since: no set logged in a
   # session of the workout, nor of the exercise.
-  def self.standing(workout_ids: [], exercise_ids: [], today: Time.zone.today, untrained: false)
+  def self.standing(workout_ids: [], exercise_ids: [], today: Current.today, untrained: false)
     latest = Sequel.function(:max, :id)
     ids = { workout_id: workout_ids, exercise_id: exercise_ids }.flat_map do |column, items|
       items.empty? ? [] : where(column => items.uniq).group(column).select_map(latest.as(:latest))
@@ -246,7 +246,7 @@ class PlanChange < Record
     !logged.empty?
   end
 
-  def undone?(lookup = Lookup.new([self], today: Time.zone.today)) = !lookup.undone_by(self).nil?
+  def undone?(lookup = Lookup.new([self], today: Current.today)) = !lookup.undone_by(self).nil?
 
   # Why it can't be taken back on `today`, or nil when it can.
   def undo_problem(lookup)
@@ -273,7 +273,7 @@ class PlanChange < Record
   # change, recorded as a change of the user's pointing at this one. Raises
   # NotUndoable when it can't be (anything the model refuses included), and
   # then nothing has changed. Answers with the change that took it back.
-  def undo!(today: Time.zone.today)
+  def undo!(today: Current.today)
     Record.user_only!("only the user takes a change back, in the app")
     db.transaction do
       # Checked inside the transaction, which holds the connection, so a
@@ -288,14 +288,16 @@ class PlanChange < Record
     raise NotUndoable, "this change was taken back already"
   rescue Sequel::ValidationFailed => error
     raise NotUndoable, "it can't be taken back: #{error.errors.full_messages.join(", ")}"
-  rescue Session::Settled, Routine::Settled, Workout::Running, Workout::ReadOnly => error
+  rescue NotUndoable, Record::UserOnly, Record::NotFound
+    raise
+  rescue Refusal => error
     raise NotUndoable, "it can't be taken back: #{error.message}"
   rescue WorkoutStructure::Invalid => error
     raise NotUndoable, "it can't be taken back as it was: #{error.message}"
   end
 
   def as_json(options = nil)
-    lookup = options&.dig(:lookup) || Lookup.new([self], today: options&.dig(:today) || Time.zone.today)
+    lookup = options&.dig(:lookup) || Lookup.new([self], today: options&.dig(:today) || Current.today)
     {
       id:, changed_by:, agent_name:, item_kind:, session_id:, routine_id:, workout_id:, exercise_id:, title:, action:,
       from_date: from_date&.iso8601, to_date: to_date&.iso8601, **before_and_after, summary:, reason:, batch:,

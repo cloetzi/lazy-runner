@@ -28,6 +28,8 @@ gem "rodauth-omniauth", "~> 0.6"
 group :test do
   gem "minitest"
   gem "rack-test"
+  # COVERAGE=1 bundle exec rake test: line and branch coverage in coverage/.
+  gem "simplecov", require: false
 end
 
 # Linting (.rubocop.yml): bundle exec rubocop. Known advisories for the

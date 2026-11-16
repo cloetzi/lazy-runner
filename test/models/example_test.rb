@@ -118,7 +118,7 @@ describe Example do
     _(Example.find!("cycle-1").import!.name).must_equal "Cycle 1"
   end
 
-  it "checks every example on boot by importing it for a stand-in account, leaving nothing" do
+  it "checks every example fits the seeds by importing it for a stand-in account, leaving nothing" do
     counts = -> { [User.count, Program.everyone.count, Workout.everyone.count] }
     before = counts.call
     Example.check_all!

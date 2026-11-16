@@ -28,7 +28,9 @@ class ApplicationController < RageController::API
     end
   end
 
-  class Forbidden < StandardError; end
+  class Forbidden < Refusal
+    refuses_with :forbidden
+  end
 
   # What SQLite answers when the database can't take a write just now: held
   # by another process past the busy timeout, or the disk full or failing.
@@ -84,15 +86,20 @@ class ApplicationController < RageController::API
     Current.agent_name = request.env["lazy_runner.agent_name"]
     # The plan changes one request makes share a batch (PlanChange).
     Current.plan_batch = nil
+    # The day the request counts from (Current.today), settled here once, so
+    # a malformed one is a 400 before anything is written or rendered.
+    Current.client_today = (Current.within_a_day(DateRange.date(params[:today], :today)) if params[:today].present?)
   end
 
   # A user given a temporary password (the owner reset theirs) chooses
   # their own before anything else. /api/me still answers, to say so.
   before_action :password_chosen!
 
-  # "Session 9 not found" (Record.find!), or a message raised in the app.
-  rescue_from Record::NotFound do |error|
-    render_error :not_found, "not_found", error.message, resource: error.resource, id: error.id
+  # What the app refuses (Refusal), each kind with its own status and code:
+  # "Session 9 not found" (Record.find!), a change only the user makes, a
+  # session no longer planned. The MCP tools give the same message back.
+  rescue_from Refusal do |error|
+    render_error error.class.status, error.class.code, error.message, **error.details
   end
 
   rescue_from Sequel::ValidationFailed do |error|
@@ -112,25 +119,8 @@ class ApplicationController < RageController::API
     render_error :bad_request, "bad_request", error.message, fields: { error.field => [error.problem] }
   end
 
-  rescue_from Forbidden, Workout::ReadOnly, Record::UserOnly do |error|
-    render_error :forbidden, "forbidden", error.message
-  end
-
-  rescue_from Session::Settled, Routine::Settled, Workout::Running, Goal::NotProposed, CoachNote::NotAConcern, PlanChange::NotUndoable,
-              CoachNote::DailyLimit do |error|
-    render_error :conflict, "conflict", error.message
-  end
-
-  rescue_from User::Refused, UserIdentity::Refused do |error|
-    render_error :conflict, "conflict", error.message
-  end
-
   rescue_from Activity::EntryInvalid do |error|
     render_error :unprocessable_content, "invalid", error.message, fields: error.fields
-  end
-
-  rescue_from Example::AlreadyImported do |error|
-    render_error :conflict, "already_imported", error.message
   end
 
   rescue_from WorkoutStructure::Invalid do |error|
@@ -217,21 +207,12 @@ class ApplicationController < RageController::API
     render json: { error: { code:, message:, **details.compact } }, status:
   end
 
-  # The client may send its own local date. Without one, today is the day in
-  # the server's time zone (TZ, see config/initializers/time_zone.rb).
+  # The client may send its own local date. Without one, it is today
+  # (Current.today: the device's `today` when sent, else the server's).
   def date_param(key = :date)
-    return Time.zone.today if params[key].blank?
+    return Current.today if params[key].blank?
 
     DateRange.date(params[key], key)
-  end
-
-  # The day a planning request counts from: the client's own `today` (its
-  # local date) when it is within a day of the server's, which covers time
-  # zones and a change sent just after midnight; else the server's today.
-  def client_today
-    server = Time.zone.today
-    given = DateRange.date(params[:today], :today) if params[:today].present?
-    given && ((server - 1)..(server + 1)).cover?(given) ? given : server
   end
 
   # Which parts of a framed workout to run: "warmup,cooldown" or a list of

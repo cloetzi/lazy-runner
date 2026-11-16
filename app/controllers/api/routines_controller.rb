@@ -15,7 +15,7 @@ module Api
     # @response 400 #/components/responses/BadRequest
     def index
       routines = Routine.eager(:workout).in_order
-      routines = routines.current(client_today) unless boolean_param(:ended)
+      routines = routines.current(Current.today) unless boolean_param(:ended)
       render json: { routines: routines.all }
     end
 
@@ -32,7 +32,7 @@ module Api
     # @response 409 #/components/responses/Conflict
     # @response 422 #/components/responses/Invalid
     def create
-      routine = Routine.plan!(params.slice(*Routine::FIELDS), today: client_today, confirmed: boolean_param(:confirmed) || false)
+      routine = Routine.plan!(params.slice(*Routine::FIELDS), confirmed: boolean_param(:confirmed) || false)
       render json: routine, status: :created
     end
 
@@ -57,7 +57,6 @@ module Api
     # @response 422 #/components/responses/Invalid
     def update
       routine = Routine.find!(params[:id])
-      routine.today = client_today
       render json: routine.revise!(params.slice(*Routine::FIELDS))
     end
 
@@ -75,7 +74,6 @@ module Api
     # @response 404 #/components/responses/NotFound
     def destroy
       routine = Routine.find!(params[:id])
-      routine.today = client_today
       return head :no_content if routine.end!(erase: routine.ended?) == :deleted
 
       render json: routine
@@ -98,7 +96,6 @@ module Api
     # @response 422 #/components/responses/Invalid
     def update_day
       routine = Routine.find!(params[:id])
-      routine.today = client_today
       day =
         case params[:status]
         when "confirmed" then routine.confirm!(params[:date])
@@ -121,7 +118,6 @@ module Api
     # @response 409 #/components/responses/Conflict
     def reset_day
       routine = Routine.find!(params[:id])
-      routine.today = client_today
       render json: routine.reset!(params[:date])
     end
   end

@@ -101,7 +101,9 @@ included; no Docker per test run. How:
   and a query a request makes on a per-user table without `user_id` fails
   it (`UserScopeTripwire`).
 - `app/controllers/application_controller.rb` the one error shape
-  (`{ error: { code, message, fields } }`) and the server's "today" (`TZ`,
+  (`{ error: { code, message, fields } }`, one `rescue_from Refusal` for what
+  the models refuse) and the request's today (`Current.today`: the device's
+  `today` within a day of the server's, else the server's in `TZ`,
   `config/initializers/time_zone.rb`). Each action's comment is its OpenAPI
   description (Rage's `@description`, `@param`, `@request`, `@response` tags;
   shared parts in `config/openapi_components.yml`), served at `/api/openapi`.

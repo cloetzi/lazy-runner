@@ -48,7 +48,7 @@ module TrainerMcp
 
     def self.answer(activities:, today: nil)
       entries = activities.each_with_index.map { |entry, index| entry(entry, index) }
-      outcomes = Activity.log_all!(entries, today: user_today(today), created_by: "llm")
+      outcomes = Current.set(client_today: user_today(today)) { Activity.log_all!(entries, created_by: "llm") }
       logged = outcomes.map { |activity, outcome| shown(activity).slice(:id, :date, :sport, :source, :external_id).merge(outcome:) }
       # A pair sent twice is one activity, counted once.
       counted = outcomes.uniq { it.first.id }
@@ -59,16 +59,13 @@ module TrainerMcp
       raise Problem, "#{error.message}. Nothing was logged; fix it and send the whole list again."
     end
 
-    # The user's today as the API takes it (ApplicationController#client_today):
-    # a day either side of the server's.
+    # The user's today as the API takes it (Current.within_a_day): a day
+    # either side of the server's; nil, the server's, when not sent.
     def self.user_today(text)
-      server = Time.zone.today
-      return server if text.nil?
+      return if text.nil?
 
-      given = Date.iso8601(date(text, :today))
-      raise Problem, "today must be within a day of the server's (#{server.iso8601})" unless ((server - 1)..(server + 1)).cover?(given)
-
-      given
+      Current.within_a_day(Date.iso8601(date(text, :today))) ||
+        raise(Problem, "today must be within a day of the server's (#{Time.zone.today.iso8601})")
     end
 
     # An entry as Activity.log_all! takes it: lengths in metres, times and

@@ -46,6 +46,88 @@ class SetLog < Record
   # before parts were kept, whose step has gone, counts as main.
   def main? = part.nil? || part == "workout"
 
+  # A set for a step the session can't take: one of another workout, or one
+  # it no longer runs that comes without what the player showed.
+  class NotPartOfSession < Refusal
+    refuses_with :bad_request
+
+    def details = { fields: { step_id: ["is not part of this session"] } }
+  end
+
+  # Logs a set of `session`, or updates it when logged before: a set is
+  # named by its step (`step_ref`), round (`set_number`) and `side`, so a
+  # retry or a reload updates it. `exercise_id` names a swap. The weight
+  # given is converted to the unit of the gear the step is done with (the
+  # exercise's own when swapped). `shown` is what the player showed
+  # ({ exercise_id:, block_label:, target:, part: }, as sent), which keeps a
+  # set whose step the session no longer runs, unlinked. The first set
+  # starts a planned session. Returns the set and whether it is new.
+  def self.log!(session, step_ref, set_number:, side: nil, exercise_id: nil, reps: nil, seconds: nil, weight: nil, status: nil,
+                shown: {})
+    step = Step.eager(:block).first(id: step_ref)
+    # A step of none of the parts its workout can have is no set of it.
+    if step && !session.workout.framed_ids.include?(step.block.workout_id)
+      raise NotPartOfSession, "step #{step.id} is not part of this session"
+    end
+
+    # The step as the session runs it now, or nil when it no longer does.
+    linked = step if step && session.workout.framed_ids(session.part_kinds).include?(step.block.workout_id)
+    planned = shown_plan(step, step_ref, shown) unless linked
+    # A swap names the exercise done instead.
+    exercise = exercise_id ? Exercise.find!(exercise_id) : (linked&.exercise || planned[0])
+    # In the unit of the gear the step is done with, unless swapped.
+    unit = linked && linked.exercise_id == exercise.id ? Step.unit_for(linked.equipment, exercise) : exercise.gear_unit
+    given = weight || {}
+    weight = exercise.in_weight_unit(given[:value], given[:unit], unit)
+    attempts = 0
+    begin
+      log = find_or_new(user_id: session.user_id, session_id: session.id, step_ref:, set_number:, side:)
+      created = log.new?
+      # The target is the one shown when the set was first logged.
+      if created && linked
+        log.step_id = linked.id
+        log.plan_from(linked, linked.target(ExerciseWeight.first(exercise_id: linked.exercise_id)))
+      elsif created
+        log.record_plan(*planned)
+      end
+      # From the step while it exists, else as the player sent it.
+      log.part = step ? part_of(session, step) : shown[:part] if created
+      log.update(
+        exercise_id: exercise.id, reps:, seconds:,
+        weight_value: weight[:value], weight_unit: weight[:value] && weight[:unit],
+        status: status || "done"
+      )
+    rescue Sequel::UniqueConstraintViolation
+      # A concurrent post of the same set inserted it between the lookup and
+      # the insert; looking it up again finds it and updates it.
+      raise if (attempts += 1) > 1
+
+      retry
+    end
+    session.update(status: "in_progress", started_at: session.started_at || Time.now) if session.status == "planned"
+    [log, created]
+  end
+
+  # What a set of a step the session no longer runs was planned as, from
+  # what the player showed: [exercise, block label, target]. Without that, a
+  # step that is gone is not found, and one of a part left out is refused.
+  def self.shown_plan(step, step_ref, shown)
+    if shown[:exercise_id].nil?
+      raise Record::NotFound.new(Step, step_ref) unless step
+
+      raise NotPartOfSession, "step #{step.id} is not part of this session"
+    end
+
+    planned = Exercise.find!(shown[:exercise_id])
+    target = shown[:target].is_a?(Hash) ? shown[:target] : {}
+    given = target[:weight].is_a?(Hash) ? target[:weight] : {}
+    weight = planned.in_weight_unit(given[:value], given[:unit])
+    weight = nil unless weight[:value].is_a?(Numeric) && ExerciseWeight::UNITS.include?(weight[:unit])
+    reps, seconds = target.values_at(:reps, :seconds).map { Integer(it.to_s, exception: false) }
+    [planned, shown[:block_label] || step&.block&.label, { reps:, seconds:, weight: }]
+  end
+  private_class_method :shown_plan
+
   # The part a step is in for a session: its own workout is the main one
   # ("workout", whatever that workout's kind), anything else the kind of the
   # warm-up or cool-down it frames it with.

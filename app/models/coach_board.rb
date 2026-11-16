@@ -9,7 +9,7 @@ class CoachBoard
   # through the rest.
   LATEST = 10
 
-  def initialize(today: Time.zone.today)
+  def initialize(today: Current.today)
     @today = today
   end
 

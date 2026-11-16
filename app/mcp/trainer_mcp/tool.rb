@@ -23,14 +23,11 @@ module TrainerMcp
     # A write that replaces or removes something.
     REPLACES = WRITES.merge(destructive_hint: true).freeze
 
-    # What the app refuses, put to the assistant as a tool error with the
-    # model's own message: a record that doesn't validate, a workout that is
-    # read-only or being trained, a session no longer planned. The API's
-    # rescue_from list (ApplicationController) names the same errors.
-    REFUSALS = [
-      Problem, Record::NotFound, Workout::ReadOnly, Workout::Running, Session::Settled, Routine::Settled, Example::AlreadyImported,
-      Goal::NotProposed, CoachNote::NotAConcern, PlanChange::NotUndoable, Record::UserOnly, CoachNote::DailyLimit
-    ].freeze
+    # What the app refuses (Refusal: a workout that is read-only or being
+    # trained, a session no longer planned, what only the user does) and a
+    # Problem with the arguments go back to the assistant as a tool error
+    # with the model's own message, as the API answers them.
+    REFUSALS = [Problem, Refusal].freeze
 
     def self.inherited(tool)
       super
@@ -52,7 +49,7 @@ module TrainerMcp
       user = user_for(server_context)
       arguments = arguments.merge(user:) if answer_takes_user?
       agent_name = server_context&.auth_info&.then { it.claims&.dig("agent_name") }
-      Current.set(user:, agent_name:, plan_batch: nil) { text(JSON.generate(answer(**arguments))) }
+      Current.set(user:, agent_name:, plan_batch: nil, client_today: nil) { text(JSON.generate(answer(**arguments))) }
     rescue *REFUSALS => error
       text(error.message, error: true)
     rescue Sequel::ValidationFailed => error
@@ -112,7 +109,7 @@ module TrainerMcp
     # The server's day and its weekday, which answers start with, so the
     # assistant needn't work out what day of the week it is.
     def self.today_and_weekday
-      day = Time.zone.today
+      day = Current.today
       { today: day.iso8601, weekday: day.strftime("%A") }
     end
 

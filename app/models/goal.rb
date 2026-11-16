@@ -26,7 +26,7 @@ class Goal < Record
 
   # Asked to accept or dismiss a goal that is no longer a proposal, or to
   # change a proposal other than by accepting or dismissing it.
-  class NotProposed < StandardError; end
+  class NotProposed < Refusal; end
 
   per_user
   include AgentSigned

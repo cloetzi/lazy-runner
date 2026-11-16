@@ -17,7 +17,7 @@ module Api
     # @response 200 #/components/schemas/CoachBoard
     # @response 400 #/components/responses/BadRequest
     def show
-      render json: CoachBoard.new(today: client_today)
+      render json: CoachBoard.new
     end
 
     # What agents did since the user last looked: "Since you last looked".
@@ -33,7 +33,7 @@ module Api
     # @response 200 #/components/schemas/CoachNews
     # @response 400 #/components/responses/BadRequest
     def news
-      render json: CoachNews.new(Current.user, today: client_today)
+      render json: CoachNews.new(Current.user)
     end
 
     # Mark "Since you last looked" as seen.

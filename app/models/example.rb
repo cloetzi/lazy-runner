@@ -13,8 +13,11 @@ class Example
 
   # The example is broken: a bug in db/examples, named in the message.
   class Error < StandardError; end
+
   # Imported before, and a second copy wasn't asked for.
-  class AlreadyImported < StandardError; end
+  class AlreadyImported < Refusal
+    refuses_with :conflict, "already_imported"
+  end
 
   # What an import or the list reads of the library, loaded once for all
   # the steps: exercises and equipment by slug, and the user's fixed-weight gear.
@@ -28,8 +31,9 @@ class Example
   end
 
   # Imports every example for a stand-in account, then rolls it all back:
-  # run on boot, after the seeds, so an example the library or the model
-  # rules no longer fit stops the server rather than a user's import.
+  # the test suite runs it on the seeds, so an example the library or the
+  # model rules no longer fit fails CI rather than a user's import. The
+  # examples and the seeds ship together, so a release that passed it holds.
   def self.check_all!
     DB.transaction(savepoint: true, rollback: :always) do
       user = User.create(username: "lazy-runner:example-check")

@@ -252,7 +252,7 @@ describe "workouts API" do
       end
     end
 
-    it "ignores a suggestion on a step, as a page on an older release sends it" do
+    it "ignores a suggestion on a step, as an editor draft from before 0.6.0 may hold" do
       blocks = structure
       blocks.first[:steps].first[:suggestion] = { direction: "up", value: 45, unit: "lb", reason: "Felt too easy" }
 

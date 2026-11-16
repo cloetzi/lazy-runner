@@ -14,10 +14,13 @@ class Workout < Record
   MAX_LENGTHS = { title: 100, subtitle: 200 }.freeze
 
   # Raised for a change to an archived workout; the message says why.
-  class ReadOnly < StandardError; end
+  class ReadOnly < Refusal
+    refuses_with :forbidden
+  end
+
   # Raised for a change to the blocks and steps of a workout a session is
   # running, which would pull them from under the player.
-  class Running < StandardError; end
+  class Running < Refusal; end
 
   per_user
   many_to_one :program, key: %i[user_id program_id], primary_key: %i[user_id id]
@@ -141,7 +144,7 @@ class Workout < Record
       update(archived_at: Time.now)
       PlanChange.record!(self, "archived", reason:)
       picked_by.update("#{kind}_id": nil, "no_#{kind}": true, updated_at: Time.now) if FRAMES.include?(kind)
-      removed = Session.where(workout_id: id, status: "planned", date: Time.zone.today..).in_order.all.each(&:destroy)
+      removed = Session.where(workout_id: id, status: "planned", date: Current.today..).in_order.all.each(&:destroy)
       # Its routines end too: their days could never be confirmed.
       Routine.where(workout_id: id).all.each { it.end!(archived: true) unless it.ended? }
       removed

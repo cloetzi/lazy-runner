@@ -134,8 +134,9 @@ flowchart LR
   list marks each piece of gear the user owns and counts the exercises that
   need gear they lack (`missing_exercises`), so the best fit goes first.
 - **Controllers** (`app/controllers/api/`): one per resource, all JSON. The
-  shared error shape and the server's "today" live in
-  `application_controller.rb`. Each action's comment is its OpenAPI
+  shared error shape lives in `application_controller.rb`, which also
+  settles the request's today (`Current.today`: the device's `today` within
+  a day of the server's, else the server's). Each action's comment is its OpenAPI
   description, see [api.md](api.md).
 - **MCP server** (`app/mcp/`): the official `mcp` gem's Streamable HTTP
   transport, mounted at `/mcp` in the same process (`config/routes.rb`),

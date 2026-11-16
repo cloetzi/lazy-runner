@@ -21,7 +21,7 @@ module Api
       raise BadRequest.param(:by, "must be manual or llm") if by && !PlanChange::BY.include?(by)
 
       changes = PlanChange.list(DateRange.resolve(params[:from], params[:to]), by:).all
-      lookup = PlanChange::Lookup.new(changes, today: client_today)
+      lookup = PlanChange::Lookup.new(changes, today: Current.today)
       render json: { changes: changes.map { it.as_json(lookup:) } }
     end
 
@@ -46,7 +46,7 @@ module Api
     # @response 409 #/components/responses/Conflict
     def undo
       change = PlanChange.find!(params[:id])
-      today = client_today
+      today = Current.today
       taken_back = change.undo!(today:)
       lookup = PlanChange::Lookup.new([change, taken_back], today:)
       render json: { change: taken_back.as_json(lookup:), undone: change.as_json(lookup:) }

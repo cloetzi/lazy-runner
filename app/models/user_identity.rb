@@ -6,7 +6,7 @@
 # unlinks. `username` is what the provider called them, for the list.
 class UserIdentity < Record
   # Unlinking the one way left into an account.
-  class Refused < StandardError; end
+  class Refused < Refusal; end
 
   per_user
   many_to_one :user

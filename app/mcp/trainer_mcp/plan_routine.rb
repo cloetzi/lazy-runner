@@ -20,7 +20,7 @@ module TrainerMcp
 
     def self.answer(**arguments)
       routine = Routine.plan!(attributes(arguments), created_by: "llm")
-      today = Time.zone.today
+      today = Current.today
       days = RoutineCalendar.new(today..(today + 27)).days.select { it.routine.id == routine.id }
       { routine: shown(routine), days: days.map { shown_day(it) } }
     end

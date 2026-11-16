@@ -71,7 +71,7 @@ class Activity < Record
   # `today` is the sender's, which `date` may not be after.
   # `known` is a Known of the activities already looked up, which a list
   # passes so each entry needn't be looked up on its own.
-  def self.log!(entry, today: Time.zone.today, created_by: "manual", known: nil)
+  def self.log!(entry, today: Current.today, created_by: "manual", known: nil)
     attempts = 0
     begin
       db.transaction(savepoint: true) { upsert(fields(entry), today:, created_by:, known:) }
@@ -114,7 +114,7 @@ class Activity < Record
   # given with what happened to it, as `log!` does. An entry that appears twice (the same source and external_id) is
   # logged once, the later one's fields winning. Raises EntryInvalid for the
   # first entry that can't be logged.
-  def self.log_all!(entries, today: Time.zone.today, created_by: "manual")
+  def self.log_all!(entries, today: Current.today, created_by: "manual")
     raise ArgumentError, "log at most #{BATCH_LIMIT} activities at once" if entries.size > BATCH_LIMIT
 
     # Each pair's entries merged, in the order its first one came, which a
@@ -191,11 +191,11 @@ class Activity < Record
   private_class_method :upsert
 
   # The day `date` may not be after: the sender's (see
-  # ApplicationController#client_today), else the server's.
+  # Current.today), unless set to another day.
   attr_writer :today
 
   def today
-    @today || Time.zone.today
+    @today || Current.today
   end
 
   # A start as ISO 8601 text (or a Time); other text is refused rather than
