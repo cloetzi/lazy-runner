@@ -723,9 +723,9 @@ function renderWorkout() {
   $("workout-subtitle").textContent = [workout.subtitle, `about ${workout.estimated_minutes} min`].filter(Boolean).join(" · ");
   const gear = [...new Set(workout.blocks.flatMap((block) => block.steps.flatMap((step) => neededEquipment(step) ?? [])))];
   const changes = workoutChanges(workout.changes, [workout.id]).map((change) => withoutUndo(change, state.workoutStale));
-  const gearList = gear.length ? html`<div class="workout-gear"><h2 class="visually-hidden">Gear</h2>
+  const gearCard = gear.length ? html`<div class="workout-gear"><h2 class="visually-hidden">Gear</h2>
       ${gearChips(gear, { names: equipmentNames, owned: ownedEquipment(), label: "Gear it needs", classes: "equipment-list" })}</div>` : "";
-  $("workout-blocks").innerHTML = html`${agentChangesHtml(changes)}${gearList}${workout.blocks.map((block, b) => html`
+  $("workout-blocks").innerHTML = html`${agentChangesHtml(changes)}${gearCard}${workout.blocks.map((block, b) => html`
     <section class="card block">
       <h2 class="block-head"><span class="block-label">${blockName(block.label)}</span><span class="block-meta">${blockSummary(block)}</span></h2>
       <ol class="steps">${block.steps.map((step, s) => stepRow(step, `${b}:${s}`))}</ol>

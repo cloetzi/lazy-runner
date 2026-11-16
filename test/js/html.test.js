@@ -27,16 +27,14 @@ test("writes nothing for null, undefined and false, and 0 as 0", () => {
 test("joined and inLine build html, escaping text but not html", () => {
   assert.equal(String(inLine("p", "a\"b", "<x>")), '<p class="a&#34;b">&#60;x&#62;</p>');
   assert.equal(String(inLine("span", "c", html`<i>y</i>`)), '<span class="c"><i>y</i></span>');
-  assert.equal(String(inLine("<script>", "c", "z")), '<span class="c">z</span>');
+  assert.throws(() => inLine("script", "c", "z"), /p or span/);
   assert.equal(String(joined(["a<b", html`<i>c</i>`], " · ")), "a&#60;b · <i>c</i>");
   assert.equal(String(joined([], ", ")), "");
 });
 
-test("innerHTML takes html as its text", () => {
-  const element = { innerHTML: "" };
-  element.innerHTML = html`<p>${"x"}</p>`;
-  assert.equal(element.innerHTML.toString(), "<p>x</p>");
-  assert.equal(`${html`<p>${"&"}</p>`}`, "<p>&#38;</p>");
+test("a boolean in an attribute's quotes is its word, and nothing elsewhere", () => {
+  assert.equal(String(html`<b aria-pressed="${false}" data-x="${true}">${false}</b>`), '<b aria-pressed="false" data-x="true"></b>');
+  assert.equal(String(html`<b${false && " hidden"}>`), "<b>");
 });
 
 test("icons and author lines are html, their text escaped", () => {
@@ -61,14 +59,14 @@ function literals(source) {
   const quoted = () => {
     const quote = source[i];
     const start = i++;
-    while (source[i] !== quote) i += source[i] === "\\" ? 2 : 1;
+    while (i < source.length && source[i] !== quote) i += source[i] === "\\" ? 2 : 1;
     i++;
     found.push({ start, text: source.slice(start, i), tagged: false });
   };
   const regex = () => {
     let inClass = false;
     i++;
-    while (inClass || source[i] !== "/") {
+    while (i < source.length && (inClass || source[i] !== "/")) {
       if (source[i] === "\\") i++;
       else if (source[i] === "[") inClass = true;
       else if (source[i] === "]") inClass = false;
@@ -79,7 +77,7 @@ function literals(source) {
   const template = () => {
     const start = i++;
     const tagged = source.slice(Math.max(0, start - 4), start) === "html";
-    while (source[i] !== "`") {
+    while (i < source.length && source[i] !== "`") {
       if (source[i] === "\\") i += 2;
       else if (source[i] === "$" && source[i + 1] === "{") {
         i += 2;
@@ -159,7 +157,7 @@ test("html stays html: no plain template goes to innerHTML, and no html is added
     const at = (index, what) => offences.push(`${name}:${lineOf(source, index)} ${what}`);
     for (const match of source.matchAll(/(?:innerHTML|outerHTML)\s*\+?=\s*`|insertAdjacentHTML\([^,]+,\s*`/g)) at(match.index, "plain template");
     // A list of html goes into html`${list}`, which keeps it html.
-    for (const match of source.matchAll(/\.join\(""\)/g)) if (name !== "html.js" && !/names$/.test(source.slice(0, match.index))) at(match.index, "join");
+    for (const match of source.matchAll(/\.join\(""\)/g)) if (name !== "html.js") at(match.index, "join");
     for (const literal of literals(source).filter((l) => l.tagged)) {
       const before = source.slice(0, literal.start - 4).trimEnd();
       const after = source.slice(literal.start + literal.text.length).trimStart();

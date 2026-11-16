@@ -30,7 +30,7 @@ export function gearChips(slugs, { names, owned, label = "Equipment", classes = 
 
 // "Kettlebell and Stability ball": names in a sentence.
 export function nameList(names) {
-  if (names.length <= 1) return names.join("");
+  if (names.length <= 1) return names[0] ?? "";
   return `${names.slice(0, -1).join(", ")} and ${names.at(-1)}`;
 }
 

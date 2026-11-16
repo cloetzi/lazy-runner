@@ -95,8 +95,8 @@ function render() {
   const hint = !review && settings.owned && owned.size === 0
     ? html`. <a href="/equipment.html">Tell us what you own</a> to see more.` : "";
   // "your gear" is what Equipment holds: it goes there to change it.
-  const [before, ...after] = count.split("your gear");
-  const linked = after.length ? html`${before}<a href="/equipment.html">your gear</a>${after.join("your gear")}` : count;
+  const at = count.indexOf("your gear");
+  const linked = at === -1 ? count : html`${count.slice(0, at)}<a href="/equipment.html">your gear</a>${count.slice(at + "your gear".length)}`;
   countLineElement.innerHTML = html`${linked}${hint}${stale ? ` · ${STALE_NOTE}` : ""}`;
   document.getElementById("library-empty").hidden = shown.length > 0;
 

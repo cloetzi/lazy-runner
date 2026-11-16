@@ -16,7 +16,10 @@ class Html {
 
 // What a value becomes inside html``: Html as it is, a list item by item,
 // nothing for null, undefined or false, and anything else as escaped text.
-function part(value) {
+// In an attribute's quotes a boolean is its word, so aria-pressed="${on}"
+// says "false" rather than nothing.
+function part(value, inAttribute = false) {
+  if (inAttribute && typeof value === "boolean") return String(value);
   if (value instanceof Html) return value.text;
   if (Array.isArray(value)) return value.map(part).join("");
   if (value == null || value === false) return "";
@@ -34,7 +37,7 @@ export const joined = (items, separator) => new Html(items.map(part).join(part(s
 export function html(strings, ...values) {
   let out = strings[0];
   values.forEach((value, i) => {
-    out += part(value) + strings[i + 1];
+    out += part(value, strings[i].endsWith('="')) + strings[i + 1];
   });
   return new Html(out);
 }
@@ -47,9 +50,11 @@ export function icon(name, label) {
 }
 
 // `content` in a line of its own (tag "p") or within one ("span"), with
-// `className`: the two a caller can ask for.
+// `className`: the two a caller can ask for, so a tag is never text.
 export function inLine(tag, className, content) {
-  return tag === "p" ? html`<p class="${className}">${content}</p>` : html`<span class="${className}">${content}</span>`;
+  if (tag === "p") return html`<p class="${className}">${content}</p>`;
+  if (tag === "span") return html`<span class="${className}">${content}</span>`;
+  throw new Error(`inLine takes p or span, not ${tag}`);
 }
 
 // Who put something on the calendar, when it was not you: the agent's icon
