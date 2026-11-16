@@ -189,6 +189,15 @@ out, and the outbox only sends a change while the user who made it is
 signed in. Every write goes through `send` in `api.js` or the outbox, so
 each carries what the CSRF check wants.
 
+Markup is written only in `html` tagged templates (`html.js`): each value is
+escaped unless it is html itself (a nested template, or what `icon`,
+`inLine` and `joined` build), and a list is taken item by item, so it stays
+html. Nothing else makes html: there is no way to vouch for a string.
+Assigned to `innerHTML`, a template is its text. A test reads every module
+for markup or an attribute outside html``, and for html added or joined into
+a string; the browser test fails when markup or a character reference shows
+as text.
+
 Logic is kept out of the DOM so node can test it (`test/js`): `player.js`
 and `countdown.js` (the session state machine and timers), `workout.js`,
 `builder.js` (the workout editor's draft and the request that saves it),

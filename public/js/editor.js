@@ -1,5 +1,5 @@
 import { getJson, loadProblem, errorMessage, paths, send, STALE_NOTE } from "./api.js";
-import { escape, icon, busy, showSheet } from "./html.js";
+import { html, joined, icon, busy, showSheet } from "./html.js";
 import { createFigure } from "./figure-view.js";
 import { openHowto, equipmentNames, learnEquipmentNames } from "./howto.js";
 import { missingGear, ownedSlugs } from "./gear.js";
@@ -41,7 +41,7 @@ export async function openEditor(id, { unit, onSaved, cameFrom = "" }) {
   $("edit-tagline").textContent = "";
   $("edit-status").textContent = "";
   $("edit-save").hidden = true;
-  $("edit-form").innerHTML = `<p class="muted">Loading…</p>`;
+  $("edit-form").innerHTML = html`<p class="muted">Loading…</p>`;
   try {
     const [workout, exercises, inventory, catalog] = await Promise.all([
       routeId === "new" ? null : getJson(paths.workout(routeId)),
@@ -84,13 +84,13 @@ export async function openEditor(id, { unit, onSaved, cameFrom = "" }) {
     render();
     showConnection();
   } catch (error) {
-    if (editor === session) $("edit-form").innerHTML = `<p>${escape(loadProblem("the editor", error))}</p>`;
+    if (editor === session) $("edit-form").innerHTML = html`<p>${loadProblem("the editor", error)}</p>`;
   }
 }
 
 function renderReadOnly(workout) {
   $("edit-heading").textContent = workout.title;
-  $("edit-form").innerHTML = `
+  $("edit-form").innerHTML = html`
     <section class="card">
       <p>This workout was deleted, so it can't be changed.</p>
       <div class="card-actions"><a class="button secondary small" href="${routeHash("workout", workout.id)}">Back to the workout</a></div>
@@ -129,9 +129,9 @@ function render() {
   // Each step's still is drawn once and moved into the redrawn form.
   const before = editor.stills;
   editor.stills = new Map();
-  $("edit-form").innerHTML = (editor.stale ? `<p class="muted">${STALE_NOTE}</p>` : "") + details(draft) +
-    draft.blocks.map((block, b) => blockCard(block, b, draft.blocks.length)).join("") +
-    `<button class="secondary editor-add" data-act="add-block" data-focus="add-block">${icon("plus")}Add block</button>`;
+  $("edit-form").innerHTML = html`${editor.stale ? html`<p class="muted">${STALE_NOTE}</p>` : ""}${details(draft)}
+    ${draft.blocks.map((block, b) => blockCard(block, b, draft.blocks.length))}
+    <button class="secondary editor-add" data-act="add-block" data-focus="add-block">${icon("plus")}Add block</button>`;
   const steps = new Map(draft.blocks.flatMap((block) => block.steps).map((step) => [step.key, step]));
   for (const box of $("edit-form").querySelectorAll("[data-still]")) {
     const step = steps.get(box.dataset.still);
@@ -162,22 +162,22 @@ function refocus(key) {
 function details(draft) {
   const main = draft.kind === "workout";
   const general = editor.problems.general;
-  const kinds = draft.id == null ? `
+  const kinds = draft.id == null ? html`
     <div class="field">
       <span class="field-label" id="edit-kind-label">Kind</span>
       <div class="segmented fill" role="group" aria-labelledby="edit-kind-label">
-        ${KINDS.map((kind) => `<button type="button" data-act="kind" data-kind="${kind.id}" data-focus="kind:${kind.id}" aria-pressed="${draft.kind === kind.id}">${kind.label}</button>`).join("")}
+        ${KINDS.map((kind) => html`<button type="button" data-act="kind" data-kind="${kind.id}" data-focus="kind:${kind.id}" aria-pressed="${draft.kind === kind.id}">${kind.label}</button>`)}
       </div>
     </div>` : "";
-  return `
+  return html`
     <section class="card editor-details">
       ${general.length ? problemList(general, "edit-problems") : ""}
       ${kinds}
       <label class="field"><span class="field-label">Name</span>
-        <input data-field="title" value="${escape(draft.title)}" maxlength="80" autocomplete="off" required></label>
+        <input data-field="title" value="${draft.title}" maxlength="80" autocomplete="off" required></label>
       <label class="field"><span class="field-label">Description <span class="muted">(optional)</span></span>
-        <input data-field="subtitle" value="${escape(draft.subtitle)}" maxlength="120" autocomplete="off" placeholder="Legs and core, 25 minutes"></label>
-      ${main ? frameSelect("warmup", "Warm-up", draft) + frameSelect("cooldown", "Cool-down", draft) : ""}
+        <input data-field="subtitle" value="${draft.subtitle}" maxlength="120" autocomplete="off" placeholder="Legs and core, 25 minutes"></label>
+      ${main ? [frameSelect("warmup", "Warm-up", draft), frameSelect("cooldown", "Cool-down", draft)] : ""}
     </section>`;
 }
 
@@ -188,27 +188,27 @@ function frameSelect(kind, label, draft) {
   const part = label.toLowerCase();
   const own = program?.[kind] ? `${program.name}'s ${part}` : `None (${program?.name ?? "the program"} has no ${part})`;
   const fallback = draft.programId
-    ? `<option value=""${chosen == null ? " selected" : ""}>${escape(own)}</option>` : "";
+    ? html`<option value=""${chosen == null ? " selected" : ""}>${own}</option>` : "";
   const none = chosen === "none" || (chosen == null && !draft.programId);
   const frames = editor.frames.filter((frame) => frame.kind === kind);
   // A chosen one since deleted is no longer listed, but still runs: say so.
   const gone = typeof chosen === "number" && !frames.some((frame) => frame.id === chosen)
-    ? `<option value="${chosen}" selected>${escape(draft.frameTitles?.[kind] ?? label)} (deleted)</option>` : "";
-  const options = gone + frames
-    .map((frame) => `<option value="${frame.id}"${frame.id === chosen ? " selected" : ""}>${escape(frame.label)}</option>`).join("");
-  return `<label class="field"><span class="field-label">${label}</span>
+    ? html`<option value="${chosen}" selected>${draft.frameTitles?.[kind] ?? label} (deleted)</option>` : "";
+  const options = [gone, ...frames
+    .map((frame) => html`<option value="${frame.id}"${frame.id === chosen ? " selected" : ""}>${frame.label}</option>`)];
+  return html`<label class="field"><span class="field-label">${label}</span>
     <select data-field="${kind}">${fallback}<option value="none"${none ? " selected" : ""}>None</option>${options}</select></label>`;
 }
 
 function blockCard(block, index, count) {
-  const name = escape(blockName(block.label || "?"));
+  const name = blockName(block.label || "?");
   const problems = editor.problems.blocks[block.key] ?? [];
   const k = block.key;
-  return `
+  return html`
     <section class="card block editor-block${problems.length ? " has-problems" : ""}" aria-label="${name}">
       <div class="editor-block-head">
         <label class="editor-label"><span class="visually-hidden">Label of ${name}</span>
-          <input data-field="label" data-key="${k}" value="${escape(block.label)}" maxlength="40" autocomplete="off"></label>
+          <input data-field="label" data-key="${k}" value="${block.label}" maxlength="40" autocomplete="off"></label>
         <div class="editor-moves">
           <button type="button" class="icon-button" data-act="block-up" data-key="${k}" data-focus="block-up:${k}" aria-label="Move ${name} up"${index === 0 ? " disabled" : ""}>${icon("chevron-up")}</button>
           <button type="button" class="icon-button" data-act="block-down" data-key="${k}" data-focus="block-down:${k}" aria-label="Move ${name} down"${index === count - 1 ? " disabled" : ""}>${icon("chevron-down")}</button>
@@ -220,7 +220,7 @@ function blockCard(block, index, count) {
         ${block.rounds > 1 ? setting("Rest between rounds", stepper("rest", k, `${block.rest_seconds} s`, `rest in ${name}`)) : ""}
       </div>
       ${problems.length ? problemList(problems) : ""}
-      ${block.steps.length ? `<ol class="editor-steps">${block.steps.map(stepItem).join("")}</ol>` : `<p class="muted editor-empty">No exercises yet.</p>`}
+      ${block.steps.length ? html`<ol class="editor-steps">${block.steps.map(stepItem)}</ol>` : html`<p class="muted editor-empty">No exercises yet.</p>`}
       <button type="button" class="secondary editor-add" data-act="add-step" data-key="${k}" data-focus="add-step:${k}">${icon("plus")}Add exercise</button>
     </section>`;
 }
@@ -230,12 +230,12 @@ function stepItem(step) {
   const open = editor.openSteps.has(k);
   const problems = editor.problems.steps[k] ?? [];
   const summary = draftSummary(step, (weight) => formatWeight(weight, editor.unit));
-  return `
+  return html`
     <li class="editor-step${open ? " open" : ""}${problems.length ? " has-problems" : ""}">
       <div class="editor-step-row">
         <span class="swap-still" data-still="${k}" aria-hidden="true"></span>
         <button type="button" class="editor-step-toggle" data-act="toggle" data-key="${k}" data-focus="toggle:${k}" aria-expanded="${open}">
-          <span class="row-text"><span class="row-title">${escape(step.exercise.name)}</span><span class="row-meta">${escape(summary || "Not set")}</span></span>
+          <span class="row-text"><span class="row-title">${step.exercise.name}</span><span class="row-meta">${summary || "Not set"}</span></span>
           ${icon(open ? "chevron-up" : "chevron-down")}
         </button>
       </div>
@@ -246,27 +246,27 @@ function stepItem(step) {
 
 function stepPanel(step) {
   const k = step.key;
-  const name = escape(step.exercise.name);
+  const name = step.exercise.name;
   const sides = step.exercise.unilateral ? " each side" : "";
   const options = weightOptions(step, editor.inventory, editor.unit);
   const amount = step.mode === "reps"
     ? setting(`Reps${sides || (step.exercise.alternating ? " in total" : "")}`, stepper("amount", k, step.reps, `reps of ${name}`))
     : step.mode === "seconds" ? setting(`Time${sides}`, stepper("amount", k, `${step.seconds} s`, `time of ${name}`)) : "";
-  return `
+  return html`
     <div class="editor-step-panel">
       <div class="segmented fill" role="group" aria-label="What ${name} counts">
-        ${MODES.map((mode) => `<button type="button" data-act="mode" data-mode="${mode.id}" data-key="${k}" data-focus="mode-${mode.id}:${k}" aria-pressed="${step.mode === mode.id}">${mode.label}</button>`).join("")}
+        ${MODES.map((mode) => html`<button type="button" data-act="mode" data-mode="${mode.id}" data-key="${k}" data-focus="mode-${mode.id}:${k}" aria-pressed="${step.mode === mode.id}">${mode.label}</button>`)}
       </div>
       <div class="editor-settings">${amount}${options ? weightSetting(step, options) : ""}</div>
       ${options ? weightHint(step, options) : ""}
       <div class="editor-settings">
         <div class="field editor-tempo">
           <label class="field-label" for="tempo-${k}">Tempo <span class="muted">(optional)</span></label>
-          <input id="tempo-${k}" data-field="tempo" data-key="${k}" value="${escape(step.tempo)}" inputmode="numeric" maxlength="4" placeholder="3110" autocomplete="off" aria-describedby="tempo-hint-${k}">
+          <input id="tempo-${k}" data-field="tempo" data-key="${k}" value="${step.tempo}" inputmode="numeric" maxlength="4" placeholder="3110" autocomplete="off" aria-describedby="tempo-hint-${k}">
           <p class="muted editor-hint" id="tempo-hint-${k}">Seconds down, pause, up, pause</p>
         </div>
         <label class="field editor-note"><span class="field-label">Note <span class="muted">(optional)</span></span>
-          <input data-field="note" data-key="${k}" value="${escape(step.note)}" maxlength="120" autocomplete="off"></label>
+          <input data-field="note" data-key="${k}" value="${step.note}" maxlength="120" autocomplete="off"></label>
       </div>
       <div class="editor-step-actions">
         <button type="button" class="secondary small" data-act="step-up" data-key="${k}" data-focus="step-up:${k}" aria-label="Move ${name} up">${icon("chevron-up")}Up</button>
@@ -281,7 +281,7 @@ function stepPanel(step) {
 function weightSetting(step) {
   const shown = step.weight ? formatWeight(step.weight, editor.unit) : "None";
   const label = (step.weights_held ?? step.exercise.weights_held) === 2 ? "Weight, each hand" : "Weight";
-  return setting(label, stepper("weight", step.key, shown, `weight for ${escape(step.exercise.name)}`));
+  return setting(label, stepper("weight", step.key, shown, `weight for ${step.exercise.name}`));
 }
 
 // What the weight means when it isn't the one sessions use, or can't step
@@ -291,24 +291,24 @@ function weightHint(step, options) {
     ? `You're at ${formatWeight(step.current, editor.unit)} now; sessions use that. This is where a first session starts.`
     : step.none && step.weight ? "You do it without a weight now; sessions use that. This is where a first session starts."
     : !options.allowed.length ? "None of its equipment has weights in your inventory, so it steps by the usual increments." : "";
-  return hint ? `<p class="muted editor-hint">${escape(hint)}</p>` : "";
+  return hint ? html`<p class="muted editor-hint">${hint}</p>` : "";
 }
 
 function setting(label, control) {
-  return `<div class="editor-setting"><span class="field-label">${label}</span>${control}</div>`;
+  return html`<div class="editor-setting"><span class="field-label">${label}</span>${control}</div>`;
 }
 
 function stepper(name, key, shown, what) {
-  return `
+  return html`
     <div class="stepper">
       <button type="button" class="secondary" data-act="${name}-down" data-key="${key}" data-focus="${name}-down:${key}" aria-label="Less ${what}">${icon("minus")}</button>
-      <span aria-live="polite">${escape(String(shown))}</span>
+      <span aria-live="polite">${String(shown)}</span>
       <button type="button" class="secondary" data-act="${name}-up" data-key="${key}" data-focus="${name}-up:${key}" aria-label="More ${what}">${icon("plus")}</button>
     </div>`;
 }
 
 function problemList(lines, id = "") {
-  return `<ul class="editor-problems" role="alert"${id ? ` id="${id}"` : ""}>${lines.map((line) => `<li>${escape(line)}</li>`).join("")}</ul>`;
+  return html`<ul class="editor-problems" role="alert"${id ? html` id="${id}"` : ""}>${lines.map((line) => html`<li>${line}</li>`)}</ul>`;
 }
 
 // ---------- Changes ----------
@@ -434,20 +434,20 @@ async function save() {
 function pick(title, onPick, current = null) {
   const dialog = $("picker") ?? document.body.appendChild(Object.assign(document.createElement("dialog"), { id: "picker", className: "sheet" }));
   const used = gearUsed(editor.exercises, editor.inventory);
-  dialog.innerHTML = `
+  dialog.innerHTML = html`
     <form method="dialog" class="howto picker">
       <header>
-        <h2>${escape(title)}</h2>
+        <h2>${title}</h2>
         <button class="icon-button" aria-label="Close">${icon("close")}</button>
       </header>
-      <input type="search" id="picker-search" placeholder="Search exercises" aria-label="Search exercises" value="${escape(pickerFilters.query)}" autocomplete="off">
+      <input type="search" id="picker-search" placeholder="Search exercises" aria-label="Search exercises" value="${pickerFilters.query}" autocomplete="off">
       <div class="segmented" role="group" aria-label="Body area">
-        ${[{ id: "", label: "All areas" }, ...AREAS].map((area) => `<button type="button" data-area="${area.id}">${escape(area.label)}</button>`).join("")}
+        ${[{ id: "", label: "All areas" }, ...AREAS].map((area) => html`<button type="button" data-area="${area.id}">${area.label}</button>`)}
       </div>
       <div class="picker-filters">
         <select id="picker-equipment" aria-label="Equipment">
           <option value="">Any equipment</option><option value="${BODYWEIGHT}">No equipment</option>
-          ${editor.inventory.filter((item) => used.has(item.slug)).map((item) => `<option value="${escape(item.slug)}">${escape(item.name)}</option>`).join("")}
+          ${editor.inventory.filter((item) => used.has(item.slug)).map((item) => html`<option value="${item.slug}">${item.name}</option>`)}
         </select>
         <div class="segmented fill" role="group" aria-label="Which exercises">
           <button type="button" data-owned="true">What I own</button>
@@ -473,7 +473,7 @@ function pick(title, onPick, current = null) {
     stills.forEach((figure) => figure.destroy());
     stills = [];
     const list = dialog.querySelector("#picker-list");
-    list.innerHTML = shown.length ? shown.map(pickerRow).join("") : `<li><p class="muted">Nothing matches. Try another area, or Everything.</p></li>`;
+    list.innerHTML = shown.length ? html`${shown.map(pickerRow)}` : html`<li><p class="muted">Nothing matches. Try another area, or Everything.</p></li>`;
     for (const box of list.querySelectorAll("[data-still]")) {
       const exercise = shown[Number(box.dataset.still)];
       if (exercise.animation) stills.push(createFigure(box, exercise.animation, { still: true }));
@@ -484,15 +484,15 @@ function pick(title, onPick, current = null) {
     const missing = new Set(missingGear(exercise.equipment, owned));
     const gear = (exercise.equipment ?? []).map((slug) => {
       const [name] = equipmentNames([slug]);
-      return missing.has(slug) ? `<span class="gear-missing-text">${icon("close")}${escape(name)}, not yours yet</span>` : escape(name);
+      return missing.has(slug) ? html`<span class="gear-missing-text">${icon("close")}${name}, not yours yet</span>` : name;
     });
-    const meta = [escape(exercise.category), ...gear, exercise.unilateral ? "per side" : exercise.alternating ? "alternating sides" : ""].filter(Boolean).join(" · ");
-    return `<li class="picker-row">
+    const meta = joined([exercise.category, ...gear, exercise.unilateral ? "per side" : exercise.alternating ? "alternating sides" : ""].filter(Boolean), " · ");
+    return html`<li class="picker-row">
       <button type="button" class="row" data-pick="${i}">
         <span class="swap-still" data-still="${i}" aria-hidden="true"></span>
-        <span class="row-text"><span class="row-title">${escape(exercise.name)}</span><span class="row-meta">${meta}</span></span>
+        <span class="row-text"><span class="row-title">${exercise.name}</span><span class="row-meta">${meta}</span></span>
       </button>
-      <button type="button" class="icon-button" data-preview="${i}" aria-label="How to do ${escape(exercise.name)}">${icon("info")}</button>
+      <button type="button" class="icon-button" data-preview="${i}" aria-label="How to do ${exercise.name}">${icon("info")}</button>
     </li>`;
   };
 

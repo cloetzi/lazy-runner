@@ -2,7 +2,7 @@
 // workout view, Get ready, the editor's picker, the example programs and the
 // Equipment page. A missing item is marked with a dashed outline, a cross and
 // the words "not yours yet", never by colour alone. Kept free of the DOM.
-import { escape, icon } from "./html.js";
+import { html, icon } from "./html.js";
 
 // The slugs /api/equipment says the user owns, a generic weight included when
 // they own gear in set weights. Null for no answer, so nothing is marked missing.
@@ -23,14 +23,14 @@ export function gearChips(slugs, { names, owned, label = "Equipment", classes = 
   if (list.length === 0) return "";
   const shown = names(list);
   const missing = new Set(missingGear(list, owned));
-  return `<ul class="${classes}" aria-label="${escape(label)}">${list.map((slug, i) => missing.has(slug)
-    ? `<li class="gear-missing">${icon("close")}${escape(shown[i])}<span class="gear-note"><span class="visually-hidden">,</span> not yours yet</span></li>`
-    : tick ? `<li>${icon("check")}${escape(shown[i])}<span class="visually-hidden">, yours</span></li>` : `<li>${escape(shown[i])}</li>`).join("")}</ul>`;
+  return html`<ul class="${classes}" aria-label="${label}">${list.map((slug, i) => missing.has(slug)
+    ? html`<li class="gear-missing">${icon("close")}${shown[i]}<span class="gear-note"><span class="visually-hidden">,</span> not yours yet</span></li>`
+    : tick ? html`<li>${icon("check")}${shown[i]}<span class="visually-hidden">, yours</span></li>` : html`<li>${shown[i]}</li>`)}</ul>`;
 }
 
 // "Kettlebell and Stability ball": names in a sentence.
 export function nameList(names) {
-  if (names.length <= 1) return names.join("");
+  if (names.length <= 1) return names[0] ?? "";
   return `${names.slice(0, -1).join(", ")} and ${names.at(-1)}`;
 }
 

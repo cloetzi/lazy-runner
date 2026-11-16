@@ -9,7 +9,7 @@ import { createFigure } from "./figure-view.js";
 import { localToday } from "./calendar.js";
 import { WEEKDAY_SHORT } from "./routines.js";
 import { programToPlan, weekPlan } from "./setup.js";
-import { escape } from "./html.js";
+import { html } from "./html.js";
 
 // The welcome screen, shown once, on a user's first sign-in (signin.js):
 // units, the gear they own, an example program and the days they train,
@@ -80,14 +80,14 @@ async function loadDays() {
     }
     const ids = new Set(plan.workouts.map((w) => w.id));
     if (routines.some((routine) => ids.has(routine.workout?.id))) {
-      hint.innerHTML = `${escape(plan.program.name)} is on your <a href="/calendar.html">Calendar</a> already.`;
+      hint.innerHTML = html`${plan.program.name} is on your <a href="/calendar.html">Calendar</a> already.`;
       return;
     }
     toPlan = plan;
     const names = plan.workouts.map((w) => w.title);
     hint.textContent = `Tap your training days. ${names.length > 1 ? `${names.join(" and ")} take turns on them` : `${names[0]} goes on them`}, every week, as Maybe days you confirm or move on the Calendar.`;
-    days.innerHTML = WEEKDAY_SHORT.map((name, i) => `
-      <label><input type="checkbox" name="weekday" value="${i + 1}" aria-label="${WEEKDAY_NAMES[i]}"><span aria-hidden="true">${name}</span></label>`).join("");
+    days.innerHTML = html`${WEEKDAY_SHORT.map((name, i) => html`
+      <label><input type="checkbox" name="weekday" value="${i + 1}" aria-label="${WEEKDAY_NAMES[i]}"><span aria-hidden="true">${name}</span></label>`)}`;
     days.hidden = false;
   } catch {
     hint.textContent = "Plan your days on the Calendar once the server can be reached.";

@@ -1,4 +1,4 @@
-import { escape, icon, authorLine, showSheet } from "./html.js";
+import { html, icon, authorLine, showSheet } from "./html.js";
 import { NEEDS_CONNECTION, offline } from "./api.js";
 import { longDay, weekdayDay, weekOf } from "./calendar.js";
 import { KNOWN_SPORTS, sportIcon, sportLabel, formatDistance } from "./activities.js";
@@ -26,22 +26,22 @@ function sheet(id) {
 // The tile a routine shows: its sport's icon (or the workouts icon), in its state.
 function tile(routine, state, size = "", agent = false) {
   const glyph = routine?.sport ? sportIcon(routine.sport) : "workouts";
-  return `<span class="sport-tile ${state === "confirmed" ? "planned" : state}${size ? ` ${size}` : ""}" aria-hidden="true">${icon(glyph)}${agent ? `<span class="tile-agent"></span>` : ""}</span>`;
+  return html`<span class="sport-tile ${state === "confirmed" ? "planned" : state}${size ? ` ${size}` : ""}" aria-hidden="true">${icon(glyph)}${agent ? html`<span class="tile-agent"></span>` : ""}</span>`;
 }
 
 // A day of a routine in a day's list. `attribute` names the data attribute a
 // tap is looked up by, holding "<routine id>:<date>". `today` is the page's.
 export function routineRow(day, routine, unit, attribute, today, change = null) {
   const meta = [STATE_LABELS[day.state], ...(routine ? routineFacts(routine, unit).slice(1) : []), day.moved && `moved from ${weekdayDay(day.date)}`]
-    .filter(Boolean).map(escape).join(" · ");
-  return `
+    .filter(Boolean).join(" · ");
+  return html`
     <li class="cal-row routine-row ${day.state}">
-      <button class="row" ${attribute}="${escape(dayKey(day))}">
+      <button class="row" ${attribute}="${dayKey(day)}">
         ${tile(routine, day.state)}
         <span class="row-text">
-          <span class="row-title${day.state === "skipped" || day.state === "missed" ? " struck" : ""}">${escape(routine ? routineTitle(routine) : "Routine")}</span>
+          <span class="row-title${day.state === "skipped" || day.state === "missed" ? " struck" : ""}">${routine ? routineTitle(routine) : "Routine"}</span>
           <span class="row-meta">${meta}</span>
-          ${routine?.note ? `<span class="row-note">${escape(routine.note)}</span>` : ""}
+          ${routine?.note ? html`<span class="row-note">${routine.note}</span>` : ""}
           ${changeHtml(change, { today, unit }) ?? authorLine(plannedBy(routine, today))}
         </span>
       </button>
@@ -53,7 +53,7 @@ export function routineRow(day, routine, unit, attribute, today, change = null) 
 // planned it) and its title; the planned distance and time are in the day under the grid.
 export function routineChip(day, routine) {
   const gone = day.state === "skipped" || day.state === "missed";
-  return `<li class="chip routine-chip">${tile(routine, day.state, "chip-tile", routine?.created_by === "llm")}<span class="chip-label${gone ? " struck" : ""}">${escape(routine ? routineTitle(routine) : "Routine")}</span></li>`;
+  return html`<li class="chip routine-chip">${tile(routine, day.state, "chip-tile", routine?.created_by === "llm")}<span class="chip-label${gone ? " struck" : ""}">${routine ? routineTitle(routine) : "Routine"}</span></li>`;
 }
 
 export const dayKey = (day) => `${day.routine_id}:${day.date}`;
@@ -78,28 +78,28 @@ export function openRoutineDaySheet({ day, routine, unit, today, on, change = nu
   // Only a one-off still wholly ahead is deleted; one whose own day has gone
   // by would only be stopped (Routine#end!).
   const canRemove = oneOff && on.onRemove && day.date >= today && day.on >= today && day.state !== "done";
-  dialog.innerHTML = `
+  dialog.innerHTML = html`
     <form method="dialog" class="howto routine-day-sheet" novalidate>
       <header>
-        <h2>${tile(routine, day.state, "small")} ${escape(routineTitle(routine))}</h2>
+        <h2>${tile(routine, day.state, "small")} ${routineTitle(routine)}</h2>
         <button class="icon-button" value="close" aria-label="Close">${icon("close")}</button>
       </header>
-      <p class="muted">${facts.map(escape).join(" · ")}</p>
-      <p>${escape(routineFacts(routine, unit).join(" · "))}</p>
-      ${routine.note ? `<p class="planner-note">${escape(routine.note)}</p>` : ""}
+      <p class="muted">${facts.join(" · ")}</p>
+      <p>${routineFacts(routine, unit).join(" · ")}</p>
+      ${routine.note ? html`<p class="planner-note">${routine.note}</p>` : ""}
       ${changeHtml(change, { today, unit, tag: "p" }) ?? authorLine(plannedBy(routine, today), "p")}
       ${on.onUndo ? undoButton(change, routineTitle(routine), { sheet: true }) : ""}
       <div class="sheet-actions">
-        ${day.state === "tentative" ? `<button class="primary" value="confirm">I'm going</button>` : ""}
-        ${canLog ? `<button class="${day.state === "tentative" ? "secondary" : "primary"}" value="log">Log it now</button>` : ""}
-        ${day.state === "confirmed" ? `<button class="secondary" value="reset">Maybe after all</button>` : ""}
-        ${open ? `<button class="secondary" value="skip">${oneOff ? "Skip" : "Not this week"}</button>` : ""}
-        ${day.state === "skipped" && day.on >= today ? `<button class="secondary" value="reset">Plan it again</button>` : ""}
+        ${day.state === "tentative" ? html`<button class="primary" value="confirm">I'm going</button>` : ""}
+        ${canLog ? html`<button class="${day.state === "tentative" ? "secondary" : "primary"}" value="log">Log it now</button>` : ""}
+        ${day.state === "confirmed" ? html`<button class="secondary" value="reset">Maybe after all</button>` : ""}
+        ${open ? html`<button class="secondary" value="skip">${oneOff ? "Skip" : "Not this week"}</button>` : ""}
+        ${day.state === "skipped" && day.on >= today ? html`<button class="secondary" value="reset">Plan it again</button>` : ""}
       </div>
-      ${open && day.on >= today ? `
+      ${open && day.on >= today ? html`
         <h3 id="routine-move-label">Move to</h3>
         <div class="move-days" role="group" aria-labelledby="routine-move-label">
-          ${choices.map((c) => `<button class="secondary small" value="move:${c.date}"${c.disabled ? " disabled" : ""}${c.date === day.on ? ` aria-current="date"` : ""}>${escape(weekdayDay(c.date))}</button>`).join("")}
+          ${choices.map((c) => html`<button class="secondary small" value="move:${c.date}"${c.disabled ? " disabled" : ""}${c.date === day.on ? html` aria-current="date"` : ""}>${weekdayDay(c.date)}</button>`)}
           <button class="secondary small" type="button" data-later aria-expanded="false">Later</button>
         </div>
         <div class="move-later" hidden>
@@ -107,10 +107,10 @@ export function openRoutineDaySheet({ day, routine, unit, today, on, change = nu
           <button class="secondary small" type="button" data-move-later>Move</button>
         </div>` : ""}
       <div class="sheet-actions">
-        ${routine.workout ? `<a class="button secondary small" href="/#workout/${routine.workout.id}">Open workout</a>` : ""}
-        ${on.onEdit ? `<button class="secondary small" value="edit">${oneOff ? "Edit" : "Edit the routine"}</button>` : ""}
+        ${routine.workout ? html`<a class="button secondary small" href="/#workout/${routine.workout.id}">Open workout</a>` : ""}
+        ${on.onEdit ? html`<button class="secondary small" value="edit">${oneOff ? "Edit" : "Edit the routine"}</button>` : ""}
       </div>
-      ${canRemove ? `<div class="danger-zone"><button class="quiet small danger" value="remove">Remove from the calendar</button></div>` : ""}
+      ${canRemove ? html`<div class="danger-zone"><button class="quiet small danger" value="remove">Remove from the calendar</button></div>` : ""}
     </form>`;
 
   const later = dialog.querySelector(".move-later");
@@ -165,55 +165,55 @@ export function openRoutineSheet({ routine = null, date, once = false, unit, tod
   // The routine's own workout stays a choice, archived or a warm-up as it may be.
   const choices = routine?.workout && workouts && !workouts.some((w) => w.id === routine.workout.id) ? [routine.workout, ...workouts] : workouts;
   const heading = editing ? "Edit the routine" : oneOff ? "Plan a day" : "Plan a routine";
-  dialog.innerHTML = `
+  dialog.innerHTML = html`
     <form method="dialog" class="howto routine-form" novalidate>
       <header>
-        <h2>${escape(heading)}</h2>
+        <h2>${heading}</h2>
         <button class="icon-button" type="button" data-close aria-label="Close">${icon("close")}</button>
       </header>
-      ${choices?.length ? `
+      ${choices?.length ? html`
         <div class="segmented fill" role="radiogroup" aria-label="What">
           <label><input type="radio" name="what" value="sport"${what === "sport" ? " checked" : ""}><span>Run or other sport</span></label>
           <label><input type="radio" name="what" value="workout"${what === "workout" ? " checked" : ""}><span>Workout</span></label>
-        </div>` : `<input type="hidden" name="what" value="sport">`}
+        </div>` : html`<input type="hidden" name="what" value="sport">`}
       <label class="field" data-for="sport"><span>Sport</span>
-        <input name="sport" list="routine-sports" maxlength="40" autocomplete="off" value="${escape(sport)}" placeholder="Run, ride, hike…">
-        <datalist id="routine-sports">${KNOWN_SPORTS.map((s) => `<option value="${escape(sportLabel(s))}">`).join("")}</datalist>
+        <input name="sport" list="routine-sports" maxlength="40" autocomplete="off" value="${sport}" placeholder="Run, ride, hike…">
+        <datalist id="routine-sports">${KNOWN_SPORTS.map((s) => html`<option value="${sportLabel(s)}">`)}</datalist>
       </label>
-      ${choices?.length ? `<label class="field" data-for="workout"><span>Workout</span>
-        <select name="workout">${choices.map((w) => `<option value="${w.id}"${routine?.workout?.id === w.id ? " selected" : ""}>${escape(w.title)}</option>`).join("")}</select>
+      ${choices?.length ? html`<label class="field" data-for="workout"><span>Workout</span>
+        <select name="workout">${choices.map((w) => html`<option value="${w.id}"${routine?.workout?.id === w.id ? " selected" : ""}>${w.title}</option>`)}</select>
       </label>` : ""}
-      ${oneOff ? `
+      ${oneOff ? html`
         <label class="field"><span>Day</span><input type="date" name="starts_on" min="${today}" value="${startsOn}"></label>
-        ${editing ? "" : `<div class="segmented fill" role="radiogroup" aria-label="How sure">
+        ${editing ? "" : html`<div class="segmented fill" role="radiogroup" aria-label="How sure">
           <label><input type="radio" name="sure" value="maybe" checked><span>Maybe</span></label>
           <label><input type="radio" name="sure" value="planned"><span>Planned</span></label>
         </div>
-        <p class="muted small-print">Maybe shows it dashed until you say you're going; Planned counts on it.</p>`}` : `
+        <p class="muted small-print">Maybe shows it dashed until you say you're going; Planned counts on it.</p>`}` : html`
         <fieldset class="field"><legend>Every</legend>
-          <div class="check-chips weekday-choices">${WEEKDAY_SHORT.map((name, i) => `<label><input type="checkbox" name="weekday" value="${i + 1}"${weekdays.includes(i + 1) ? " checked" : ""}><span>${name}</span></label>`).join("")}</div>
+          <div class="check-chips weekday-choices">${WEEKDAY_SHORT.map((name, i) => html`<label><input type="checkbox" name="weekday" value="${i + 1}"${weekdays.includes(i + 1) ? " checked" : ""}><span>${name}</span></label>`)}</div>
         </fieldset>
         <label class="field"><span>From</span><input type="date" name="starts_on" min="${today}" value="${startsOn}"></label>
-        ${editing && routine.starts_on < today ? `<p class="muted small-print">Days gone by stay as they were: a change to the days or the sport starts a new routine today.</p>` : ""}`}
+        ${editing && routine.starts_on < today ? html`<p class="muted small-print">Days gone by stay as they were: a change to the days or the sport starts a new routine today.</p>` : ""}`}
       <label class="field"><span>Title <span class="muted">(optional)</span></span>
-        <input name="title" maxlength="200" value="${escape(routine?.title ?? "")}" placeholder="Long run">
+        <input name="title" maxlength="200" value="${routine?.title ?? ""}" placeholder="Long run">
       </label>
       <div class="activity-numbers">
         <label class="field"><span>Minutes</span><input name="minutes" inputmode="numeric" value="${routine?.minutes ?? ""}" placeholder="45"></label>
-        <label class="field"><span>Distance</span><span class="with-unit"><input name="distance" inputmode="decimal" value="${escape(distance)}" placeholder="0"><span class="muted">${unit}</span></span></label>
+        <label class="field"><span>Distance</span><span class="with-unit"><input name="distance" inputmode="decimal" value="${distance}" placeholder="0"><span class="muted">${unit}</span></span></label>
       </div>
       <fieldset class="field"><legend>Effort</legend>
         <div class="segmented fill" role="radiogroup" aria-label="Effort">
           <label><input type="radio" name="effort" value=""${routine?.effort ? "" : " checked"}><span>Any</span></label>
-          ${EFFORTS.map((e) => `<label><input type="radio" name="effort" value="${e}"${routine?.effort === e ? " checked" : ""}><span>${e[0].toUpperCase() + e.slice(1)}</span></label>`).join("")}
+          ${EFFORTS.map((e) => html`<label><input type="radio" name="effort" value="${e}"${routine?.effort === e ? " checked" : ""}><span>${e[0].toUpperCase() + e.slice(1)}</span></label>`)}
         </div>
       </fieldset>
       <label class="field"><span>Note <span class="muted">(optional)</span></span>
-        <textarea name="note" rows="2" maxlength="2000">${escape(routine?.note ?? "")}</textarea>
+        <textarea name="note" rows="2" maxlength="2000">${routine?.note ?? ""}</textarea>
       </label>
       <p class="form-error" role="alert" hidden></p>
       <button class="primary" type="submit">${editing ? "Save" : "Plan"}</button>
-      ${editing && onEnd ? `<div class="danger-zone"><button class="quiet small danger" type="button" data-end>${routine.starts_on < today ? "Stop this routine" : "Delete this routine"}</button></div>` : ""}
+      ${editing && onEnd ? html`<div class="danger-zone"><button class="quiet small danger" type="button" data-end>${routine.starts_on < today ? "Stop this routine" : "Delete this routine"}</button></div>` : ""}
     </form>`;
   const form = dialog.querySelector("form");
   const error = form.querySelector(".form-error");

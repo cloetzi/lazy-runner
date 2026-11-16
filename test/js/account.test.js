@@ -225,9 +225,9 @@ test("sends the sign-in page back where it came from, and only on this site", ()
 test("links the sync note to the sign-in page when changes wait for one", () => {
   const here = { pathname: "/calendar.html", search: "", hash: "" };
 
-  assert.equal(syncNote(1, "offline", here), "1 change waiting to sync");
-  assert.equal(syncNote(3, "server", here), "3 changes waiting to sync: the server isn't saving changes at the moment, they'll go once it does");
-  assert.equal(syncNote(2, "auth", here), '<a href="/signin.html?next=%2Fcalendar.html">Sign in again</a> to sync 2 changes');
+  assert.equal(String(syncNote(1, "offline", here)), "1 change waiting to sync");
+  assert.equal(String(syncNote(3, "server", here)), "3 changes waiting to sync: the server isn't saving changes at the moment, they'll go once it does");
+  assert.equal(String(syncNote(2, "auth", here)), '<a href="/signin.html?next=%2Fcalendar.html">Sign in again</a> to sync 2 changes');
 });
 
 test("names a device by its browser and system", () => {

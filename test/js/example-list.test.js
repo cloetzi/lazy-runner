@@ -18,8 +18,8 @@ test("heads each workout under What's in it, with minutes for main ones", () => 
 });
 
 test("marks each piece of an example's gear as yours or not, in words", () => {
-  const html = gearLine({ gear: [{ slug: "dumbbell", name: "Dumbbells", owned: true }, { slug: "kettlebell", name: "Kettlebell", owned: false }] });
+  const html = String(gearLine({ gear: [{ slug: "dumbbell", name: "Dumbbells", owned: true }, { slug: "kettlebell", name: "Kettlebell", owned: false }] }));
   assert.match(html, /#check[^]*Dumbbells<span class="visually-hidden">, yours<\/span>/);
   assert.match(html, /class="gear-missing"[^]*#close[^]*Kettlebell[^]*not yours yet/);
-  assert.equal(gearLine({ gear: [] }), "");
+  assert.equal(String(gearLine({ gear: [] })), "");
 });

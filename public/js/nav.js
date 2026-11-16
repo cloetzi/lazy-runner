@@ -1,5 +1,5 @@
 import { PAGES, TABS, MORE, SIDEBAR, SIDEBAR_SECONDARY } from "./routes.js";
-import { escape, icon } from "./html.js";
+import { html, icon } from "./html.js";
 import { ACCOUNT_KEY, adoptAccount, checkSignedIn, signInHref, storedAccount } from "./account.js";
 import { offline } from "./api.js";
 import { localToday } from "./calendar.js";
@@ -176,13 +176,13 @@ export function mountNav(current) {
     if (event.key === ACCOUNT_KEY || event.key === null) location.reload();
   });
   const links = (pages) => pages
-    .map((page) => `<li><a href="${page.href}" data-page="${page.id}">${icon(page.icon)}<span>${escape(page.label)}</span></a></li>`).join("");
-  const user = (where) => `<a class="nav-user ${where}" href="/settings.html#account" hidden>${icon("person")}<span><span class="visually-hidden">Signed in as </span><span class="nav-user-name"></span></span></a>`;
+    .map((page) => html`<li><a href="${page.href}" data-page="${page.id}">${icon(page.icon)}<span>${page.label}</span></a></li>`);
+  const user = (where) => html`<a class="nav-user ${where}" href="/settings.html#account" hidden>${icon("person")}<span><span class="visually-hidden">Signed in as </span><span class="nav-user-name"></span></span></a>`;
   const tabs = TABS
-    .map((page) => `<a class="tab" href="${page.href}" data-page="${page.id}">${icon(page.icon)}<span>${escape(page.label)}</span></a>`).join("");
+    .map((page) => html`<a class="tab" href="${page.href}" data-page="${page.id}">${icon(page.icon)}<span>${page.label}</span></a>`);
 
   document.body.classList.add("with-nav");
-  document.body.insertAdjacentHTML("afterbegin", `
+  document.body.insertAdjacentHTML("afterbegin", html`
     <a class="skip-link" id="skip-link">Skip to content</a>
     <header class="topbar">
       <span class="topbar-brand">${icon("mark", "The Lazy Runner")}</span>

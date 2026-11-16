@@ -1,6 +1,6 @@
 import { mountNav, showCoachNews } from "./nav.js";
 import { getJson, loadProblem, offline, paths, sendChange, STALE_NOTE } from "./api.js";
-import { escape, icon } from "./html.js";
+import { html, icon } from "./html.js";
 import { localToday, shortDay, weekdayDay, STATUS_LABELS } from "./calendar.js";
 import { STATE_LABELS, routineTitle, routineFacts } from "./routines.js";
 import { activityTitle, activityFacts, sportIcon, preferredDistanceUnit } from "./activities.js";
@@ -159,7 +159,7 @@ function render() {
   $("coach-note").hidden = notes.length === 0;
   const board = state.board;
   if (!board) {
-    $("coach-board").innerHTML = state.failed ? "" : `<p class="muted">Loading…</p>`;
+    $("coach-board").innerHTML = state.failed ? "" : html`<p class="muted">Loading…</p>`;
     return;
   }
   const written = everyNote();
@@ -173,15 +173,15 @@ function render() {
   // side by side in landscape.
   // Side by side, the left holds what stands now (the reading and the goals
   // it ties back to), the right what happened by date (the week, the notes).
-  const reading = `${newsCard()}${currentCard("status", board.status)}${currentCard("focus", board.focus)}${concernsCard(board)}`;
-  $("coach-board").innerHTML = [empty ? introCard() : "", wide.matches
-    ? `<div class="coach-column coach-reading">${reading}${goalsCard(board)}</div><div class="coach-column">${weekCard(board)}${notesCard(board)}</div>`
-    : `<div class="coach-column">${reading}${weekCard(board)}${goalsCard(board)}${notesCard(board)}</div>`].join("");
+  const reading = html`${newsCard()}${currentCard("status", board.status)}${currentCard("focus", board.focus)}${concernsCard(board)}`;
+  $("coach-board").innerHTML = html`${empty ? introCard() : ""}${wide.matches
+    ? html`<div class="coach-column coach-reading">${reading}${goalsCard(board)}</div><div class="coach-column">${weekCard(board)}${notesCard(board)}</div>`
+    : html`<div class="coach-column">${reading}${weekCard(board)}${goalsCard(board)}${notesCard(board)}</div>`}`;
 }
 
 // Until anything is written: what the page is for, and the two ways in.
 function introCard() {
-  return `
+  return html`
     <section class="card coach-card coach-intro" aria-labelledby="intro-title">
       <h2 id="intro-title">Your training notebook</h2>
       <p>Goals, where things stand, what to work on next and notes along the way. You write here, and so can a coach you work with or an AI assistant you connect. Start with a goal.</p>
@@ -199,17 +199,17 @@ function newsCard() {
   if (!hasNews(state.news)) return "";
   // A copy kept on the device can't say what can still be taken back.
   const live = !state.newsStale;
-  const groups = newsGroups(state.news, { today: today(), unit: unit() }).map((g) => `
+  const groups = newsGroups(state.news, { today: today(), unit: unit() }).map((g) => html`
     <div class="news-group">
-      <p class="author"><span class="author-badge llm" aria-hidden="true">${icon("agent")}</span><strong>${escape(g.who)}</strong><span class="muted"> · ${escape(g.when)}</span></p>
-      <ul class="news-items">${g.items.map((item) => `
+      <p class="author"><span class="author-badge llm" aria-hidden="true">${icon("agent")}</span><strong>${g.who}</strong><span class="muted"> · ${g.when}</span></p>
+      <ul class="news-items">${g.items.map((item) => html`
         <li>
-          <span>${escape(item.text)}</span>
-          ${item.href ? `<a class="link" href="${escape(item.href)}" aria-label="${escape(item.showLabel ?? `Show ${item.title} on the calendar`)}">Show</a>` : ""}
+          <span>${item.text}</span>
+          ${item.href ? html`<a class="link" href="${item.href}" aria-label="${item.showLabel ?? `Show ${item.title} on the calendar`}">Show</a>` : ""}
           ${live && item.undo ? undoButton(item.undo, item.title, { classes: "quiet small", disabled: state.busy }) : ""}
-        </li>`).join("")}</ul>
-    </div>`).join("");
-  return `
+        </li>`)}</ul>
+    </div>`);
+  return html`
     <section class="card coach-card coach-news" aria-labelledby="news-title">
       <header class="coach-card-head"><h2 id="news-title">Since you last looked</h2><button class="secondary small" data-seen${state.busy || !live ? " disabled" : ""}>Mark as seen</button></header>
       ${groups}
@@ -218,7 +218,7 @@ function newsCard() {
 
 function aboutTag(note) {
   if (!note.about && !note.date) return "";
-  return `<span class="tag">${escape(aboutLabel(note))}</span>`;
+  return html`<span class="tag">${aboutLabel(note)}</span>`;
 }
 
 function goalsCard({ goals, proposals }) {
@@ -226,52 +226,52 @@ function goalsCard({ goals, proposals }) {
   // The arrows only in Reorder, side by side, 44 px each.
   const reordering = state.reordering && goals.length > 1;
   const list = goals.length
-    ? `<ol class="goal-list${reordering ? " reordering" : ""}">${goals.map((g, i) => {
-        const text = `
+    ? html`<ol class="goal-list${reordering ? " reordering" : ""}">${goals.map((g, i) => {
+        const text = html`
             <span class="goal-number" aria-hidden="true">${i + 1}.</span>
             <span class="row-text">
-              <span class="row-title">${escape(g.title)}</span>
-              ${g.target_date || g.why ? `<span class="goal-why muted">${[g.target_date && `By ${shortDay(g.target_date)}`, g.why].filter(Boolean).map(escape).join(" · ")}</span>` : ""}
+              <span class="row-title">${g.title}</span>
+              ${g.target_date || g.why ? html`<span class="goal-why muted">${[g.target_date && `By ${shortDay(g.target_date)}`, g.why].filter(Boolean).join(" · ")}</span>` : ""}
             </span>`;
-        return `
+        return html`
         <li>
-          ${reordering ? `<div class="row goal">${text}</div>` : `<button class="row goal" data-goal="${g.id}">${text}</button>`}
-          ${reordering ? `<span class="goal-order">
-            <button class="secondary small icon-only" data-goal-up="${g.id}" aria-label="${escape(`Move ${g.title} up`)}"${i === 0 ? " disabled" : ""}>${icon("chevron-up")}</button>
-            <button class="secondary small icon-only" data-goal-down="${g.id}" aria-label="${escape(`Move ${g.title} down`)}"${i === goals.length - 1 ? " disabled" : ""}>${icon("chevron-down")}</button>
+          ${reordering ? html`<div class="row goal">${text}</div>` : html`<button class="row goal" data-goal="${g.id}">${text}</button>`}
+          ${reordering ? html`<span class="goal-order">
+            <button class="secondary small icon-only" data-goal-up="${g.id}" aria-label="${`Move ${g.title} up`}"${i === 0 ? " disabled" : ""}>${icon("chevron-up")}</button>
+            <button class="secondary small icon-only" data-goal-down="${g.id}" aria-label="${`Move ${g.title} down`}"${i === goals.length - 1 ? " disabled" : ""}>${icon("chevron-down")}</button>
           </span>` : ""}
         </li>`;
-      }).join("")}</ol>`
-    : `<p class="muted">No goals yet. What are you training for? Everything the coach writes ties back to these.</p>`;
+      })}</ol>`
+    : html`<p class="muted">No goals yet. What are you training for? Everything the coach writes ties back to these.</p>`;
   // Waiting proposals as one line; Review opens them,
   // each saying what Accept and Dismiss do.
   const agents = [...new Set(proposals.map((p) => agentName(p)))];
-  const waiting = proposals.length ? `
+  const waiting = proposals.length ? html`
     <div class="proposals${state.reviewing ? " open" : ""}">
       <button class="row proposals-line" data-review aria-expanded="${state.reviewing}">
         <span class="row-text">
           <span class="row-title">${proposals.length === 1 ? "1 goal proposal waiting" : `${proposals.length} goal proposals waiting`}</span>
-          <span class="row-meta">From ${escape(agents.length > 1 ? `${agents.slice(0, -1).join(", ")} and ${agents.at(-1)}` : agents[0])}</span>
+          <span class="row-meta">From ${agents.length > 1 ? `${agents.slice(0, -1).join(", ")} and ${agents.at(-1)}` : agents[0]}</span>
         </span>
         <span class="proposals-toggle">${state.reviewing ? "Close" : "Review"}${icon(state.reviewing ? "chevron-up" : "chevron-down")}</span>
       </button>
-      ${state.reviewing ? proposals.map((p, i) => proposalHtml(p, i, goals, byId)).join("") : ""}
+      ${state.reviewing ? proposals.map((p, i) => proposalHtml(p, i, goals, byId)) : ""}
     </div>` : "";
   const tools = [
     goals.length > 1 && (reordering
-      ? `<button class="secondary small" data-reorder>${icon("check")}Done</button>`
-      : `<button class="quiet small" data-reorder>Reorder</button>`),
+      ? html`<button class="secondary small" data-reorder>${icon("check")}Done</button>`
+      : html`<button class="quiet small" data-reorder>Reorder</button>`),
     !reordering && pastGoalsButton(),
   ].filter(Boolean);
-  return `
+  return html`
     <section class="card coach-card coach-goals" id="goals" aria-labelledby="goals-title">
       <header class="coach-card-head"><h2 id="goals-title">Goals</h2><button class="secondary small" data-add-goal>${icon("plus")}Add</button></header>
       ${waiting}
       ${list}
-      ${reordering ? `<p class="muted small-print">Put what matters most at the top.</p>` : ""}
-      ${tools.length ? `<div class="goal-tools">${tools.join("")}</div>` : ""}
+      ${reordering ? html`<p class="muted small-print">Put what matters most at the top.</p>` : ""}
+      ${tools.length ? html`<div class="goal-tools">${tools}</div>` : ""}
       ${state.past?.length ? pastGoals() : ""}
-      ${state.agentSeen ? `<p class="muted small-print">Only you change goals; your coach agent can propose one.</p>` : ""}
+      ${state.agentSeen ? html`<p class="muted small-print">Only you change goals; your coach agent can propose one.</p>` : ""}
     </section>`;
 }
 
@@ -280,21 +280,21 @@ function proposalHtml(p, i, goals, byId) {
   const replaces = p.replaces_id && byId.get(p.replaces_id);
   const place = replaces ? goals.indexOf(replaces) + 1 : goals.length + 1;
   const accept = replaces
-    ? `It takes the place of goal ${place}, “${escape(replaces.title)}”, which moves to past goals.`
+    ? html`It takes the place of goal ${place}, “${replaces.title}”, which moves to past goals.`
     : `It becomes goal ${place}, at the end of your list.`;
-  return `
+  return html`
     <div class="proposal">
-      <p class="proposal-title"><strong>${escape(p.title)}</strong></p>
-      ${replaces ? `<p class="muted small-print">Instead of goal ${place}, “${escape(replaces.title)}”</p>` : ""}
-      ${p.proposed_reason ? `<p>${escape(p.proposed_reason)}</p>` : ""}
-      <p class="muted small-print">${[p.target_date && `By ${shortDay(p.target_date)}`, p.why, `Proposed ${writtenOn(p)}`].filter(Boolean).map(escape).join(" · ")}</p>
+      <p class="proposal-title"><strong>${p.title}</strong></p>
+      ${replaces ? html`<p class="muted small-print">Instead of goal ${place}, “${replaces.title}”</p>` : ""}
+      ${p.proposed_reason ? html`<p>${p.proposed_reason}</p>` : ""}
+      <p class="muted small-print">${[p.target_date && `By ${shortDay(p.target_date)}`, p.why, `Proposed ${writtenOn(p)}`].filter(Boolean).join(" · ")}</p>
       <div class="proposal-actions">
         <button class="${i === 0 ? "primary" : "secondary"} small" data-accept="${p.id}">Accept</button>
         <button class="secondary small" data-dismiss="${p.id}">Dismiss</button>
       </div>
       <dl class="proposal-effects small-print">
         <div><dt>Accept</dt><dd>${accept}</dd></div>
-        <div><dt>Dismiss</dt><dd>${escape(agentName(p))} won't propose this goal again.</dd></div>
+        <div><dt>Dismiss</dt><dd>${agentName(p)} won't propose this goal again.</dd></div>
       </dl>
     </div>`;
 }
@@ -302,38 +302,38 @@ function proposalHtml(p, i, goals, byId) {
 // Past goals: offered only once there is one (the board says how many).
 function pastGoalsButton() {
   if (state.past || !(state.board.past_goals)) return "";
-  return `<button class="quiet small" data-past>Past goals</button>`;
+  return html`<button class="quiet small" data-past>Past goals</button>`;
 }
 
 function pastGoals() {
-  return `
+  return html`
     <div class="past-goals">
       <h3>Past goals</h3>
-      <ul class="coach-entries">${state.past.map((g) => `
+      <ul class="coach-entries">${state.past.map((g) => html`
         <li class="coach-entry">
-          <p class="entry-title"><strong>${escape(g.title)}</strong> ${g.status === "achieved" ? `<span class="tag success">Achieved</span>` : `<span class="tag">Dropped</span>`}</p>
-          ${g.decided_at ? `<p class="muted small-print">${escape(writtenOn({ created_at: g.decided_at }))}</p>` : ""}
+          <p class="entry-title"><strong>${g.title}</strong> ${g.status === "achieved" ? html`<span class="tag success">Achieved</span>` : html`<span class="tag">Dropped</span>`}</p>
+          ${g.decided_at ? html`<p class="muted small-print">${writtenOn({ created_at: g.decided_at })}</p>` : ""}
           <div class="entry-actions">
             <button class="quiet small" data-reactivate="${g.id}">Make it a goal again</button>
-            <button class="quiet small danger" data-delete-goal="${g.id}" data-title="${escape(g.title)}">Delete</button>
+            <button class="quiet small danger" data-delete-goal="${g.id}" data-title="${g.title}">Delete</button>
           </div>
-        </li>`).join("")}</ul>
+        </li>`)}</ul>
     </div>`;
 }
 
 function currentCard(kind, note) {
   const title = KIND_LABELS[kind];
   const body = note
-    ? `
-      ${note.title ? `<p class="current-title"><strong>${escape(note.title)}</strong></p>` : ""}
-      <p class="current-body">${escape(note.body)}</p>
+    ? html`
+      ${note.title ? html`<p class="current-title"><strong>${note.title}</strong></p>` : ""}
+      <p class="current-body">${note.body}</p>
       <div class="current-foot">
-        <p class="note-by">${author(note)}${note.replaces ? `<span class="muted"> · replaces ${escape(writtenOn(note.replaces))}</span>` : ""}</p>
+        <p class="note-by">${author(note)}${note.replaces ? html`<span class="muted"> · replaces ${writtenOn(note.replaces)}</span>` : ""}</p>
         <div class="entry-actions">${replyButton(note)}${editButton(note)}</div>
       </div>
       ${replies(note)}`
-    : `<p class="muted">${kind === "status" ? `Where things stand: written by you or your coach${state.agentSeen ? " or your coach agent" : ""}.` : "What to work on next."}</p>`;
-  return `
+    : html`<p class="muted">${kind === "status" ? `Where things stand: written by you or your coach${state.agentSeen ? " or your coach agent" : ""}.` : "What to work on next."}</p>`;
+  return html`
     <section class="card coach-card" aria-labelledby="${kind}-title">
       <header class="coach-card-head"><h2 id="${kind}-title">${title}</h2><button class="secondary small" data-write="${kind}">${note ? "Update" : "Write"}</button></header>
       ${body}
@@ -346,31 +346,31 @@ function currentCard(kind, note) {
 function weekCard({ week }) {
   const now = today();
   const item = (glyph, title, facts, extra = "") =>
-    `<span class="week-item${extra}">${glyph}<span class="week-item-text"><span class="week-item-title">${escape(title)}</span>${facts.length ? `<span class="week-item-facts">${facts.map(escape).join(" · ")}</span>` : ""}</span></span>`;
+    html`<span class="week-item${extra}">${glyph}<span class="week-item-text"><span class="week-item-title">${title}</span>${facts.length ? html`<span class="week-item-facts">${facts.join(" · ")}</span>` : ""}</span></span>`;
   const rows = weekDays(week, now).map(({ date, sessions, routineDays, activities, notes }) => {
     const items = [
       ...sessions.map(({ session, mark }) =>
-        item(`<span class="week-glyph" aria-hidden="true"><span class="mark ${mark}"></span></span>`, session.workout.title,
+        item(html`<span class="week-glyph" aria-hidden="true"><span class="mark ${mark}"></span></span>`, session.workout.title,
           [STATUS_LABELS[mark], session.workout.estimated_minutes && `${session.workout.estimated_minutes} min`].filter(Boolean), mark === "skipped" ? " struck" : "")),
       ...routineDays.map(({ day, routine }) =>
-        item(`<span class="sport-tile routine-tile small ${day.state}" aria-hidden="true">${icon(routine?.sport ? sportIcon(routine.sport) : "workouts")}</span>`,
+        item(html`<span class="sport-tile routine-tile small ${day.state}" aria-hidden="true">${icon(routine?.sport ? sportIcon(routine.sport) : "workouts")}</span>`,
           routine ? routineTitle(routine) : "Routine", [STATE_LABELS[day.state], ...(routine ? routineFacts(routine, unit()).slice(1) : [])], day.state === "skipped" ? " struck" : "")),
       ...activities.map(({ activity, fulfils }) =>
-        item(`<span class="sport-tile small" aria-hidden="true">${icon(sportIcon(activity.sport))}</span>`, activityTitle(activity),
+        item(html`<span class="sport-tile small" aria-hidden="true">${icon(sportIcon(activity.sport))}</span>`, activityTitle(activity),
           [fulfils && `✓ ${routineTitle(fulfils)}`, ...activityFacts(activity, unit()).slice(0, 2)].filter(Boolean))),
     ];
-    if (notes.length) items.push(item(`<span class="note-tile small" aria-hidden="true">${icon("coach")}</span>`, notes.length === 1 ? "1 note" : `${notes.length} notes`, [], " quiet"));
+    if (notes.length) items.push(item(html`<span class="note-tile small" aria-hidden="true">${icon("coach")}</span>`, notes.length === 1 ? "1 note" : `${notes.length} notes`, [], " quiet"));
     const when = date === now ? " today" : date < now ? " past" : "";
-    return `
+    return html`
       <li>
         <a class="row week-line${when}" href="/calendar.html#${date}">
-          <span class="week-date"><span>${escape(date === now ? "Today" : weekdayDay(date))}</span></span>
-          <span class="week-items">${items.length ? items.join("") : `<span class="muted">Rest</span>`}</span>
+          <span class="week-date"><span>${date === now ? "Today" : weekdayDay(date)}</span></span>
+          <span class="week-items">${items.length ? items : html`<span class="muted">Rest</span>`}</span>
           ${icon("chevron-right")}
         </a>
       </li>`;
-  }).join("");
-  return `
+  });
+  return html`
     <section class="card coach-card coach-week-card" aria-labelledby="week-title">
       <header class="coach-card-head"><h2 id="week-title">This week</h2><a class="link" href="/calendar.html">Calendar</a></header>
       <ul class="coach-week">${rows}</ul>
@@ -379,15 +379,15 @@ function weekCard({ week }) {
 
 function noteItem(note, { concern = false } = {}) {
   const resolved = note.resolved_at;
-  return `
+  return html`
     <li class="coach-entry${concern ? " concern" : ""}">
-      ${note.title || (!concern && note.kind !== "note") ? `<p class="entry-title">${concern ? `<span class="concern-dot" aria-hidden="true"></span>` : ""}${note.title ? `<strong>${escape(note.title)}</strong>` : ""}${!concern && note.kind !== "note" ? ` <span class="tag">${escape(KIND_LABELS[note.kind])}${resolved ? ", resolved" : ""}</span>` : ""}</p>` : ""}
-      <p class="entry-body">${escape(note.body)}</p>
+      ${note.title || (!concern && note.kind !== "note") ? html`<p class="entry-title">${concern ? html`<span class="concern-dot" aria-hidden="true"></span>` : ""}${note.title ? html`<strong>${note.title}</strong>` : ""}${!concern && note.kind !== "note" ? html` <span class="tag">${KIND_LABELS[note.kind]}${resolved ? ", resolved" : ""}</span>` : ""}</p>` : ""}
+      <p class="entry-body">${note.body}</p>
       <p class="note-by">${author(note)} ${aboutTag(note)}</p>
-      ${resolved ? `<p class="muted small-print">Resolved ${escape(writtenOn({ created_at: resolved }))}${note.resolution ? `: ${escape(note.resolution)}` : ""}</p>` : ""}
+      ${resolved ? html`<p class="muted small-print">Resolved ${writtenOn({ created_at: resolved })}${note.resolution ? html`: ${note.resolution}` : ""}</p>` : ""}
       ${replies(note)}
       <div class="entry-actions">
-        ${concern && !resolved ? `<button class="secondary small" data-resolve="${note.id}">Resolve</button>` : ""}
+        ${concern && !resolved ? html`<button class="secondary small" data-resolve="${note.id}">Resolve</button>` : ""}
         ${replyButton(note)}
         ${editButton(note)}
       </div>
@@ -396,29 +396,29 @@ function noteItem(note, { concern = false } = {}) {
 
 // A note the user didn't write takes a reply, which shows under it with
 // its own Edit.
-const replyButton = (note) => note.author_kind !== "user" ? `<button class="secondary small" data-reply="${note.id}">Reply</button>` : "";
-const replies = (note) => repliesHtml(note, (r) => ` <button class="quiet small" data-edit-reply="${r.id}" data-note="${note.id}" aria-label="Edit your reply">Edit</button>`);
+const replyButton = (note) => note.author_kind !== "user" ? html`<button class="secondary small" data-reply="${note.id}">Reply</button>` : "";
+const replies = (note) => repliesHtml(note, (r) => html` <button class="quiet small" data-edit-reply="${r.id}" data-note="${note.id}" aria-label="Edit your reply">Edit</button>`);
 
 // An agent's note stays as it wrote it: it can only go.
 function editButton(note) {
   return note.author_kind === "llm"
-    ? `<button class="quiet small danger" data-delete-note="${note.id}">Delete</button>`
-    : `<button class="quiet small" data-edit-note="${note.id}">Edit</button>`;
+    ? html`<button class="quiet small danger" data-delete-note="${note.id}">Delete</button>`
+    : html`<button class="quiet small" data-edit-note="${note.id}">Edit</button>`;
 }
 
 function concernsCard({ concerns }) {
-  return `
+  return html`
     <section class="card coach-card" aria-labelledby="concerns-title">
       <header class="coach-card-head"><h2 id="concerns-title">Concerns</h2><button class="secondary small" data-write="concern">${icon("plus")}Add</button></header>
-      ${concerns.length ? `<ul class="coach-entries">${concerns.map((n) => noteItem(n, { concern: true })).join("")}</ul>` : `<p class="muted">Nothing to watch right now.</p>`}
+      ${concerns.length ? html`<ul class="coach-entries">${concerns.map((n) => noteItem(n, { concern: true }))}</ul>` : html`<p class="muted">Nothing to watch right now.</p>`}
     </section>`;
 }
 
 // The journal: filters, the notes under the one picked, the earlier
 // statuses and focus folded into one line (under All), and Tidy up.
 function notesCard({ notes }) {
-  const filters = `<div class="segmented fill journal-filters" role="group" aria-label="Show notes">${JOURNAL_FILTERS.map((f) =>
-    `<button type="button" data-filter="${f.key}" aria-pressed="${f.key === state.filter}">${escape(f.label)}</button>`).join("")}</div>`;
+  const filters = html`<div class="segmented fill journal-filters" role="group" aria-label="Show notes">${JOURNAL_FILTERS.map((f) =>
+    html`<button type="button" data-filter="${f.key}" aria-pressed="${f.key === state.filter}">${f.label}</button>`)}</div>`;
   // Offline, or not read yet: the board's latest stand in under All.
   const list = state.journal ?? (state.filter === "all" ? notes.filter((n) => n.kind === "note" || n.kind === "concern") : []);
   const earlier = state.filter === "all" && state.earlier.length ? earlierLine() : "";
@@ -430,16 +430,16 @@ function notesCard({ notes }) {
     concerns: "No resolved concerns yet; open ones are above.",
   }[state.filter];
   const actions = [
-    state.journal && state.journalNext != null && `<button class="secondary small" data-older${state.loadingOlder ? " disabled" : ""}>Older notes</button>`,
-    (list.length || state.earlier.length) && `<button class="quiet small" data-tidy>Tidy up</button>`,
+    state.journal && state.journalNext != null && html`<button class="secondary small" data-older${state.loadingOlder ? " disabled" : ""}>Older notes</button>`,
+    (list.length || state.earlier.length) && html`<button class="quiet small" data-tidy>Tidy up</button>`,
   ].filter(Boolean);
-  return `
+  return html`
     <section class="card coach-card" aria-labelledby="notes-title">
       <header class="coach-card-head"><h2 id="notes-title">Notes</h2><button class="secondary small" data-write="note">Write a note</button></header>
       ${filters}
-      ${list.length ? `<ul class="coach-entries">${list.map((n) => noteItem(n)).join("")}</ul>` : `<p class="muted">${empty}</p>`}
+      ${list.length ? html`<ul class="coach-entries">${list.map((n) => noteItem(n))}</ul>` : html`<p class="muted">${empty}</p>`}
       ${earlier}
-      ${actions.length ? `<div class="journal-actions">${actions.join("")}</div>` : ""}
+      ${actions.length ? html`<div class="journal-actions">${actions}</div>` : ""}
     </section>`;
 }
 
@@ -447,14 +447,14 @@ function notesCard({ notes }) {
 function earlierLine() {
   const count = `${state.earlier.length}${state.earlierNext != null ? "+" : ""}`;
   const kinds = [...new Set(state.earlier.map((n) => n.kind))].sort().map((k) => KIND_LABELS[k].toLowerCase()).join(" and ");
-  return `
+  return html`
     <div class="journal-earlier">
       <button class="row earlier-toggle" data-earlier aria-expanded="${state.earlierOpen}">
-        <span class="row-text"><span class="row-title">Earlier ${escape(kinds)}, ${count}</span></span>
+        <span class="row-text"><span class="row-title">Earlier ${kinds}, ${count}</span></span>
         ${icon(state.earlierOpen ? "chevron-up" : "chevron-down")}
       </button>
-      ${state.earlierOpen ? `<ul class="coach-entries">${state.earlier.map((n) => noteItem(n)).join("")}</ul>
-        ${state.earlierNext != null ? `<button class="secondary small" data-earlier-more>Older</button>` : ""}` : ""}
+      ${state.earlierOpen ? html`<ul class="coach-entries">${state.earlier.map((n) => noteItem(n))}</ul>
+        ${state.earlierNext != null ? html`<button class="secondary small" data-earlier-more>Older</button>` : ""}` : ""}
     </div>`;
 }
 

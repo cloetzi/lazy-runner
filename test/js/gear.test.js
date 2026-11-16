@@ -18,11 +18,11 @@ test("lists the gear not owned, none when what is owned isn't known", () => {
 });
 
 test("marks missing gear with a cross and words, not colour alone", () => {
-  const html = gearChips(["dumbbell", "kettlebell"], { names, owned: new Set(["dumbbell"]) });
+  const html = String(gearChips(["dumbbell", "kettlebell"], { names, owned: new Set(["dumbbell"]) }));
   assert.match(html, /<li>Dumbbells<\/li>/);
   assert.match(html, /<li class="gear-missing"><svg[^]*#close[^]*Kettlebell[^]*not yours yet<\/span><\/li>/);
-  assert.doesNotMatch(gearChips(["kettlebell"], { names, owned: null }), /not yours yet/);
-  assert.equal(gearChips([], { names, owned: null }), "");
+  assert.doesNotMatch(String(gearChips(["kettlebell"], { names, owned: null })), /not yours yet/);
+  assert.equal(String(gearChips([], { names, owned: null })), "");
 });
 
 test("names gear in a sentence", () => {

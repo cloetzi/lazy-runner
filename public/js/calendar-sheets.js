@@ -1,4 +1,4 @@
-import { escape, icon, authorLine, showSheet } from "./html.js";
+import { html, icon, authorLine, showSheet } from "./html.js";
 import { longDay, weekdayDay, dayName, moveChoices, movable, shownStatus, STATUS_LABELS } from "./calendar.js";
 import {
   KNOWN_SPORTS, sportIcon, sportLabel, activityTitle, activityFacts, activityKey, formatDistance, formatClimb, formatDuration,
@@ -29,28 +29,28 @@ function sheet(id) {
 export function openPlanSheet({ date, workouts, onPlan }) {
   const dialog = sheet("plan-sheet");
   const chosen = workouts.find((w) => w.up_next) ?? workouts[0];
-  dialog.innerHTML = `
+  dialog.innerHTML = html`
     <form method="dialog" class="howto">
       <header>
         <h2>Plan a workout</h2>
         <button class="icon-button" value="close" formnovalidate aria-label="Close">${icon("close")}</button>
       </header>
-      <p class="muted">${escape(longDay(date))}. It goes last on the day.</p>
-      ${workouts.length ? `<fieldset class="list plan-workouts">
+      <p class="muted">${longDay(date)}. It goes last on the day.</p>
+      ${workouts.length ? html`<fieldset class="list plan-workouts">
         <legend class="visually-hidden">Workout</legend>
-        ${workouts.map((w) => `
+        ${workouts.map((w) => html`
           <label class="row">
             <input type="radio" name="workout" value="${w.id}"${w === chosen ? " checked" : ""} required>
             <span class="row-text">
-              <span class="row-title">${escape(w.title)}${w.up_next ? ` <span class="badge">Up next</span>` : ""}</span>
-              <span class="row-meta">${[`${w.estimated_minutes} min`, w.subtitle].filter(Boolean).map(escape).join(" · ")}</span>
+              <span class="row-title">${w.title}${w.up_next ? html` <span class="badge">Up next</span>` : ""}</span>
+              <span class="row-meta">${[`${w.estimated_minutes} min`, w.subtitle].filter(Boolean).join(" · ")}</span>
             </span>
-          </label>`).join("")}
+          </label>`)}
       </fieldset>
       <label class="field"><span>Note <span class="muted">(optional)</span></span>
         <textarea name="note" rows="2" maxlength="500" placeholder="Why this day, such as easy legs before the long run"></textarea>
       </label>
-      <button class="primary" value="plan">Plan</button>` : `
+      <button class="primary" value="plan">Plan</button>` : html`
       <p>Get a workout first: import an example program, or build one of your own.</p>
       <div class="card-actions">
         <a class="button primary small" href="/#examples">From an example</a>
@@ -71,16 +71,16 @@ export function openPlanSheet({ date, workouts, onPlan }) {
 // it and when: where the coach's reading meets what was planned and done.
 function notesList(notes) {
   if (!notes.length) return "";
-  return `
+  return html`
     <h3>Notes</h3>
-    <ul class="sheet-notes">${notes.map((n) => `
+    <ul class="sheet-notes">${notes.map((n) => html`
       <li>
-        ${n.title ? `<p><strong>${escape(n.title)}</strong></p>` : ""}
-        <p>${escape(n.body)}</p>
-        <p class="muted small-print">${escape(`${authorLabel(n)} · ${writtenOn(n)}`)}</p>
-        ${n.replies?.length ? `<ul class="sheet-replies" aria-label="Replies">${n.replies.map((r) => `
-          <li><p>${escape(r.body)}</p><p class="muted small-print">${escape(`${authorLabel(r)} · ${writtenOn(r)}`)}</p></li>`).join("")}</ul>` : ""}
-      </li>`).join("")}</ul>`;
+        ${n.title ? html`<p><strong>${n.title}</strong></p>` : ""}
+        <p>${n.body}</p>
+        <p class="muted small-print">${`${authorLabel(n)} · ${writtenOn(n)}`}</p>
+        ${n.replies?.length ? html`<ul class="sheet-replies" aria-label="Replies">${n.replies.map((r) => html`
+          <li><p>${r.body}</p><p class="muted small-print">${`${authorLabel(r)} · ${writtenOn(r)}`}</p></li>`)}</ul>` : ""}
+      </li>`)}</ul>`;
 }
 
 // A session's sheet. A planned or missed one can move to a day of its week
@@ -102,24 +102,24 @@ export function openSessionSheet({ session, today, on, notes = [], change = null
   // A done session opens with how it felt, and the remark made on finishing.
   const felt = status === "done" ? howItFelt(session.completion) : "";
   const remark = status === "done" ? session.completion?.note : "";
-  dialog.innerHTML = `
+  dialog.innerHTML = html`
     <form method="dialog" class="howto session-sheet" novalidate>
       <header>
-        <h2>${escape(session.workout.title)}</h2>
+        <h2>${session.workout.title}</h2>
         <button class="icon-button" value="close" aria-label="Close">${icon("close")}</button>
       </header>
-      <p class="muted">${facts.map(escape).join(" · ")}</p>
-      ${felt ? `<p class="session-felt"><strong>${escape(felt)}</strong></p>` : ""}
-      ${remark ? `<p class="session-remark">${escape(remark)}</p>` : ""}
-      ${session.note ? `<p class="planner-note">${escape(session.note)}</p>` : ""}
+      <p class="muted">${facts.join(" · ")}</p>
+      ${felt ? html`<p class="session-felt"><strong>${felt}</strong></p>` : ""}
+      ${remark ? html`<p class="session-remark">${remark}</p>` : ""}
+      ${session.note ? html`<p class="planner-note">${session.note}</p>` : ""}
       ${changeHtml(change, { today, tag: "p" }) ?? authorLine(plannedBy(session, today), "p")}
       ${on.onUndo ? undoButton(change, session.workout.title, { sheet: true }) : ""}
       ${notesList(notes)}
-      ${status === "missed" ? `<button class="primary" value="today">Do today</button>` : ""}
-      ${can ? `
+      ${status === "missed" ? html`<button class="primary" value="today">Do today</button>` : ""}
+      ${can ? html`
         <h3 id="move-label">Move to</h3>
         <div class="move-days" role="group" aria-labelledby="move-label">
-          ${choices.map((c) => `<button class="secondary small" value="move:${c.date}"${c.disabled ? " disabled" : ""}${c.date === session.date ? ` aria-current="date"` : ""}>${escape(weekdayDay(c.date))}</button>`).join("")}
+          ${choices.map((c) => html`<button class="secondary small" value="move:${c.date}"${c.disabled ? " disabled" : ""}${c.date === session.date ? html` aria-current="date"` : ""}>${weekdayDay(c.date)}</button>`)}
           <button class="secondary small" type="button" data-later aria-expanded="false">Later</button>
         </div>
         <div class="move-later" hidden>
@@ -128,10 +128,10 @@ export function openSessionSheet({ session, today, on, notes = [], change = null
         </div>` : ""}
       <div class="sheet-actions">
         <a class="button secondary small" href="/#workout/${session.workout.id}">Open workout</a>
-        ${logged ? `<a class="button secondary small" href="/#session/${session.id}">See the log</a>` : ""}
-        ${can ? `<button class="secondary small" value="skip">Skip</button>` : ""}
+        ${logged ? html`<a class="button secondary small" href="/#session/${session.id}">See the log</a>` : ""}
+        ${can ? html`<button class="secondary small" value="skip">Skip</button>` : ""}
       </div>
-      ${can ? `<div class="danger-zone"><button class="quiet small danger" value="remove">Remove from the calendar</button></div>` : ""}
+      ${can ? html`<div class="danger-zone"><button class="quiet small danger" value="remove">Remove from the calendar</button></div>` : ""}
     </form>`;
 
   const later = dialog.querySelector(".move-later");
@@ -170,14 +170,14 @@ export function openSessionSheet({ session, today, on, notes = [], change = null
 // attribute a tap is looked up by, holding the activity's key.
 // `fulfils` names the routine day it ticked off, if any.
 export function activityRow(activity, unit, attribute, fulfils = null) {
-  const meta = [fulfils && `✓ ${fulfils}`, ...activityFacts(activity, unit), activity.pending && "not synced yet"].filter(Boolean).map(escape).join(" · ");
-  return `
+  const meta = [fulfils && `✓ ${fulfils}`, ...activityFacts(activity, unit), activity.pending && "not synced yet"].filter(Boolean).join(" · ");
+  return html`
     <li class="cal-row activity-row">
-      <button class="row" ${attribute}="${escape(activityKey(activity))}">
+      <button class="row" ${attribute}="${activityKey(activity)}">
         <span class="sport-tile" aria-hidden="true">${icon(sportIcon(activity.sport))}</span>
         <span class="row-text">
-          <span class="row-title">${escape(activityTitle(activity))}</span>
-          ${meta ? `<span class="row-meta">${meta}</span>` : ""}
+          <span class="row-title">${activityTitle(activity)}</span>
+          ${meta ? html`<span class="row-meta">${meta}</span>` : ""}
         </span>
       </button>
     </li>`;
@@ -203,19 +203,19 @@ export function editActivity({ activity, unit, today, send, notes = [] }) {
 export function openAddSheet({ date, onWorkout, onOnce, onRoutine, onActivity, onNote }) {
   const dialog = sheet("add-sheet");
   const choices = [
-    onWorkout && `<button class="secondary add-choice" value="workout">${icon("workouts")}<span><strong>Workout</strong><span class="muted">Plan one of your workouts</span></span></button>`,
-    onOnce && `<button class="secondary add-choice" value="once">${icon("sport-run")}<span><strong>Run or other sport</strong><span class="muted">Maybe, or planned, on this day</span></span></button>`,
-    onRoutine && `<button class="secondary add-choice" value="routine">${icon("calendar")}<span><strong>Routine</strong><span class="muted">Every week, such as a run on Wednesdays</span></span></button>`,
-    onActivity && `<button class="secondary add-choice" value="activity">${icon("sport-activity")}<span><strong>Activity</strong><span class="muted">Log a run, ride or anything you did</span></span></button>`,
-    onNote && `<button class="secondary add-choice" value="note">${icon("coach")}<span><strong>Note</strong><span class="muted">How it went, what to watch, for you and your coach</span></span></button>`,
+    onWorkout && html`<button class="secondary add-choice" value="workout">${icon("workouts")}<span><strong>Workout</strong><span class="muted">Plan one of your workouts</span></span></button>`,
+    onOnce && html`<button class="secondary add-choice" value="once">${icon("sport-run")}<span><strong>Run or other sport</strong><span class="muted">Maybe, or planned, on this day</span></span></button>`,
+    onRoutine && html`<button class="secondary add-choice" value="routine">${icon("calendar")}<span><strong>Routine</strong><span class="muted">Every week, such as a run on Wednesdays</span></span></button>`,
+    onActivity && html`<button class="secondary add-choice" value="activity">${icon("sport-activity")}<span><strong>Activity</strong><span class="muted">Log a run, ride or anything you did</span></span></button>`,
+    onNote && html`<button class="secondary add-choice" value="note">${icon("coach")}<span><strong>Note</strong><span class="muted">How it went, what to watch, for you and your coach</span></span></button>`,
   ].filter(Boolean);
-  dialog.innerHTML = `
+  dialog.innerHTML = html`
     <form method="dialog" class="howto">
       <header>
-        <h2>Add to ${escape(longDay(date))}</h2>
+        <h2>Add to ${longDay(date)}</h2>
         <button class="icon-button" value="close" aria-label="Close">${icon("close")}</button>
       </header>
-      <div class="add-choices">${choices.join("")}</div>
+      <div class="add-choices">${choices}</div>
     </form>`;
   dialog.onclose = () => {
     if (dialog.returnValue === "workout") onWorkout();
@@ -232,14 +232,14 @@ export function openAddSheet({ date, onWorkout, onOnce, onRoutine, onActivity, o
 // `attribute` names the data attribute a tap is looked up by, holding its id.
 export function noteRow(note, attribute) {
   const title = note.title ?? (note.kind === "note" ? "Note" : KIND_LABELS[note.kind]);
-  return `
+  return html`
     <li class="cal-row note-row">
       <button class="row" ${attribute}="${note.id}">
         <span class="note-tile" aria-hidden="true">${icon("coach")}</span>
         <span class="row-text">
-          <span class="row-title">${escape(title)}</span>
-          <span class="row-meta">${escape(`${authorLabel(note)}: ${note.body}`)}</span>
-          ${(note.replies ?? []).map((r) => `<span class="row-reply">${escape(`${authorLabel(r)}: ${r.body}`)}</span>`).join("")}
+          <span class="row-title">${title}</span>
+          <span class="row-meta">${`${authorLabel(note)}: ${note.body}`}</span>
+          ${(note.replies ?? []).map((r) => html`<span class="row-reply">${`${authorLabel(r)}: ${r.body}`}</span>`)}
         </span>
       </button>
     </li>`;
@@ -252,16 +252,16 @@ export function noteRow(note, attribute) {
 export function openLogActivitySheet({ date, unit, onLog, sport = "", about = "" }) {
   const dialog = sheet("activity-log-sheet");
   const climbUnit = unit === "mi" ? "ft" : "m";
-  dialog.innerHTML = `
+  dialog.innerHTML = html`
     <form method="dialog" class="howto activity-form" novalidate>
       <header>
         <h2>Log an activity</h2>
         <button class="icon-button" type="button" data-close aria-label="Close">${icon("close")}</button>
       </header>
-      <p class="muted">${[longDay(date), about].filter(Boolean).map(escape).join(" · ")}</p>
+      <p class="muted">${[longDay(date), about].filter(Boolean).join(" · ")}</p>
       <label class="field"><span>Sport</span>
-        <input name="sport" list="activity-sports" maxlength="40" autocomplete="off" required placeholder="Run, ride, hike…" value="${escape(sport ? sportLabel(sport) : "")}">
-        <datalist id="activity-sports">${KNOWN_SPORTS.map((s) => `<option value="${escape(sportLabel(s))}">`).join("")}</datalist>
+        <input name="sport" list="activity-sports" maxlength="40" autocomplete="off" required placeholder="Run, ride, hike…" value="${sport ? sportLabel(sport) : ""}">
+        <datalist id="activity-sports">${KNOWN_SPORTS.map((s) => html`<option value="${sportLabel(s)}">`)}</datalist>
       </label>
       <label class="field"><span>Title <span class="muted">(optional)</span></span>
         <input name="title" maxlength="200" placeholder="Lunch loop">
@@ -337,20 +337,20 @@ export function openActivitySheet({ activity, unit, today, on, notes = [] }) {
   // One not on the server yet is yours; one with a change queued still says where it came from.
   const origin = activity.id == null ? "" : activityOrigin(activity, today);
   const offScale = activity.rpe != null && !RPE_ANCHORS.some((a) => a.rpe === activity.rpe);
-  dialog.innerHTML = `
+  dialog.innerHTML = html`
     <form method="dialog" class="howto activity-sheet" novalidate>
       <header>
-        <h2><span class="sport-tile" aria-hidden="true">${icon(sportIcon(activity.sport))}</span> ${escape(activityTitle(activity))}</h2>
+        <h2><span class="sport-tile" aria-hidden="true">${icon(sportIcon(activity.sport))}</span> ${activityTitle(activity)}</h2>
         <button class="icon-button" value="close" aria-label="Close">${icon("close")}</button>
       </header>
-      <p class="muted">${[longDay(activity.date), activity.title ? sportLabel(activity.sport) : "", activity.pending ? "not synced yet" : ""].filter(Boolean).map(escape).join(" · ")}</p>
-      ${facts.length ? `<dl class="activity-facts">${facts.map(([name, value]) => `<div><dt>${escape(name)}</dt><dd>${escape(value)}</dd></div>`).join("")}</dl>`
-        : `<p class="muted">No numbers were sent with it.</p>`}
-      ${activity.created_by === "llm" ? authorLine(origin, "p") : origin ? `<p class="muted small-print">${escape(origin)}</p>` : ""}
-      <h3>How hard was it?${offScale ? ` <span class="muted">RPE ${activity.rpe}</span>` : ""}</h3>
+      <p class="muted">${[longDay(activity.date), activity.title ? sportLabel(activity.sport) : "", activity.pending ? "not synced yet" : ""].filter(Boolean).join(" · ")}</p>
+      ${facts.length ? html`<dl class="activity-facts">${facts.map(([name, value]) => html`<div><dt>${name}</dt><dd>${value}</dd></div>`)}</dl>`
+        : html`<p class="muted">No numbers were sent with it.</p>`}
+      ${activity.created_by === "llm" ? authorLine(origin, "p") : origin ? html`<p class="muted small-print">${origin}</p>` : ""}
+      <h3>How hard was it?${offScale ? html` <span class="muted">RPE ${activity.rpe}</span>` : ""}</h3>
       ${rpePicker({ rpe: activity.rpe })}
       <label class="field"><span>Note</span>
-        <textarea name="note" rows="2" maxlength="2000">${escape(activity.note ?? "")}</textarea>
+        <textarea name="note" rows="2" maxlength="2000">${activity.note ?? ""}</textarea>
       </label>
       <div class="sheet-actions">
         <button class="secondary small" value="note">Save note</button>
@@ -378,14 +378,14 @@ export function openRpeSheet({ activity, unit, onRpe, today = activity.date }) {
   const dialog = sheet("rpe-sheet");
   // One from a day before says which ("Yesterday", "Friday").
   const facts = [activity.date !== today && dayName(activity.date, today), ...activityFacts(activity, unit)].filter(Boolean);
-  dialog.innerHTML = `
+  dialog.innerHTML = html`
     <form method="dialog" class="howto">
       <header>
         <h2>How hard was it?</h2>
         <button class="icon-button" value="close" aria-label="Close">${icon("close")}</button>
       </header>
       <p class="rpe-about"><span class="sport-tile small" aria-hidden="true">${icon(sportIcon(activity.sport))}</span>
-        <span><strong>${escape(activityTitle(activity))}</strong>${facts.length ? `<br><span class="muted">${escape(facts.join(" · "))}</span>` : ""}</span></p>
+        <span><strong>${activityTitle(activity)}</strong>${facts.length ? html`<br><span class="muted">${facts.join(" · ")}</span>` : ""}</span></p>
       ${rpePicker({ answer: true })}
       <button class="quiet small" value="close">Not now</button>
       <p class="muted">You can turn this question off in <a href="/settings.html#training">Settings</a>.</p>
@@ -409,12 +409,12 @@ export function weekSummaryHtml({ week, board = null, unit, when = "current", he
   const goal = current ? board?.goals?.[0] : null;
   const focus = current ? board?.focus : null;
   const concerns = current ? watching(board?.concerns) : [];
-  return `
+  return html`
     ${heading}
-    ${lines.length ? `<ul class="week-kinds">${lines.map((l) => `<li><strong>${escape(l.count)}</strong> ${escape(l.label)}${l.facts.length ? `<span class="muted"> · ${escape(l.facts.join(" · "))}</span>` : ""}</li>`).join("")}</ul>`
-      : `<p class="muted">${{ current: "Nothing planned this week yet.", past: "Nothing that week.", future: "Nothing planned yet." }[when]}</p>`}
-    ${goal ? `<p class="week-goal muted">Goal: ${escape(goal.title)}</p>` : ""}
-    ${focus ? `<p class="week-focus"><strong>Focus</strong> <span class="muted">· ${escape(authorLabel(focus))}</span><br>${escape(focus.body)}</p>` : ""}
-    ${concerns.map((c) => `<p class="week-watching">${icon("info")}<span>Watching: ${escape(c)}</span></p>`).join("")}
-    ${current && board ? `<a class="link" href="/coach.html">Open Coach</a>` : ""}`;
+    ${lines.length ? html`<ul class="week-kinds">${lines.map((l) => html`<li><strong>${l.count}</strong> ${l.label}${l.facts.length ? html`<span class="muted"> · ${l.facts.join(" · ")}</span>` : ""}</li>`)}</ul>`
+      : html`<p class="muted">${{ current: "Nothing planned this week yet.", past: "Nothing that week.", future: "Nothing planned yet." }[when]}</p>`}
+    ${goal ? html`<p class="week-goal muted">Goal: ${goal.title}</p>` : ""}
+    ${focus ? html`<p class="week-focus"><strong>Focus</strong> <span class="muted">· ${authorLabel(focus)}</span><br>${focus.body}</p>` : ""}
+    ${concerns.map((c) => html`<p class="week-watching">${icon("info")}<span>Watching: ${c}</span></p>`)}
+    ${current && board ? html`<a class="link" href="/coach.html">Open Coach</a>` : ""}`;
 }

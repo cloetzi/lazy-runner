@@ -69,16 +69,16 @@ test("names the button for a screen reader by what it does", () => {
 });
 
 test("a row's button carries the change's id, a sheet's closes it with undo", () => {
-  assert.match(undoButton(change(), "Session B"), /type="button" data-undo="7" aria-label="Move Session B back to Sat 21">Move it back</);
-  assert.match(undoButton(change(), "Session B", { sheet: true }), /value="undo"/);
-  assert.equal(undoButton(change({ undoable: false }), "Session B"), "");
+  assert.match(String(undoButton(change(), "Session B")), /type="button" data-undo="7" aria-label="Move Session B back to Sat 21">Move it back</);
+  assert.match(String(undoButton(change(), "Session B", { sheet: true })), /value="undo"/);
+  assert.equal(String(undoButton(change({ undoable: false }), "Session B")), "");
 });
 
 test("shows the reason given with the change, escaped", () => {
-  const html = changeHtml(change({ reason: "Legs <fresh>" }), { today, tag: "p" });
+  const html = String(changeHtml(change({ reason: "Legs <fresh>" }), { today, tag: "p" }));
   assert.match(html, /<p class="author-line">.*Coach agent moved this from Sat 21 · today/);
   assert.match(html, /<p class="change-reason">Legs &#60;fresh&#62;<\/p>/);
-  assert.doesNotMatch(changeHtml(change({ reason: null }), { today }), /change-reason/);
+  assert.doesNotMatch(String(changeHtml(change({ reason: null }), { today })), /change-reason/);
 });
 
 test("lines a day that lost a session, with Put it back for a removal", () => {
@@ -90,7 +90,7 @@ test("lines a day that lost a session, with Put it back for a removal", () => {
   assert.equal(line.text, "Session B removed by Coach agent");
   assert.equal(line.reason, "Legs fresh for Sunday");
   assert.equal(line.undo, removed);
-  assert.match(undoButton(line.undo, undefined, { classes: "quiet small" }), /class="quiet small" type="button" data-undo="8" aria-label="Put Session B back on Wed 18">Put it back</);
+  assert.match(String(undoButton(line.undo, undefined, { classes: "quiet small" })), /class="quiet small" type="button" data-undo="8" aria-label="Put Session B back on Wed 18">Put it back</);
 });
 
 test("offers Move it back on the line when the session went outside the days shown", () => {

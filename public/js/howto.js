@@ -1,6 +1,6 @@
 import { createFigure } from "./figure-view.js";
 import { getJson, paths } from "./api.js";
-import { escape, icon, showSheet } from "./html.js";
+import { html, icon, showSheet } from "./html.js";
 import { tempoText } from "./player.js";
 import { ownedSlugs } from "./gear.js";
 
@@ -86,12 +86,12 @@ export function equipmentNames(equipment) {
 export function openHowto(exercise, { mirror = false, tempo = null, onClose, controls = false, historyHref = "" } = {}) {
   const dialog = document.getElementById("howto") ?? document.body.appendChild(Object.assign(document.createElement("dialog"), { id: "howto" }));
   const list = (title, items, tag = "ul") => items?.length
-    ? `<h3>${title}</h3><${tag}>${items.map((line) => `<li>${escape(line)}</li>`).join("")}</${tag}>` : "";
+    ? html`<h3>${title}</h3><${tag}>${items.map((line) => html`<li>${line}</li>`)}</${tag}>` : "";
   const equipment = equipmentNames(exercise.equipment);
   const view = { mirror, speed: 1 };
-  const toggles = controls && exercise.animation ? `
+  const toggles = controls && exercise.animation ? html`
     <div class="howto-controls">
-      ${exercise.unilateral ? `<div class="segmented" role="group" aria-label="Side">
+      ${exercise.unilateral ? html`<div class="segmented" role="group" aria-label="Side">
         <button type="button" data-side="left">Left side</button>
         <button type="button" data-side="right">Right side</button>
       </div>` : ""}
@@ -101,20 +101,20 @@ export function openHowto(exercise, { mirror = false, tempo = null, onClose, con
       </div>
     </div>` : "";
 
-  dialog.innerHTML = `
+  dialog.innerHTML = html`
     <form method="dialog" class="howto">
       <header>
-        <h2>${escape(exercise.name)}</h2>
+        <h2>${exercise.name}</h2>
         <button class="icon-button" aria-label="Close">${icon("close")}</button>
       </header>
-      ${exercise.animation ? `<div class="figure-box howto-figure"></div>` : ""}
+      ${exercise.animation ? html`<div class="figure-box howto-figure"></div>` : ""}
       ${toggles}
-      ${equipment.length ? `<p class="muted">With: ${escape(equipment.join(", "))}</p>` : ""}
-      ${tempo ? `<p class="muted">Tempo ${escape(tempo)}: ${escape(tempoText(tempo))}</p>` : ""}
+      ${equipment.length ? html`<p class="muted">With: ${equipment.join(", ")}</p>` : ""}
+      ${tempo ? html`<p class="muted">Tempo ${tempo}: ${tempoText(tempo)}</p>` : ""}
       ${list("How to do it", exercise.instructions, "ol")}
       ${list("Cues", exercise.cues)}
       ${list("Common mistakes", exercise.mistakes)}
-      ${historyHref ? `<p><a href="${escape(historyHref)}">Your history with it</a></p>` : ""}
+      ${historyHref ? html`<p><a href="${historyHref}">Your history with it</a></p>` : ""}
     </form>`;
 
   let figure = null;

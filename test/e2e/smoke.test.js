@@ -61,6 +61,29 @@ async function accessible(page, where) {
   }));
   const found = violations.map((v) => `${v.id}: ${v.nodes.map((node) => node.target.join(" ")).join(", ")}`);
   assert.deepEqual(found, [], `axe on ${where}`);
+  await noMarkupAsText(page, where);
+}
+
+// No markup or character reference shows as text or in a label: what an
+// html`` value escaped twice, or a string of markup escaped once, would show.
+async function noMarkupAsText(page, where) {
+  const shown = await page.evaluate(() => {
+    const tags = "a|b|br|button|dd|details|div|dl|dt|em|h[1-6]|i|img|input|label|li|ol|option|p|section|select|small|span|strong|summary|svg|ul|use";
+    const looksLikeMarkup = new RegExp(`&(#\\d+|amp|lt|gt|quot|apos);|</?(${tags})[\\s>/]`, "i");
+    const found = [];
+    const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+    for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+      if (!node.parentElement.closest("script, style, noscript") && looksLikeMarkup.test(node.data)) found.push(node.data.trim());
+    }
+    for (const element of document.body.querySelectorAll("[aria-label], [title], [placeholder]")) {
+      for (const name of ["aria-label", "title", "placeholder"]) {
+        const value = element.getAttribute(name);
+        if (value && looksLikeMarkup.test(value)) found.push(`${name}: ${value}`);
+      }
+    }
+    return found;
+  });
+  assert.deepEqual(shown, [], `markup shown as text on ${where}`);
 }
 
 // Opens a page as the owner, its errors collected.
@@ -405,14 +428,14 @@ test("plans a session on the calendar and moves it to another day", async () => 
   await page.locator(`[data-add="${today}"]`).click();
   await page.locator('#add-sheet button[value="workout"]').click();
   await page.locator("#plan-sheet").getByText("Session A", { exact: true }).click();
-  await page.locator('#plan-sheet textarea[name="note"]').fill("Easy legs before the long run");
+  await page.locator('#plan-sheet textarea[name="note"]').fill('Easy legs & "fresh" feet before the long run');
   await page.locator('#plan-sheet button[value="plan"]').click();
 
   const planned = await eventually(async () => {
     const sessions = await getJson(`/api/sessions?from=${today}&to=${today}`);
     return sessions.find((s) => s.workout.title === "Session A" && s.status === "planned");
   });
-  assert.equal(planned.note, "Easy legs before the long run");
+  assert.equal(planned.note, 'Easy legs & "fresh" feet before the long run');
   assert.equal(planned.created_by, "manual");
 
   // The calendar reads the server again once the plan is sent: open it by its id.
@@ -539,7 +562,7 @@ test("builds a workout of your own in the editor and runs it", async () => {
 
   await page.goto("/#workouts");
   await page.locator("#new-workout").click();
-  await form.locator("input[data-field=title]").fill("Quick core");
+  await form.locator("input[data-field=title]").fill("Quick core & hips");
   await form.locator("select[data-field=warmup]").selectOption("none");
   await form.locator("select[data-field=cooldown]").selectOption("none");
   await addExercise("Dead bug");
@@ -594,9 +617,9 @@ test("sets a goal on the Coach tab, writes a status, and accepts the agent's pro
   const goalSheet = page.locator("#goal-sheet");
   await goalSheet.locator('input[name="title"]').waitFor();
   await accessible(page, "the Coach tab with the goal sheet open");
-  await goalSheet.locator('input[name="title"]').fill("Ski season with quiet knees");
+  await goalSheet.locator('input[name="title"]').fill('Ski season & "quiet" knees');
   await goalSheet.getByRole("button", { name: "Save" }).click();
-  await page.locator(".goal-list").getByText("Ski season with quiet knees").waitFor();
+  await page.locator(".goal-list").getByText('Ski season & "quiet" knees').waitFor();
 
   await page.locator('[data-write="status"]').click();
   const noteSheet = page.locator("#note-sheet");
@@ -632,7 +655,7 @@ test("sets a goal on the Coach tab, writes a status, and accepts the agent's pro
   await accessible(page, "the Coach tab with a goal proposal open");
   await page.getByRole("button", { name: "Accept" }).click();
   await page.locator(".goal-list").getByText("Core twice a week").waitFor();
-  assert.deepEqual((await getJson("/api/goals")).goals.map((g) => g.title), ["Ski season with quiet knees", "Core twice a week"]);
+  assert.deepEqual((await getJson("/api/goals")).goals.map((g) => g.title), ['Ski season & "quiet" knees', "Core twice a week"]);
 
   // The agent's concern takes a reply, which shows under it.
   await page.locator("#concerns-title").locator("../..").getByRole("button", { name: "Reply" }).click();
@@ -669,12 +692,12 @@ test("makes an API token on Settings that an assistant signs in to /mcp with", a
   // An older address (Coach's "Connect an assistant") opens its section.
   await page.goto("/settings.html#api-tokens");
   await page.locator("#coach-title").waitFor();
-  await page.locator('#new-token input[name="name"]').fill("Trainer agent");
+  await page.locator('#new-token input[name="name"]').fill("Trainer & agent");
   await page.locator("#new-token").getByRole("button", { name: "Make a token" }).click();
   await page.waitForFunction(() => document.querySelector("#new-token-secret input").value !== "");
   const secret = await page.locator("#new-token-secret input").inputValue();
   assert.match(secret, /^lr_[A-Za-z0-9_-]{43}$/);
-  await page.locator("#tokens").getByText("Trainer agent").waitFor();
+  await page.locator("#tokens").getByText("Trainer & agent").waitFor();
   // The card says where to connect, with the new token in the command.
   const mcpUrl = `${new URL(BASE_URL).origin}/mcp`;
   assert.equal(await page.locator("#mcp-url input").inputValue(), mcpUrl);
@@ -693,7 +716,7 @@ test("makes an API token on Settings that an assistant signs in to /mcp with", a
 
   // Revoking it takes it out of the command again, and the assistant out.
   page.once("dialog", (dialog) => dialog.accept());
-  await page.locator("#tokens li", { hasText: "Trainer agent" }).getByRole("button", { name: "Revoke" }).click();
+  await page.locator("#tokens li", { hasText: "Trainer & agent" }).getByRole("button", { name: "Revoke" }).click();
   await page.waitForFunction(() => document.querySelector("#mcp-command input").value.endsWith('Bearer <token>"'));
   assert.equal(await page.locator("#new-token-secret").isHidden(), true);
   assert.equal((await call({ Authorization: `Bearer ${secret}` })).status(), 401);
