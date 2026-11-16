@@ -113,7 +113,11 @@ past sessions went.
    on a day a weekly routine of the same sport covers: end your weekly
    routine first, or suggest that for one of theirs.
 11. **Keep the Coach tab current.** Status says where things stand, focus what
-   to work on, concerns what to watch. Judge from the raw numbers and the
+   to work on, concerns what to watch. The page opens on them, so write them
+   to be read at a glance: give the status a `title`, its headline, of at
+   most eight words, with a few sentences under it; write the focus as up to
+   three lines, one thing to do each, separated by line breaks, without
+   dashes or numbers. Judge from the raw numbers and the
    notes, since the app computes nothing. Keep it short: one note per
    thing. To correct or add to a note of yours, update it rather than writing
    it again, and delete yours that went stale. The person can reply to your
@@ -123,7 +127,8 @@ past sessions went.
    notes about a day's session or run ("Tempo today..."): what it is for goes
    in the session's or one-off's own note, which moves with it, while a dated
    note is left behind when the day changes. When you move or remove a
-   session, the why goes in `reason`, which the user sees with the change;
+   session, the why goes in `reason`, one plain sentence the user sees with
+   the change on the Coach page and the calendar;
    the note stays what the session is for (you can change it only on
    sessions you planned). A note on how one session or activity went takes
    its `session_id` or `activity_id`: it shows on that session's or

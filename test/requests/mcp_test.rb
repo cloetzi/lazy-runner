@@ -66,6 +66,14 @@ describe "MCP server" do
       _(brief).must_include "Never estimate a number"
     end
 
+    it "says how a status, a focus and a reason read on the Coach page" do
+      brief = TrainerMcp::BRIEF.squish
+
+      _(brief).must_include "give the status a `title`, its headline, of at most eight words"
+      _(brief).must_include "write the focus as up to three lines, one thing to do each"
+      _(brief).must_include "the why goes in `reason`, one plain sentence the user sees with the change"
+    end
+
     it "is a prompt" do
       _(rpc("prompts/list")["prompts"].map { it["name"] }).must_equal ["trainer_brief"]
 
@@ -119,6 +127,29 @@ describe "MCP server" do
         _(description).must_include "A day without one is a rest day"
       end
       _(tools["update_workout"]["description"]).must_include "a change applies to every future session of it"
+    end
+
+    it "says a status takes a headline and a focus is written as lines" do
+      written = tools["write_coach_note"]
+
+      _(written["description"]).must_include "give a status a `title`, its headline there, of at most eight words"
+      _(written["description"]).must_include "write a focus as up to three lines, one thing to do each, separated by line breaks"
+      %w[write_coach_note update_coach_note].each do |name|
+        properties = tools[name]["inputSchema"]["properties"]
+
+        _(properties["title"]["description"]).must_include "at most eight words"
+        _(properties["body"]["description"]).must_include "up to three lines"
+      end
+    end
+
+    it "keeps a status's headline and a focus's lines as written" do
+      status = call_tool("write_coach_note", kind: "status", title: "On plan, strength catching up", body: "Long run done at 18 km.")
+      focus = call_tool("write_coach_note", kind: "focus", body: "Two strength sessions.\nStep-downs from the low step.\nLong run flat.")
+
+      board = call_tool("get_coach_board")
+      _(board["status"].values_at("id", "title")).must_equal [status["id"], "On plan, strength catching up"]
+      _(board["focus"]["body"].lines.map(&:chomp)).must_equal ["Two strength sessions.", "Step-downs from the low step.", "Long run flat."]
+      _(focus["title"]).must_be_nil
     end
   end
 
