@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # A reply to a coach note (#263): the user's few words under a note they
 # didn't write, linked to it. Deleting the note deletes its replies. A plain
 # key, as a coach note's link to its session is: the model checks the note is

@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module TrainerMcp
   class SetExerciseWeight < Tool
     description <<~TEXT.squish
@@ -12,9 +14,11 @@ module TrainerMcp
     input_schema(
       properties: {
         exercise: { type: %w[string integer], description: "The exercise's slug, or its id." },
-        value: { type: "number", description: "The weight; 0 for none: the exercise is then done without a weight, whatever its workout steps set." },
+        value: { type: "number",
+                 description: "The weight; 0 for none: the exercise is then done without a weight, whatever its workout steps set." },
         unit: { type: "string", enum: ExerciseWeight::UNITS, description: "lb or kg; the exercise's unit when left out." },
-        reason: { type: "string", description: "Why, shown to the user with the change, such as \"You asked for heavier: RPE 6 on all sets last week\"." }
+        reason: { type: "string",
+                  description: "Why, shown to the user with the change, such as \"You asked for heavier: RPE 6 on all sets last week\"." }
       },
       required: %w[exercise value]
     )

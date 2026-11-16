@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require "test_helper"
 
 describe "since you last looked" do
@@ -46,11 +48,13 @@ describe "since you last looked" do
     mine = agent_did_things
 
     shown = news
-    _(shown["changes"].map { it.values_at("action", "session_id") }).must_equal [["planned", shown["changes"][0]["session_id"]], ["moved", mine["id"]]]
+    _(shown["changes"].map { it.values_at("action", "session_id") })
+      .must_equal [["planned", shown["changes"][0]["session_id"]], ["moved", mine["id"]]]
     _(shown["changes"][1].values_at("agent_name", "undoable")).must_equal ["Coach agent", true]
     _(shown["notes"].map { it["body"] }).must_equal ["Planned next week"]
     _(shown["goals"].map { it["title"] }).must_equal ["Run a 10k"]
-    _(shown["activities"]).must_equal [{ "agent_name" => nil, "count" => 2, "from" => "2026-11-09", "to" => "2026-11-10", "sources" => ["Garmin"], "created_at" => shown["activities"][0]["created_at"] }]
+    _(shown["activities"]).must_equal [{ "agent_name" => nil, "count" => 2, "from" => "2026-11-09", "to" => "2026-11-10",
+                                         "sources" => ["Garmin"], "created_at" => shown["activities"][0]["created_at"] }]
     _(Time.iso8601(shown["since"])).must_equal Time.utc(2026, 10, 28).in_time_zone.to_time
     _(shown["latest"]).wont_be_nil
     _(unseen).must_equal 6

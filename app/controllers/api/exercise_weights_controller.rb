@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module Api
   class ExerciseWeightsController < ApplicationController
     # The remembered weight for an exercise.

@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # Weight arithmetic shared by everything that stores or compares a weight.
 # Weights are { value:, unit: } hashes, kept in the unit of the gear they are
 # for (Exercise#weight_unit, Step#gear_unit); anything given in the other unit

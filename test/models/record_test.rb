@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require "test_helper"
 
 describe Record do
@@ -34,7 +36,7 @@ describe Record do
     session = Session.new(workout: workout("cycle-1-workout-1"), date: Date.today, started_at: "soon", note: { a: 1 })
     block = Block.new(workout: workout("cycle-1-workout-1"), label: "Z", position: 9, rounds: [2])
 
-    _([session, block].map { it.valid? && nil || it.errors.full_messages })
+    _([session, block].map { (it.valid? && nil) || it.errors.full_messages })
       .must_equal [["Started at is invalid", "Note is invalid"], ["Rounds is not a number"]]
   end
 

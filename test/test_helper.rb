@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 ENV["RAGE_ENV"] = "test"
 
 require "bundler/setup"
@@ -12,7 +14,7 @@ require_relative "openapi_schema"
 SeedLoader.load!
 
 module TestUsers
-  PASSWORD = "correct horse battery".freeze
+  PASSWORD = "correct horse battery"
   # What a test user owns: everything in the catalogue (the generic weight
   # comes with the dumbbells), with these weights.
   WEIGHTS = { "dumbbell" => [10, 20], "kettlebell" => [40] }.freeze
@@ -21,7 +23,9 @@ module TestUsers
   # Equipment page and in Settings.
   def self.equip!(user)
     Current.set(user:) do
-      Equipment.current.where(any_weight: false).all.each { UserEquipment.create(equipment: it, owned: true, weights: WEIGHTS.fetch(it.slug, [])) }
+      Equipment.current.where(any_weight: false).all.each do |item|
+        UserEquipment.create(equipment: item, owned: true, weights: WEIGHTS.fetch(item.slug, []))
+      end
       Example.all.each(&:import!)
     end
   end
@@ -75,7 +79,8 @@ end
 # steps and completions, which belong to a user through their parent, are
 # left to the isolation tests (test/requests/isolation_test.rb).
 module UserScopeTripwire
-  TABLES = %w[programs workouts sessions set_logs exercise_weights settings user_equipment api_tokens user_identities activities goals coach_notes routines plan_changes].freeze
+  TABLES = %w[programs workouts sessions set_logs exercise_weights settings user_equipment api_tokens user_identities activities goals
+              coach_notes routines plan_changes].freeze
   # Asked on purpose of everyone's: the token a request's secret is, and
   # the identity an OIDC sign-in vouched for.
   ALLOWED = [
@@ -118,7 +123,7 @@ DB.loggers << UserScopeTripwire
 # back as they were.
 module EnvHelpers
   def with_env(values)
-    saved = values.keys.to_h { [it, ENV[it]] }
+    saved = values.keys.to_h { [it, ENV.fetch(it, nil)] }
     values.each { |key, value| ENV[key] = value }
     yield
   ensure
@@ -136,10 +141,10 @@ end
 # Rage runs each request in a fiber on the server's scheduler, which does not
 # exist in tests. Run the fiber synchronously instead, as Rage's RSpec helper does.
 module SynchronousFibers
-  def schedule(&block)
+  def schedule(&)
     fiber = Fiber.new(blocking: true) do
       Fiber.current.__set_id
-      Fiber.current.__set_result(block.call)
+      Fiber.current.__set_result(yield)
     end
     fiber.resume
     fiber
@@ -239,14 +244,19 @@ module RequestHelpers
   # without REST access.
   def answered_by_auth_app(status)
     return { "$ref" => "#/components/responses/Unauthorized" } if status == "401"
-    return { "$ref" => "#/components/responses/Conflict" } if status == "409" && JSON.parse(last_response.body).dig("error", "code") == "user_mismatch"
+    if status == "409" && JSON.parse(last_response.body).dig("error", "code") == "user_mismatch"
+      return { "$ref" => "#/components/responses/Conflict" }
+    end
 
     refusal = JSON.parse(last_response.body).dig("error", "message") if status == "403"
-    { "$ref" => "#/components/responses/Forbidden" } if [Auth::Csrf::REFUSED, Auth::Csrf::NOT_JSON, Auth::Token::REFUSED, Auth::Token::MCP_ONLY].include?(refusal)
+    return unless [Auth::Csrf::REFUSED, Auth::Csrf::NOT_JSON, Auth::Token::REFUSED, Auth::Token::MCP_ONLY].include?(refusal)
+
+    { "$ref" => "#/components/responses/Forbidden" }
   end
 
   def must_match_description
-    path, method = last_request.path, last_request.request_method.downcase
+    path = last_request.path
+    method = last_request.request_method.downcase
     # A server error is a bug, which no description covers.
     # Rodauth's routes under /api/auth are not Rage routes; docs/api.md describes them.
     return if !path.start_with?("/api/") || path.start_with?("/api/openapi", "/api/auth/") || last_response.server_error?
@@ -328,7 +338,7 @@ module LoggingHelpers
   end
 end
 
-class Minitest::Spec
+class Minitest::Spec # rubocop:disable Style/ClassAndModuleChildren -- reopened, not defined
   prepend TransactionalTests
   include TripwireCheck
   include EnvHelpers

@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module TrainerMcp
   class PlanSessions < SessionTool
     description <<~TEXT.squish
@@ -30,7 +32,9 @@ module TrainerMcp
 
     def self.answer(sessions:)
       entries = sessions.each_with_index.map do |entry, index|
-        workout = Workout.with_pk(entry[:workout_id]) || raise(Problem, "sessions[#{index}]: no workout #{entry[:workout_id]}; list_workouts lists them")
+        workout = Workout.with_pk(entry[:workout_id])
+        raise Problem, "sessions[#{index}]: no workout #{entry[:workout_id]}; list_workouts lists them" unless workout
+
         { workout:, date: entry[:date], position: entry[:position], note: entry[:note].presence, parts: parts(entry[:parts]) }
       end
       planned = Session.plan_all!(entries, created_by: "llm")

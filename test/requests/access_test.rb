@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require "test_helper"
 
 # The access table (lib/auth/access.rb) against config/routes.rb, and the
@@ -12,7 +14,7 @@ describe Auth::Access do
   # The GET routes that take no id, the ones a request can be made to as is.
   def plain_gets
     Rage.__router.routes.select { it[:method] == "GET" && it[:meta][:controller_class] && !it[:path].include?(":") }
-                        .map { it[:path] }.uniq.select { Auth::Access.for(it) }
+      .map { it[:path] }.uniq.select { Auth::Access.for(it) }
   end
 
   it "has a row for every route under /api" do

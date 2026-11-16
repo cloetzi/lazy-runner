@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require "test_helper"
 
 describe Invite do
@@ -6,7 +8,7 @@ describe Invite do
   it "is pending for seven days, to the second" do
     invite, token = Invite.issue!(now:)
 
-    _(invite.expires_at.to_i).must_equal (now + 7 * 86_400).to_i
+    _(invite.expires_at.to_i).must_equal (now + (7 * 86_400)).to_i
     _(Invite.pending_token?(token, now: invite.expires_at - 1)).must_equal true
     _(Invite.pending_token?(token, now: invite.expires_at)).must_equal false
     _(Invite.redeem!(token, now: invite.expires_at)).must_equal false
@@ -24,7 +26,7 @@ describe Invite do
   end
 
   it "clears out expired invites when making one, and keeps the pending ones" do
-    old, = Invite.issue!(now: now - 8 * 86_400)
+    old, = Invite.issue!(now: now - (8 * 86_400))
     recent, = Invite.issue!(now: now - 86_400)
     Invite.issue!(now:)
 

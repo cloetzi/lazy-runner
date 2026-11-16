@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require "test_helper"
 
 describe AppVersion do
@@ -18,7 +20,7 @@ describe AppVersion do
   it "falls back to the commit of the git checkout without a sha baked in" do
     check = Rage.root.join(".git").exist? ? -> { _(it).must_match(/\A\h{7,}\z/) } : -> { _(it).must_be_nil }
 
-    with_env("APP_COMMIT" => nil) { check.(AppVersion.commit) }
-    with_env("APP_COMMIT" => "main") { check.(AppVersion.commit) }
+    with_env("APP_COMMIT" => nil) { check.call(AppVersion.commit) }
+    with_env("APP_COMMIT" => "main") { check.call(AppVersion.commit) }
   end
 end

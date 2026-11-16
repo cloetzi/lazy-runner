@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module TrainerMcp
   class DeleteCoachNotes < CoachTool
     description <<~TEXT.squish
@@ -20,7 +22,10 @@ module TrainerMcp
       CoachNote.db.transaction do
         found = CoachNote.where(id: note_ids).select_hash(:id, :author_kind)
         missing = note_ids - found.keys
-        raise Problem, "no notes #{missing.join(", ")} (deleted already, or never there); list_coach_notes lists them. Nothing was deleted" if missing.any?
+        if missing.any?
+          raise Problem,
+                "no notes #{missing.join(", ")} (deleted already, or never there); list_coach_notes lists them. Nothing was deleted"
+        end
 
         theirs = found.reject { |_, author| author == "llm" }.keys.sort
         raise Problem, "notes #{theirs.join(", ")} are the person's; leave them out. Nothing was deleted" if theirs.any?

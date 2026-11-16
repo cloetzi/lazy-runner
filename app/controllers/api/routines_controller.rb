@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module Api
   class RoutinesController < ApplicationController
     # The user's routines: what they mean to do, tentatively.

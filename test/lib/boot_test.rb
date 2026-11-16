@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require "test_helper"
 require "open3"
 
@@ -23,7 +25,7 @@ describe "booting against an existing database" do
     )
     _(status.success?).must_equal true, output
     @output = output
-    JSON.parse(output.lines.reverse.find { it.start_with?("RESULT ") }.delete_prefix("RESULT "))
+    JSON.parse(output.lines.rfind { it.start_with?("RESULT ") }.delete_prefix("RESULT "))
   end
 
   it "takes over a 0.1.0 database, seeds it, copies the one-user data aside, keeps both private and opens no connection" do

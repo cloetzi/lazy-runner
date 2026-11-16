@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require "test_helper"
 
 describe Example do
@@ -18,7 +20,8 @@ describe Example do
     cycle = Example.find!("cycle-1").as_json
     _(cycle[:name]).must_equal "Cycle 1"
     _(cycle[:workouts].map { it[:kind] }).must_equal %w[warmup workout workout cooldown]
-    _(cycle[:workouts].find { it[:slug] == "cycle-1-workout-1" }[:estimated_minutes]).must_equal workout("cycle-1-workout-1").estimated_minutes
+    _(cycle[:workouts].find { it[:slug] == "cycle-1-workout-1" }[:estimated_minutes])
+      .must_equal workout("cycle-1-workout-1").estimated_minutes
     _(cycle[:equipment]).must_include "kettlebell"
     _(cycle[:imported]).must_equal true
     as_new_user { _(Example.find!("cycle-1").as_json[:imported]).must_equal false }
@@ -103,7 +106,7 @@ describe Example do
     error = _ { Example.find!("cycle-1").import! }.must_raise Example::AlreadyImported
     _(error.message).must_equal "Cycle 1 is already imported; import it again with copy to add another"
 
-    copies = 2.times.map { Example.find!("cycle-1").import!(copy: true).name }
+    copies = Array.new(2) { Example.find!("cycle-1").import!(copy: true).name }
     _(copies).must_equal ["Cycle 1 (copy)", "Cycle 1 (copy 2)"]
     _(Program.where(example_slug: "cycle-1").count).must_equal 3
   end
@@ -126,9 +129,9 @@ describe Example do
   describe "when broken" do
     def import(step, block = {})
       Example.new("broken", "name" => "Broken", "workouts" => [
-        { "slug" => "broken-1", "kind" => "workout", "title" => "Broken",
-          "blocks" => [{ "label" => "A", "steps" => [step] }.merge(block)] }
-      ]).import!
+                    { "slug" => "broken-1", "kind" => "workout", "title" => "Broken",
+                      "blocks" => [{ "label" => "A", "steps" => [step] }.merge(block)] }
+                  ]).import!
     end
 
     def refused(...) = _ { import(...) }.must_raise(Example::Error).message
@@ -141,9 +144,12 @@ describe Example do
     end
 
     it "names the step or block a validation fails on" do
-      _(refused("exercise" => "plank", "reps" => 5, "seconds" => 30)).must_equal "broken: broken-1 A step 1 (plank): needs reps or seconds, not both"
-      _(refused("exercise" => "curtsy-lunge", "reps" => 8, "per_side" => false)).must_include "broken-1 A step 1 (curtsy-lunge): Per side must be set"
-      _(refused({ "exercise" => "plank", "seconds" => 30 }, { "rounds" => 0 })).must_equal "broken: broken-1 A: Rounds must be greater than or equal to 1"
+      _(refused("exercise" => "plank", "reps" => 5, "seconds" => 30))
+        .must_equal "broken: broken-1 A step 1 (plank): needs reps or seconds, not both"
+      _(refused("exercise" => "curtsy-lunge", "reps" => 8, "per_side" => false))
+        .must_include "broken-1 A step 1 (curtsy-lunge): Per side must be set"
+      _(refused({ "exercise" => "plank", "seconds" => 30 }, { "rounds" => 0 }))
+        .must_equal "broken: broken-1 A: Rounds must be greater than or equal to 1"
     end
 
     it "does per side what its exercise does per side, unless told" do

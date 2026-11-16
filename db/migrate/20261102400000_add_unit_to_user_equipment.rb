@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # Each user says which unit their weighted gear comes in (#189): a user
 # whose kettlebells are 16 and 24 kg lists them as kg. Null until set or
 # weights are listed, while the item follows the user's unit (Settings).

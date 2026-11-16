@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # A day of a routine the user changed: `confirmed` ("I'm going"), `skipped`
 # ("Not this week"), or `moved` to another day, where it is tentative again
 # (a confirmed or skipped day may have been moved first, and keeps

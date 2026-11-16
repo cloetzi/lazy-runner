@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # A workout on a date, of one user. The player runs a main workout framed by its program's
 # warm-up and cool-down, and logs every set against this session.
 #
@@ -31,7 +33,11 @@ class Session < Record
   json_columns part_kinds: nil
 
   # When a session happened on its day: its finish, else its start.
-  MOMENT = Sequel.function(:coalesce, Sequel.lit("(SELECT completions.finished_at FROM completions WHERE completions.session_id = sessions.id)"), Sequel[:sessions][:started_at])
+  MOMENT = Sequel.function(
+    :coalesce,
+    Sequel.lit("(SELECT completions.finished_at FROM completions WHERE completions.session_id = sessions.id)"),
+    Sequel[:sessions][:started_at]
+  )
   # Newest first in the order `after` goes by: by date, then by when
   # sessions happened, the ones that neither started nor finished last, in
   # the day's planned order.
@@ -45,6 +51,7 @@ class Session < Record
 
   per_user
   include AgentSigned
+
   many_to_one :workout, key: %i[user_id workout_id], primary_key: %i[user_id id]
   one_to_many :set_logs, key: %i[user_id session_id], primary_key: %i[user_id id]
   one_to_one :completion
@@ -60,10 +67,13 @@ class Session < Record
     # only where the planner put them, so it decides only between sessions
     # that neither started nor finished, which come after the ones that did.
     def after(session)
-      date, position, id = Sequel[:sessions][:date], Sequel[:sessions][:position], Sequel[:sessions][:id]
+      date = Sequel[:sessions][:date]
+      position = Sequel[:sessions][:position]
+      id = Sequel[:sessions][:id]
       moment = session.moment
       same_day =
         if moment
+          # rubocop:disable-next Style/YodaCondition -- MOMENT is SQL: it goes first
           (MOMENT > moment) | ((MOMENT =~ moment) & (id > session.id)) | Sequel.expr(MOMENT => nil)
         else
           Sequel.expr(MOMENT => nil) & ((position > session.position) | ((position =~ session.position) & (id > session.id)))
@@ -103,8 +113,8 @@ class Session < Record
   # warm-up or cool-down done on its own is not a training day.
   def self.weeks(sessions, from, to)
     monday = ->(date) { date - (date.cwday - 1) }
-    finished = sessions.select { it.status == "done" && it.workout.kind == "workout" }.group_by { monday.(it.date) }
-    monday.(to).step(monday.(from), -7).map do |start|
+    finished = sessions.select { it.status == "done" && it.workout.kind == "workout" }.group_by { monday.call(it.date) }
+    monday.call(to).step(monday.call(from), -7).map do |start|
       partial, done = finished.fetch(start, []).partition { it.completion&.ended_early }
       { week_start: start.iso8601, done: done.size, partial: partial.size }
     end
@@ -250,7 +260,9 @@ class Session < Record
     validates_includes CREATORS, :created_by
     validates_number :position, only_integer: true, greater_than: 0
     # Checked when written, so a longer note kept from before still saves.
-    validates_max_length MAX_NOTE, :note, allow_nil: true, message: "is longer than #{MAX_NOTE} characters" if new? || column_changed?(:note)
+    if new? || column_changed?(:note)
+      validates_max_length MAX_NOTE, :note, allow_nil: true, message: "is longer than #{MAX_NOTE} characters"
+    end
     history_stays
     routine_own
     return unless planning?
@@ -288,7 +300,8 @@ class Session < Record
   def before_save
     Record.user_only!("only the user skips a session") if new? && Current.agent_name && status == "skipped"
     if !new? && Current.agent_name && column_changed?(:status) && !AGENT_MOVES[initial_value(:status)]&.include?(status)
-      Record.user_only!("session #{id} is #{initial_value(:status).tr("_", " ")}: only the user skips a session or takes one back from started, skipped or done")
+      was = initial_value(:status).tr("_", " ")
+      Record.user_only!("session #{id} is #{was}: only the user skips a session or takes one back from started, skipped or done")
     end
     super
   end
@@ -296,7 +309,9 @@ class Session < Record
   # A session started, skipped or done is history: an agent takes off only
   # what is still planned (remove!).
   def before_destroy
-    Record.user_only!("session #{id} is #{status.tr("_", " ")}: only the user erases one started, skipped or done") unless status == "planned"
+    unless status == "planned"
+      Record.user_only!("session #{id} is #{status.tr("_", " ")}: only the user erases one started, skipped or done")
+    end
     super
   end
 
@@ -307,7 +322,8 @@ class Session < Record
     # planning it again needs.
     return unless status == "planned"
 
-    PlanChange.record!(self, "removed", from_date: date, removed: true, was: PlanChange::SESSION_RESTORE.to_h { [it, it == :parts ? part_kinds : self[it]] })
+    was = PlanChange::SESSION_RESTORE.to_h { [it, it == :parts ? part_kinds : self[it]] }
+    PlanChange.record!(self, "removed", from_date: date, removed: true, was:)
   end
 
   private
@@ -325,9 +341,7 @@ class Session < Record
 
     was = fields.to_h { |name, column| [name, plan_value(column, changes[column].first)] }
     now = fields.to_h { |name, column| [name, plan_value(column, changes[column].last)] }
-    if moved && !was.key?(:position)
-      was[:position] = now[:position] = position
-    end
+    was[:position] = now[:position] = position if moved && !was.key?(:position)
     PlanChange.record!(self, moved ? "moved" : "changed", from_date: changes.dig(:date, 0) || date, to_date: date, was:, now:)
   end
 
@@ -350,8 +364,9 @@ class Session < Record
 
     position ||= self.position if date == from
     day = Session.where(date:).exclude(id:).order(:position, :id).all
-    index = (position || day.size + 1).clamp(1, day.size + 1) - 1
-    self.date, self.position = date, index + 1
+    index = (position || (day.size + 1)).clamp(1, day.size + 1) - 1
+    self.date = date
+    self.position = index + 1
     # Only what changed: this copy may be older than the row (another
     # device logging a set meanwhile), and a full save would write it back.
     save_changes

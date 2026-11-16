@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # Every error has one shape, so a client (the PWA, or an agent through MCP)
 # can tell what failed without parsing English:
 #
@@ -85,7 +87,8 @@ class ApplicationController < RageController::API
     render_error :forbidden, "forbidden", error.message
   end
 
-  rescue_from Session::Settled, Routine::Settled, Workout::Running, Goal::NotProposed, CoachNote::NotAConcern, PlanChange::NotUndoable, CoachNote::DailyLimit do |error|
+  rescue_from Session::Settled, Routine::Settled, Workout::Running, Goal::NotProposed, CoachNote::NotAConcern, PlanChange::NotUndoable,
+              CoachNote::DailyLimit do |error|
     render_error :conflict, "conflict", error.message
   end
 
@@ -199,7 +202,7 @@ class ApplicationController < RageController::API
   def client_today
     server = Time.zone.today
     given = DateRange.date(params[:today], :today) if params[:today].present?
-    given && (server - 1..server + 1).cover?(given) ? given : server
+    given && ((server - 1)..(server + 1)).cover?(given) ? given : server
   end
 
   # Which parts of a framed workout to run: "warmup,cooldown" or a list of

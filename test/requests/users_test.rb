@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require "test_helper"
 
 describe "users and invites" do
@@ -30,7 +32,7 @@ describe "users and invites" do
       _(json["path"]).must_equal "/signin.html#invite/#{token}"
       _(token).must_match(/\A[A-Za-z0-9_-]{43}\z/)
       _(Invite.first!.digest).must_equal Digest::SHA256.hexdigest(token)
-      _(Time.parse(json["invite"]["expires_at"])).must_be_close_to Time.now + 7 * 86_400, 60
+      _(Time.parse(json["invite"]["expires_at"])).must_be_close_to Time.now + (7 * 86_400), 60
 
       get "/api/invites"
       _(json["invites"].map { it["id"] }).must_equal [Invite.first!.id]
@@ -73,12 +75,12 @@ describe "users and invites" do
 
     it "stops working after seven days" do
       token = invite!
-      travel_to(Time.now + 7 * 86_400 + 1) do
+      travel_to(Time.now + (7 * 86_400) + 1) do
         join(token)
         _(last_response.status).must_equal 404
       end
 
-      travel_to(Time.now + 8 * 86_400) do
+      travel_to(Time.now + (8 * 86_400)) do
         @signed_out = false
         sign_in(user)
         get "/api/invites"
@@ -106,7 +108,7 @@ describe "users and invites" do
       _(json["invites"].map { it["label"] }).must_equal [nil, "For Sam"]
 
       # Refused, it changes nothing: not even the sweep of expired ones.
-      travel_to(Time.now + 8 * 86_400) do
+      travel_to(Time.now + (8 * 86_400)) do
         post_json "/api/invites", label: "x" * 61
         _(last_response.status).must_equal 422
         _(json["error"]["fields"]).must_equal({ "label" => ["is longer than 60 characters"] })
@@ -145,7 +147,7 @@ describe "users and invites" do
           check(token)
           [last_response.status, json]
         end
-        travel_to(Time.now + 7 * 86_400 + 1) do
+        travel_to(Time.now + (7 * 86_400) + 1) do
           check(expired)
           answers << [last_response.status, json]
         end
@@ -165,7 +167,8 @@ describe "users and invites" do
       it "takes the app's own pages only" do
         token = invite!
         sign_out!
-        post "/api/auth/invite-check", JSON.generate(invite: token), "CONTENT_TYPE" => "application/json", "HTTP_SEC_FETCH_SITE" => "cross-site"
+        post "/api/auth/invite-check", JSON.generate(invite: token), "CONTENT_TYPE" => "application/json",
+                                                                     "HTTP_SEC_FETCH_SITE" => "cross-site"
 
         _(last_response.status).must_equal 403
       end

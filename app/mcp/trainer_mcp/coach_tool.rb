@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module TrainerMcp
   # What the coach tools share: goals and notes as they answer with them.
   class CoachTool < Tool
@@ -10,7 +12,7 @@ module TrainerMcp
     end
 
     # The day a moment was in the server's time zone (TZ), as `today` is.
-    def self.day(time) = time&.in_time_zone&.to_date&.iso8601
+    def self.day(time) = time&.then { it.in_time_zone.to_date.iso8601 }
 
     def self.note(note)
       compact(

@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module Api
   class ActivitiesController < ApplicationController
     # Activities in a date range, by day and in the order they started.

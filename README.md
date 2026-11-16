@@ -242,6 +242,7 @@ From source, with the Ruby version in `.ruby-version` and the Node version in `.
 bundle install
 bundle exec rage s      # http://localhost:3000
 bundle exec rake test   # Ruby tests (Minitest)
+bundle exec rubocop     # lint
 npm test                # player logic tests
 ```
 

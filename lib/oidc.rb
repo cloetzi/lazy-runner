@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require "securerandom"
 require "uri"
 require "omniauth_openid_connect"
@@ -33,7 +35,7 @@ module Oidc
   # rack-oauth2's methods: :basic sends the secret in the Authorization
   # header; any method it doesn't name sends it in the body.
   AUTH_METHODS = { "client_secret_basic" => :basic, "client_secret_post" => :client_secret_post }.freeze
-  CALLBACK_PATH = "/api/auth/oidc/callback".freeze
+  CALLBACK_PATH = "/api/auth/oidc/callback"
   ALGORITHMS = %w[RS256 RS384 RS512 PS256 PS384 PS512 ES256 ES384 ES512 EdDSA].freeze
 
   Settings = Data.define(:issuer, :client_id, :client_secret, :name, :auto_signup, :redirect_uri, :auth_method, :signing_alg)
@@ -121,7 +123,7 @@ module Oidc
     # Discovery is over HTTPS only (the openid_connect gem's), as it should be.
     raise Error, "OIDC_ISSUER must be an https URL" unless url?(issuer, https: true)
 
-    redirect_uri = fetch.("OIDC_REDIRECT_URI")
+    redirect_uri = fetch.call("OIDC_REDIRECT_URI")
     unless url?(redirect_uri) && URI(redirect_uri).path == CALLBACK_PATH && URI(redirect_uri).query.nil?
       raise Error, "OIDC_REDIRECT_URI must be the app's http(s) URL ending in #{CALLBACK_PATH}"
     end
@@ -132,7 +134,7 @@ module Oidc
     raise Error, "OIDC_SIGNING_ALG must be one of #{ALGORITHMS.join(", ")}" unless ALGORITHMS.include?(alg)
 
     Settings.new(
-      issuer:, client_id: fetch.("OIDC_CLIENT_ID"), client_secret: fetch.("OIDC_CLIENT_SECRET"),
+      issuer:, client_id: fetch.call("OIDC_CLIENT_ID"), client_secret: fetch.call("OIDC_CLIENT_SECRET"),
       name: env["OIDC_NAME"].presence || "single sign-on",
       auto_signup: %w[1 true yes on].include?(env["OIDC_AUTO_SIGNUP"].to_s.strip.downcase),
       redirect_uri:, auth_method:, signing_alg: alg
@@ -151,9 +153,9 @@ module Oidc
   # in the characters a username may have; one that is taken gets a number.
   def self.username(claims, taken:)
     base = [claims["preferred_username"], claims["nickname"], claims["email"].to_s[/\A[^@]*/], claims["name"]]
-           .map { it.to_s.gsub(/[^A-Za-z0-9._-]/, "")[0, 36] }
-           .find { it.length >= 3 } || "user"
+      .map { it.to_s.gsub(/[^A-Za-z0-9._-]/, "")[0, 36] }
+      .find { it.length >= 3 } || "user"
     candidates = [base, *(2..99).map { "#{base}-#{it}" }]
-    candidates.find { !taken.(it) } || "#{base[0, 27]}-#{SecureRandom.hex(4)}"
+    candidates.find { !taken.call(it) } || "#{base[0, 27]}-#{SecureRandom.hex(4)}"
   end
 end

@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require "test_helper"
 
 describe Animation do
@@ -5,7 +7,7 @@ describe Animation do
     {
       "anchor" => "ankle_near",
       "accent" => ["thigh_near"],
-      "highlight" => ["thigh_near", "hip"],
+      "highlight" => %w[thigh_near hip],
       "props" => [{ "type" => "dumbbell", "at" => "hand_near" }, { "type" => "bench", "x" => 20, "width" => 60, "height" => 40 }],
       "still" => 1,
       "keyframes" => [
@@ -33,12 +35,12 @@ describe Animation do
 
   it "rejects unknown segments, joints and keys" do
     problems = Animation.problems(animation(
-      anchor: "tail",
-      accent: ["wing"],
-      highlight: ["hip", "fin"],
-      tempo: 2111,
-      keyframes: [{ "pose" => { "thigh" => 10 } }, { "pose" => {}, "speed" => 2 }]
-    ))
+                                    anchor: "tail",
+                                    accent: ["wing"],
+                                    highlight: %w[hip fin],
+                                    tempo: 2111,
+                                    keyframes: [{ "pose" => { "thigh" => 10 } }, { "pose" => {}, "speed" => 2 }]
+                                  ))
 
     _(problems).must_equal [
       "unknown keys: tempo",
@@ -52,9 +54,9 @@ describe Animation do
 
   it "rejects bad numbers" do
     problems = Animation.problems(animation(
-      still: 5,
-      keyframes: [{ "pose" => { "torso" => "up" }, "at" => [1], "hold" => -1 }, { "move" => "slow" }]
-    ))
+                                    still: 5,
+                                    keyframes: [{ "pose" => { "torso" => "up" }, "at" => [1], "hold" => -1 }, { "move" => "slow" }]
+                                  ))
 
     _(problems).must_equal [
       "still must be a keyframe index",

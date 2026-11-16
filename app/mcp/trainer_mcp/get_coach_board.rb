@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module TrainerMcp
   class GetCoachBoard < CoachTool
     description <<~TEXT.squish
@@ -26,7 +28,10 @@ module TrainerMcp
         notes: board.journal.map { note(it) },
         week: {
           from: week.begin.iso8601, to: week.end.iso8601,
-          sessions: Session.eager(:completion, :workout).where(date: week).in_order.all.then { |sessions| minutes = {}; sessions.map { SessionTool.shown(it, minutes) } },
+          sessions: Session.eager(:completion, :workout).where(date: week).in_order.all.then do |sessions|
+            minutes = {}
+            sessions.map { SessionTool.shown(it, minutes) }
+          end,
           activities: board.week_activities.map { it.as_json.except(:client_ref, :created_at, :updated_at) },
           routines: routines.routines.map { RoutineTool.shown(it) },
           routine_days: routines.days.map { RoutineTool.shown_day(it) },

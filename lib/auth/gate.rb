@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require_relative "access"
 require_relative "csrf"
 require_relative "token"
@@ -12,14 +14,14 @@ module Auth
   # Included in AuthApp, a Roda app: it uses Roda's request, response and
   # env, and AuthApp's rodauth.
   module Gate
-    USER_MISMATCH = "This change was made by another user, who is no longer signed in here".freeze
+    USER_MISMATCH = "This change was made by another user, who is no longer signed in here"
 
     private
 
     # Before Rodauth's routes: a token request answered or let through
     # (true), the CSRF check on writes, the throttles, and a stale session
     # forgotten.
-    def gate_before_sign_in(r, access)
+    def gate_before_sign_in(r, access) # rubocop:disable Naming/PredicateMethod -- the gate, not a question
       # A personal API token stands in for the session: no cookie, so nothing
       # for another site to ride on, and no CSRF check. Rodauth's routes and
       # the public ones don't read one.
@@ -41,9 +43,7 @@ module Auth
 
       # A device signed out elsewhere still carries its cookie: forget it, so
       # signing in again works, and /api/me answers as for anyone signed out.
-      if Access.answers_signed_out?(access) && rodauth.logged_in? && !rodauth.currently_active_session?
-        rodauth.clear_session
-      end
+      rodauth.clear_session if Access.answers_signed_out?(access) && rodauth.logged_in? && !rodauth.currently_active_session?
       false
     end
 
@@ -81,10 +81,10 @@ module Auth
       # What a script or agent writes with the token carries its name.
       env["lazy_runner.agent_name"] = token.claims["agent_name"]
       refuse_other_user(r)
-    rescue MCP::Server::OAuth::Error => e
+    rescue MCP::Server::OAuth::Error => error
       return if access == :optional
 
-      halt_json(401, Token::INVALID, headers: { "www-authenticate" => Token.challenge(e) }.compact)
+      halt_json(401, Token::INVALID, headers: { "www-authenticate" => Token.challenge(error) }.compact)
     end
 
     # A write the PWA queued for one user (X-Lazy-Runner-User, see

@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # Days as the API and the MCP tools read them: a date as YYYY-MM-DD, and a
 # range of dates with its defaults and its limit, so both answer alike.
 module DateRange

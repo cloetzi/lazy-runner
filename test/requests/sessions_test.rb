@@ -1,9 +1,11 @@
+# frozen_string_literal: true
+
 require "test_helper"
 
 describe "sessions API" do
   include RequestHelpers
 
-  let(:workout_1) { workout("cycle-1-workout-1") }
+  let(:workout1) { workout("cycle-1-workout-1") }
   let(:squat) { step_for("cycle-1-workout-1", "goblet-squat") }
 
   # Sessions are planned from today on, and these plan from October 1st.
@@ -11,13 +13,13 @@ describe "sessions API" do
   after { travel_back }
 
   def create_session(**body)
-    post_json "/api/sessions", { workout_id: workout_1.id, date: "2026-10-19", **body }
+    post_json "/api/sessions", { workout_id: workout1.id, date: "2026-10-19", **body }
     Session.find!(json["id"])
   end
 
   describe "POST /api/sessions" do
     it "plans a session and returns its player plan" do
-      post_json "/api/sessions", workout_id: workout_1.id, date: "2026-10-19"
+      post_json "/api/sessions", workout_id: workout1.id, date: "2026-10-19"
 
       _(last_response.status).must_equal 201
       _(json["status"]).must_equal "planned"
@@ -28,7 +30,7 @@ describe "sessions API" do
     end
 
     it "can start the session right away" do
-      post_json "/api/sessions", workout_id: workout_1.id, status: "in_progress"
+      post_json "/api/sessions", workout_id: workout1.id, status: "in_progress"
 
       _(json["status"]).must_equal "in_progress"
       _(json["started_at"]).wont_be_nil
@@ -37,7 +39,7 @@ describe "sessions API" do
 
     it "keeps which parts the session runs, and only takes sets from them" do
       session = create_session(parts: %w[workout])
-      warm_up_step = workout_1.framed.first.blocks.first.steps.first
+      warm_up_step = workout1.framed.first.blocks.first.steps.first
 
       _(json["parts"]).must_equal %w[workout]
       _(session.parts.map(&:kind)).must_equal %w[workout]
@@ -59,11 +61,11 @@ describe "sessions API" do
     end
 
     it "returns the same session when a create with the same client_ref is retried" do
-      post_json "/api/sessions", workout_id: workout_1.id, date: "2026-10-19", status: "in_progress", client_ref: "run-1"
+      post_json "/api/sessions", workout_id: workout1.id, date: "2026-10-19", status: "in_progress", client_ref: "run-1"
       _(last_response.status).must_equal 201
       first = json
 
-      post_json "/api/sessions", workout_id: workout_1.id, date: "2026-10-19", status: "in_progress", client_ref: "run-1"
+      post_json "/api/sessions", workout_id: workout1.id, date: "2026-10-19", status: "in_progress", client_ref: "run-1"
 
       _(last_response.status).must_equal 200
       _(json["id"]).must_equal first["id"]
@@ -80,7 +82,7 @@ describe "sessions API" do
         nil
       end
 
-      post_json "/api/sessions", workout_id: workout_1.id, date: "2026-10-19", client_ref: "run-2"
+      post_json "/api/sessions", workout_id: workout1.id, date: "2026-10-19", client_ref: "run-2"
 
       _(last_response.status).must_equal 200
       _(json["id"]).must_equal existing.id
@@ -91,17 +93,17 @@ describe "sessions API" do
     end
 
     it "creates a session per client_ref and without one" do
-      post_json "/api/sessions", workout_id: workout_1.id, client_ref: "run-3"
-      post_json "/api/sessions", workout_id: workout_1.id, client_ref: "run-4"
-      post_json "/api/sessions", workout_id: workout_1.id
-      post_json "/api/sessions", workout_id: workout_1.id
+      post_json "/api/sessions", workout_id: workout1.id, client_ref: "run-3"
+      post_json "/api/sessions", workout_id: workout1.id, client_ref: "run-4"
+      post_json "/api/sessions", workout_id: workout1.id
+      post_json "/api/sessions", workout_id: workout1.id
 
       _(Session.count).must_equal 4
     end
 
     it "plans at a position on its day, with the planner's note" do
       first = create_session(date: "2026-10-05")
-      post_json "/api/sessions", workout_id: workout_1.id, date: "2026-10-05", position: 1, note: "Mobility first", created_by: "llm"
+      post_json "/api/sessions", workout_id: workout1.id, date: "2026-10-05", position: 1, note: "Mobility first", created_by: "llm"
 
       _(last_response.status).must_equal 201
       _(json["position"]).must_equal 1
@@ -111,44 +113,44 @@ describe "sessions API" do
     end
 
     it "plans from today on, but logs a session started on an earlier day" do
-      post_json "/api/sessions", workout_id: workout_1.id, date: "2026-09-30"
+      post_json "/api/sessions", workout_id: workout1.id, date: "2026-09-30"
 
       _(last_response.status).must_equal 422
       _(json["error"]["fields"]).must_equal({ "date" => ["must be today or later"] })
       _(Session.count).must_equal 0
 
-      post_json "/api/sessions", workout_id: workout_1.id, date: "2026-09-30", status: "in_progress"
+      post_json "/api/sessions", workout_id: workout1.id, date: "2026-09-30", status: "in_progress"
       _(last_response.status).must_equal 201
     end
 
     it "plans from the device's today when it is a day behind the server's" do
-      post_json "/api/sessions", workout_id: workout_1.id, date: "2026-09-30", today: "2026-09-30"
+      post_json "/api/sessions", workout_id: workout1.id, date: "2026-09-30", today: "2026-09-30"
 
       _(last_response.status).must_equal 201
       _(json["status"]).must_equal "planned"
     end
 
     it "plans on the device's today when no date is sent" do
-      post_json "/api/sessions", workout_id: workout_1.id, today: "2026-10-02"
+      post_json "/api/sessions", workout_id: workout1.id, today: "2026-10-02"
 
       _(last_response.status).must_equal 201
       _(json["date"]).must_equal "2026-10-02"
     end
 
     it "starts a session at the time the device sent, never later than now" do
-      post_json "/api/sessions", workout_id: workout_1.id, status: "in_progress", started_at: "2026-10-01T07:15:00Z"
+      post_json "/api/sessions", workout_id: workout1.id, status: "in_progress", started_at: "2026-10-01T07:15:00Z"
       _(Time.iso8601(json["started_at"])).must_equal Time.utc(2026, 10, 1, 7, 15)
 
-      post_json "/api/sessions", workout_id: workout_1.id, status: "in_progress", started_at: "2026-10-03T07:15:00Z"
+      post_json "/api/sessions", workout_id: workout1.id, status: "in_progress", started_at: "2026-10-03T07:15:00Z"
       _(Time.iso8601(json["started_at"])).must_equal Time.utc(2026, 10, 1, 12)
 
-      post_json "/api/sessions", workout_id: workout_1.id, status: "in_progress", started_at: "early"
+      post_json "/api/sessions", workout_id: workout1.id, status: "in_progress", started_at: "early"
       _(last_response.status).must_equal 400
       _(json["error"]["fields"].keys).must_equal ["started_at"]
     end
 
     it "goes by the server's today when the device's is further off" do
-      post_json "/api/sessions", workout_id: workout_1.id, date: "2026-09-28", today: "2026-09-28"
+      post_json "/api/sessions", workout_id: workout1.id, date: "2026-09-28", today: "2026-09-28"
 
       _(last_response.status).must_equal 422
       _(json["error"]["fields"]).must_equal({ "date" => ["must be today or later"] })
@@ -156,7 +158,7 @@ describe "sessions API" do
 
     it "rejects a position that is not a whole number from 1" do
       [0, -1, "2.5", "first"].each do |position|
-        post_json "/api/sessions", workout_id: workout_1.id, date: "2026-10-05", position: position
+        post_json "/api/sessions", workout_id: workout1.id, date: "2026-10-05", position: position
 
         _(last_response.status).must_equal 400
         _(json["error"]["fields"].keys).must_equal ["position"]
@@ -167,7 +169,7 @@ describe "sessions API" do
       post_json "/api/sessions", workout_id: 0
       _(last_response.status).must_equal 404
 
-      post_json "/api/sessions", workout_id: workout_1.id, status: "done"
+      post_json "/api/sessions", workout_id: workout1.id, status: "done"
       _(last_response.status).must_equal 400
     end
   end
@@ -185,7 +187,9 @@ describe "sessions API" do
     end
 
     it "says who planned each: the agent by its token's name, and when" do
-      Current.set(agent_name: "Coach Claude") { Session.plan_all!([{ workout: workout("cycle-1-workout-1"), date: "2026-11-05" }], created_by: "llm") }
+      Current.set(agent_name: "Coach Claude") do
+        Session.plan_all!([{ workout: workout("cycle-1-workout-1"), date: "2026-11-05" }], created_by: "llm")
+      end
       create_session(date: "2026-11-06")
 
       get "/api/sessions?from=2026-11-05&to=2026-11-06"
@@ -233,7 +237,8 @@ describe "sessions API" do
 
       travel_to Time.utc(2026, 10, 5, 12) do
         get "/api/sessions?from=2026-10-01&to=2026-10-07"
-        _(json.map { [it["id"], it["position"], it["status"]] }).must_equal [[first.id, 1, "missed"], [second.id, 2, "missed"], [later.id, 1, "planned"]]
+        _(json.map { [it["id"], it["position"], it["status"]] })
+          .must_equal [[first.id, 1, "missed"], [second.id, 2, "missed"], [later.id, 1, "planned"]]
 
         get "/api/sessions?from=2026-10-01&to=2026-10-07&status=missed"
         _(json.map { it["id"] }).must_equal [first.id, second.id]
@@ -292,7 +297,7 @@ describe "sessions API" do
     end
 
     it "moves a planned session to another day and place" do
-      staying, moving = 2.times.map { create_session(date: "2026-10-03") }
+      staying, moving = Array.new(2) { create_session(date: "2026-10-03") }
       there = create_session(date: "2026-10-04")
 
       patch_json "/api/sessions/#{moving.id}", date: "2026-10-04", position: 1
@@ -456,7 +461,7 @@ describe "sessions API" do
       session = create_session
 
       post_json "/api/sessions/#{session.id}/sets",
-        step_id: squat.id, set_number: 1, reps: 8, weight: { value: 45, unit: "lb" }
+                step_id: squat.id, set_number: 1, reps: 8, weight: { value: 45, unit: "lb" }
 
       _(last_response.status).must_equal 201
       _(json["weight"]).must_equal({ "value" => 45.0, "unit" => "lb" })
@@ -468,7 +473,7 @@ describe "sessions API" do
       session = create_session
 
       post_json "/api/sessions/#{session.id}/sets",
-        step_id: squat.id, set_number: 1, reps: 8, weight: { value: 18, unit: "kg" }
+                step_id: squat.id, set_number: 1, reps: 8, weight: { value: 18, unit: "kg" }
 
       _(json["weight"]).must_equal({ "value" => 40.0, "unit" => "lb" })
       _(SetLog.find!(json["id"]).weight).must_equal({ value: 40.0, unit: "lb" })
@@ -491,7 +496,7 @@ describe "sessions API" do
 
     it "updates the same set when it is logged again" do
       session = create_session
-      statuses = 2.times.map do |i|
+      statuses = Array.new(2) do |i|
         post_json "/api/sessions/#{session.id}/sets", step_id: squat.id, set_number: 1, reps: 6 + i
         last_response.status
       end
@@ -530,7 +535,8 @@ describe "sessions API" do
 
     it "logs warm-up steps against the session" do
       session = create_session
-      post_json "/api/sessions/#{session.id}/sets", step_id: step_for("cycle-1-warmup", "side-plank").id, set_number: 1, side: "left", status: "skipped"
+      post_json "/api/sessions/#{session.id}/sets", step_id: step_for("cycle-1-warmup", "side-plank").id, set_number: 1, side: "left",
+                                                    status: "skipped"
 
       _(last_response.status).must_equal 201
       _(json["status"]).must_equal "skipped"
@@ -597,10 +603,15 @@ describe "sessions API" do
     end
 
     describe "for a step the session no longer runs" do
-      let(:own) { Workout.create_with!({ kind: "workout", title: "Legs", blocks: [{ label: "Strength", rounds: 2, steps: [{ exercise: "goblet-squat", reps: 8 }, { exercise: "plank", duration_seconds: 30 }] }] }) }
+      let(:own) do
+        steps = [{ exercise: "goblet-squat", reps: 8 }, { exercise: "plank", duration_seconds: 30 }]
+        Workout.create_with!({ kind: "workout", title: "Legs", blocks: [{ label: "Strength", rounds: 2, steps: }] })
+      end
       let(:session) { Session.add!(workout: own, date: Date.today, status: "in_progress", started_at: Time.now) }
       let(:gone) { own.blocks.first.steps.first }
-      let(:shown) { { planned_exercise_id: gone.exercise_id, block_label: "Strength", target: { reps: 8, weight: { value: 40, unit: "lb" } } } }
+      let(:shown) do
+        { planned_exercise_id: gone.exercise_id, block_label: "Strength", target: { reps: 8, weight: { value: 40, unit: "lb" } } }
+      end
 
       it "keeps a set whose step was deleted, from what the player showed" do
         step_id = gone.id
@@ -634,18 +645,19 @@ describe "sessions API" do
       it "keeps a swapped set, naming the exercise done and the one planned" do
         Step.remove!([gone.id])
 
-        post_json "/api/sessions/#{session.id}/sets", step_id: gone.id, set_number: 1, reps: 10, exercise_id: exercise("reverse-fly").id, **shown
+        post_json "/api/sessions/#{session.id}/sets", step_id: gone.id, set_number: 1, reps: 10, exercise_id: exercise("reverse-fly").id,
+                                                      **shown
 
         _(json["exercise_id"]).must_equal exercise("reverse-fly").id
         _(json["planned_exercise_id"]).must_equal gone.exercise_id
       end
 
       it "keeps a set of a part the session has left out since, without the link" do
-        warm_up = workout_1.framed.first.blocks.first.steps.first
+        warm_up = workout1.framed.first.blocks.first.steps.first
         planned = create_session(parts: %w[workout])
 
-        post_json "/api/sessions/#{planned.id}/sets", step_id: warm_up.id, set_number: 1, seconds: 30,
-          planned_exercise_id: warm_up.exercise_id, block_label: warm_up.block.label, target: { seconds: 30 }
+        post_json "/api/sessions/#{planned.id}/sets", step_id: warm_up.id, set_number: 1, seconds: 30, target: { seconds: 30 },
+                                                      planned_exercise_id: warm_up.exercise_id, block_label: warm_up.block.label
 
         _(last_response.status).must_equal 201
         _(json["step_id"]).must_be_nil
@@ -693,7 +705,8 @@ describe "sessions API" do
 
       _(last_response.status).must_equal 400
 
-      post_json "/api/sessions/#{session.id}/sets", step_id: push_up.id, set_number: 1, planned_exercise_id: push_up.exercise_id, block_label: "A"
+      post_json "/api/sessions/#{session.id}/sets", step_id: push_up.id, set_number: 1, planned_exercise_id: push_up.exercise_id,
+                                                    block_label: "A"
       _(last_response.status).must_equal 400
     end
 
@@ -770,7 +783,7 @@ describe "sessions API" do
       _(json["completion"]["feedback"]).must_equal "too_easy"
       _(ExerciseWeight.first!(exercise_id: squat.exercise_id).value).must_equal 40
 
-      get "/api/workouts/#{workout_1.id}"
+      get "/api/workouts/#{workout1.id}"
       step = json["blocks"].flat_map { it["steps"] }.find { it["id"] == squat.id }
       _(step["target"]["weight"]).must_equal({ "value" => 40.0, "unit" => "lb" })
       _(step.keys).wont_include "suggestion"
@@ -780,7 +793,7 @@ describe "sessions API" do
       patch_json "/api/equipment/#{equipment("dumbbell").id}", unit: "kg", weights: [4, 8]
       patch_json "/api/equipment/#{equipment("kettlebell").id}", unit: "kg", weights: [16, 24]
 
-      get "/api/workouts/#{workout_1.id}"
+      get "/api/workouts/#{workout1.id}"
       step = json["blocks"].flat_map { it["steps"] }.find { it["id"] == squat.id }
       _(step["allowed_weights"]).must_equal [4.0, 8.0, 16.0, 24.0]
       _(step["target"]["weight"]["unit"]).must_equal "kg"
@@ -895,11 +908,13 @@ describe "sessions API" do
       session = create_session(status: "in_progress")
       SetLog.create(session:, step: step_for("cycle-1-warmup", "side-plank"), set_number: 1, side: "left", status: "skipped")
       SetLog.create(session:, step: squat, set_number: 1, reps: 8)
-      SetLog.create(session:, step_ref: 0, exercise: exercise("plank"), planned_exercise: exercise("plank"), block_label: "Old", set_number: 1, seconds: 30)
+      SetLog.create(session:, step_ref: 0, exercise: exercise("plank"), planned_exercise: exercise("plank"), block_label: "Old",
+                    set_number: 1, seconds: 30)
 
       get "/api/sessions/#{session.id}"
 
-      _(json["exercises"].map { [it["exercise"]["slug"], it["part"]] }).must_equal [%w[side-plank warmup], %w[goblet-squat workout], %w[plank workout]]
+      _(json["exercises"].map { [it["exercise"]["slug"], it["part"]] })
+        .must_equal [%w[side-plank warmup], %w[goblet-squat workout], %w[plank workout]]
     end
 
     it "groups a swap under the exercise done and names the one planned" do
@@ -917,7 +932,8 @@ describe "sessions API" do
     end
 
     it "keeps two steps of the same exercise in a block apart, each with its target" do
-      own = Workout.create_with!({ kind: "workout", title: "Squats", blocks: [{ label: "A", rounds: 2, steps: [{ exercise: "goblet-squat", reps: 8 }, { exercise: "goblet-squat", reps: 15 }] }] })
+      steps = [{ exercise: "goblet-squat", reps: 8 }, { exercise: "goblet-squat", reps: 15 }]
+      own = Workout.create_with!({ kind: "workout", title: "Squats", blocks: [{ label: "A", rounds: 2, steps: }] })
       session = Session.add!(workout: own, date: Date.today, status: "in_progress", started_at: Time.now)
       heavy, light = own.blocks.first.steps
       [1, 2].each do |round|
@@ -951,7 +967,7 @@ describe "sessions API" do
     def remember_squat(value) = ExerciseWeight.create(exercise: squat.exercise, value:, unit: "lb")
 
     it "renumbers the day it leaves" do
-      first, second, third = 3.times.map { create_session(date: "2026-10-03") }
+      first, second, third = Array.new(3) { create_session(date: "2026-10-03") }
 
       delete "/api/sessions/#{second.id}"
 
@@ -1008,7 +1024,7 @@ describe "sessions API" do
       finish(first, "right")
       travel 1.hour
       # Planned at the top of the day after the first was done.
-      post_json "/api/sessions", workout_id: workout_1.id, date: "2026-10-19", position: 1
+      post_json "/api/sessions", workout_id: workout1.id, date: "2026-10-19", position: 1
       second = Session.find!(json["id"])
       log_all(second, "goblet-squat", weight_value: 50)
       second.update(status: "in_progress", started_at: Time.now)

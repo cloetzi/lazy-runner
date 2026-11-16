@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module Api
   class PlanChangesController < ApplicationController
     # Changes to the plan, newest first: sessions and routines planned, moved, removed, changed or ended.

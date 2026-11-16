@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # What agents did since the user last looked at Coach (#259), for the
 # "Since you last looked" card and the dot on the Coach tab: the changes they
 # made to the plan (not taken back), the notes they wrote, the goals they
@@ -37,16 +39,16 @@ class CoachNews
   # The activities agents copied, by the agent: how many, their first and
   # last day, and where they came from.
   def copied
-    sources = activities.exclude(source: nil).distinct.select_map([:agent_name, :source]).group_by(&:first)
+    sources = activities.exclude(source: nil).distinct.select_map(%i[agent_name source]).group_by(&:first)
     # Aggregates come back untyped on SQLite: dates and times as text.
     activities.group(:agent_name).order(:agent_name)
       .select(:agent_name) { [count.function.*.as(:count), min(:date).as(:from), max(:date).as(:to), max(:created_at).as(:newest)] }
       .naked.all.map do |row|
-        {
-          agent_name: row[:agent_name], count: row[:count], from: row[:from].to_s, to: row[:to].to_s,
-          sources: (sources[row[:agent_name]] || []).map(&:last).sort, created_at: Activity.db.to_application_timestamp(row[:newest])
-        }
-      end
+      {
+        agent_name: row[:agent_name], count: row[:count], from: row[:from].to_s, to: row[:to].to_s,
+        sources: (sources[row[:agent_name]] || []).map(&:last).sort, created_at: Activity.db.to_application_timestamp(row[:newest])
+      }
+    end
   end
 
   # Each newest first.
@@ -57,5 +59,5 @@ class CoachNews
 
   private
 
-  def made_since = Sequel[:created_at] > @since
+  def made_since = Sequel[:created_at] > @since # rubocop:disable Naming/PredicateMethod -- a Sequel condition
 end

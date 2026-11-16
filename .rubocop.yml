@@ -1,0 +1,89 @@
+# RuboCop's defaults with new cops on, and the few exceptions below. The
+# Ruby version is read from .ruby-version, so it is not repeated here.
+
+plugins:
+  - rubocop-performance
+  - rubocop-minitest
+  - rubocop-sequel
+  - rubocop-rake
+
+AllCops:
+  NewCops: enable
+  SuggestExtensions: false
+  Exclude:
+    - "node_modules/**/*"
+    - "vendor/**/*"
+    - "storage/**/*"
+    - "lib/api_reference/swagger-ui/**/*"
+
+# No size or complexity limits (the user's choice).
+Metrics:
+  Enabled: false
+
+# The style the code already has (also Rails' and Standard's choice).
+Style/StringLiterals:
+  EnforcedStyle: double_quotes
+Style/StringLiteralsInInterpolation:
+  EnforcedStyle: double_quotes
+
+# Controllers document each action for OpenAPI and MCP tools carry a
+# description; a comment per class on top adds nothing.
+Style/Documentation:
+  Enabled: false
+
+Layout/LineLength:
+  Max: 140
+  # OpenAPI tags in action comments (@request, @response and their
+  # continuation lines) can't wrap.
+  AllowedPatterns: ['^\s*# @', '^\s*#   ']
+
+# `rescue => error`, as the code writes it.
+Naming/RescuedExceptionsVariableName:
+  PreferredName: error
+
+# Short spec-style tests read worse with a blank line before every expectation.
+Minitest/EmptyLineBeforeAssertionMethods:
+  Enabled: false
+
+# PostgreSQL only.
+Sequel/ConcurrentIndex:
+  Enabled: false
+Sequel/JSONColumn:
+  Enabled: false
+
+# A private helper sits next to the method that uses it as `private def`
+# (inside Rodauth's configure block it can't be anything else), and a model
+# keeps a `private` section for its validations.
+Style/AccessModifierDeclarations:
+  Enabled: false
+
+# `reps > 0` in a migration is a Sequel expression for a CHECK constraint,
+# which has no `positive?`.
+Style/NumericPredicate:
+  Exclude:
+    - "db/migrate/**/*"
+
+# `same?(a, b)` and Roda's request `r` read better than longer names.
+Naming/MethodParameterName:
+  AllowedNames: [a, b, r, at, by, db, id, in, io, ip, of, "on", os, pp, to]
+
+# `redeem!` answers whether it worked, as a bang method may.
+Naming/PredicateMethod:
+  AllowBangMethods: true
+
+# A few test files name their fixtures as constants next to the specs that
+# use them. They are top-level constants all the same, so each name must be
+# unique across the tests.
+Lint/ConstantDefinitionInBlock:
+  Exclude:
+    - "test/**/*"
+
+# A new record is saved with `save`, and WorkoutStructure#write! writes whole
+# records on purpose; CLAUDE.md says when `save_changes` is the one to use.
+Sequel/SaveChanges:
+  Enabled: false
+
+# A chain continued on the next line is indented one step, not aligned with
+# its receiver far to the right.
+Layout/MultilineMethodCallIndentation:
+  EnforcedStyle: indented

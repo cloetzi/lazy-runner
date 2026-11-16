@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # Someone who signs in. Rodauth (lib/auth_app.rb) creates users and checks
 # their passwords, which it keeps in its own account_password_hashes table;
 # this model only reads them. The owner made the install with the setup

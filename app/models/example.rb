@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require "yaml"
 
 # An example program, read from db/examples/<slug>.yml: a user imports one
@@ -22,7 +24,7 @@ class Example
 
   # Read once: the files change only with a release.
   def self.all
-    @all ||= Dir[DIR.join("*.yml")].sort.map { new(File.basename(it, ".yml"), YAML.safe_load_file(it)) }.freeze
+    @all ||= Dir[DIR.join("*.yml")].map { new(File.basename(it, ".yml"), YAML.safe_load_file(it)) }.freeze
   end
 
   # Imports every example for a stand-in account, then rolls it all back:
@@ -85,7 +87,8 @@ class Example
       slug:, name:, description:,
       workouts: workouts.map do |w|
         {
-          slug: w.fetch("slug"), kind: w.fetch("kind"), title: w.fetch("title"), subtitle: w["subtitle"], estimated_minutes: minutes(w, library),
+          slug: w.fetch("slug"), kind: w.fetch("kind"), title: w.fetch("title"), subtitle: w["subtitle"],
+          estimated_minutes: minutes(w, library),
           exercises: steps_of(w).map { library.exercises.fetch(it["exercise"]).name }.uniq
         }
       end,
@@ -201,7 +204,7 @@ class Example
   # Runs a save, turning a failed validation into an error naming the record.
   def save!(name)
     yield
-  rescue Sequel::ValidationFailed => e
-    raise Error, "#{slug}: #{name}: #{e.errors.full_messages.join(", ")}"
+  rescue Sequel::ValidationFailed => error
+    raise Error, "#{slug}: #{name}: #{error.errors.full_messages.join(", ")}"
   end
 end

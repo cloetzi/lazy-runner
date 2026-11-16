@@ -1,6 +1,8 @@
+# frozen_string_literal: true
+
 module Api
   class TodayController < ApplicationController
-    NO_WORKOUTS = "there is no workout to train yet: import an example program or build a workout".freeze
+    NO_WORKOUTS = "there is no workout to train yet: import an example program or build a workout"
 
     # What to do today, ready for the player.
     # @description The main card is `session_id` if given, else the day's
@@ -44,6 +46,7 @@ module Api
           [Workout.suggested, "default"]
         end
       return render_error(:not_found, "no_workouts", NO_WORKOUTS) unless main
+
       # Picking a workout again after doing or skipping it starts a new session.
       session = nil unless session&.workout_id == main.id && (source == "session" || %w[planned in_progress].include?(session.status))
       kinds = %w[in_progress done].include?(session&.status) ? session.part_kinds : parts_param

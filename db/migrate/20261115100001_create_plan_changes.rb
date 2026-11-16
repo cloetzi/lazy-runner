@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # A record of changes to the plan (#258): one row per change to one planned
 # session or routine, by the user in the app (`manual`) or an agent over MCP
 # (`llm`, named by its token), with what it was before and after, the reason

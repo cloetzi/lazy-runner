@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module Api
   class VersionController < ApplicationController
     # The running version and the current release of the frontend.

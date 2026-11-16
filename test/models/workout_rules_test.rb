@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require "test_helper"
 
 # The rules a workout, its blocks and steps keep, in the models and in the
@@ -101,7 +103,8 @@ describe "workout rules" do
   describe Block do
     it "needs a label, at least one round and no negative rest" do
       block.set(label: "", rounds: 0, rest_seconds: -10)
-      _(problems(block)).must_equal ["Label can't be blank", "Rounds must be greater than or equal to 1", "Rest seconds must be greater than or equal to 0"]
+      _(problems(block))
+        .must_equal ["Label can't be blank", "Rounds must be greater than or equal to 1", "Rest seconds must be greater than or equal to 0"]
     end
 
     it "needs a step to be run" do
@@ -126,7 +129,7 @@ describe "workout rules" do
   end
 
   describe "in the database" do
-    def rejects(&write) = _ { write.call }.must_raise(Sequel::ConstraintViolation, write.source_location.inspect)
+    def rejects(&write) = _(&write).must_raise(Sequel::ConstraintViolation, write.source_location.inspect)
 
     it "rejects what the models would, even past them" do
       steps = Step.where(id: block.steps.first.id)

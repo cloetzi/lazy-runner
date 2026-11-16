@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require "test_helper"
 
 # GET /api/account/setup: what Today's "Getting set up" card ticks off.

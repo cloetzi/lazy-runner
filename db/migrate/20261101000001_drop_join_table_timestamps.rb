@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # The join tables between equipment and the exercises and steps that need it
 # are plain lists of pairs: nothing reads when a pair was made, and Sequel's
 # many_to_many writes only the pair.

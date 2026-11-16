@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require "test_helper"
 
 # What an agent may do is the models' to say (Record.user_only!,
@@ -21,7 +23,10 @@ describe "an agent on the REST API" do
     last_response
   end
 
-  let(:own_workout) { Workout.create_with!({ kind: "workout", title: "Mine", blocks: [{ label: "A", steps: [{ exercise_id: exercise("plank").id, duration_seconds: 30 }] }] }) }
+  let(:own_workout) do
+    Workout.create_with!({ kind: "workout", title: "Mine",
+                           blocks: [{ label: "A", steps: [{ exercise_id: exercise("plank").id, duration_seconds: 30 }] }] })
+  end
 
   def proposal
     Current.set(agent_name: "Coach agent") { Goal.propose!(title: "Run a half marathon", reason: "You asked for a race") }
@@ -85,7 +90,8 @@ describe "an agent on the REST API" do
       planned = session_on("2026-11-12", "planned")
       _(as_agent(:patch, "/api/sessions/#{planned.id}", { status: "skipped" }).status).must_equal 403
 
-      ended = session_on("2026-11-10", "done").tap { Completion.create(session_id: it.id, finished_at: Time.now, ended_early: true, rpe: 7) }
+      ended = session_on("2026-11-10", "done")
+      Completion.create(session_id: ended.id, finished_at: Time.now, ended_early: true, rpe: 7)
       _(as_agent(:patch, "/api/sessions/#{ended.id}", { status: "in_progress" }).status).must_equal 403
       _(ended.refresh.completion.rpe).must_equal 7
     end
@@ -177,7 +183,8 @@ describe "an agent on the REST API" do
     synced = { date: "2026-11-10", sport: "run", source: "garmin", external_id: "17" }
     mine = Activity.log!(synced.merge(title: "Morning run")).first
 
-    as_agent(:post, "/api/activities", { activities: [synced.merge(title: "Renamed"), { date: "2026-11-10", sport: "ride", source: "garmin", external_id: "18" }] })
+    as_agent(:post, "/api/activities",
+             { activities: [synced.merge(title: "Renamed"), { date: "2026-11-10", sport: "ride", source: "garmin", external_id: "18" }] })
 
     _(last_response.status).must_equal 200, last_response.body
     _(json["activities"].map { it["external_id"] }).must_equal %w[17 18]

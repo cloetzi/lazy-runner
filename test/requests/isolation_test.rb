@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require "test_helper"
 
 # Every user sees and changes only their own records (#175): another user's
@@ -190,13 +192,15 @@ describe "one user's data, kept from another" do
   it "keeps no query of one user's for the next" do
     steps = ->(slug) { Workout.eager(blocks: :steps).first(example_slug: slug).blocks.flat_map(&:steps).map(&:id) }
     lazy = ->(slug) { Workout.first(example_slug: slug).blocks.first.steps.map(&:id) }
-    mine = [steps.("cycle-1-workout-1"), lazy.("cycle-1-workout-1"), Session.select_order_map(:id)]
-    theirs = Current.set(user: @someone) { [steps.("cycle-1-workout-1"), lazy.("cycle-1-workout-1"), Session.select_order_map(:id)] }
+    mine = [steps.call("cycle-1-workout-1"), lazy.call("cycle-1-workout-1"), Session.select_order_map(:id)]
+    theirs = Current.set(user: @someone) do
+      [steps.call("cycle-1-workout-1"), lazy.call("cycle-1-workout-1"), Session.select_order_map(:id)]
+    end
 
     _(theirs[0] & mine[0]).must_be_empty
     _(theirs[1] & mine[1]).must_be_empty
     _(theirs[2]).must_equal [@their_done.id, @their_planned.id]
-    _([steps.("cycle-1-workout-1"), lazy.("cycle-1-workout-1"), Session.select_order_map(:id)]).must_equal mine
+    _([steps.call("cycle-1-workout-1"), lazy.call("cycle-1-workout-1"), Session.select_order_map(:id)]).must_equal mine
   end
 
   describe "through MCP" do

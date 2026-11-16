@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # What a coach writes on the user's board: the current `status` (where things
 # stand), the `focus` (what to work on), a `concern` (something to watch,
 # open until resolved), or a plain `note` in the journal.
@@ -47,6 +49,7 @@ class CoachNote < Record
     where :by_agent, author_kind: "llm"
     # Written since the start of the server's day.
     def written_today = where { created_at >= Time.zone.now.beginning_of_day.to_time }
+
     # Notes that show on one of the days in `days`, in the order written:
     # one about a session or activity on its day now (a note follows its
     # session when it moves), any other on the day it is dated to.
@@ -145,7 +148,9 @@ class CoachNote < Record
     validates_includes AUTHORS, :author_kind
     validates_presence :author_name if author_kind == "human"
     validates_presence :title if concern?
-    MAX_LENGTHS.each { |column, length| validates_max_length length, column, allow_nil: true, message: "is longer than #{length} characters" }
+    MAX_LENGTHS.each do |column, length|
+      validates_max_length length, column, allow_nil: true, message: "is longer than #{length} characters"
+    end
     validate_reply if reply? || column_changed?(:reply_to_id)
     if !new? && author_kind == "user" && column_changed?(:author_kind) && !replies_dataset.empty?
       errors.add(:author_kind, "can't be user: you replied to this note")
@@ -163,7 +168,9 @@ class CoachNote < Record
   def before_save
     unless new?
       theirs!
-      Record.user_only!("note #{id} stays signed as the agent's") if Current.agent_name && (column_changed?(:author_kind) || column_changed?(:author_name))
+      if Current.agent_name && (column_changed?(:author_kind) || column_changed?(:author_name))
+        Record.user_only!("note #{id} stays signed as the agent's")
+      end
     end
     super
   end
@@ -174,6 +181,7 @@ class CoachNote < Record
     if author_kind == "llm" && Current.agent_name && CoachNote.by_agent.written_today.count >= AGENT_DAILY_LIMIT
       raise DailyLimit, "an agent writes at most #{AGENT_DAILY_LIMIT} notes a day; change or delete the ones there"
     end
+
     super
   end
 
@@ -181,7 +189,9 @@ class CoachNote < Record
   # cascades), so an agent leaves a note the user replied to.
   def before_destroy
     theirs!
-    Record.user_only!("note #{id} has the user's replies; an agent changes it rather than deleting it") if Current.agent_name && !replies_dataset.empty?
+    if Current.agent_name && !replies_dataset.empty?
+      Record.user_only!("note #{id} has the user's replies; an agent changes it rather than deleting it")
+    end
     super
   end
 
@@ -199,6 +209,7 @@ class CoachNote < Record
     if new?
       target = Record.id(reply_to_id) && CoachNote.with_pk(Record.id(reply_to_id))
       return errors.add(:reply_to_id, "is not found") unless target
+
       errors.add(:reply_to_id, "is a reply; answer the note it replies to") if target.reply?
       errors.add(:reply_to_id, "is your own note; edit it instead") if target.author_kind == "user"
     end

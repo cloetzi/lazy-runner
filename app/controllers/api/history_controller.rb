@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module Api
   class HistoryController < ApplicationController
     # Recent sessions, and per week the sessions done and those ended early.

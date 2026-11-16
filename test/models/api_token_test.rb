@@ -1,7 +1,8 @@
+# frozen_string_literal: true
+
 require "test_helper"
 
 describe ApiToken do
-
   it "finds a token by its secret, and nothing by anything else" do
     token, secret = ApiToken.issue!(user, "Agent")
 

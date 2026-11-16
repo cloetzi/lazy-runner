@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # Programs stop being seeded (#183): they are examples a user imports, and an
 # imported copy is the user's own (`source: user`), noting the example it
 # came from in `example_slug`. The copies the seed loader made become such

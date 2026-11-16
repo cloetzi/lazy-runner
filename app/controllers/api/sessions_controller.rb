@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module Api
   class SessionsController < ApplicationController
     # Statuses a client may set directly; "done" comes from /complete.
@@ -26,7 +28,8 @@ module Api
     # @response 200 #/components/schemas/SessionDetail
     # @response 404 #/components/responses/NotFound
     def show
-      render json: SessionDetail.new(Session.eager(:workout, :completion, set_logs: [{ exercise: :equipment }, :planned_exercise]).find!(params[:id]))
+      render json: SessionDetail.new(Session.eager(:workout, :completion,
+                                                   set_logs: [{ exercise: :equipment }, :planned_exercise]).find!(params[:id]))
     end
 
     # Plan or start a session of a workout on a date.
@@ -75,6 +78,7 @@ module Api
       rescue Sequel::UniqueConstraintViolation
         # A concurrent create with the same client_ref got there first.
         raise unless client_ref && (session = Session.first(client_ref:))
+
         session.today = today
         return render_with_plan(session)
       end
@@ -106,8 +110,10 @@ module Api
       if params.key?(:status)
         status = params[:status].to_s
         if status == "done"
-          raise BadRequest.new("finish a session with POST /api/sessions/:id/complete", fields: { status: ["is set by POST /api/sessions/:id/complete"] })
+          raise BadRequest.new("finish a session with POST /api/sessions/:id/complete",
+                               fields: { status: ["is set by POST /api/sessions/:id/complete"] })
         end
+
         settable!(status)
         # Planned again, it hasn't started; started, it keeps its first start.
         given = client_time(:started_at)
@@ -117,7 +123,8 @@ module Api
           when "skipped" then session.started_at
           else session.started_at || given || Time.now
           end
-        changes.merge!(status:, started_at:)
+        changes[:status] = status
+        changes[:started_at] = started_at
         # Picking a run up again marks it active, so it holds its workout.
         resumed = status == "in_progress" && session.status == "in_progress"
       end
@@ -190,6 +197,7 @@ module Api
       if step && !session.workout.framed_ids.include?(step.block.workout_id)
         raise BadRequest.new("step #{step.id} is not part of this session", fields: { step_id: ["is not part of this session"] })
       end
+
       linked = step if step && session.workout.framed_ids(session.part_kinds).include?(step.block.workout_id)
       shown = shown_plan(step, step_ref) unless linked
 
@@ -201,7 +209,8 @@ module Api
       weight = exercise.in_weight_unit(weight[:value], weight[:unit], unit)
       attempts = 0
       begin
-        log = SetLog.find_or_new(user_id: session.user_id, session_id: session.id, step_ref:, set_number: integer_param(:set_number), side: string_param(:side).presence)
+        log = SetLog.find_or_new(user_id: session.user_id, session_id: session.id, step_ref:, set_number: integer_param(:set_number),
+                                 side: string_param(:side).presence)
         created = log.new?
         # The target is the one shown when the set was first logged.
         if created && linked
@@ -222,6 +231,7 @@ module Api
         # A concurrent post of the same set inserted it between the lookup and
         # the insert; looking it up again finds it and updates it.
         raise if (attempts += 1) > 1
+
         retry
       end
       session.update(status: "in_progress", started_at: session.started_at || Time.now) if session.status == "planned"
@@ -269,7 +279,8 @@ module Api
     # @response 422 #/components/responses/Invalid
     def completion
       if params.key?(:feedback)
-        raise BadRequest.new("change the feedback with POST /api/sessions/:id/complete", fields: { feedback: ["is set by POST /api/sessions/:id/complete"] })
+        raise BadRequest.new("change the feedback with POST /api/sessions/:id/complete",
+                             fields: { feedback: ["is set by POST /api/sessions/:id/complete"] })
       end
 
       session = Session.find!(params[:id])

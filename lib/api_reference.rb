@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require "rack/files"
 
 # The API reference at /api/openapi: Rage's OpenAPI document at /json, and a

@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module Api
   class CalendarController < ApplicationController
     # Everything on the calendar in a date range: sessions, activities, notes and routine days.

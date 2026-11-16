@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require "test_helper"
 
 describe "plan changes API" do
@@ -46,7 +48,8 @@ describe "plan changes API" do
         ["moved", "llm", "Coach agent", session["id"], "2026-11-12", "2026-11-14", true],
         ["planned", "manual", nil, session["id"], nil, "2026-11-12", false]
       ]
-      _(listed.first.values_at("was", "now")).must_equal [{ "date" => "2026-11-12", "position" => 1 }, { "date" => "2026-11-14", "position" => 1 }]
+      _(listed.first.values_at("was", "now"))
+        .must_equal [{ "date" => "2026-11-12", "position" => 1 }, { "date" => "2026-11-14", "position" => 1 }]
       _(changes(by: "manual").map { it["action"] }).must_equal ["planned"]
       _(changes(from: "2026-11-01", to: "2026-11-10")).must_equal []
     end
@@ -93,12 +96,15 @@ describe "plan changes API" do
       _(json["error"]["message"]).must_equal "take a planned session off the calendar instead"
 
       as_agent(:patch, "/api/sessions/#{session["id"]}", date: "2026-11-14")
-      send(:post, "/api/plan_changes/#{changes.first["id"]}/undo", "{}", RequestHelpers::JSON_ENV.merge("HTTP_AUTHORIZATION" => "Bearer #{token}"))
+      send(:post, "/api/plan_changes/#{changes.first["id"]}/undo", "{}",
+           RequestHelpers::JSON_ENV.merge("HTTP_AUTHORIZATION" => "Bearer #{token}"))
       _(last_response.status).must_equal 403
       _(json["error"]["message"]).must_equal "only the user takes a change back, in the app"
 
       other = create_user("other")
-      theirs = Current.set(user: other) { Session.plan!(workout: Workout.first!(example_slug: "cycle-1-workout-1"), date: d("2026-11-12")) && PlanChange.last }
+      theirs = Current.set(user: other) do
+        Session.plan!(workout: Workout.first!(example_slug: "cycle-1-workout-1"), date: d("2026-11-12")) && PlanChange.last
+      end
       post_json "/api/plan_changes/#{theirs.id}/undo"
       _(last_response.status).must_equal 404
       _(session).wont_be_nil
@@ -116,7 +122,7 @@ describe "plan changes API" do
       by_id = shown["sessions"].to_h { [it["id"], it["change"]] }
       _(by_id[moved["id"]].values_at("action", "agent_name", "undoable")).must_equal ["moved", "Coach agent", true]
       _(by_id[mine["id"]]).must_be_nil
-      _(shown["plan_changes"].map { it.values_at("action", "from_date") }).must_equal [["moved", "2026-11-12"], ["removed", "2026-11-13"]]
+      _(shown["plan_changes"].map { it.values_at("action", "from_date") }).must_equal [%w[moved 2026-11-12], %w[removed 2026-11-13]]
 
       post_json "/api/plan_changes/#{by_id[moved["id"]]["id"]}/undo"
       shown = calendar
@@ -170,7 +176,8 @@ describe "plan changes API" do
 
       get "/api/workouts/#{strength.id}", today: "2026-11-11"
       shown = json["changes"]
-      _(shown.map { it.values_at("item_kind", "action", "changed_by", "workout_id", "undoable") }).must_equal [["workout", "changed", "llm", strength.id, true]]
+      _(shown.map { it.values_at("item_kind", "action", "changed_by", "workout_id", "undoable") })
+        .must_equal [["workout", "changed", "llm", strength.id, true]]
       _(shown.first["summary"]).must_equal "#{rounds} rounds in block #{json["blocks"].first["label"]} (was #{rounds - 1})"
       get "/api/today", workout_id: strength.id, date: "2026-11-11"
       _(json["changes"].map { it["id"] }).must_equal [shown.first["id"]]

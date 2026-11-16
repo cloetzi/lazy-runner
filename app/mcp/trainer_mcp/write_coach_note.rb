@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module TrainerMcp
   class WriteCoachNote < CoachTool
     description <<~TEXT.squish
@@ -14,7 +16,8 @@ module TrainerMcp
         kind: { type: "string", enum: CoachNote::KINDS },
         title: { type: "string", description: "A short headline; needed for a concern." },
         body: { type: "string", description: "The note, a few plain sentences." },
-        date: { type: "string", format: "date", description: "The day it is about, YYYY-MM-DD. Not for what a planned session or run is for: that goes in its own note." },
+        date: { type: "string", format: "date",
+                description: "The day it is about, YYYY-MM-DD. Not for what a planned session or run is for: that goes in its own note." },
         activity_id: { type: "integer", description: "The activity it is about." },
         session_id: { type: "integer", description: "The session it is about, from list_sessions." },
         author_name: { type: "string", description: "Ignored: the app signs your notes with your API token's name." }
@@ -27,6 +30,7 @@ module TrainerMcp
     # both get past the repeat check or the daily limit.
     # `author_name` is still taken, so a prompt that names it keeps working,
     # but the note is signed with the token's name (CoachNote).
+    # rubocop:disable-next Lint/UnusedMethodArgument -- author_name, as above
     def self.answer(kind:, body:, title: nil, author_name: nil, **about)
       written = CoachNote.new(kind:, body:, title:, author_kind: "llm", **about)
       CoachNote.db.transaction do
@@ -40,7 +44,7 @@ module TrainerMcp
           note(written.save(validate: false))
         rescue CoachNote::DailyLimit
           raise Problem, "you wrote #{CoachNote::AGENT_DAILY_LIMIT} notes today, the most in a day: update_coach_note " \
-            "the ones there, or delete_coach_notes what is stale"
+                         "the ones there, or delete_coach_notes what is stale"
         end
       end
     end

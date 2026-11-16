@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require "test_helper"
 
 describe "accounts and sign-in" do
@@ -33,7 +35,8 @@ describe "accounts and sign-in" do
       _(owner.owner).must_equal true
       _(SetupCode.active?).must_equal false
       get "/api/me"
-      _(json["user"]).must_equal({ "id" => owner.id, "username" => "Runner", "owner" => true, "password_change_required" => false, "welcomed" => false })
+      _(json["user"])
+        .must_equal({ "id" => owner.id, "username" => "Runner", "owner" => true, "password_change_required" => false, "welcomed" => false })
       # Nothing of their own yet: they pick their gear and examples in the app.
       Current.set(user: owner) do
         _([Program.count, Workout.count, UserEquipment.count]).must_equal [0, 0, 0]
@@ -148,7 +151,12 @@ describe "accounts and sign-in" do
     # a real user out, and past a budget they stop costing a hash (#207).
     it "lets the real user in through a stream of made-up usernames" do
       hashes = 0
-      counter = Module.new { define_method(:verify_password) { |*args, **opts| hashes += 1; super(*args, **opts) } }
+      counter = Module.new do
+        define_method(:verify_password) do |*args, **opts|
+          hashes += 1
+          super(*args, **opts)
+        end
+      end
       Argon2::Password.singleton_class.prepend(counter)
       70.times { sign_in_as "made-up-#{it}", "wrong password" }
 

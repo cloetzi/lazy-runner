@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # What was actually done for one set of a step (one side, for per-side steps).
 # Self-contained: it names the exercise planned and the one done, the block and
 # the target as shown, so history stays true when the workout changes. The step
@@ -89,6 +91,7 @@ class SetLog < Record
     if step_id && (new? || column_changed?(:step_id)) && Step.where(id: step_id).empty?
       raise Current::Mismatch, "this set's step is another user's"
     end
+
     # A finished or skipped session is history: an agent logs sets only in
     # one planned or under way.
     if Current.agent_name && %w[done skipped].include?(session&.status)
@@ -119,8 +122,8 @@ class SetLog < Record
     validates_includes ExerciseWeight::UNITS, :target_weight_unit unless target_weight_value.nil?
     validates_number :reps, :seconds, only_integer: true, at_least: 0, allow_nil: true
     validates_number :weight_value, :target_weight_value, at_least: 0, allow_nil: true
-    if new? || column_changed?(:block_label)
-      validates_max_length MAX_BLOCK_LABEL, :block_label, allow_nil: true, message: "is longer than #{MAX_BLOCK_LABEL} characters"
-    end
+    return unless new? || column_changed?(:block_label)
+
+    validates_max_length MAX_BLOCK_LABEL, :block_label, allow_nil: true, message: "is longer than #{MAX_BLOCK_LABEL} characters"
   end
 end

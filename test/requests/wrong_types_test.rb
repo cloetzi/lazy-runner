@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require "test_helper"
 
 # JSON can hold any type where a field expects another: an object, an array
@@ -18,8 +20,8 @@ describe "wrongly typed parameters" do
   def self.schema_for(operation)
     spec = RequestHelpers::SPEC
     resolve = ->(schema) { schema && schema["$ref"] ? spec.dig(*schema["$ref"].delete_prefix("#/").split("/")) : schema }
-    schema = resolve.(operation.dig("requestBody", "content", "application/json", "schema"))
-    schema = resolve.(schema["oneOf"].first) if schema&.key?("oneOf")
+    schema = resolve.call(operation.dig("requestBody", "content", "application/json", "schema"))
+    schema = resolve.call(schema["oneOf"].first) if schema&.key?("oneOf")
     schema
   end
 
@@ -28,12 +30,20 @@ describe "wrongly typed parameters" do
   let(:planned) { session_on("2026-11-12", "planned") }
   let(:done) { session_on("2026-11-10", "done").tap { Completion.create(session_id: it.id, finished_at: Time.now) } }
   let(:step) { step_for("cycle-1-workout-1", "goblet-squat") }
-  let(:own_workout) { Workout.create_with!({ kind: "workout", title: "Mine", blocks: [{ label: "A", steps: [{ exercise_id: exercise("plank").id, duration_seconds: 30 }] }] }) }
+  let(:own_workout) do
+    Workout.create_with!({ kind: "workout", title: "Mine",
+                           blocks: [{ label: "A", steps: [{ exercise_id: exercise("plank").id, duration_seconds: 30 }] }] })
+  end
   let(:activity) { Activity.log!({ date: "2026-11-10", sport: "run", moving_seconds: 1800 }).first }
   let(:routine) { Routine.plan!({ sport: "run", weekdays: [6] }) }
   let(:goal) { Goal.add!(title: "Strong knees") }
   let(:note) { CoachNote.create(kind: "note", body: "Easy week", author_kind: "llm") }
-  let(:change) { Current.set(agent_name: "Coach agent") { Session.add!(workout: strength, date: Date.new(2026, 11, 13), status: "planned", created_by: "llm") }; PlanChange.first! }
+  let(:change) do
+    Current.set(agent_name: "Coach agent") do
+      Session.add!(workout: strength, date: Date.new(2026, 11, 13), status: "planned", created_by: "llm")
+    end
+    PlanChange.first!
+  end
 
   # [method, path, a body it accepts]: every route that takes a body.
   def requests
@@ -44,9 +54,11 @@ describe "wrongly typed parameters" do
       [:patch, "/api/equipment/#{equipment("dumbbell").id}", { owned: true }],
       [:put, "/api/exercises/#{exercise("goblet-squat").id}/weight", { value: 20, unit: "lb" }],
       [:post, "/api/examples/cycle-1/import", { copy: true }],
-      [:post, "/api/workouts", { kind: "workout", title: "Knees", blocks: [{ label: "A", steps: [{ exercise_id: exercise("plank").id, duration_seconds: 30 }] }] }],
+      [:post, "/api/workouts",
+       { kind: "workout", title: "Knees", blocks: [{ label: "A", steps: [{ exercise_id: exercise("plank").id, duration_seconds: 30 }] }] }],
       [:patch, "/api/workouts/#{own_workout.id}", { title: "Mine again" }],
-      [:put, "/api/workouts/#{own_workout.id}", { title: "Mine", blocks: [{ label: "A", steps: [{ exercise_id: exercise("plank").id, duration_seconds: 40 }] }] }],
+      [:put, "/api/workouts/#{own_workout.id}",
+       { title: "Mine", blocks: [{ label: "A", steps: [{ exercise_id: exercise("plank").id, duration_seconds: 40 }] }] }],
       [:post, "/api/workouts/#{own_workout.id}/duplicate", { title: "Copy" }],
       [:post, "/api/sessions", { workout_id: strength.id, date: "2026-11-12" }],
       [:patch, "/api/sessions/#{planned.id}", { note: "Legs" }],
@@ -121,9 +133,11 @@ describe "wrongly typed parameters" do
 
   it "answers a wrong type inside a workout's blocks and steps" do
     step = { exercise_id: exercise("plank").id, duration_seconds: 30 }
-    blocks = WRONG.map { [it] } + WRONG.map { [{ label: "A", steps: it }] } + WRONG.map { [{ label: "A", steps: [it] }] }
+    blocks = WRONG.zip + WRONG.map { [{ label: "A", steps: it }] } + WRONG.map { [{ label: "A", steps: [it] }] }
     blocks += %i[label rounds rest_seconds].product(WRONG).map { |key, value| [{ label: "A", steps: [step], key => value }] }
-    blocks += %i[exercise_id reps duration_seconds tempo weight side].product(WRONG).map { |key, value| [{ label: "A", steps: [step.merge(key => value)] }] }
+    blocks += %i[exercise_id reps duration_seconds tempo weight side].product(WRONG).map do |key, value|
+      [{ label: "A", steps: [step.merge(key => value)] }]
+    end
     blocks.each do |value|
       post_json "/api/workouts", kind: "workout", title: "Knees", blocks: value
       must_answer_in_shape("blocks #{value.inspect}")
@@ -139,7 +153,7 @@ describe "wrongly typed parameters" do
         next if names.empty?
 
         concrete = path.sub("/api/sessions/{id}", "/api/sessions/#{planned.id}").sub("/api/routines/{id}", "/api/routines/#{routine.id}")
-                       .sub("{date}", "2026-11-14")
+          .sub("{date}", "2026-11-14")
         names.each do |name|
           ["#{name}[a]=b", "#{name}[]=1", "#{name}=%FF%FE"].each do |query|
             send(method, "#{concrete}?#{query}")

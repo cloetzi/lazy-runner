@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module Auth
   # Writes made with the session cookie must come from the app's own pages:
   # a same-origin request (Sec-Fetch-Site, or else Origin), with a JSON body.
@@ -8,8 +10,8 @@ module Auth
   module Csrf
     UNSAFE = %w[POST PUT PATCH DELETE].freeze
     # The refusals, by reason.
-    REFUSED = "Refused: the request didn't come from this app".freeze
-    NOT_JSON = "Send the body as application/json".freeze
+    REFUSED = "Refused: the request didn't come from this app"
+    NOT_JSON = "Send the body as application/json"
 
     def self.unsafe?(request) = UNSAFE.include?(request.request_method)
 

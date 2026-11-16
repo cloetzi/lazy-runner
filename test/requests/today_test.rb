@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require "test_helper"
 
 describe "GET /api/today" do
@@ -36,7 +38,7 @@ describe "GET /api/today" do
 
     it "estimates the duration" do
       _(json["estimated_minutes"]).must_be :>, 20
-      _(json["estimated_minutes"]).must_equal json["workouts"].sum { it["estimated_minutes"] }
+      _(json["estimated_minutes"]).must_equal(json["workouts"].sum { it["estimated_minutes"] })
     end
 
     it "includes the full player plan, its equipment and the weight targets" do
@@ -104,7 +106,8 @@ describe "GET /api/today" do
 
       get "/api/today?date=#{date}"
 
-      _(json["day"].map { [it["id"], it["position"], it["status"]] }).must_equal [[done.id, 1, "done"], [sooner.id, 2, "planned"], [later.id, 3, "planned"]]
+      _(json["day"].map { [it["id"], it["position"], it["status"]] })
+        .must_equal [[done.id, 1, "done"], [sooner.id, 2, "planned"], [later.id, 3, "planned"]]
       _(json["source"]).must_equal "session"
       _(json["session"]["id"]).must_equal sooner.id
     end
@@ -137,7 +140,6 @@ describe "GET /api/today" do
       get "/api/today?date=#{date}&session_id=#{session_on("2026-10-20", "planned").id}"
       _(last_response.status).must_equal 404
     end
-
   end
 
   describe "a rest day" do
@@ -263,8 +265,8 @@ describe "GET /api/today" do
   end
 
   it "says how many weights each weighted exercise holds" do
-    workout_2 = workout("cycle-1-workout-2")
-    get "/api/today?date=2026-10-19&workout_id=#{workout_2.id}"
+    workout2 = workout("cycle-1-workout-2")
+    get "/api/today?date=2026-10-19&workout_id=#{workout2.id}"
     items = json["plan"]["items"].select { it["type"] == "exercise" }.index_by { it["exercise"]["slug"] }
 
     _(items["two-arm-row"]["weights_held"]).must_equal 2
@@ -285,7 +287,8 @@ describe "GET /api/today" do
     target = json["plan"]["targets"].find { it["exercise"]["name"] == "Goblet squat" }
 
     _(squat["any_weight"]["slug"]).must_equal "weight"
-    _(squat["any_weight"]["carriers"].to_h { [it["value"], it["equipment"]] }).must_equal({ 10.0 => "dumbbell", 20.0 => "dumbbell", 40.0 => "kettlebell" })
+    _(squat["any_weight"]["carriers"].to_h { [it["value"], it["equipment"]] })
+      .must_equal({ 10.0 => "dumbbell", 20.0 => "dumbbell", 40.0 => "kettlebell" })
     _(target["any_weight"]).must_equal squat["any_weight"]
     _(dumbbells["weight_equipment"]).must_equal "dumbbell"
     _(dumbbells["any_weight"]).must_be_nil

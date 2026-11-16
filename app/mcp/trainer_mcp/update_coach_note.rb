@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module TrainerMcp
   class UpdateCoachNote < CoachTool
     description <<~TEXT.squish

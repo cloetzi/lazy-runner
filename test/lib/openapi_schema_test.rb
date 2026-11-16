@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require "test_helper"
 
 describe OpenAPISchema do
@@ -5,12 +7,15 @@ describe OpenAPISchema do
     {
       "components" => {
         "schemas" => {
-          "Weight" => { "type" => "object", "required" => %w[value unit], "properties" => { "value" => { "type" => "number" }, "unit" => { "type" => "string", "enum" => %w[lb kg] } } },
-          "Rest" => { "type" => "object", "required" => %w[type], "properties" => { "type" => { "type" => "string", "enum" => %w[rest] } } },
+          "Weight" => { "type" => "object", "required" => %w[value unit],
+                        "properties" => { "value" => { "type" => "number" }, "unit" => { "type" => "string", "enum" => %w[lb kg] } } },
+          "Rest" => { "type" => "object", "required" => %w[type],
+                      "properties" => { "type" => { "type" => "string", "enum" => %w[rest] } } },
           "Set" => {
             "allOf" => [
               { "type" => "object", "required" => %w[reps], "properties" => { "reps" => { "type" => "integer" } } },
-              { "type" => "object", "required" => %w[weight], "properties" => { "weight" => { "allOf" => [{ "$ref" => "#/components/schemas/Weight" }], "nullable" => true } } }
+              { "type" => "object", "required" => %w[weight],
+                "properties" => { "weight" => { "allOf" => [{ "$ref" => "#/components/schemas/Weight" }], "nullable" => true } } }
             ]
           }
         }
@@ -35,7 +40,8 @@ describe OpenAPISchema do
 
   it "checks types and enums through references" do
     _(checker.errors({ "reps" => 8.5, "weight" => { "value" => "20", "unit" => "st" } }, set))
-      .must_equal ["$.reps: 8.5 is not integer", "$.weight.value: \"20\" is not number", "$.weight.unit: \"st\" is not one of [\"lb\", \"kg\"]"]
+      .must_equal ["$.reps: 8.5 is not integer", "$.weight.value: \"20\" is not number",
+                   "$.weight.unit: \"st\" is not one of [\"lb\", \"kg\"]"]
   end
 
   it "wants exactly one schema of a oneOf to match, item by item" do

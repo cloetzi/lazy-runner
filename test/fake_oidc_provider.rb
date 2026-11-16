@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require "openssl"
 require "digest"
 require "base64"
@@ -11,9 +13,9 @@ require "faraday"
 # authorize URL the app hands out, "signs in" here with #authorize, and
 # takes the code back to the app's callback.
 class FakeOidcProvider
-  ISSUER = "https://id.example.test".freeze
-  CLIENT_ID = "lazy-runner".freeze
-  CLIENT_SECRET = "client secret for the tests".freeze
+  ISSUER = "https://id.example.test"
+  CLIENT_ID = "lazy-runner"
+  CLIENT_SECRET = "client secret for the tests"
 
   # How the client authenticates at the token endpoint: :basic or :post.
   attr_accessor :down, :signing_key, :auth

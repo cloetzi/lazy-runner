@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module TrainerMcp
   # Lets /mcp in with a personal API token (ApiToken), through the mcp gem's
   # bearer check: the transport answers 401 with WWW-Authenticate without one,
@@ -17,7 +19,8 @@ module TrainerMcp
       token = ApiToken.authenticate(secret, touch: !@rest) or raise MCP::Server::OAuth::InvalidTokenError, "Unknown or revoked token"
       token.used! if @rest && token.rest?
 
-      MCP::Server::OAuth::AccessToken.new(token: secret, subject: token.user_id.to_s, client_id: token.id.to_s, claims: { "agent_name" => token.name, "rest" => token.rest? })
+      MCP::Server::OAuth::AccessToken.new(token: secret, subject: token.user_id.to_s, client_id: token.id.to_s,
+                                          claims: { "agent_name" => token.name, "rest" => token.rest? })
     end
   end
 end

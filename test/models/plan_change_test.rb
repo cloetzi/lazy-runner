@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require "test_helper"
 
 describe PlanChange do
@@ -33,7 +35,9 @@ describe PlanChange do
     end
 
     it "shares one batch within a call and starts another for the next" do
-      Current.set(plan_batch: nil) { Session.plan_all!([{ workout: strength, date: d("2026-11-12") }, { workout: other, date: d("2026-11-13") }]) }
+      Current.set(plan_batch: nil) do
+        Session.plan_all!([{ workout: strength, date: d("2026-11-12") }, { workout: other, date: d("2026-11-13") }])
+      end
       Current.set(plan_batch: nil) { plan("2026-11-14") }
 
       batches = changes.map(&:batch)
@@ -50,7 +54,8 @@ describe PlanChange do
       PlanChange.because("Legs fresh for Sunday") { session.move!(date: d("2026-11-14")) }
 
       _(session.refresh.note).must_equal "Legs"
-      _([latest.action, latest.session_id, latest.from_date, latest.to_date, latest.reason]).must_equal ["moved", session.id, d("2026-11-12"), d("2026-11-14"), "Legs fresh for Sunday"]
+      _([latest.action, latest.session_id, latest.from_date, latest.to_date, latest.reason])
+        .must_equal ["moved", session.id, d("2026-11-12"), d("2026-11-14"), "Legs fresh for Sunday"]
       _(latest.was).must_equal({ "date" => "2026-11-12", "position" => 2 })
       _(latest.now).must_equal({ "date" => "2026-11-14", "position" => 1 })
     end
@@ -68,7 +73,8 @@ describe PlanChange do
       session = as_agent { Session.plan!(workout: strength, date: d("2026-11-12"), note: "Legs", parts: %w[workout], created_by: "llm") }
       PlanChange.because("Too close to the long run") { session.remove! }
 
-      _([latest.action, latest.session_id, latest.from_date, latest.reason, latest.title]).must_equal ["removed", nil, d("2026-11-12"), "Too close to the long run", strength.title]
+      _([latest.action, latest.session_id, latest.from_date, latest.reason, latest.title])
+        .must_equal ["removed", nil, d("2026-11-12"), "Too close to the long run", strength.title]
       _(latest.was).must_equal(
         "workout_id" => strength.id, "date" => "2026-11-12", "position" => 1, "note" => "Legs", "parts" => %w[workout],
         "created_by" => "llm", "agent_name" => "Coach agent", "routine_id" => nil, "routine_date" => nil
@@ -92,7 +98,8 @@ describe PlanChange do
       session = plan("2026-11-12")
       strength.archive!
 
-      _([latest.action, latest.from_date, latest.reason, latest.was["workout_id"]]).must_equal ["removed", session.date, "its workout was archived", strength.id]
+      _([latest.action, latest.from_date, latest.reason, latest.was["workout_id"]])
+        .must_equal ["removed", session.date, "its workout was archived", strength.id]
     end
   end
 
@@ -114,7 +121,8 @@ describe PlanChange do
       _(changed.now).must_equal({ "minutes" => 50, "note" => "Easy" })
       _(ended.was).must_equal(
         "title" => nil, "sport" => "run", "workout_id" => nil, "weekdays" => [3], "starts_on" => "2026-11-11", "ends_on" => nil,
-        "minutes" => 50, "distance_m" => nil, "effort" => nil, "note" => "Easy", "created_by" => "manual", "agent_name" => nil, "id" => run.id
+        "minutes" => 50, "distance_m" => nil, "effort" => nil, "note" => "Easy", "created_by" => "manual", "agent_name" => nil,
+        "id" => run.id
       )
     end
 
@@ -124,7 +132,9 @@ describe PlanChange do
       revised = run.revise!(weekdays: [3, 6])
 
       _(PlanChange.count).must_equal count + 1
-      _([latest.action, latest.routine_id, latest.from_date, latest.was, latest.now]).must_equal ["changed", revised.id, today, { "weekdays" => [1], "starts_on" => "2026-11-02" }, { "weekdays" => [3, 6], "starts_on" => "2026-11-11" }]
+      _([latest.action, latest.routine_id, latest.from_date, latest.was,
+         latest.now]).must_equal ["changed", revised.id, today, { "weekdays" => [1], "starts_on" => "2026-11-02" },
+                                  { "weekdays" => [3, 6], "starts_on" => "2026-11-11" }]
     end
 
     it "records nothing for a day confirmed or made tentative again, and the session a routine change removes with why" do
@@ -137,7 +147,8 @@ describe PlanChange do
       lift.confirm!(d("2026-11-13"))
       lift.revise!(weekdays: [6])
 
-      _(changes.last(2).map { [it.item_kind, it.action, it.reason] }).must_equal [["routine", "changed", nil], ["session", "removed", "its routine changed"]]
+      _(changes.last(2).map { [it.item_kind, it.action, it.reason] })
+        .must_equal [["routine", "changed", nil], ["session", "removed", "its routine changed"]]
     end
   end
 
@@ -160,7 +171,8 @@ describe PlanChange do
       back = undo(latest)
       again = Session.with_pk(back.session_id)
 
-      _([again.id == session.id, again.workout_id, again.date, again.note, again.part_kinds, again.created_by, again.agent_name]).must_equal [false, strength.id, d("2026-11-12"), "Legs", %w[workout], "llm", "Coach agent"]
+      _([again.id == session.id, again.workout_id, again.date, again.note, again.part_kinds, again.created_by, again.agent_name])
+        .must_equal [false, strength.id, d("2026-11-12"), "Legs", %w[workout], "llm", "Coach agent"]
       _(back.action).must_equal "planned"
     end
 
@@ -223,19 +235,20 @@ describe PlanChange do
       session = Session.first(routine_id: again.id)
 
       _([session.date, session.routine_date]).must_equal [d("2026-11-13"), d("2026-11-13")]
-      _(PlanChange.where(item_kind: "session", action: "removed").all.map { it.undone? }).must_equal [true]
+      _(PlanChange.where(item_kind: "session", action: "removed").all.map(&:undone?)).must_equal [true]
     end
 
     it "offers no routine back whose last day has gone by, or whose workout is archived" do
       run = Routine.plan!({ sport: "run", weekdays: [3], ends_on: "2026-11-20" }, today:)
       ended = run.end! && latest
       lookup = ->(on) { PlanChange::Lookup.new([ended], today: on) }
-      _(ended.undo_problem(lookup.(d("2026-11-20")))).must_be_nil
-      _(ended.undo_problem(lookup.(d("2026-11-21")))).must_equal "its last day, 2026-11-20, has gone by"
+      _(ended.undo_problem(lookup.call(d("2026-11-20")))).must_be_nil
+      _(ended.undo_problem(lookup.call(d("2026-11-21")))).must_equal "its last day, 2026-11-20, has gone by"
 
       lift = Routine.plan!({ workout_id: strength.id, weekdays: [5] }, today:)
       strength.archive!
-      _(_ { undo(PlanChange.where(action: "ended", title: lift.workout.title).last) }.must_raise(PlanChange::NotUndoable).message).must_equal "its workout is archived"
+      _(_ { undo(PlanChange.where(action: "ended", title: lift.workout.title).last) }.must_raise(PlanChange::NotUndoable).message)
+        .must_equal "its workout is archived"
     end
 
     it "takes back only the latest change of an item, once, and nothing planned" do
@@ -259,7 +272,7 @@ describe PlanChange do
       moved = latest
       travel_to Time.utc(2026, 11, 13, 12)
       _(_ { moved.refresh.undo!(today: d("2026-11-13")) }.must_raise(PlanChange::NotUndoable).message).must_match(/2026-11-12, has gone by/)
-      travel_back
+      travel_to Time.utc(2026, 11, 11, 12)
 
       session.update(status: "skipped")
       _(_ { undo(moved) }.must_raise(PlanChange::NotUndoable).message).must_match(/skipped/)

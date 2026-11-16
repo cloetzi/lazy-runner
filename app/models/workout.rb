@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # A warm-up, main workout or cool-down, of one user: in a program (one
 # imported from an example, db/examples) or standing alone, the user's own
 # or an assistant's (`llm`). Any of them can be edited, and they are archived
@@ -82,14 +84,18 @@ class Workout < Record
   def self.catalog
     last_done = Session.where(status: "done").group(:workout_id).select_hash(:workout_id, Sequel.function(:max, :date).as(:last_done))
     up_next = suggested
-    cards = ->(workouts) { workouts.map { it.card(up_next: it.id == up_next&.id, last_done: last_done[it.id]&.then { Date.iso8601(it.to_s) }) } }
+    cards = lambda { |workouts|
+      workouts.map do |workout|
+        workout.card(up_next: workout.id == up_next&.id, last_done: last_done[workout.id]&.then { Date.iso8601(it.to_s) })
+      end
+    }
     programs = Program.eager(workouts: { blocks: { steps: [:equipment, { exercise: :equipment }] } }).order(:id).all.map do |program|
-      { id: program.id, name: program.name, workouts: cards.(program.workouts) }
+      { id: program.id, name: program.name, workouts: cards.call(program.workouts) }
     end
     # A program whose workouts were all archived has nothing to show.
     programs.reject! { it[:workouts].empty? }
     own = active.where(program_id: nil).eager(blocks: { steps: [:equipment, { exercise: :equipment }] }).order(:position, :id).all
-    own.any? ? programs << { id: nil, name: "My workouts", workouts: cards.(own) } : programs
+    own.any? ? programs << { id: nil, name: "My workouts", workouts: cards.call(own) } : programs
   end
 
   # The kinds named in a "warmup,cooldown" list (or array), or nil for all.
@@ -216,7 +222,8 @@ class Workout < Record
         block.steps.each do |step|
           Step.create(
             block_id: new_block.id, equipment_pks: step.equipment.map(&:id),
-            **step.values.slice(:exercise_id, :position, :reps, :duration_seconds, :tempo, :weight_value, :weight_unit, :per_side, :note, :weights_held)
+            **step.values.slice(:exercise_id, :position, :reps, :duration_seconds, :tempo, :weight_value, :weight_unit, :per_side,
+                                :note, :weights_held)
           )
         end
       end
@@ -370,7 +377,9 @@ class Workout < Record
   def validate
     super
     validates_presence :title
-    MAX_LENGTHS.each { |column, length| validates_max_length length, column, allow_nil: true, message: "is longer than #{length} characters" }
+    MAX_LENGTHS.each do |column, length|
+      validates_max_length length, column, allow_nil: true, message: "is longer than #{length} characters"
+    end
     validates_includes KINDS, :kind
     validates_includes SOURCES, :source
     frames_fit

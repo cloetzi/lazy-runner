@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require "test_helper"
 
 describe Hashing do
@@ -19,7 +21,10 @@ describe Hashing do
     Array.new(5) do
       Thread.new do
         Hashing.run do
-          most.synchronize { now += 1; peak = [peak, now].max }
+          most.synchronize do
+            now += 1
+            peak = [peak, now].max
+          end
           sleep 0.02
           most.synchronize { now -= 1 }
         end

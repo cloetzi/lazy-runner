@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module Api
   class ExercisesController < ApplicationController
     # The exercise library, by name.

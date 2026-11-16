@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require "test_helper"
 
 # Gear in mixed units: dumbbells in lb, the kettlebell in kg (#197).
@@ -84,7 +86,8 @@ describe "weights with gear in mixed units" do
 
     it "relabels the steps done with a kettlebell, not those of its exercise's dumbbells" do
       step = with_kettlebell(fly_step, 16)
-      dumbbells = workout("cycle-1-workout-2").blocks.first.add_step(exercise: fly, position: 99, reps: 10, weight_value: 16, weight_unit: "kg")
+      dumbbells = workout("cycle-1-workout-2").blocks.first.add_step(exercise: fly, position: 99, reps: 10, weight_value: 16,
+                                                                     weight_unit: "kg")
 
       inventory("kettlebell").update(unit: "lb")
 

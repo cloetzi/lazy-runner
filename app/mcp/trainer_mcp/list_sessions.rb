@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module TrainerMcp
   class ListSessions < SessionTool
     description <<~TEXT.squish

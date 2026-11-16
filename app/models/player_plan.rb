@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # Flattens workouts into the ordered list of screens the player walks through.
 #
 # Blocks are circuits: each round runs every step in order, per-side steps run
@@ -32,7 +34,7 @@ class PlayerPlan
       lists = same.filter_map { |other| other[:allowed_weights]&.map { in_unit(it, other[:weight_unit], item[:weight_unit]) } }
       allowed = lists.flatten.uniq.sort unless lists.empty?
       item.slice(:weight, :weight_unit, :weights_held, :weight_equipment, :any_weight, :seed_weight, :equipment)
-          .merge(allowed_weights: allowed, exercise: item[:exercise].slice(:id, :name))
+        .merge(allowed_weights: allowed, exercise: item[:exercise].slice(:id, :name))
     end
   end
 

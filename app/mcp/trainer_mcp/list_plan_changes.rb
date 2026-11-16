@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module TrainerMcp
   class ListPlanChanges < Tool
     description <<~TEXT.squish
@@ -12,7 +14,8 @@ module TrainerMcp
     TEXT
     input_schema(
       properties: {
-        since: { type: "string", format: "date", description: "The first day of changes, YYYY-MM-DD; #{PlanChange::DEFAULT_DAYS} days back unless given." },
+        since: { type: "string", format: "date",
+                 description: "The first day of changes, YYYY-MM-DD; #{PlanChange::DEFAULT_DAYS} days back unless given." },
         by: { type: "string", enum: PlanChange::BY, description: "Only the user's (manual) or agents' (llm) changes." }
       }
     )
@@ -23,6 +26,7 @@ module TrainerMcp
       from = since ? days(since, since).begin : today - PlanChange::DEFAULT_DAYS
       raise Problem, "since must be today (#{today.iso8601}) or earlier" if from > today
       raise Problem, "since must be within #{DateRange::MAX_DAYS} days of today" if (today - from).to_i >= DateRange::MAX_DAYS
+
       changes = PlanChange.list(from..today, by:).all
       lookup = PlanChange::Lookup.new(changes, today:)
       { **today_and_weekday, changes: changes.map { change(it, lookup) } }
@@ -33,7 +37,8 @@ module TrainerMcp
     def self.change(change, lookup)
       compact(
         id: change.id, action: change.action, item_kind: change.item_kind, session_id: change.session_id,
-        routine_id: change.routine_id, workout_id: change.workout_id, exercise_id: change.exercise_id, title: change.title, summary: change.summary, by: change.changed_by, agent_name: change.agent_name,
+        routine_id: change.routine_id, workout_id: change.workout_id, exercise_id: change.exercise_id,
+        title: change.title, summary: change.summary, by: change.changed_by, agent_name: change.agent_name,
         at: change.created_at.iso8601, from_date: change.from_date&.iso8601, to_date: change.to_date&.iso8601,
         reason: change.reason, undoes: change.undoes_id, undone: (true if change.undone?(lookup))
       ).merge(change.before_and_after.compact)

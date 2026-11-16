@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # What a user has of an item in the equipment catalogue: whether they own it
 # and, for fixed-weight equipment such as dumbbells, the weights they own and
 # the unit they come in. An item without a row is not owned.
@@ -32,7 +34,7 @@ class UserEquipment < Record.Model(:user_equipment)
 
     default = Setting.unit
     weighted = where(owned: true, equipment_id: Equipment.weighted.select(:id)).all
-               .select { it.weights.any? }.map { it.unit || default }.uniq
+      .select { it.weights.any? }.map { it.unit || default }.uniq
     Current.gear_units = {
       user:, default:, rows: exclude(unit: nil).select_hash(:equipment_id, :unit), any_weight: (weighted.first if weighted.one?)
     }

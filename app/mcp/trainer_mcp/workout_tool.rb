@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module TrainerMcp
   # What the tools that write workouts share: the schema of a workout's
   # fields and of its whole structure, as WorkoutStructure reads it, and the
@@ -7,19 +9,24 @@ module TrainerMcp
       type: "object",
       description: "One exercise. Exactly one of reps or duration_seconds (or neither, with only a note saying what to do).",
       properties: {
-        id: { type: "integer", description: "A step of this workout to keep, from get_workout: the sets logged against it keep their link. Leave it out for a new step." },
+        id: { type: "integer",
+              description: "A step of this workout to keep, from get_workout: the sets logged against it keep their link. Leave it out " \
+                           "for a new step." },
         exercise: {
           type: %w[string integer object],
           description: "The exercise's slug from search_exercises (or its id). The { id, slug, name } get_workout gives works too."
         },
-        reps: { type: %w[integer null], minimum: 1, maximum: Step::MAX_REPS, description: "Reps per set: per side when the exercise is done one side at a time (unilateral), both sides together when it alternates sides (alternating: 10 is 5 a side)." },
-        duration_seconds: { type: %w[integer null], minimum: 1, maximum: Step::MAX_SECONDS, description: "Seconds per set, instead of reps." },
+        reps: { type: %w[integer null], minimum: 1, maximum: Step::MAX_REPS,
+                description: "Reps per set: per side when the exercise is done one side at a time (unilateral), both sides together " \
+                             "when it alternates sides (alternating: 10 is 5 a side)." },
+        duration_seconds: { type: %w[integer null], minimum: 1, maximum: Step::MAX_SECONDS,
+                            description: "Seconds per set, instead of reps." },
         tempo: { type: %w[string null], description: "Seconds per phase, 3 or 4 digits such as \"3110\" (down, pause, up, pause)." },
         weight: {
           type: %w[number object null],
           description: "The weight to start at while the exercise has no remembered weight; once it has one, that wins " \
-                       "(set_exercise_weight). Either a number in the unit of the gear the step is done with, such as 20, or an object with " \
-                       "its value, such as {\"value\": 20, \"unit\": \"lb\"}. Leave it out for none: a step sent " \
+                       "(set_exercise_weight). Either a number in the unit of the gear the step is done with, such as 20, " \
+                       "or an object with its value, such as {\"value\": 20, \"unit\": \"lb\"}. Leave it out for none: a step sent " \
                        "without one has none. Use a weight the user owns for the gear the step is done with.",
           properties: { value: { type: "number", minimum: 0 }, unit: { type: "string", enum: ExerciseWeight::UNITS } },
           required: ["value"]
@@ -29,8 +36,8 @@ module TrainerMcp
         equipment: {
           type: %w[array null], items: { type: "string" },
           description: "Equipment slugs from list_equipment, only when done with other gear than the exercise needs (such as " \
-                       "a straight-leg deadlift with the kettlebell rather than dumbbells). A step can't drop the gear its exercise needs: for " \
-                       "bodyweight, pick an exercise that needs none, or leave the weight out and say so in the note."
+                       "a straight-leg deadlift with the kettlebell rather than dumbbells). A step can't drop the gear its " \
+                       "exercise needs: for bodyweight, pick an exercise that needs none, or leave the weight out and say so in the note."
         }
       }
     }.freeze
@@ -40,9 +47,11 @@ module TrainerMcp
       description: "Steps run in order, for a number of rounds.",
       properties: {
         id: { type: "integer", description: "A block of this workout to keep, from get_workout. Leave it out for a new block." },
-        label: { type: "string", maxLength: Block::MAX_LABEL, description: "Its name, unique in the workout, such as \"Main\" or \"Core finisher\"." },
+        label: { type: "string", maxLength: Block::MAX_LABEL,
+                 description: "Its name, unique in the workout, such as \"Main\" or \"Core finisher\"." },
         rounds: { type: "integer", minimum: 1, maximum: Block::MAX_ROUNDS, description: "How many times the steps run; 1 when left out." },
-        rest_seconds: { type: "integer", minimum: 0, maximum: Block::MAX_REST_SECONDS, description: "Rest after each round but the last; 0 when left out." },
+        rest_seconds: { type: "integer", minimum: 0, maximum: Block::MAX_REST_SECONDS,
+                        description: "Rest after each round but the last; 0 when left out." },
         steps: { type: "array", items: STEP, minItems: 1, maxItems: WorkoutStructure::MAX_STEPS }
       },
       required: %w[label steps]
@@ -99,13 +108,20 @@ module TrainerMcp
       workout.blocks.each_with_index.flat_map do |block, b|
         block.steps.each_with_index.flat_map do |step, s|
           where = "Block #{b + 1} (#{block.label}), step #{s + 1} (#{step.exercise.slug})"
-          missing = step.equipment_needed - owned
           [
-            ("#{where}: needs #{missing.join(", ")}, which the user doesn't own: pick an exercise without it, or update_equipment once they say they have it#{" (weight is any dumbbell or kettlebell)" if missing.intersect?(generic)}" if missing.any?),
+            gear_warning(step.equipment_needed - owned, generic, where),
             weight_warning(step, remembered[step.exercise_id], fixed, where)
           ].compact
         end
       end
+    end
+
+    def self.gear_warning(missing, generic, where)
+      return if missing.empty?
+
+      any = " (weight is any dumbbell or kettlebell)" if missing.intersect?(generic)
+      "#{where}: needs #{missing.join(", ")}, which the user doesn't own: pick an exercise without it, " \
+        "or update_equipment once they say they have it#{any}"
     end
 
     def self.weight_warning(step, remembered, fixed, where)
@@ -119,13 +135,19 @@ module TrainerMcp
 
       gear = step.equipment_needed.find { fixed.key?(it) }
       other = Equipment.carrying(weight, fixed, except: gear)
-      change = remembered ? "it is the exercise's remembered weight, which wins over a step's: set_exercise_weight changes it once the user agrees" : "give one of those"
+      change =
+        if remembered
+          "it is the exercise's remembered weight, which wins over a step's: set_exercise_weight changes it once the user agrees"
+        else
+          "give one of those"
+        end
       hint = other ? "give equipment [\"#{other}\"] if it is done with that, or #{change}" : change
       gear = "any weight" if fixed[gear].is_a?(Equipment::AnyWeight)
-      "#{where}: #{format_weight(value)} #{unit} is not a weight the user owns for #{gear} (#{allowed.map { format_weight(it) }.join(", ")} #{unit}); #{hint}"
+      owned = allowed.map { format_weight(it) }.join(", ")
+      "#{where}: #{format_weight(value)} #{unit} is not a weight the user owns for #{gear} (#{owned} #{unit}); #{hint}"
     end
 
-    def self.format_weight(value) = value % 1 == 0 ? value.to_i.to_s : value.to_s
+    def self.format_weight(value) = (value % 1).zero? ? value.to_i.to_s : value.to_s
 
     # The workout fields and structure among `arguments`, as Workout#revise! takes them.
     def self.changes(arguments)

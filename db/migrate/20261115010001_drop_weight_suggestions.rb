@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # The app no longer suggests weights (#264): changing one is the user's and
 # the coach's. The table goes with its rows; the finish feedback that drove
 # them stays on completions for the coach to read.

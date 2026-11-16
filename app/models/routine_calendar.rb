@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # The days of the user's routines that show on a range of days, each with
 # how it reads on `today` and what fulfils it. Nothing of this is stored but
 # the days the user changed (RoutineDay) and the links sessions and
@@ -31,7 +33,7 @@ class RoutineCalendar
       }
     end
 
-    def to_json(*args) = as_json.to_json(*args)
+    def to_json(*) = as_json.to_json(*)
   end
 
   # How one day of `routine` reads.
@@ -79,7 +81,8 @@ class RoutineCalendar
     days = candidates.map do |id, date|
       session = sessions[[id, date]]
       kept = stored[[id, date]]
-      Day.new(routine: by_id[id], date:, on: session&.date || kept&.moved_to || date, stored: kept, session:, activity: hand[[id, date]], linked: hand.key?([id, date]))
+      Day.new(routine: by_id[id], date:, on: session&.date || kept&.moved_to || date, stored: kept, session:, activity: hand[[id, date]],
+              linked: hand.key?([id, date]))
     end
     days.select! { range.cover?(it.on) }
     days.sort_by! { [it.on, it.routine.id, it.date] }
@@ -100,7 +103,10 @@ class RoutineCalendar
       if routine.workout_id
         workout_day(day, done_sessions)
       else
-        day.activity ||= (claim(activities) { it.date == day.on && Sport.same?(it.sport, routine.sport) } unless day.stored&.status == "skipped")
+        day.activity ||= unless day.stored&.status == "skipped"
+                           claim(activities) { it.date == day.on && Sport.same?(it.sport, routine.sport) }
+                         end
+
         day.state = if day.activity then "done"
                     elsif day.stored&.status == "skipped" then "skipped"
                     else open_state(day, day.stored&.status == "confirmed")
@@ -139,8 +145,8 @@ class RoutineCalendar
   end
 
   # Takes the first item that matches out of `items`.
-  def claim(items, &matches)
-    index = items.index(&matches)
+  def claim(items, &)
+    index = items.index(&)
     index && items.delete_at(index)
   end
 end

@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require "test_helper"
 
 describe Session do
@@ -34,7 +36,7 @@ describe Session do
     end
 
     it "takes the first planned in the day's order" do
-      first, second = 2.times.map { session("planned") }
+      first, second = Array.new(2) { session("planned") }
       first.update_columns(position: 2)
       second.update_columns(position: 1)
 
@@ -47,10 +49,10 @@ describe Session do
     before { travel_to Time.utc(2026, 10, 20, 12) }
     after { travel_back }
 
-    let(:workout_1) { workout("cycle-1-workout-1") }
-    let(:workout_2) { workout("cycle-1-workout-2") }
+    let(:workout1) { workout("cycle-1-workout-1") }
+    let(:workout2) { workout("cycle-1-workout-2") }
 
-    def plan(date, **options) = Session.plan!(workout: workout_1, date: Date.iso8601(date), **options)
+    def plan(date, **) = Session.plan!(workout: workout1, date: Date.iso8601(date), **)
 
     def day(date) = Session.where(date: Date.iso8601(date)).order(:position).map { [it.id, it.position] }
 
@@ -79,7 +81,7 @@ describe Session do
     end
 
     it "takes a date as text, as an MCP tool sends it" do
-      session = Session.plan!(workout: workout_1, date: "2026-10-22")
+      session = Session.plan!(workout: workout1, date: "2026-10-22")
       _(session.date).must_equal Date.new(2026, 10, 22)
 
       error = _ { session.move!(date: "next week") }.must_raise Sequel::ValidationFailed
@@ -89,15 +91,15 @@ describe Session do
 
     it "plans several sessions all or nothing" do
       planned = Session.plan_all!([
-        { workout: workout_1, date: "2026-10-21", note: "Strength" },
-        { workout: workout_2, date: "2026-10-21", position: 1, parts: %w[workout] }
-      ], created_by: "llm")
+                                    { workout: workout1, date: "2026-10-21", note: "Strength" },
+                                    { workout: workout2, date: "2026-10-21", position: 1, parts: %w[workout] }
+                                  ], created_by: "llm")
 
       _(planned.map(&:created_by).uniq).must_equal ["llm"]
       _(day("2026-10-21")).must_equal [[planned[1].id, 1], [planned[0].id, 2]]
       _(planned[1].part_kinds).must_equal %w[workout]
 
-      error = _ { Session.plan_all!([{ workout: workout_1, date: "2026-10-22" }, { workout: workout_1, date: "2026-10-19" }]) }
+      error = _ { Session.plan_all!([{ workout: workout1, date: "2026-10-22" }, { workout: workout1, date: "2026-10-19" }]) }
         .must_raise Session::EntryInvalid
       _(error).must_be_kind_of Sequel::ValidationFailed
       _([error.index, error.model.errors[:date]]).must_equal [1, ["must be today or later"]]
@@ -105,7 +107,8 @@ describe Session do
     end
 
     it "plans nothing new with an archived workout" do
-      built = Workout.create_with!({ kind: "workout", title: "Old", blocks: [{ label: "A", steps: [{ exercise: "plank", duration_seconds: 30 }] }] })
+      built = Workout.create_with!({ kind: "workout", title: "Old",
+                                     blocks: [{ label: "A", steps: [{ exercise: "plank", duration_seconds: 30 }] }] })
       built.archive!
 
       error = _ { plan("2026-10-21", workout: built) }.must_raise Sequel::ValidationFailed
@@ -113,7 +116,8 @@ describe Session do
     end
 
     it "moves no missed session of an archived workout back onto the calendar" do
-      built = Workout.create_with!({ kind: "workout", title: "Old", blocks: [{ label: "A", steps: [{ exercise: "plank", duration_seconds: 30 }] }] })
+      built = Workout.create_with!({ kind: "workout", title: "Old",
+                                     blocks: [{ label: "A", steps: [{ exercise: "plank", duration_seconds: 30 }] }] })
       missed = session_on("2026-10-18", "planned", workout: built)
       skipped = Session.create(workout: built, date: Date.iso8601("2026-10-19"), status: "skipped")
       built.archive!
@@ -131,14 +135,14 @@ describe Session do
     end
 
     it "plans at most four weeks of sessions at once" do
-      entries = Array.new(Session::PLAN_LIMIT + 1) { { workout: workout_1, date: "2026-10-21" } }
+      entries = Array.new(Session::PLAN_LIMIT + 1) { { workout: workout1, date: "2026-10-21" } }
 
       _ { Session.plan_all!(entries) }.must_raise ArgumentError
       _(Session.count).must_equal 0
     end
 
     it "moves a session to another day, renumbering both" do
-      first, moving, last = 3.times.map { plan("2026-10-21") }
+      first, moving, last = Array.new(3) { plan("2026-10-21") }
       there = plan("2026-10-23")
 
       moving.move!(date: "2026-10-23", position: 1)
@@ -166,7 +170,7 @@ describe Session do
     end
 
     it "reorders a day" do
-      first, second, third = 3.times.map { plan("2026-10-21") }
+      first, second, third = Array.new(3) { plan("2026-10-21") }
 
       third.move!(position: 2)
 
@@ -197,7 +201,7 @@ describe Session do
     end
 
     it "reorders a missed session's day without a new date" do
-      first, second = 2.times.map { session_on("2026-10-19", "planned") }
+      first, second = Array.new(2) { session_on("2026-10-19", "planned") }
 
       second.move!(position: 1)
 
@@ -222,7 +226,7 @@ describe Session do
     end
 
     it "removes a planned or missed session, renumbering its day" do
-      first, second, third = 3.times.map { plan("2026-10-21") }
+      first, second, third = Array.new(3) { plan("2026-10-21") }
       missed = session_on("2026-10-19", "planned")
 
       second.remove!
@@ -254,7 +258,7 @@ describe Session do
     end
 
     it "counts what comes after a session in the day's order" do
-      first, second = 2.times.map { plan("2026-10-21") }
+      first, second = Array.new(2) { plan("2026-10-21") }
       second.move!(position: 1)
 
       _(Session.after(second.refresh)).must_include first.refresh

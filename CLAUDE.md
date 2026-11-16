@@ -18,6 +18,7 @@ fails when it misses a table or column, so update it with every migration),
 bundle install
 bundle exec rage s          # dev server on http://localhost:3000 (migrates and seeds on boot)
 bundle exec rake test       # Ruby tests (Minitest)
+bundle exec rubocop         # lint (.rubocop.yml); -a fixes what is safe to fix
 npm test                    # player logic tests (node:test, no dependencies)
 npm ci && npm run test:e2e  # browser smoke test (Playwright) against a server with a fresh database at BASE_URL
 docker build --build-arg RUBY_VERSION="$(cat .ruby-version)" -t lazy-runner .
@@ -222,9 +223,9 @@ then `BASE_URL=http://localhost:3999 SERVER_LOG=/tmp/e2e.log npm run test:e2e`.
   review; a dependency dashboard issue. An older pin needs a `packageRules`
   entry saying why. Not covered: the vendored Swagger UI (by hand) and the
   Debian release in the session-start hook's fallback image.
-- CI runs on GitHub-hosted runners (`ubuntu-latest`) and only tests: Ruby,
-  node and e2e as parallel jobs, toolchains from setup actions reading the
-  version files, dependencies cached. The image is built only for a release
+- CI runs on GitHub-hosted runners (`ubuntu-latest`) and only tests and
+  lints: Ruby, RuboCop, node and e2e as parallel jobs, toolchains from setup
+  actions reading the version files, dependencies cached. The image is built only for a release
   (`.github/workflows/release.yml`). Keep branch builds lean.
 - Commits follow [Conventional Commits](https://www.conventionalcommits.org/):
   `type(scope): summary` with `feat`, `fix`, `perf`, `refactor`, `docs`,
@@ -237,7 +238,12 @@ then `BASE_URL=http://localhost:3999 SERVER_LOG=/tmp/e2e.log npm run test:e2e`.
   the image. The version is release-please's
   (`.release-please-manifest.json`, `version.txt`, `CHANGELOG.md`): never
   bump it by hand.
-- Use `it` in short blocks rather than `_1`.
+- Use `it` in short blocks rather than `_1`, and name the parameter in a
+  block over more than one line.
+- RuboCop (`.rubocop.yml`): its defaults with new cops on, all Metrics off,
+  lines up to 140, and a frozen string literal comment in every Ruby file.
+  CI fails on any offence and there is no todo file: fix it, or disable the
+  cop on that line with `-- why`.
 - Every API change gets a request test in `test/requests/`. Timing logic gets a
   unit test.
 - Seeds are the source of truth for the library, examples for programs.

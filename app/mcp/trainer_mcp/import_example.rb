@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module TrainerMcp
   class ImportExample < Tool
     description <<~TEXT.squish

@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require "test_helper"
 
 # Workout edits and remembered weights in the record of plan changes (#290).
@@ -16,7 +18,7 @@ describe WorkoutChange do
   def blocks = WorkoutChange.snapshot(strength.refresh)["blocks"]
 
   # The workout's structure with `change` made to a copy of it.
-  def edited(&change) = blocks.tap(&change)
+  def edited(&) = blocks.tap(&)
 
   def revise(&) = strength.revise!("blocks" => edited(&))
 
@@ -49,8 +51,9 @@ describe WorkoutChange do
 
       block_a = "block #{original[0]["label"]}"
       gone = original[1]["steps"].last
+      was_weight = second["weight"] ? "#{second["weight"]["value"].to_i} lb" : "none"
       _(latest.summary).must_equal [
-        "#{exercise_name(second)}: 15 reps (was #{second["reps"]}), weight 20 lb (was #{second["weight"] ? "#{second["weight"]["value"].to_i} lb" : "none"})",
+        "#{exercise_name(second)}: 15 reps (was #{second["reps"]}), weight 20 lb (was #{was_weight})",
         "#{lunge.name} instead of #{exercise_name(first)} in #{block_a}",
         "took #{exercise_name(gone)} out of block #{original[1]["label"]}"
       ].join("; ")
@@ -62,16 +65,21 @@ describe WorkoutChange do
       lunge = exercise("curtsy-lunge")
       push = exercise("push-up")
       shot = ->(list) { WorkoutChange.snapshot(strength).merge("blocks" => list) }
-      summary = WorkoutChange.summary(shot.(original), shot.(edited do |list|
+      summary = WorkoutChange.summary(shot.call(original), shot.call(edited do |list|
         list[0]["steps"][0] = first.except("id", "per_side").merge("exercise_id" => lunge.id)
         list[0]["steps"][1] = second.except("id", "per_side").merge("exercise_id" => push.id)
       end))
       _(summary).must_equal "#{lunge.name} instead of #{exercise_name(first)} in block #{original[0]["label"]}; " \
                             "#{push.name} instead of #{exercise_name(second)} in block #{original[0]["label"]}"
 
-      resent = edited { |list| list.each { |block| block.delete("id"); block["steps"].each { it.delete("id") } } }
+      resent = edited do |list|
+        list.each do |block|
+          block.delete("id")
+          block["steps"].each { it.delete("id") }
+        end
+      end
       resent[0]["steps"][0]["reps"] = 15
-      _(WorkoutChange.summary(shot.(original), shot.(resent))).must_equal "#{exercise_name(first)}: 15 reps (was #{first["reps"]})"
+      _(WorkoutChange.summary(shot.call(original), shot.call(resent))).must_equal "#{exercise_name(first)}: 15 reps (was #{first["reps"]})"
     end
 
     it "keeps a kind of item to its own link, as the table's checks do" do
@@ -81,7 +89,12 @@ describe WorkoutChange do
     end
 
     it "names the first few changes and counts the rest" do
-      revise { |shot| shot.each { |block| block["rounds"] += 1; block["rest_seconds"] += 15 } }
+      revise do |shot|
+        shot.each do |block|
+          block["rounds"] += 1
+          block["rest_seconds"] += 15
+        end
+      end
 
       shown = latest.summary.split("; ")
       _(shown.size).must_equal WorkoutChange::SHOWN + 1
@@ -118,7 +131,8 @@ describe WorkoutChange do
       undo = change.refresh.undo!(today:)
 
       after = WorkoutChange.snapshot(strength.refresh)
-      _(after["blocks"].map { |block| block["steps"].map { it["exercise_id"] } }).must_equal(before["blocks"].map { |block| block["steps"].map { it["exercise_id"] } })
+      _(after["blocks"].map { |block| block["steps"].map { it["exercise_id"] } })
+        .must_equal(before["blocks"].map { |block| block["steps"].map { it["exercise_id"] } })
       _(after["blocks"][0]).must_equal before["blocks"][0]
       _([undo.item_kind, undo.changed_by, undo.undoes_id]).must_equal ["workout", "manual", change.id]
       _(change.refresh.undone?).must_equal true
@@ -144,12 +158,14 @@ describe WorkoutChange do
       as_agent { PlanChange.because("RPE 6 on every set") { ExerciseWeight.remember!(squat, 25, "lb") } }
 
       change = latest
-      _([change.item_kind, change.exercise_id, change.title, change.changed_by, change.reason]).must_equal ["weight", squat.id, squat.name, "llm", "RPE 6 on every set"]
+      _([change.item_kind, change.exercise_id, change.title, change.changed_by, change.reason])
+        .must_equal ["weight", squat.id, squat.name, "llm", "RPE 6 on every set"]
       _(change.was).must_equal({ "value" => nil, "unit" => nil })
       _(change.now).must_equal({ "value" => 25.0, "unit" => "lb" })
 
       ExerciseWeight.remember!(squat, 30, "lb")
-      _([latest.changed_by, latest.was, latest.now]).must_equal ["manual", { "value" => 25.0, "unit" => "lb" }, { "value" => 30.0, "unit" => "lb" }]
+      _([latest.changed_by, latest.was, latest.now])
+        .must_equal ["manual", { "value" => 25.0, "unit" => "lb" }, { "value" => 30.0, "unit" => "lb" }]
 
       count = PlanChange.count
       ExerciseWeight.remember!(squat, 30, "lb")
@@ -180,19 +196,21 @@ describe WorkoutChange do
     it "gives an item's latest change while it is an agent's, not taken back, and on Get ready until it is trained" do
       as_agent { revise { it[0]["rounds"] += 1 } }
       as_agent { ExerciseWeight.remember!(squat, 25, "lb") }
-      standing = ->(**options) { PlanChange.standing(workout_ids: [strength.id], exercise_ids: [squat.id], today:, **options).map { it[:item_kind] } }
+      standing = lambda { |**options|
+        PlanChange.standing(workout_ids: [strength.id], exercise_ids: [squat.id], today:, **options).map { it[:item_kind] }
+      }
 
-      _(standing.(untrained: true)).must_equal %w[workout weight]
+      _(standing.call(untrained: true)).must_equal %w[workout weight]
 
       session = Session.plan!(workout: strength, date: today)
       step = strength.refresh.blocks.first.steps.first
       SetLog.create(session_id: session.id, step_id: step.id, step_ref: step.id, exercise_id: squat.id, planned_exercise_id: squat.id,
                     block_label: "A", set_number: 1, status: "done", created_at: Time.now + 60)
-      _(standing.(untrained: true)).must_equal []
-      _(standing.()).must_equal %w[workout weight]
+      _(standing.call(untrained: true)).must_equal []
+      _(standing.call).must_equal %w[workout weight]
 
       ExerciseWeight.remember!(squat, 30, "lb")
-      _(standing.()).must_equal %w[workout]
+      _(standing.call).must_equal %w[workout]
     end
 
     it "counts a warm-up as trained when its main workout's session logs a set of it" do
@@ -202,8 +220,8 @@ describe WorkoutChange do
 
       session = Session.plan!(workout: strength, date: today)
       step = warmup.refresh.blocks.first.steps.first
-      SetLog.create(session_id: session.id, step_id: step.id, step_ref: step.id, exercise_id: step.exercise_id, planned_exercise_id: step.exercise_id,
-                    block_label: "A", set_number: 1, status: "done", created_at: Time.now + 60)
+      SetLog.create(session_id: session.id, step_id: step.id, step_ref: step.id, exercise_id: step.exercise_id,
+                    planned_exercise_id: step.exercise_id, block_label: "A", set_number: 1, status: "done", created_at: Time.now + 60)
       _(PlanChange.standing(workout_ids: [warmup.id], today:, untrained: true)).must_equal []
     end
   end

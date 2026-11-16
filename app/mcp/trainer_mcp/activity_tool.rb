@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module TrainerMcp
   # What the activity tools share: an activity as they answer with it, and
   # reading the distances, times and starts an agent sends.
@@ -23,7 +25,9 @@ module TrainerMcp
 
       match = value.is_a?(String) && value.strip.match(LENGTH)
       factor = match && METRES[match[2].downcase.presence || "m"]
-      raise Problem, "#{field} must be metres as a number, or text with its unit such as \"5 mi\" or \"10.2 km\"; got #{value.inspect}" unless factor
+      unless factor
+        raise Problem, "#{field} must be metres as a number, or text with its unit such as \"5 mi\" or \"10.2 km\"; got #{value.inspect}"
+      end
 
       (match[1].to_f * factor).round
     end

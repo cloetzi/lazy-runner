@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require "json"
 
 # Checks an exercise animation against the skeleton the frontend renders it
@@ -37,7 +39,9 @@ module Animation
     problems << "keyframe #{index}: at must be [x, y]" if keyframe.key?("at") && !point?(keyframe["at"])
     problems += scale_problems(keyframe.fetch("scale", {}), index)
     %w[hold move].each do |key|
-      problems << "keyframe #{index}: #{key} must be zero or more seconds" if keyframe.key?(key) && !(keyframe[key].is_a?(Numeric) && keyframe[key] >= 0)
+      if keyframe.key?(key) && !(keyframe[key].is_a?(Numeric) && keyframe[key] >= 0)
+        problems << "keyframe #{index}: #{key} must be zero or more seconds"
+      end
     end
     problems
   end

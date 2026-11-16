@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require "test_helper"
 
 describe Activity do
@@ -36,7 +38,7 @@ describe Activity do
     end
 
     it "takes an id at its source as text, whatever it was sent as" do
-      activity, = log(source: "garmin", external_id: 1234567)
+      activity, = log(source: "garmin", external_id: 1_234_567)
 
       _(activity.external_id).must_equal "1234567"
     end
@@ -163,7 +165,8 @@ describe Activity do
 
     it "matches an id sent as a whole number with a fraction to the same id" do
       Activity.log_all!([{ date: "2026-11-01", sport: "run", source: "garmin", external_id: 18_234_567_890 }], today:)
-      logged = Activity.log_all!([{ date: "2026-11-01", sport: "run", source: "garmin", external_id: 18_234_567_890.0, distance_m: 5000 }], today:)
+      logged = Activity.log_all!([{ date: "2026-11-01", sport: "run", source: "garmin", external_id: 18_234_567_890.0, distance_m: 5000 }],
+                                 today:)
 
       _(logged.map(&:last)).must_equal [:updated]
       _(Activity.select_map(%i[external_id distance_m])).must_equal [["18234567890", 5000]]
@@ -171,9 +174,9 @@ describe Activity do
 
     it "logs a pair sent twice once, the later fields winning" do
       logged = Activity.log_all!([
-        { date: "2026-11-01", sport: "run", source: "garmin", external_id: "a1", distance_m: 5000, rpe: 4 },
-        { date: "2026-11-01", sport: "run", source: "garmin", external_id: "a1", distance_m: 5100, rpe: 6 }
-      ], today:).map(&:first)
+                                   { date: "2026-11-01", sport: "run", source: "garmin", external_id: "a1", distance_m: 5000, rpe: 4 },
+                                   { date: "2026-11-01", sport: "run", source: "garmin", external_id: "a1", distance_m: 5100, rpe: 6 }
+                                 ], today:).map(&:first)
 
       _(logged.map(&:id).uniq.size).must_equal 1
       _(logged.first.distance_m).must_equal 5100
@@ -181,18 +184,21 @@ describe Activity do
     end
 
     it "looks the list up once, finding what it named before and what it logged itself" do
-      Activity.log_all!([{ date: "2026-10-30", sport: "run", source: "garmin", external_id: "a1" }, { date: "2026-10-30", sport: "ride", client_ref: "r1" }], today:)
+      Activity.log_all!(
+        [{ date: "2026-10-30", sport: "run", source: "garmin", external_id: "a1" },
+         { date: "2026-10-30", sport: "ride", client_ref: "r1" }], today:
+      )
       log = StringIO.new
       logger = Logger.new(log)
       Activity.db.loggers << logger
       logged = begin
         Activity.log_all!([
-          { date: "2026-10-30", sport: "run", source: "garmin", external_id: "a1", distance_m: 8000 },
-          { date: "2026-10-30", sport: "ride", client_ref: "r1" },
-          { date: "2026-10-31", sport: "swim", client_ref: "r2" },
-          { date: "2026-10-31", sport: "swim", client_ref: "r2" },
-          { date: "2026-10-31", sport: "walk", source: "strava", external_id: "s9" }
-        ], today:)
+                            { date: "2026-10-30", sport: "run", source: "garmin", external_id: "a1", distance_m: 8000 },
+                            { date: "2026-10-30", sport: "ride", client_ref: "r1" },
+                            { date: "2026-10-31", sport: "swim", client_ref: "r2" },
+                            { date: "2026-10-31", sport: "swim", client_ref: "r2" },
+                            { date: "2026-10-31", sport: "walk", source: "strava", external_id: "s9" }
+                          ], today:)
       ensure
         Activity.db.loggers.delete(logger)
       end
@@ -205,34 +211,35 @@ describe Activity do
     it "answers a row found by its pair and by its client_ref as the same" do
       Activity.log_all!([{ date: "2026-10-30", sport: "run", source: "garmin", external_id: "a1", client_ref: "r1" }], today:)
 
-      logged = Activity.log_all!([{ source: "garmin", external_id: "a1", rpe: 7 }, { date: "2026-10-30", sport: "run", client_ref: "r1" }], today:)
+      logged = Activity.log_all!([{ source: "garmin", external_id: "a1", rpe: 7 }, { date: "2026-10-30", sport: "run", client_ref: "r1" }],
+                                 today:)
 
       _(logged.map(&:last)).must_equal %i[updated known]
       _(logged.map { it.first.rpe }).must_equal [7, 7]
     end
 
     it "logs nothing when one entry can't be logged, and names it by its place" do
-      error = _ {
+      error = _ do
         Activity.log_all!([{ date: "2026-11-01", sport: "run" }, { date: "2026-11-01", sport: "run", distance_m: -5 }], today:)
-      }.must_raise Activity::EntryInvalid
+      end.must_raise Activity::EntryInvalid
 
       _(error.fields).must_equal("activities[1].distance_m" => ["must be greater than or equal to 0"])
       _(Activity.count).must_equal 0
     end
 
     it "names the first bad entry, and a merged pair by its first place" do
-      error = _ {
+      error = _ do
         Activity.log_all!([{ date: "bad", sport: "run" }, 5], today:)
-      }.must_raise Activity::EntryInvalid
+      end.must_raise Activity::EntryInvalid
       _(error.fields.keys).must_equal ["activities[0].date"]
 
-      error = _ {
+      error = _ do
         Activity.log_all!([
-          { date: "2026-11-01", sport: "run", source: "w", external_id: "1", distance_m: -1 },
-          { date: "2026-11-01", sport: "run" },
-          { source: "w", external_id: "1", title: "Again" }
-        ], today:)
-      }.must_raise Activity::EntryInvalid
+                            { date: "2026-11-01", sport: "run", source: "w", external_id: "1", distance_m: -1 },
+                            { date: "2026-11-01", sport: "run" },
+                            { source: "w", external_id: "1", title: "Again" }
+                          ], today:)
+      end.must_raise Activity::EntryInvalid
       _(error.fields.keys).must_equal ["activities[0].distance_m"]
     end
 

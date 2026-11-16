@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module Api
   # The install's users, for the owner. Needs a signed-in browser: an API
   # token can't manage users or invites.

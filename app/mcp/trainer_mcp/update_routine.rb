@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module TrainerMcp
   class UpdateRoutine < RoutineTool
     description <<~TEXT.squish

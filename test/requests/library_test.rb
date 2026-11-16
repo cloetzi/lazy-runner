@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require "test_helper"
 
 describe "library API" do
@@ -128,7 +130,8 @@ describe "library API" do
       _(planned).must_equal Step.where(exercise: deadlift).exclude(weight_value: nil).first.weight.transform_keys(&:to_s)
 
       ExerciseWeight.create(exercise: deadlift, value: 55, unit: "lb")
-      _(alternatives("goblet-squat").find { it["slug"] == "straight-leg-deadlift" }["weight"]).must_equal({ "value" => 55.0, "unit" => "lb" })
+      _(alternatives("goblet-squat").find { it["slug"] == "straight-leg-deadlift" }["weight"])
+        .must_equal({ "value" => 55.0, "unit" => "lb" })
       _(alternatives("goblet-squat").find { it["slug"] == "plank" }["weight"]).must_be_nil
     end
 
@@ -209,7 +212,8 @@ describe "library API" do
 
       bug = json["plan"]["items"].find { it["type"] == "exercise" && it["exercise"]["slug"] == "dead-bug" }
       _(bug["exercise"]["alternating"]).must_equal true
-      _(json["plan"]["items"].find { it["type"] == "exercise" && it["exercise"]["slug"] != "dead-bug" }["exercise"]["alternating"]).must_equal false
+      _(json["plan"]["items"].find { it["type"] == "exercise" && it["exercise"]["slug"] != "dead-bug" }["exercise"]["alternating"])
+        .must_equal false
     end
 
     it "gives each step its target, with a remembered weight winning over the seed" do

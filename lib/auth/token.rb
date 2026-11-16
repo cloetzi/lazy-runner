@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module Auth
   # A personal API token in place of the session (ApiToken, made in
   # Settings). It is read and checked as /mcp checks it (the mcp gem's bearer
@@ -8,9 +10,9 @@ module Auth
     # nothing. Another scheme (a proxy's Basic sign-in passed through, say) is
     # left alone, and the request reads as one without a token.
     BEARER = /\ABearer(?: |\z)/i
-    REFUSED = "Manage the account from a signed-in browser, not with an API token".freeze
-    MCP_ONLY = "This API token is for MCP (/mcp) only; for the REST API, make one with REST access in Settings".freeze
-    INVALID = "Send a valid API token: Authorization: Bearer lr_...".freeze
+    REFUSED = "Manage the account from a signed-in browser, not with an API token"
+    MCP_ONLY = "This API token is for MCP (/mcp) only; for the REST API, make one with REST access in Settings"
+    INVALID = "Send a valid API token: Authorization: Bearer lr_..."
 
     def self.bearer?(env) = env["HTTP_AUTHORIZATION"].to_s.b.match?(BEARER)
 

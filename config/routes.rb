@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require_relative "../lib/api_reference"
 
 Rage.routes.draw do

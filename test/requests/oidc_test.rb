@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require "test_helper"
 require "fake_oidc_provider"
 
@@ -126,7 +128,10 @@ describe "signing in with an OpenID Connect provider" do
       PROVIDER.down = true
       calls = 0
       adapter = Oidc.http_adapter
-      Oidc.http_adapter = ->(faraday) { calls += 1; adapter.(faraday) }
+      Oidc.http_adapter = lambda { |faraday|
+        calls += 1
+        adapter.call(faraday)
+      }
       3.times do
         post_json "/api/auth/oidc"
         _(last_response.status).must_equal 502
@@ -139,7 +144,10 @@ describe "signing in with an OpenID Connect provider" do
     it "asks the provider for its discovery document once, not on every sign-in" do
       calls = 0
       adapter = Oidc.http_adapter
-      Oidc.http_adapter = ->(faraday) { calls += 1; adapter.(faraday) }
+      Oidc.http_adapter = lambda { |faraday|
+        calls += 1
+        adapter.call(faraday)
+      }
       2.times { start }
       _(calls).must_equal 1
     ensure
@@ -393,7 +401,7 @@ describe "signing in with an OpenID Connect provider" do
       end
       sign_out!
       sign_in(user)
-      _(devices.()).must_equal [identity.id, identity.id, nil]
+      _(devices.call).must_equal [identity.id, identity.id, nil]
 
       sign_out!
       sign_in_at_provider(sub: "sub-1")
@@ -401,7 +409,7 @@ describe "signing in with an OpenID Connect provider" do
 
       _(last_response.status).must_equal 204
       # The one asking stays signed in, and with its identity gone it names none.
-      _(devices.()).must_equal [nil, nil]
+      _(devices.call).must_equal [nil, nil]
       _(signed_in_as).must_equal user.username
     end
 
@@ -465,7 +473,8 @@ describe "signing in with an OpenID Connect provider" do
 
     it "unlinks them all on a change of password that signs the other devices out, or a reset" do
       link(user, "sub-1")
-      post_json "/api/auth/change-password", password: RequestHelpers::TEST_PASSWORD, new_password: "a brand new password", sign_out_others: false
+      post_json "/api/auth/change-password", password: RequestHelpers::TEST_PASSWORD, new_password: "a brand new password",
+                                             sign_out_others: false
       _(UserIdentity.count).must_equal 1
       post_json "/api/auth/change-password", password: "a brand new password", new_password: "another new password"
       _(last_response.status).must_equal 200
@@ -506,7 +515,12 @@ describe "signing in with an OpenID Connect provider" do
   describe "a wrong password for an account without one" do
     def verifications
       count = 0
-      counter = Module.new { define_method(:verify_password) { |*args, **opts| count += 1; super(*args, **opts) } }
+      counter = Module.new do
+        define_method(:verify_password) do |*args, **opts|
+          count += 1
+          super(*args, **opts)
+        end
+      end
       Argon2::Password.singleton_class.prepend(counter)
       yield
       count
@@ -538,7 +552,8 @@ describe "signing in with an OpenID Connect provider" do
 end
 
 describe Oidc do
-  ENV_KEYS = %w[OIDC_ISSUER OIDC_CLIENT_ID OIDC_CLIENT_SECRET OIDC_NAME OIDC_AUTO_SIGNUP OIDC_REDIRECT_URI OIDC_CLIENT_AUTH_METHOD OIDC_SIGNING_ALG].freeze
+  ENV_KEYS = %w[OIDC_ISSUER OIDC_CLIENT_ID OIDC_CLIENT_SECRET OIDC_NAME OIDC_AUTO_SIGNUP OIDC_REDIRECT_URI OIDC_CLIENT_AUTH_METHOD
+                OIDC_SIGNING_ALG].freeze
 
   def settings(env) = Oidc.from_env(ENV_KEYS.to_h { [it, nil] }.merge(env))
 
@@ -546,10 +561,11 @@ describe Oidc do
     _(settings({})).must_be_nil
   end
 
-  CALLBACK = "https://runner.example.test/api/auth/oidc/callback".freeze
+  CALLBACK = "https://runner.example.test/api/auth/oidc/callback"
 
   it "reads the provider, with defaults" do
-    found = settings("OIDC_ISSUER" => "https://id.example.test", "OIDC_CLIENT_ID" => "app", "OIDC_CLIENT_SECRET" => "s", "OIDC_REDIRECT_URI" => CALLBACK)
+    found = settings("OIDC_ISSUER" => "https://id.example.test", "OIDC_CLIENT_ID" => "app", "OIDC_CLIENT_SECRET" => "s",
+                     "OIDC_REDIRECT_URI" => CALLBACK)
     _(found.to_h).must_equal(
       issuer: "https://id.example.test", client_id: "app", client_secret: "s", name: "single sign-on",
       auto_signup: false, redirect_uri: CALLBACK, auth_method: :basic, signing_alg: "RS256"

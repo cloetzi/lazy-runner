@@ -1,6 +1,6 @@
 name: CI
 
-# Tests only, on GitHub-hosted runners: the image is built on release
+# Tests and lint only, on GitHub-hosted runners: the image is built on release
 # (release.yml). Jobs run in parallel with their toolchains and dependencies
 # cached, and a newer push to a branch cancels its older run.
 on:
@@ -26,6 +26,20 @@ jobs:
         with:
           bundler-cache: true
       - run: bundle exec rake test
+
+  # Only the development group: RuboCop doesn't load the app.
+  lint:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      BUNDLE_ONLY: development
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ruby/setup-ruby@b3aaceaef7e0ee231b499e7b5f49c03fc1d32199 # v1.338.0
+        with:
+          bundler-cache: true
+      # Offences as annotations on the pull request.
+      - run: bundle exec rubocop --format github
 
   node:
     runs-on: ubuntu-latest

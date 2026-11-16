@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module Api
   class ProgramsController < ApplicationController
     # The user's programs and their workouts.

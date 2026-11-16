@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require_relative "../../lib/auth_app"
 require_relative "../../lib/api_boundary"
 

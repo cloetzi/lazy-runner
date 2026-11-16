@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # How a finished session felt.
 class Completion < Record
   # The signed-in user's: those of their sessions (see Record.per_user).
@@ -24,6 +26,8 @@ class Completion < Record
     validates_number :rpe, only_integer: true, within: 1..10, allow_nil: true
     validates_includes FEEDBACK, :feedback, allow_nil: true
     # Checked when written, so a longer note kept from before still saves.
-    validates_max_length MAX_NOTE, :note, allow_nil: true, message: "is longer than #{MAX_NOTE} characters" if new? || column_changed?(:note)
+    return unless new? || column_changed?(:note)
+
+    validates_max_length MAX_NOTE, :note, allow_nil: true, message: "is longer than #{MAX_NOTE} characters"
   end
 end

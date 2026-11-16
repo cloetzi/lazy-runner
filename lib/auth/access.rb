@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module Auth
   # Who may ask for what under /api, by the path's first segment after /api:
   # one row per resource in config/routes.rb (test/requests/access_test.rb
@@ -23,7 +25,7 @@ module Auth
   module Access
     REQUIREMENTS = %i[public sign_in optional browser signed_in].freeze
     # Rodauth's own routes (AuthApp's prefix), the "auth" row.
-    SIGN_IN = "/api/auth".freeze
+    SIGN_IN = "/api/auth"
 
     RULES = {
       "version" => :public,

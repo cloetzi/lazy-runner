@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require "omniauth_openid_connect"
 require_relative "../oidc"
 
@@ -113,7 +115,7 @@ module Auth
       intent = remove_session_value("oidc") || {}
       issuer = Oidc.settings.issuer
       subject = omniauth_uid.to_s
-      claims = omniauth_extra&.dig("raw_info")&.to_h || {}
+      claims = omniauth_extra&.dig("raw_info").to_h
       name = claims.values_at("preferred_username", "email", "name").find(&:present?)&.to_s&.slice(0, 100)
       identity = UserIdentity.find_identity(issuer, subject)
       now = Time.now

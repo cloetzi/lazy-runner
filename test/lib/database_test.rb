@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require "test_helper"
 
 describe Database do
@@ -14,7 +16,9 @@ describe Database do
   # them, its indexes, foreign keys and CHECK constraints by name.
   def shape(db)
     db.tables.sort.to_h do |table|
-      columns = db.schema(table, reload: true).map { |name, info| [name, info.values_at(:type, :allow_null, :ruby_default, :primary_key)] }.sort
+      columns = db.schema(table, reload: true).map do |name, info|
+        [name, info.values_at(:type, :allow_null, :ruby_default, :primary_key)]
+      end.sort
       indexes = db.fetch("PRAGMA index_list(?)", table.to_s).reject { it[:origin] == "pk" }.to_h do |index|
         keys = db.fetch("PRAGMA index_xinfo(?)", index[:name]).select { it[:key] == 1 }.map { it[:name] || it[:cid] }
         [index[:name], [index[:unique], index[:partial], keys]]
@@ -76,11 +80,11 @@ describe Database do
   it "keeps every CHECK constraint and partial index of the baseline through the later migrations" do
     kept = ->(db) { shape(db).transform_values { it[:checks] + it[:indexes].select { |_, (_, partial)| partial == 1 }.keys } }
     db = Database.connect("sqlite:/")
-    Sequel::TimestampMigrator.run(db, Database::MIGRATIONS, target: 20261025010001)
-    baseline = kept.(db)
+    Sequel::TimestampMigrator.run(db, Database::MIGRATIONS, target: 20_261_025_010_001)
+    baseline = kept.call(db)
     Database.migrate!(db)
 
-    after = kept.(db)
+    after = kept.call(db)
     baseline.each do |table, names|
       next if DROPPED[table] == :all
 
@@ -90,20 +94,24 @@ describe Database do
 
   it "fills in the part of the sets logged before parts were kept, from their steps" do
     db = Database.connect("sqlite:/")
-    Sequel::TimestampMigrator.run(db, Database::MIGRATIONS, target: 20261115010001)
+    Sequel::TimestampMigrator.run(db, Database::MIGRATIONS, target: 20_261_115_010_001)
     now = Time.now
     add = ->(table, **values) { db[table].insert(created_at: now, updated_at: now, **values) }
-    user = add.(:users, username: "before")
-    exercise = add.(:exercises, slug: "x", name: "X", category: "strength")
+    user = add.call(:users, username: "before")
+    exercise = add.call(:exercises, slug: "x", name: "X", category: "strength")
     steps = %w[workout warmup cooldown].to_h do |kind|
-      workout = add.(:workouts, user_id: user, kind:, title: kind, position: 1)
-      block = add.(:blocks, workout_id: workout, label: "A", position: 1)
-      [kind, [workout, add.(:steps, block_id: block, exercise_id: exercise, position: 1, reps: 8)]]
+      workout = add.call(:workouts, user_id: user, kind:, title: kind, position: 1)
+      block = add.call(:blocks, workout_id: workout, label: "A", position: 1)
+      [kind, [workout, add.call(:steps, block_id: block, exercise_id: exercise, position: 1, reps: 8)]]
     end
-    main = add.(:sessions, user_id: user, workout_id: steps["workout"][0], date: Date.today, position: 1)
-    alone = add.(:sessions, user_id: user, workout_id: steps["cooldown"][0], date: Date.today, position: 2)
-    log = ->(session, step_ref) { add.(:set_logs, user_id: user, session_id: session, step_ref:, exercise_id: exercise, planned_exercise_id: exercise, set_number: 1) }
-    logs = [log.(main, steps["warmup"][1]), log.(main, steps["workout"][1]), log.(main, steps["cooldown"][1]), log.(alone, steps["cooldown"][1]), log.(main, 0)]
+    main = add.call(:sessions, user_id: user, workout_id: steps["workout"][0], date: Date.today, position: 1)
+    alone = add.call(:sessions, user_id: user, workout_id: steps["cooldown"][0], date: Date.today, position: 2)
+    log = lambda { |session, step_ref|
+      add.call(:set_logs, user_id: user, session_id: session, step_ref:, exercise_id: exercise, planned_exercise_id: exercise,
+                          set_number: 1)
+    }
+    logs = [log.call(main, steps["warmup"][1]), log.call(main, steps["workout"][1]), log.call(main, steps["cooldown"][1]),
+            log.call(alone, steps["cooldown"][1]), log.call(main, 0)]
 
     Database.migrate!(db)
 
@@ -133,7 +141,9 @@ describe Database do
       _ { db[:workouts].where(id: workout).update(warmup_id: warmup) }.must_raise Sequel::ForeignKeyConstraintViolation
       session = add(:sessions, user_id: mine, workout_id: workout, date: Date.today, position: 1)
       exercise = add(:exercises, slug: "x", name: "X", category: "strength")
-      _ { add(:set_logs, user_id: theirs, session_id: session, exercise_id: exercise, planned_exercise_id: exercise, set_number: 1) }.must_raise Sequel::ForeignKeyConstraintViolation
+      _ do
+        add(:set_logs, user_id: theirs, session_id: session, exercise_id: exercise, planned_exercise_id: exercise, set_number: 1)
+      end.must_raise Sequel::ForeignKeyConstraintViolation
     end
 
     it "deletes a user with everything of theirs" do
@@ -144,7 +154,8 @@ describe Database do
       exercise = add(:exercises, slug: "x", name: "X", category: "strength")
       step = add(:steps, block_id: block, exercise_id: exercise, position: 1, reps: 5)
       session = add(:sessions, user_id: user, workout_id: workout, date: Date.today, position: 1)
-      add(:set_logs, user_id: user, session_id: session, step_id: step, step_ref: step, exercise_id: exercise, planned_exercise_id: exercise, set_number: 1)
+      add(:set_logs, user_id: user, session_id: session, step_id: step, step_ref: step, exercise_id: exercise,
+                     planned_exercise_id: exercise, set_number: 1)
       add(:completions, session_id: session, finished_at: now)
       add(:settings, user_id: user)
       add(:user_equipment, user_id: user, equipment_id: add(:equipment, slug: "e", name: "E", position: 1), owned: true)
@@ -159,30 +170,32 @@ describe Database do
 
   it "brings workouts saved before their limits within them" do
     db = Database.connect("sqlite:/")
-    Sequel::TimestampMigrator.run(db, Database::MIGRATIONS, target: 20261107000001)
+    Sequel::TimestampMigrator.run(db, Database::MIGRATIONS, target: 20_261_107_000_001)
     now = Time.now
     add = ->(table, **values) { db[table].insert(created_at: now, updated_at: now, **values) }
-    user = add.(:users, username: "runner")
-    workout = add.(:workouts, user_id: user, kind: "workout", title: "T" * 150, subtitle: "S" * 250, position: 1, source: "user")
-    huge = add.(:blocks, workout_id: workout, label: "L" * 80, position: 1, rounds: 10**12, rest_seconds: 10**6)
-    alike = add.(:blocks, workout_id: workout, label: "#{"L" * 70}x", position: 2, rounds: 3)
-    exercise = add.(:exercises, slug: "x", name: "X", category: "strength")
-    add.(:steps, block_id: huge, exercise_id: exercise, position: 1, reps: 10**6, note: "N" * 600)
-    add.(:steps, block_id: alike, exercise_id: exercise, position: 1, duration_seconds: 10**6)
+    user = add.call(:users, username: "runner")
+    workout = add.call(:workouts, user_id: user, kind: "workout", title: "T" * 150, subtitle: "S" * 250, position: 1, source: "user")
+    huge = add.call(:blocks, workout_id: workout, label: "L" * 80, position: 1, rounds: 10**12, rest_seconds: 10**6)
+    alike = add.call(:blocks, workout_id: workout, label: "#{"L" * 70}x", position: 2, rounds: 3)
+    exercise = add.call(:exercises, slug: "x", name: "X", category: "strength")
+    add.call(:steps, block_id: huge, exercise_id: exercise, position: 1, reps: 10**6, note: "N" * 600)
+    add.call(:steps, block_id: alike, exercise_id: exercise, position: 1, duration_seconds: 10**6)
     Database.migrate!(db)
 
     _(db[:workouts].select_map(%i[title subtitle])).must_equal [["T" * 100, "S" * 200]]
-    _(db[:blocks].order(:id).select_map(%i[label rounds rest_seconds])).must_equal [["#{"L" * (59 - huge.to_s.size)} #{huge}", 20, 600], ["#{"L" * (59 - alike.to_s.size)} #{alike}", 3, 0]]
+    _(db[:blocks].order(:id).select_map(%i[label rounds rest_seconds]))
+      .must_equal [["#{"L" * (59 - huge.to_s.size)} #{huge}", 20, 600], ["#{"L" * (59 - alike.to_s.size)} #{alike}", 3, 0]]
     _(db[:steps].order(:id).select_map(%i[reps duration_seconds note])).must_equal [[1000, nil, "N" * 500], [nil, 3600, nil]]
   end
 
   it "keeps the programs the seeds gave a user, as imported examples" do
     db = Database.connect("sqlite:/")
-    Sequel::TimestampMigrator.run(db, Database::MIGRATIONS, target: 20261102000003)
+    Sequel::TimestampMigrator.run(db, Database::MIGRATIONS, target: 20_261_102_000_003)
     now = Time.now
     user = db[:users].insert(username: "runner", created_at: now, updated_at: now)
     program = db[:programs].insert(user_id: user, slug: "cycle-1", name: "Cycle 1", source: "seed", created_at: now, updated_at: now)
-    db[:workouts].insert(user_id: user, program_id: program, slug: "cycle-1-workout-1", kind: "workout", title: "Workout 1", position: 1, source: "seed", created_at: now, updated_at: now)
+    db[:workouts].insert(user_id: user, program_id: program, slug: "cycle-1-workout-1", kind: "workout", title: "Workout 1", position: 1,
+                         source: "seed", created_at: now, updated_at: now)
     Database.migrate!(db)
 
     _(db[:programs].select_map(%i[example_slug source])).must_equal [%w[cycle-1 user]]
@@ -192,17 +205,20 @@ describe Database do
 
   it "makes a session the seeds planned the user's, in what a recorded removal would plan again" do
     db = Database.connect("sqlite:/")
-    Sequel::TimestampMigrator.run(db, Database::MIGRATIONS, target: 20261116000201)
+    Sequel::TimestampMigrator.run(db, Database::MIGRATIONS, target: 20_261_116_000_201)
     now = Time.now
     user = db[:users].insert(username: "runner", created_at: now, updated_at: now)
-    change = ->(was) { db[:plan_changes].insert(user_id: user, changed_by: "llm", item_kind: "session", action: "removed", was: was, batch: "b", created_at: now, updated_at: now) }
-    seeded = change.('{"workout_id":1,"date":"2026-11-12","created_by":"seed","agent_name":null}')
-    planned = change.('{"workout_id":1,"date":"2026-11-12","created_by":"llm","agent_name":"Coach"}')
+    change = lambda { |was|
+      db[:plan_changes].insert(user_id: user, changed_by: "llm", item_kind: "session", action: "removed", was: was, batch: "b",
+                               created_at: now, updated_at: now)
+    }
+    seeded = change.call('{"workout_id":1,"date":"2026-11-12","created_by":"seed","agent_name":null}')
+    planned = change.call('{"workout_id":1,"date":"2026-11-12","created_by":"llm","agent_name":"Coach"}')
     Database.migrate!(db)
 
     was = ->(id) { JSON.parse(db[:plan_changes].where(id:).get(:was)) }
-    _(was.(seeded)).must_equal("workout_id" => 1, "date" => "2026-11-12", "created_by" => "manual", "agent_name" => nil)
-    _(was.(planned)["created_by"]).must_equal "llm"
+    _(was.call(seeded)).must_equal("workout_id" => 1, "date" => "2026-11-12", "created_by" => "manual", "agent_name" => nil)
+    _(was.call(planned)["created_by"]).must_equal "llm"
   end
 
   describe "backups before migrating" do
@@ -256,7 +272,7 @@ describe Database do
           db[:schema_migrations].insert(filename: "2099010100000#{i}_later.rb")
           Database.back_up!(db, at: Time.utc(2026, 11, 18, 10, i))
         end
-        _(backups(dir)).must_equal (1..5).map { format("app-20261118T10%02d00Z-2099010100000%d.sqlite3", it, it) }
+        _(backups(dir)).must_equal((1..5).map { format("app-20261118T10%<minute>02d00Z-2099010100000%<minute>d.sqlite3", minute: it) })
         db.disconnect
       end
     end
@@ -304,7 +320,7 @@ describe Database do
         INSERT INTO completions (session_id, finished_at, created_at, updated_at) VALUES (901, '#{now}', '#{now}', '#{now}');
       SQL
       Database.adopt_active_record!(db)
-      Sequel::TimestampMigrator.run(db, Database::MIGRATIONS, target: 20261102000002)
+      Sequel::TimestampMigrator.run(db, Database::MIGRATIONS, target: 20_261_102_000_002)
 
       _(db[:sessions].order(:id).select_map(%i[id position note])).must_equal [[901, 1, nil], [902, 1, nil], [903, 2, nil]]
       _(db[:completions].select_map(:session_id)).must_equal [901]

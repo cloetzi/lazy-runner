@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # Accounts and sign-in (lib/auth_app.rb). `users` is Rodauth's accounts
 # table: a username to sign in with (case-insensitive) and whether the user
 # owns the install. The other tables are Rodauth's own, named as it names

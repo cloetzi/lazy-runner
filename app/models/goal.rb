@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # What the user trains for: "Ski season with strong, quiet knees", with an
 # optional target date and why it matters. Goals anchor the Coach tab, and
 # the coach ties status, focus and plans back to them.
@@ -28,6 +30,7 @@ class Goal < Record
 
   per_user
   include AgentSigned
+
   many_to_one :replaces, class: self
 
   dataset_module do
@@ -36,7 +39,9 @@ class Goal < Record
     where :proposed, status: "proposed"
     where :dismissed, status: "dismissed"
     # Achieved, dropped and dismissed goals, the latest decided first.
-    def past = exclude(status: %w[active proposed]).order(Sequel.desc(Sequel.function(:coalesce, :decided_at, :updated_at)), Sequel.desc(:id))
+    def past
+      exclude(status: %w[active proposed]).order(Sequel.desc(Sequel.function(:coalesce, :decided_at, :updated_at)), Sequel.desc(:id))
+    end
   end
 
   # A goal an agent proposes, for the user to accept or dismiss. `replaces`
@@ -47,7 +52,8 @@ class Goal < Record
     replaced = active.with_pk(Record.id(replaces)) || raise(NotFound.new(self, replaces, "no active goal #{replaces}")) if replaces
     # Compared in Ruby: SQLite's lower() folds ASCII letters only.
     if (dismissed = self.dismissed.all.find { it.title.downcase == title.to_s.strip.downcase })
-      raise NotProposed, "the user dismissed #{dismissed.title.inspect} on #{dismissed.decided_at.in_time_zone.to_date.iso8601}; don't propose it again"
+      raise NotProposed,
+            "the user dismissed #{dismissed.title.inspect} on #{dismissed.decided_at.in_time_zone.to_date.iso8601}; don't propose it again"
     end
     raise NotProposed, "#{OPEN_PROPOSALS} proposals are already waiting for the user" if proposed.count >= OPEN_PROPOSALS
 
@@ -156,7 +162,9 @@ class Goal < Record
     validates_presence :proposed_reason if proposed?
     # An agent's goal waits for the user (Goal.propose!).
     errors.add(:status, "must be proposed for a goal an agent writes") if new? && Current.agent_name && !proposed?
-    MAX_LENGTHS.each { |column, length| validates_max_length length, column, allow_nil: true, message: "is longer than #{length} characters" }
+    MAX_LENGTHS.each do |column, length|
+      validates_max_length length, column, allow_nil: true, message: "is longer than #{length} characters"
+    end
   end
 
   def before_destroy

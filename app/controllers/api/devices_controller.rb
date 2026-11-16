@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module Api
   class DevicesController < ApplicationController
     # The devices you are signed in on.

@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # Sessions lost the "seed" creator (20261116000201), but a removal recorded
 # before then keeps it in what it would plan again, which taking the removal
 # back must be able to save: such a session counts as the user's there too.

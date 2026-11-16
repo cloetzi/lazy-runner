@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module TrainerMcp
   class ListRoutines < RoutineTool
     # Days before today a range without dates starts: one week back, the

@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require "test_helper"
 
 describe "API errors" do
@@ -39,7 +41,8 @@ describe "API errors" do
       [:patch, "/api/sessions/#{session_on("2026-10-19", "in_progress").id}", { date: "2099-01-01" }, 409, "conflict"],
       [:get, "/api/sessions?status=someday", nil, 400, "bad_request"],
       [:get, "/api/sessions/0", nil, 404, "not_found"],
-      [:post, "/api/sessions/#{session.id}/sets", { step_id: step_for("cycle-1-workout-1", "goblet-squat").id, set_number: 0 }, 422, "invalid"],
+      [:post, "/api/sessions/#{session.id}/sets", { step_id: step_for("cycle-1-workout-1", "goblet-squat").id, set_number: 0 }, 422,
+       "invalid"],
       [:post, "/api/sessions/#{session.id}/complete", { feedback: "meh" }, 422, "invalid"],
       [:post, "/api/sessions/#{session.id}/complete", { note: "x" * 2001 }, 422, "invalid"],
       [:patch, "/api/sessions/#{session.id}", { note: "x" * 2001 }, 422, "invalid"],
@@ -75,13 +78,15 @@ describe "API errors" do
   it "says a missing id is required rather than not found" do
     post_json "/api/sessions/#{session.id}/sets", set_number: 1
 
-    _(json["error"]).must_equal({ "code" => "bad_request", "message" => "step_id is required", "fields" => { "step_id" => ["is required"] } })
+    _(json["error"])
+      .must_equal({ "code" => "bad_request", "message" => "step_id is required", "fields" => { "step_id" => ["is required"] } })
   end
 
   it "names the parameter that can't be read" do
     get "/api/today?date=tomorrow"
 
-    _(json["error"]).must_equal({ "code" => "bad_request", "message" => "date must be a date as YYYY-MM-DD", "fields" => { "date" => ["must be a date as YYYY-MM-DD"] } })
+    _(json["error"]).must_equal({ "code" => "bad_request", "message" => "date must be a date as YYYY-MM-DD",
+                                  "fields" => { "date" => ["must be a date as YYYY-MM-DD"] } })
   end
 
   # Nothing along the way keeps a copy of the user's data, and no browser

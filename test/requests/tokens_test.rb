@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require "test_helper"
 
 describe "API tokens" do
@@ -118,10 +120,10 @@ describe "API tokens" do
       with_token(secret)
       post_json "/api/sessions", workout_id: workout("cycle-1-workout-1").id, date: "2030-11-05", status: "planned", created_by: "llm"
       _(last_response.status).must_equal 201, last_response.body
-      _(json.values_at("created_by", "agent_name")).must_equal ["llm", "Script"]
+      _(json.values_at("created_by", "agent_name")).must_equal %w[llm Script]
 
       post_json "/api/sessions", workout_id: workout("cycle-1-workout-1").id, date: "2030-11-06", status: "planned", created_by: "manual"
-      _(json.values_at("created_by", "agent_name")).must_equal ["llm", "Script"]
+      _(json.values_at("created_by", "agent_name")).must_equal %w[llm Script]
     end
 
     it "turns away an unknown token, saying how to send one" do

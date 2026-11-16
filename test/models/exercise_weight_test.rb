@@ -1,9 +1,12 @@
+# frozen_string_literal: true
+
 require "test_helper"
 
 describe ExerciseWeight do
   describe "#fall_back!" do
     def log(slug, on:, value:)
-      SetLog.create(session: session_on(on), step: step_for("cycle-1-workout-1", slug), set_number: 1, reps: 8, weight_value: value, weight_unit: "lb")
+      SetLog.create(session: session_on(on), step: step_for("cycle-1-workout-1", slug), set_number: 1, reps: 8, weight_value: value,
+                    weight_unit: "lb")
     end
 
     it "goes back to the weight of the latest session that logged the exercise" do

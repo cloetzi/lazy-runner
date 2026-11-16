@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module Api
   class WelcomeController < ApplicationController
     # How far set-up has come, for the "Getting set up" card on Today.

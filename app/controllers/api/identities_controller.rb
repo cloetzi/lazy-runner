@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module Api
   # Signing in with the install's OpenID Connect provider (lib/oidc.rb):
   # the identities linked to your account. Linking one is a sign-in at the

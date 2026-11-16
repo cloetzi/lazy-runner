@@ -20,6 +20,7 @@ GEM
     argon2 (2.3.3)
       ffi (~> 1.15)
       ffi-compiler (~> 1.0)
+    ast (2.4.3)
     attr_required (1.0.2)
     base64 (0.3.0)
     bigdecimal (4.1.3)
@@ -72,6 +73,8 @@ GEM
       hana (~> 1.3)
       regexp_parser (~> 2.0)
       simpleidn (~> 0.2)
+    language_server-protocol (3.17.0.6)
+    lint_roller (1.1.0)
     logger (1.7.0)
     mail (2.9.1)
       logger
@@ -117,11 +120,16 @@ GEM
       tzinfo
       validate_url
       webfinger (~> 2.0)
+    parallel (2.3.0)
+    parser (3.3.13.0)
+      ast (~> 2.4.1)
+      racc
     pp (0.6.4)
       prettyprint
     prettyprint (0.2.1)
     prism (1.9.0)
     public_suffix (7.0.5)
+    racc (1.8.1)
     rack (3.2.7)
     rack-oauth2 (2.3.0)
       activesupport
@@ -146,6 +154,7 @@ GEM
       rake (>= 12.0)
       thor (~> 1.0)
       zeitwerk (~> 2.6)
+    rainbow (3.1.1)
     rake (13.4.2)
     rbs (4.2.0)
       logger
@@ -167,6 +176,35 @@ GEM
     rodauth-omniauth (0.6.2)
       omniauth (~> 2.0)
       rodauth (~> 2.36)
+    rubocop (1.92.2)
+      json (>= 2.3)
+      language_server-protocol (~> 3.17.0.2)
+      lint_roller (~> 1.1.0)
+      parallel (>= 1.10)
+      parser (>= 3.3.0.2)
+      rainbow (>= 2.2.2, < 4.0)
+      regexp_parser (>= 2.11.3, < 3.0)
+      rubocop-ast (>= 1.49.0, < 2.0)
+      ruby-progressbar (~> 1.7)
+      unicode-display_width (>= 2.4.0, < 4.0)
+    rubocop-ast (1.51.0)
+      parser (>= 3.3.7.2)
+      prism (>= 1.7)
+    rubocop-minitest (0.41.0)
+      lint_roller (~> 1.1)
+      rubocop (>= 1.89.0, < 2.0)
+      rubocop-ast (>= 1.38.0, < 2.0)
+    rubocop-performance (1.27.0)
+      lint_roller (~> 1.1)
+      rubocop (>= 1.89.0, < 2.0)
+      rubocop-ast (>= 1.47.1, < 2.0)
+    rubocop-rake (0.7.1)
+      lint_roller (~> 1.1)
+      rubocop (>= 1.72.1)
+    rubocop-sequel (0.4.1)
+      lint_roller (~> 1.1)
+      rubocop (>= 1.72.1, < 2)
+    ruby-progressbar (1.13.0)
     securerandom (0.4.1)
     sequel (5.110.0)
       bigdecimal
@@ -191,6 +229,9 @@ GEM
       concurrent-ruby (~> 1.0)
     tzinfo-data (1.2026.5)
       tzinfo (>= 1.0.0)
+    unicode-display_width (3.3.0)
+      unicode-emoji (~> 4.3)
+    unicode-emoji (4.3.0)
     uri (1.1.2)
     validate_url (1.0.15)
       activemodel (>= 3.0.0)
@@ -225,6 +266,11 @@ DEPENDENCIES
   roda (~> 3.109)
   rodauth (~> 2.49)
   rodauth-omniauth (~> 0.6)
+  rubocop
+  rubocop-minitest
+  rubocop-performance
+  rubocop-rake
+  rubocop-sequel
   sequel (~> 5.110)
   sqlite3
   tzinfo-data
@@ -234,6 +280,7 @@ CHECKSUMS
   activesupport (8.1.4) sha256=891dd3fe43c4fc8391934b237b1189bb1f661c932a84a840043db9d46a4e80df
   aes_key_wrap (1.1.0) sha256=b935f4756b37375895db45669e79dfcdc0f7901e12d4e08974d5540c8e0776a5
   argon2 (2.3.3) sha256=535276457cabf71940f21ac31b49b9d3b0d0a4640fe9db2b46b9677e2838453d
+  ast (2.4.3) sha256=954615157c1d6a382bc27d690d973195e79db7f55e9765ac7c481c60bdb4d383
   attr_required (1.0.2) sha256=f0ebfc56b35e874f4d0ae799066dbc1f81efefe2364ca3803dc9ea6a4de6cb99
   base64 (0.3.0) sha256=27337aeabad6ffae05c265c450490628ef3ebd4b67be58257393227588f5a97b
   bigdecimal (4.1.3) sha256=61ebe1e5e559bdc3cc6f2c0ee7f427321fc838f59611c294356eb04d6e21cf66
@@ -263,6 +310,8 @@ CHECKSUMS
   json (3.1.0) sha256=3ce7ccf8fde58960177a3a756c31f292a4c1e1dedee884547096a5b0604e3bd8
   json-jwt (1.17.2) sha256=97e37c1c3e22e9e1d74a1c0d77319c5cdc8a636226e5dbb1664b0b34eddcf1c9
   json_schemer (2.5.0) sha256=2f01fb4cce721a4e08dd068fc2030cffd0702a7f333f1ea2be6e8991f00ae396
+  language_server-protocol (3.17.0.6) sha256=5ef2c0c138f8267e1bc631d3328347d354f96724b0af22f2c79516120443b7f0
+  lint_roller (1.1.0) sha256=2c0c845b632a7d172cb849cc90c1bce937a28c5c8ccccb50dfd46a485003cc87
   logger (1.7.0) sha256=196edec7cc44b66cfb40f9755ce11b392f21f7967696af15d274dde7edff0203
   mail (2.9.1) sha256=06574eca475253d6c18145dd70af80d0eb970182d55053497c5f4d797ea160e8
   mcp (1.8.2) sha256=59843aaceb060260bfcf38692d1c99ec497eefc039a6174237f53a59ee71d323
@@ -276,16 +325,20 @@ CHECKSUMS
   omniauth (2.3.1) sha256=bb47bfcd5614b00cd89de4b45b0687123d09143dfeb5dbaf1bb57ff190bc2d2e
   omniauth_openid_connect (0.8.0) sha256=1f2f3890386e2a742221cee0d2e903b78d874e6fab9ea3bfa31c1462f4793d25
   openid_connect (2.5.0) sha256=659aff8edce0907798e3f6837e5f27ae2937ae8735216f3e900ab8daa29e39c4
+  parallel (2.3.0) sha256=f75a3e904101ce6a1ccb6b8dc800cbafd42166d83330192438dcf29395167a6f
+  parser (3.3.13.0) sha256=e02f9b63c2fe05b0c68f692ba4df89b3cb113b663964f75d988fbebfd6c3deca
   pp (0.6.4) sha256=dfcb0fce700c41456265922884f9fe195d7fbb0674a3578e6c0f69588e82b570
   prettyprint (0.2.1) sha256=d555d57ea6d7cf001d4774b693546a6bd88bec1e778ddffb5c60b68ceec4b7d4
   prism (1.9.0) sha256=7b530c6a9f92c24300014919c9dcbc055bf4cdf51ec30aed099b06cd6674ef85
   public_suffix (7.0.5) sha256=1a8bb08f1bbea19228d3bed6e5ed908d1cb4f7c2726d18bd9cadf60bc676f623
+  racc (1.8.1) sha256=4a7f6929691dbec8b5209a0b373bc2614882b55fc5d2e447a21aaa691303d62f
   rack (3.2.7) sha256=93e13e1c24f93556671d85d2d79fa228c3485815c50d7e2f265b5330c6528fb7
   rack-oauth2 (2.3.0) sha256=43e02cf73f13886a0a06499603caeec58aeba6eae1fefc4977c9678b7652c632
   rack-protection (4.2.1) sha256=cf6e2842df8c55f5e4d1a4be015e603e19e9bc3a7178bae58949ccbb58558bac
   rack-test (2.2.0) sha256=005a36692c306ac0b4a9350355ee080fd09ddef1148a5f8b2ac636c720f5c463
   rage-iodine (5.9.0) sha256=f4a8096e95a1c4d4e837c2637d70d7b32bbd99e5bbc1b6fad6dcdf1fbd8d9dc5
   rage-rb (1.28.2) sha256=2669c9fce4548d29646ac343d6c412f9b3697e03532b4ec46b65cef5bb052eb2
+  rainbow (3.1.1) sha256=039491aa3a89f42efa1d6dec2fc4e62ede96eb6acd95e52f1ad581182b79bc6a
   rake (13.4.2) sha256=cb825b2bd5f1f8e91ca37bddb4b9aaf345551b4731da62949be002fa89283701
   rbs (4.2.0) sha256=51f7b886dcc05bc09e10b901daa6a81829f6adc03101d6ca9ea4aac6103e0674
   rdoc (8.1.0) sha256=befc37880a5cfd36dcb176c748b5fd5ee39dd3536a75e81824e4972ce230f60a
@@ -294,6 +347,13 @@ CHECKSUMS
   roda (3.109.0) sha256=470f60355043a7732edb08ece2d12eb2e6912866ac87106c92ded5f6f8a5a8dc
   rodauth (2.49.0) sha256=c4450072ca7b01ba59e51f0c41fbbd0884a2356ccccf141519b45857d646a255
   rodauth-omniauth (0.6.2) sha256=8407f9bc5179822e980361239ca1a72c0b6fde66b204017f3954cf3e273574ab
+  rubocop (1.92.2) sha256=14fb31eed143a0dc6f78186c550c1715e81cd38f59d05d1165050e445c1f5382
+  rubocop-ast (1.51.0) sha256=0ec311e36b191b3872d909078a35274e962ae97dbce64be6812d145ca59acfcb
+  rubocop-minitest (0.41.0) sha256=c15bfe00134a30c8a00ce670b07ecc80440455ba277b8682cf0d515c98ee7426
+  rubocop-performance (1.27.0) sha256=eeeb1374d062a368ee1c787b70eb0b0cc4b184cb1f8565f424760946146d61ce
+  rubocop-rake (0.7.1) sha256=3797f2b6810c3e9df7376c26d5f44f3475eda59eb1adc38e6f62ecf027cbae4d
+  rubocop-sequel (0.4.1) sha256=f325dc470c1e3191a616b41a4bf8cfbb2c3c2f4fbc2eee6286de019ca1f7c113
+  ruby-progressbar (1.13.0) sha256=80fc9c47a9b640d6834e0dc7b3c94c9df37f08cb072b7761e4a71e22cff29b33
   securerandom (0.4.1) sha256=cc5193d414a4341b6e225f0cb4446aceca8e50d5e1888743fac16987638ea0b1
   sequel (5.110.0) sha256=c316335b352adb4109bb02ade237b1a6dbd493493def34542ce05893f62138ae
   simpleidn (0.3.0) sha256=12ca730bed2f3db04d11e9bfd1bca3e11fb37f55b21eb2e9793fb5814bf54d03
@@ -311,6 +371,8 @@ CHECKSUMS
   tsort (0.2.0) sha256=9650a793f6859a43b6641671278f79cfead60ac714148aabe4e3f0060480089f
   tzinfo (2.0.6) sha256=8daf828cc77bcf7d63b0e3bdb6caa47e2272dcfaf4fbfe46f8c3a9df087a829b
   tzinfo-data (1.2026.5) sha256=0bdc3c5a540b1704f73a7b5c9be5c90bd0a5866c8e9e8e8a7885977d23a81645
+  unicode-display_width (3.3.0) sha256=4b7aa66a4b11db50f6f7e98411215cd0dd10eaecb665d36eec5bcacb3fa0b613
+  unicode-emoji (4.3.0) sha256=11c02fa73290378c066bb0562cd4c87d8e1b706fbbe0059ca12746a4244de8ce
   uri (1.1.2) sha256=89292e98eabbef6248b0a0ed5e7e398e152f83f17560023a6d94a7f492b169fb
   validate_url (1.0.15) sha256=72fe164c0713d63a9970bd6700bea948babbfbdcec392f2342b6704042f57451
   webfinger (2.1.3) sha256=567a52bde77fb38ca6b67e55db755f988766ec4651c1d24916a65aa70540695c

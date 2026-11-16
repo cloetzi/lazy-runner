@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # A user's remembered weight for an exercise. Shared by every workout of
 # theirs the exercise appears in, and always wins over the seed value. Reps and seconds are not
 # remembered: they belong to each workout's step. A null `value` remembers

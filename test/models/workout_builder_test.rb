@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require "test_helper"
 
 # Writing a workout's whole structure from a description, as the builder API
@@ -7,7 +9,9 @@ describe "workout builder" do
   let(:plank) { exercise("plank") }
 
   def build(source: "user", **attrs)
-    Workout.create_with!({ kind: "workout", title: "Built", blocks: [{ label: "A", steps: [{ exercise_id: squat.id, reps: 8 }] }] }.merge(attrs), source:)
+    Workout.create_with!(
+      { kind: "workout", title: "Built", blocks: [{ label: "A", steps: [{ exercise_id: squat.id, reps: 8 }] }] }.merge(attrs), source:
+    )
   end
 
   it "marks who built it" do
@@ -16,7 +20,8 @@ describe "workout builder" do
   end
 
   it "comes after the user's other workouts and is ready to run" do
-    first, second = build, build
+    first = build
+    second = build
 
     _(second.position).must_equal first.position + 1
     _(second.valid?(validation_context: :publish)).must_equal true
@@ -24,14 +29,16 @@ describe "workout builder" do
   end
 
   it "takes string keys as well as symbols" do
-    workout = Workout.create_with!({ "kind" => "cooldown", "title" => "Wind down", "blocks" => [{ "label" => "A", "steps" => [{ "exercise_id" => plank.id.to_s, "duration_seconds" => "30" }] }] })
+    steps = [{ "exercise_id" => plank.id.to_s, "duration_seconds" => "30" }]
+    workout = Workout.create_with!({ "kind" => "cooldown", "title" => "Wind down", "blocks" => [{ "label" => "A", "steps" => steps }] })
 
     _(workout.kind).must_equal "cooldown"
     _(workout.blocks.first.steps.first.duration_seconds).must_equal 30
   end
 
   it "names a step's exercise by its slug too, as the MCP tools do" do
-    workout = Workout.create_with!({ kind: "workout", title: "Slugs", blocks: [{ label: "A", steps: [{ exercise: "goblet-squat", reps: 8 }, { exercise: plank.id, duration_seconds: 30 }] }] })
+    steps = [{ exercise: "goblet-squat", reps: 8 }, { exercise: plank.id, duration_seconds: 30 }]
+    workout = Workout.create_with!({ kind: "workout", title: "Slugs", blocks: [{ label: "A", steps: }] })
 
     _(workout.blocks.first.steps.map(&:exercise)).must_equal [squat, plank]
   end
@@ -41,12 +48,15 @@ describe "workout builder" do
     step = built.blocks.first.steps.first
     squat.update(retired: true)
 
-    _(built.revise!(blocks: [{ label: "A", steps: [{ id: step.id, exercise: "goblet-squat", reps: 10 }] }]).blocks.first.steps.first.reps).must_equal 10
+    _(built.revise!(blocks: [{ label: "A", steps: [{ id: step.id, exercise: "goblet-squat", reps: 10 }] }]).blocks.first.steps.first.reps)
+      .must_equal 10
     _ { built.revise!(blocks: [{ label: "A", steps: [{ exercise: "goblet-squat", reps: 10 }] }]) }.must_raise WorkoutStructure::Invalid
   end
 
   it "names the field of an exercise it can't find" do
-    error = _ { build(blocks: [{ label: "A", steps: [{ exercise: "burpee", reps: 8 }, { exercise_id: 0, reps: 8 }, { reps: 8 }] }]) }.must_raise WorkoutStructure::Invalid
+    error = _ do
+      build(blocks: [{ label: "A", steps: [{ exercise: "burpee", reps: 8 }, { exercise_id: 0, reps: 8 }, { reps: 8 }] }])
+    end.must_raise WorkoutStructure::Invalid
 
     _(error.fields.keys).must_equal %w[blocks[0].steps[0].exercise blocks[0].steps[1].exercise_id blocks[0].steps[2].exercise_id]
     _(error.message).must_include "Block 1 (A), step 1: Exercise burpee is not in the library"
@@ -55,9 +65,9 @@ describe "workout builder" do
 
   it "keeps only the equipment a step is done with instead of its exercise's" do
     workout = build(blocks: [{ label: "A", steps: [
-      { exercise: "goblet-squat", reps: 8, equipment: ["weight"] },
-      { exercise: "goblet-squat", reps: 8, equipment: ["kettlebell"], weights_held: 1 }
-    ] }])
+                      { exercise: "goblet-squat", reps: 8, equipment: ["weight"] },
+                      { exercise: "goblet-squat", reps: 8, equipment: ["kettlebell"], weights_held: 1 }
+                    ] }])
 
     _(workout.blocks.first.steps.map { it.equipment.map(&:slug) }).must_equal [[], ["kettlebell"]]
   end
@@ -67,7 +77,8 @@ describe "workout builder" do
 
     error = _ { build(blocks: [{ label: "A", rounds: 0, steps: [{ exercise_id: squat.id, reps: 8, duration_seconds: 30 }] }]) }.must_raise WorkoutStructure::Invalid
 
-    _(error.fields).must_equal({ "blocks[0].rounds" => ["must be greater than or equal to 1"], "blocks[0].steps[0]" => ["needs reps or seconds, not both"] })
+    _(error.fields).must_equal({ "blocks[0].rounds" => ["must be greater than or equal to 1"],
+                                 "blocks[0].steps[0]" => ["needs reps or seconds, not both"] })
     _(Workout.count).must_equal count
   end
 
@@ -103,17 +114,22 @@ describe "workout builder" do
 
     it "holds the workout on its day and the next, then lets it go" do
       built = build
-      run = travel_to(Time.zone.local(2026, 10, 24, 8)) { Session.create(workout: built, date: Date.new(2026, 10, 24), status: "in_progress") }
+      run = travel_to(Time.zone.local(2026, 10, 24, 8)) do
+        Session.create(workout: built, date: Date.new(2026, 10, 24), status: "in_progress")
+      end
 
       _(built.running_session.id).must_equal run.id
       travel_to Time.zone.local(2026, 10, 26, 12)
       _(built.running_session).must_be_nil
-      _(built.revise!(blocks: [{ label: "B", steps: [{ exercise_id: plank.id, duration_seconds: 30 }] }]).refresh.blocks.map(&:label)).must_equal ["B"]
+      _(built.revise!(blocks: [{ label: "B", steps: [{ exercise_id: plank.id, duration_seconds: 30 }] }]).refresh.blocks.map(&:label))
+        .must_equal ["B"]
     end
 
     it "holds it later on while it is picked up again or logs a set" do
       built = build
-      run = travel_to(Time.zone.local(2026, 10, 20, 8)) { Session.create(workout: built, date: Date.new(2026, 10, 20), status: "in_progress") }
+      run = travel_to(Time.zone.local(2026, 10, 20, 8)) do
+        Session.create(workout: built, date: Date.new(2026, 10, 20), status: "in_progress")
+      end
       _(built.running_session).must_be_nil
 
       run.update(note: "back at it")
@@ -128,8 +144,8 @@ describe "workout builder" do
     it "isn't woken by an edit that unlinks its sets" do
       built = build
       run = travel_to(Time.zone.local(2026, 10, 20, 8)) do
-        Session.create(workout: built, date: Date.new(2026, 10, 20), status: "in_progress").tap do
-          SetLog.create(session: it, step: built.blocks.first.steps.first, set_number: 1, reps: 8)
+        Session.create(workout: built, date: Date.new(2026, 10, 20), status: "in_progress").tap do |session|
+          SetLog.create(session:, step: built.blocks.first.steps.first, set_number: 1, reps: 8)
         end
       end
 

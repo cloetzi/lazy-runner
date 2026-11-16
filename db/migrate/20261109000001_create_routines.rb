@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # Routines (#178): what the user means to do, tentatively. A weekly routine
 # ("run every Wednesday") or a one-off ("maybe a hike on Saturday") is either
 # a sport, fulfilled by a logged activity of that sport on its day, or one of

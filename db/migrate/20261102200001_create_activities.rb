@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # Activities (#177): runs, rides and other sports, as they happened, logged
 # by hand or sent by a script or an agent with the numbers its source gave.
 # Nothing derived is kept (no pace, load or score). An activity that came
@@ -33,13 +35,16 @@ Sequel.migration do
       DateTime :updated_at, null: false
 
       index %i[user_id date], name: :index_activities_on_user_id_and_date
-      index %i[user_id source external_id], unique: true, where: Sequel.~(external_id: nil), name: :index_activities_on_source_and_external_id
+      index %i[user_id source external_id],
+            unique: true, where: Sequel.~(external_id: nil), name: :index_activities_on_source_and_external_id
       index %i[user_id client_ref], unique: true, name: :index_activities_on_client_ref
       constraint(:activities_sport) { Sequel.function(:length, Sequel.function(:trim, :sport)) > 0 }
       constraint(:activities_created_by, created_by: %w[manual llm])
       constraint(:activities_rpe) { (rpe =~ nil) | ((rpe >= 1) & (rpe <= 10)) }
       constraint(:activities_numbers) do
-        %i[moving_seconds elapsed_seconds distance_m climb_m avg_hr max_hr].map { |column| (Sequel[column] =~ nil) | (Sequel[column] >= 0) }.reduce(:&)
+        %i[moving_seconds elapsed_seconds distance_m climb_m avg_hr max_hr].map do |column|
+          (Sequel[column] =~ nil) | (Sequel[column] >= 0)
+        end.reduce(:&)
       end
       constraint(:activities_external_id_source) { (external_id =~ nil) | (source !~ nil) }
     end

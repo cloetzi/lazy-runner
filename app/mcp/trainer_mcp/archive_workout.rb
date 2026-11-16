@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module TrainerMcp
   class ArchiveWorkout < Tool
     description <<~TEXT.squish
@@ -10,7 +12,9 @@ module TrainerMcp
     input_schema(
       properties: {
         workout_id: { type: "integer", description: "The workout's id, from list_workouts." },
-        reason: { type: "string", description: "Why, shown to the user with the change, such as \"Replaced by Strength B, as agreed\". Required for a workout the user made (`source: user`)." }
+        reason: { type: "string",
+                  description: "Why, shown to the user with the change, such as \"Replaced by Strength B, as agreed\". Required for a " \
+                               "workout the user made (`source: user`)." }
       },
       required: %w[workout_id]
     )

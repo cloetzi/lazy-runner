@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require "yaml"
 
 # Tunable rules from config/coach.yml: the weight stepper's increments, which

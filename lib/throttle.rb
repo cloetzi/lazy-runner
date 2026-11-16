@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # Counts attempts in a sliding window, in this process (the server runs one
 # worker). Sign-in hashes every password with Argon2, two at a time
 # (lib/hashing.rb), so attempts are capped per key (a username, an account) and,

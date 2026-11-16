@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require "test_helper"
 
 describe User do
@@ -24,10 +26,10 @@ describe User do
   # would keep every other request waiting.
   it "hashes a password set from code before its transaction opens" do
     level = -> { User.db.synchronize { User.db.send(:savepoint_level, it) } }
-    outside = level.()
+    outside = level.call
     seen = []
     run = Hashing.method(:run)
-    Hashing.define_singleton_method(:run) { |&work| seen << level.() && run.call(&work) }
+    Hashing.define_singleton_method(:run) { |&work| (seen << level.call) && run.call(&work) }
 
     user.set_password!("a brand new password")
 

@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # Signing in with an OpenID Connect provider (#185): an identity at the
 # provider (its issuer and the `sub` it gives the person) points at one
 # user. A user has a password, identities or both. Keyed by the issuer, so

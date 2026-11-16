@@ -1,9 +1,12 @@
+# frozen_string_literal: true
+
 class Exercise < Record
   CATEGORIES = %w[stretch mobility activation strength cardio].freeze
   AREAS = %w[legs hips core upper_body].freeze
   PATTERNS = %w[squat lunge hinge push pull anti_extension anti_rotation mobility].freeze
   # Patterns close enough to stand in for each other.
-  RELATED_PATTERNS = { "squat" => "lunge", "lunge" => "squat", "anti_extension" => "anti_rotation", "anti_rotation" => "anti_extension" }.freeze
+  RELATED_PATTERNS = { "squat" => "lunge", "lunge" => "squat", "anti_extension" => "anti_rotation",
+                       "anti_rotation" => "anti_extension" }.freeze
   # How closely a swap trains the same movement, best first.
   MATCHES = %w[same similar other].freeze
 
@@ -81,7 +84,7 @@ class Exercise < Record
   # "Same movement, same dumbbells".
   def match_reason(other)
     movement = { "same" => "Same movement", "similar" => "Similar movement" }[match(other)]
-    movement ||= (areas & other.areas).any? ? "Works the same area" : "Same kind of exercise"
+    movement ||= areas.intersect?(other.areas) ? "Works the same area" : "Same kind of exercise"
     shared = equipment.select { other.equipment_slugs.include?(it.slug) }
     gear = if other.equipment_slugs.empty? then "no equipment"
            elsif shared.any? then "same #{shared.map { it.any_weight ? "weight" : it.name.downcase }.join(" and ")}"
@@ -130,8 +133,8 @@ class Exercise < Record
 
   def as_json(*)
     {
-      id:, slug:, name:, category:, areas:, pattern:, cues:, mistakes:, equipment: equipment_slugs, unilateral:, alternating:, weights_held:,
-      default_reps:, default_seconds:, instructions:, animation:
+      id:, slug:, name:, category:, areas:, pattern:, cues:, mistakes:, equipment: equipment_slugs,
+      unilateral:, alternating:, weights_held:, default_reps:, default_seconds:, instructions:, animation:
     }
   end
 

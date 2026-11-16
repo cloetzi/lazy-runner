@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require "digest"
 require "securerandom"
 
@@ -10,7 +12,7 @@ require "securerandom"
 # SHA-256 digest is kept, so the table alone signs nobody in. Revoking one
 # deletes it.
 class ApiToken < Record
-  PREFIX = "lr_".freeze
+  PREFIX = "lr_"
   # `api` is good for /mcp and /api, `mcp` for /mcp alone.
   SCOPES = %w[mcp api].freeze
   # 32 random bytes, base64url: 43 characters after the prefix.
@@ -59,7 +61,7 @@ class ApiToken < Record
     return unless secret.is_a?(String) && secret.bytesize == LENGTH && secret.start_with?(PREFIX)
 
     everyone.where(user_id: User.exclude(password_change_required: true).select(:id))
-            .first(digest: digest(secret))&.tap { it.used!(now) if touch }
+      .first(digest: digest(secret))&.tap { it.used!(now) if touch }
   end
 
   def self.digest(secret) = Digest::SHA256.hexdigest(secret)

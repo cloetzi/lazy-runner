@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require "test_helper"
 
 describe "workouts API" do
@@ -39,8 +41,10 @@ describe "workouts API" do
       post_json "/api/workouts/#{seeded.id}/duplicate", title: "My legs"
 
       _(last_response.status).must_equal 201
-      _(json.slice("title", "source", "editable", "program_id")).must_equal({ "title" => "My legs", "source" => "user", "editable" => true, "program_id" => nil })
-      _(json["blocks"].flat_map { it["steps"] }.map { it["exercise"]["slug"] }).must_equal seeded.blocks.flat_map(&:steps).map { it.exercise.slug }
+      _(json.slice("title", "source", "editable", "program_id"))
+        .must_equal({ "title" => "My legs", "source" => "user", "editable" => true, "program_id" => nil })
+      _(json["blocks"].flat_map { it["steps"] }.map { it["exercise"]["slug"] })
+        .must_equal(seeded.blocks.flat_map(&:steps).map { it.exercise.slug })
       _(json["framed"].map { it["title"] }).must_equal [workout("cycle-1-warmup").title, "My legs", workout("cycle-1-cooldown").title]
     end
 
@@ -132,14 +136,16 @@ describe "workouts API" do
 
       _(last_response.status).must_equal 201
       _(json.slice("kind", "title", "subtitle", "source", "editable", "program_id")).must_equal(
-        { "kind" => "workout", "title" => "Knees of steel", "subtitle" => "Ski season", "source" => "user", "editable" => true, "program_id" => nil }
+        { "kind" => "workout", "title" => "Knees of steel", "subtitle" => "Ski season", "source" => "user", "editable" => true,
+          "program_id" => nil }
       )
       _(json["blocks"].map { it.slice("label", "position", "rounds", "rest_seconds") }).must_equal [
         { "label" => "A", "position" => 1, "rounds" => 3, "rest_seconds" => 45 },
         { "label" => "Core", "position" => 2, "rounds" => 1, "rest_seconds" => 0 }
       ]
       squat, lunge = json["blocks"].first["steps"]
-      _(squat.slice("position", "reps", "tempo", "weight", "per_side")).must_equal({ "position" => 1, "reps" => 8, "tempo" => "3110", "weight" => { "value" => 20.0, "unit" => "lb" }, "per_side" => false })
+      _(squat.slice("position", "reps", "tempo", "weight", "per_side"))
+        .must_equal("position" => 1, "reps" => 8, "tempo" => "3110", "weight" => { "value" => 20.0, "unit" => "lb" }, "per_side" => false)
       _(lunge.slice("per_side", "weight")).must_equal({ "per_side" => true, "weight" => { "value" => 10.0, "unit" => "lb" } })
       _(json["framed"].map { it["id"] }).must_equal [json["id"]]
       _(json["plan"]["items"]).wont_be_empty
@@ -159,7 +165,8 @@ describe "workouts API" do
       _(last_response.status).must_equal 422
       _(json["error"]["message"]).must_equal "Block 1 (A), step 2: Exercise 0 is not in the library; " \
                                              "Block 2 (Core), step 2 (goblet-squat): Reps must be greater than 0"
-      _(json["error"]["fields"]).must_equal({ "blocks[0].steps[1].exercise_id" => ["names no exercise in the library"], "blocks[1].steps[1].reps" => ["must be greater than 0"] })
+      _(json["error"]["fields"]).must_equal({ "blocks[0].steps[1].exercise_id" => ["names no exercise in the library"],
+                                              "blocks[1].steps[1].reps" => ["must be greater than 0"] })
       _(Workout.count).must_equal count
     end
 
@@ -182,7 +189,7 @@ describe "workouts API" do
       count = Workout.count
       body = new_workout(title: "x" * 101)
       body[:blocks][0].merge!(rounds: 10**12, rest_seconds: 601)
-      body[:blocks][0][:steps][0].merge!(reps: 1001)
+      body[:blocks][0][:steps][0][:reps] = 1001
       body[:blocks][1][:steps][0].merge!(duration_seconds: 3601, note: "n" * 501)
       post_json "/api/workouts", body
 
@@ -209,7 +216,8 @@ describe "workouts API" do
       blocks = Array.new(2) { { label: "B#{it}", rounds: 20, steps: Array.new(8) { step } } }
       post_json "/api/workouts", new_workout(blocks:)
       _(last_response.status).must_equal 422
-      _(json["error"]["fields"]).must_equal("blocks" => ["add up to 320 steps across their rounds and sides; a workout can have at most 300"])
+      _(json["error"]["fields"])
+        .must_equal("blocks" => ["add up to 320 steps across their rounds and sides; a workout can have at most 300"])
 
       blocks[1][:rounds] = 15
       post_json "/api/workouts", new_workout(blocks:)
@@ -218,7 +226,8 @@ describe "workouts API" do
       # One side at a time is a screen a side.
       sided = { exercise_id: exercise("half-kneel-quad-stretch").id, duration_seconds: 30 }
       post_json "/api/workouts", new_workout(blocks: [{ label: "A", rounds: 20, steps: Array.new(8) { sided } }])
-      _(json["error"]["fields"]).must_equal("blocks" => ["add up to 320 steps across their rounds and sides; a workout can have at most 300"])
+      _(json["error"]["fields"])
+        .must_equal("blocks" => ["add up to 320 steps across their rounds and sides; a workout can have at most 300"])
     end
 
     it "picks a warm-up and cool-down" do
@@ -236,7 +245,9 @@ describe "workouts API" do
     def structure(workout = copy)
       workout.refresh.blocks.map do |block|
         { id: block.id, label: block.label, rounds: block.rounds, rest_seconds: block.rest_seconds,
-          steps: block.steps.map { { id: it.id, exercise_id: it.exercise_id, reps: it.reps, duration_seconds: it.duration_seconds, note: it.note } } }
+          steps: block.steps.map do |step|
+            { id: step.id, exercise_id: step.exercise_id, reps: step.reps, duration_seconds: step.duration_seconds, note: step.note }
+          end }
       end
     end
 
@@ -280,7 +291,8 @@ describe "workouts API" do
       put_json "/api/workouts/#{copy.id}", blocks: [a, b, *blocks.drop(2)]
 
       _(last_response.status).must_equal 200
-      _(json["blocks"].first(2).map { it.slice("id", "label") }).must_equal [{ "id" => a[:id], "label" => a[:label] }, { "id" => b[:id], "label" => b[:label] }]
+      _(json["blocks"].first(2).map { it.slice("id", "label") })
+        .must_equal [{ "id" => a[:id], "label" => a[:label] }, { "id" => b[:id], "label" => b[:label] }]
       _(json["blocks"][1]["steps"].last["id"]).must_equal moved[:id]
     end
 
@@ -318,7 +330,9 @@ describe "workouts API" do
     end
 
     it "takes gear other than the exercise names, and a weight in its unit" do
-      blocks = [{ label: "A", steps: [{ exercise_id: exercise("goblet-squat").id, reps: 8, equipment: ["kettlebell"], weights_held: 1, weight: { value: 40 } }] }]
+      blocks = [{ label: "A",
+                  steps: [{ exercise_id: exercise("goblet-squat").id, reps: 8, equipment: ["kettlebell"], weights_held: 1,
+                            weight: { value: 40 } }] }]
 
       put_json "/api/workouts/#{copy.id}", blocks: blocks
 
@@ -329,7 +343,9 @@ describe "workouts API" do
 
     it "keeps a step's weight in the unit of the gear it is done with when gear comes in mixed units" do
       inventory("kettlebell").update(unit: "kg", weights: [16, 24])
-      blocks = [{ label: "A", steps: [{ exercise_id: exercise("reverse-fly").id, reps: 8, equipment: ["kettlebell"], weights_held: 1, weight: { value: 16, unit: "kg" } }] }]
+      blocks = [{ label: "A",
+                  steps: [{ exercise_id: exercise("reverse-fly").id, reps: 8, equipment: ["kettlebell"], weights_held: 1,
+                            weight: { value: 16, unit: "kg" } }] }]
 
       put_json "/api/workouts/#{copy.id}", blocks: blocks
 
@@ -398,7 +414,7 @@ describe "workouts API" do
 
       _(last_response.status).must_equal 200
       _(json["blocks"].first["steps"].first["reps"]).must_equal 12
-      _(json["blocks"].flat_map { it["steps"] }.map { it["id"] }).must_equal blocks.flat_map { it["steps"] }.map { it["id"] }
+      _(json["blocks"].flat_map { it["steps"] }.map { it["id"] }).must_equal(blocks.flat_map { it["steps"] }.map { it["id"] })
     end
 
     it "keeps a step's own gear and weights held when GET's blocks come back" do
@@ -409,14 +425,18 @@ describe "workouts API" do
       put_json "/api/workouts/#{copy.id}", blocks: json["blocks"]
 
       _(last_response.status).must_equal 200
-      _(Step.find!(deadlift["id"]).values.slice(:weights_held, :exercise_id)).must_equal({ weights_held: 1, exercise_id: deadlift["exercise"]["id"] })
+      _(Step.find!(deadlift["id"]).values.slice(:weights_held, :exercise_id))
+        .must_equal({ weights_held: 1, exercise_id: deadlift["exercise"]["id"] })
       _(Step.find!(deadlift["id"]).equipment.map(&:slug)).must_equal ["kettlebell"]
       # Gear GET only echoes from the exercise stays the exercise's.
-      _(DB[:step_equipment].where(step_id: copy.blocks.flat_map(&:steps).map(&:id)).count).must_equal DB[:step_equipment].where(step_id: seeded.blocks.flat_map(&:steps).map(&:id)).count
+      _(DB[:step_equipment].where(step_id: copy.blocks.flat_map(&:steps).map(&:id)).count)
+        .must_equal DB[:step_equipment].where(step_id: seeded.blocks.flat_map(&:steps).map(&:id)).count
     end
 
     it "waits for an old run that is picked up again" do
-      run = travel_to(Time.zone.local(2026, 10, 20, 8)) { Session.create(workout: copy, date: Date.iso8601("2026-10-20"), status: "in_progress", started_at: Time.now) }
+      run = travel_to(Time.zone.local(2026, 10, 20, 8)) do
+        Session.create(workout: copy, date: Date.iso8601("2026-10-20"), status: "in_progress", started_at: Time.now)
+      end
       travel_to Time.zone.local(2026, 10, 25, 12)
 
       patch_json "/api/sessions/#{run.id}", status: "in_progress"

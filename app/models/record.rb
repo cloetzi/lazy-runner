@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # What every model shares: Sequel::Model with the plugins the app leans on,
 # validation messages worded as the API has always given them ("Reps must be
 # greater than 0"), and a lookup by id that names what it looked for.
@@ -5,7 +7,7 @@
 # An anonymous subclass first, so Sequel doesn't look for a `records` table;
 # reopened below as a plain class, so its constants (NotFound, MESSAGES)
 # resolve here and a model can't shadow them by defining its own.
-Record = Class.new(Sequel::Model)
+Record = Class.new(Sequel::Model) # rubocop:disable Style/EmptyClassDefinition -- see above
 
 class Record
   # A value that can't be typecast (reps: "ten") stays as given, for the
@@ -112,11 +114,11 @@ class Record
   # Associations between two of a user's tables are keyed by user_id too, as
   # their composite foreign keys are
   # (db/migrate/20261102000003_scope_data_by_user.rb).
-  def self.per_user(parent_key = nil, &parents)
+  def self.per_user(parent_key = nil, &)
     column = Sequel[table_name][:user_id]
     filter =
       if parent_key
-        Sequel::SQL::BooleanExpression.new(:IN, Sequel[table_name][parent_key], Sequel.delay(&parents))
+        Sequel::SQL::BooleanExpression.new(:IN, Sequel[table_name][parent_key], Sequel.delay(&))
       else
         { column => Sequel.delay { Current.user!.id } }
       end
@@ -127,7 +129,7 @@ class Record
     return unless parent_key
 
     define_singleton_method(:parent_key) { parent_key }
-    define_singleton_method(:own_parents, &parents)
+    define_singleton_method(:own_parents, &)
     include OwnParent
   end
 

@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # One change to the plan (#258): a session or routine planned, moved,
 # removed, changed or ended, a workout changed or archived, or an exercise's
 # remembered weight set (#290), by the user in the app (`manual`) or by an agent
@@ -61,7 +63,8 @@ class PlanChange < Record
   # (Current.plan_reason, unless `reason` is given) and in this request's
   # batch. Nothing while recording is off (`quietly`). An undo's first change
   # of the same kind is the one that takes the change back.
-  def self.record!(item, action, from_date: nil, to_date: nil, was: nil, now: nil, removed: false, summary: nil, reason: Current.plan_reason)
+  def self.record!(item, action, from_date: nil, to_date: nil, was: nil, now: nil, removed: false, summary: nil,
+                   reason: Current.plan_reason)
     return if Current.plan_quiet
 
     kind = kind_of(item)
@@ -125,8 +128,8 @@ class PlanChange < Record
   class Lookup
     def initialize(changes, today:, sessions: [], routines: [])
       @today = today
-      session_ids = changes.map(&:session_id).compact.uniq
-      routine_ids = changes.map(&:routine_id).compact.uniq
+      session_ids = changes.filter_map(&:session_id).uniq
+      routine_ids = changes.filter_map(&:routine_id).uniq
       latest = Sequel.function(:max, :id).as(:latest)
       @undone_by = read(changes.map(&:id)) { PlanChange.where(undoes_id: it).select_hash(:undoes_id, :id) }
       @latest = ITEMS.values.to_h do |column|
@@ -136,13 +139,15 @@ class PlanChange < Record
       @sessions = loaded(sessions, session_ids) { Session.where(id: it).as_hash(:id) }
       @routines = loaded(routines, routine_ids) { Routine.where(id: it).as_hash(:id) }
       @routines.each_value { it.today = today }
-      exercise_ids = changes.map(&:exercise_id).compact.uniq
+      exercise_ids = changes.filter_map(&:exercise_id).uniq
       @remembered = read(exercise_ids) { ExerciseWeight.where(exercise_id: it).as_hash(:exercise_id) }
-      workout_ids = changes.filter_map { it.was&.dig("workout_id") } + changes.map(&:workout_id).compact
+      workout_ids = changes.filter_map { it.was&.dig("workout_id") } + changes.filter_map(&:workout_id)
       @workouts = read(workout_ids.uniq) { Workout.where(id: it).as_hash(:id) }
       # The routine days a removed session confirmed that a session holds again.
       days = changes.filter_map { [it.was["routine_id"], it.was["routine_date"]] if it.action == "removed" && it.was&.dig("routine_id") }
-      @held = read(days.map(&:first).uniq) { Session.where(routine_id: it).select_map([:routine_id, :routine_date]).to_set { |id, date| [id, date.iso8601] } }
+      @held = read(days.map(&:first).uniq) do |ids|
+        Session.where(routine_id: ids).select_map(%i[routine_id routine_date]).to_set { |id, date| [id, date.iso8601] }
+      end
     end
 
     attr_reader :today
@@ -166,11 +171,11 @@ class PlanChange < Record
     private
 
     # What `query` reads for `ids`, or nothing without a query when there are none.
-    def read(ids, &query) = ids.empty? ? {} : query.(ids)
+    def read(ids, &) = ids.empty? ? {} : yield(ids)
 
-    def loaded(records, ids, &query)
+    def loaded(records, ids, &)
       known = records.to_h { [it.id, it] }.slice(*ids)
-      known.merge(read(ids - known.keys, &query))
+      known.merge(read(ids - known.keys, &))
     end
   end
 
@@ -187,7 +192,10 @@ class PlanChange < Record
       @routines = latest.select(&:routine_id).to_h { [it.routine_id, it] }
       week = today - (today.cwday - 1)
       left = ([days.begin, week].max..days.end)
-      lines = left.begin > left.end ? [] : agent.where(item_kind: "session", action: %w[moved removed], from_date: left).order(:from_date, :id).all
+      lines = []
+      if left.begin <= left.end
+        lines = agent.where(item_kind: "session", action: %w[moved removed], from_date: left).order(:from_date, :id).all
+      end
       @lookup = Lookup.new(@sessions.values + @routines.values + lines, today:, sessions:, routines:)
       # A move stays news while the session is where it put it: not once it
       # changed again or went.
@@ -216,7 +224,7 @@ class PlanChange < Record
     return [] if ids.empty?
 
     changes = by_agent.not_undone.where(id: ids, undoes_id: nil).order(:id).all
-    changes = changes.reject { it.trained_since? } if untrained
+    changes = changes.reject(&:trained_since?) if untrained
     lookup = Lookup.new(changes, today:)
     # A weight that changed since without a record (a session erased) is
     # no longer the agent's.
@@ -229,7 +237,12 @@ class PlanChange < Record
   # exercise.
   def trained_since?
     logged = SetLog.where(Sequel[:created_at] > created_at)
-    logged = workout_id ? logged.where(step_id: Step.where(block_id: Block.where(workout_id:).select(:id)).select(:id)) : logged.where(exercise_id:)
+    logged =
+      if workout_id
+        logged.where(step_id: Step.where(block_id: Block.where(workout_id:).select(:id)).select(:id))
+      else
+        logged.where(exercise_id:)
+      end
     !logged.empty?
   end
 
@@ -242,6 +255,7 @@ class PlanChange < Record
     return "an undo can't be taken back; change it again instead" if undoes_id
     return planned_problem if action == "planned"
     return "an archived workout stays archived; duplicate it to train it again" if action == "archived"
+
     if item_kind == "workout"
       problem = workout_problem(lookup)
       return problem if problem
@@ -291,6 +305,7 @@ class PlanChange < Record
 
   def weight_problem(lookup)
     return "the exercise is gone" unless exercise_id
+
     # Changed without a record since (a session erased, its gear relabelled).
     "the weight changed since; set it on Get ready instead" unless lookup.remembered(exercise_id) == now&.transform_keys(&:to_sym)
   end
@@ -307,7 +322,9 @@ class PlanChange < Record
     validates_includes BY, :changed_by
     validates_includes KINDS, :item_kind
     validates_includes ACTIONS, :action
-    MAX_LENGTHS.each { |column, length| validates_max_length length, column, allow_nil: true, message: "is longer than #{length} characters" }
+    MAX_LENGTHS.each do |column, length|
+      validates_max_length length, column, allow_nil: true, message: "is longer than #{length} characters"
+    end
     # Another user's session, routine, workout or change is not found, as a
     # lookup would say. Exercises are shared.
     { session_id: Session, routine_id: Routine, workout_id: Workout, exercise_id: Exercise, undoes_id: PlanChange }.each do |column, model|
@@ -343,7 +360,9 @@ class PlanChange < Record
       workout = lookup.workout(was["workout_id"])
       return "its workout is gone" unless workout
       return "its workout is archived" if workout.archived?
-      return "its routine day, #{was["routine_date"]}, is planned again" if was["routine_id"] && lookup.held?(was["routine_id"], was["routine_date"])
+      if was["routine_id"] && lookup.held?(was["routine_id"], was["routine_date"])
+        return "its routine day, #{was["routine_date"]}, is planned again"
+      end
 
       return
     end
@@ -458,5 +477,4 @@ class PlanChange < Record
   def put_back_on(routine, today)
     Current.set(plan_undo: { id:, kind: item_kind }) { put_back(today, routine) }
   end
-
 end

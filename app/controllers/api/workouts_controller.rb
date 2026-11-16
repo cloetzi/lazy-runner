@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module Api
   class WorkoutsController < ApplicationController
     # Every workout, by program.
@@ -65,6 +67,7 @@ module Api
       workout = Workout.find!(params[:id])
       raise BadRequest.param(:blocks, "change with PUT, which takes the whole structure") if params.key?(:blocks)
       raise BadRequest.param(:kind, "can't change; build a new workout instead") if params.key?(:kind)
+
       workout.revise!(params.to_h.slice(*Workout::FIELDS.map(&:to_sym)))
       show_workout(workout.id)
     end
@@ -103,6 +106,7 @@ module Api
       workout = editable(Workout.find!(params[:id]))
       blocks!
       raise BadRequest.param(:kind, "can't change; build a new workout instead") if params.key?(:kind) && params[:kind].to_s != workout.kind
+
       workout.revise!(params.to_h.slice(*Workout::FIELDS.map(&:to_sym), :blocks))
       show_workout(workout.id)
     end

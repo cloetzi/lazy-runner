@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module TrainerMcp
   class MoveSession < SessionTool
     description <<~TEXT.squish
@@ -13,8 +15,12 @@ module TrainerMcp
         session_id: { type: "integer", description: "The session, from list_sessions." },
         date: { type: "string", description: "Its new day, YYYY-MM-DD, today or later." },
         position: { type: "integer", minimum: 1, description: "Its place on the day, 1 first." },
-        reason: { type: "string", description: "Why it moves, shown to the user with the change, such as \"Legs fresh for Sunday's long run\". Required for a session the user planned." },
-        note: { type: %w[string null], description: "Replaces its note; empty or null clears it. Only for a session you planned (`created_by: llm`): the note says what it is for, the reason why it moved." }
+        reason: { type: "string",
+                  description: "Why it moves, shown to the user with the change, such as \"Legs fresh for Sunday's long run\". " \
+                               "Required for a session the user planned." },
+        note: { type: %w[string null],
+                description: "Replaces its note; empty or null clears it. Only for a session you planned (`created_by: llm`): the note " \
+                             "says what it is for, the reason why it moved." }
       },
       required: %w[session_id]
     )
@@ -27,6 +33,7 @@ module TrainerMcp
       if changes.key?(:note) && session.created_by != "llm" && session.status == "planned"
         raise Problem, "session #{session_id} is the user's: their note stays as it is; give the reason for the move in `reason`"
       end
+
       reason!(session, reason, "move", date: changes[:date])
       from = session.date
       changes[:note] = changes[:note].presence if changes.key?(:note)

@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # The equipment catalogue, seeded and shared: exercises name the equipment
 # they need, so the library and the builder can keep to what is at hand.
 # What each user owns of it, which weights and in which unit, is theirs

@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require "test_helper"
 
 describe "example programs API" do
@@ -18,7 +20,8 @@ describe "example programs API" do
       _(cycle["workouts"].map { it["estimated_minutes"] }).must_be(:all?, Integer)
       _(cycle["equipment"]).must_include "kettlebell"
       session_a = json.find { it["slug"] == "home-strength" }["workouts"].first
-      _(session_a["exercises"].first(2)).must_equal [exercise("glute-bridge-single-leg-lift").name, exercise("side-plank-knee-leg-raise").name]
+      _(session_a["exercises"].first(2))
+        .must_equal [exercise("glute-bridge-single-leg-lift").name, exercise("side-plank-knee-leg-raise").name]
       _(session_a["exercises"]).must_equal session_a["exercises"].uniq
     end
 
@@ -34,7 +37,8 @@ describe "example programs API" do
       _(fit["no-gear"]["gear"].select { it["owned"] == false }).must_be_empty
       cycle = fit["cycle-1"]
       _(cycle["missing_exercises"]).must_be :>, 0
-      _(cycle["gear"].find { it["slug"] == "dumbbell" }).must_equal("slug" => "dumbbell", "name" => equipment("dumbbell").name, "owned" => true)
+      _(cycle["gear"].find { it["slug"] == "dumbbell" })
+        .must_equal("slug" => "dumbbell", "name" => equipment("dumbbell").name, "owned" => true)
       _(cycle["gear"].find { it["slug"] == "kettlebell" }["owned"]).must_equal false
       # Any dumbbell will do for an exercise that needs just a weight.
       _(cycle["gear"].find { it["slug"] == "weight" }["owned"]).must_equal true
@@ -72,7 +76,8 @@ describe "example programs API" do
       post_json "/api/examples/cycle-1/import"
 
       _(last_response.status).must_equal 409
-      _(json["error"]).must_equal("code" => "already_imported", "message" => "Cycle 1 is already imported; import it again with copy to add another")
+      _(json["error"])
+        .must_equal("code" => "already_imported", "message" => "Cycle 1 is already imported; import it again with copy to add another")
 
       post_json "/api/examples/cycle-1/import", copy: true
       _(last_response.status).must_equal 201

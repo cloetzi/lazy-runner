@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require "yaml"
 
 # Loads the equipment catalogue and the exercise library from db/seeds/*.yml,
@@ -40,7 +42,10 @@ class SeedLoader
   def load_equipment
     read("equipment.yml").each_with_index.to_h do |attrs, index|
       item = Equipment.find_or_new(slug: attrs.fetch("slug"))
-      save!(item.slug) { item.update(name: attrs.fetch("name"), position: index + 1, unit: attrs["unit"], any_weight: attrs.fetch("any_weight", false), retired: false) }
+      save!(item.slug) do
+        item.update(name: attrs.fetch("name"), position: index + 1, unit: attrs["unit"],
+                    any_weight: attrs.fetch("any_weight", false), retired: false)
+      end
       [item.slug, item]
     end
   end
@@ -77,8 +82,8 @@ class SeedLoader
   # Runs a save, turning a failed validation into an error that names the record.
   def save!(name)
     yield
-  rescue Sequel::ValidationFailed => e
-    raise Error, "#{name}: #{e.errors.full_messages.join(", ")}"
+  rescue Sequel::ValidationFailed => error
+    raise Error, "#{name}: #{error.errors.full_messages.join(", ")}"
   end
 
   # An exercise dropped from the seeds leaves the library, with every user's

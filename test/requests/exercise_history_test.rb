@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require "test_helper"
 
 describe "exercise history API" do
@@ -27,7 +29,8 @@ describe "exercise history API" do
       _(json["remembered"]["value"]).must_equal 40.0
       _(json["sessions"].map { it["date"] }).must_equal %w[2026-10-16 2026-10-13]
       _(json["sessions"].first["workout"]["title"]).must_equal "Workout 1"
-      _(json["sessions"].first["sets"].map { [it["set_number"], it["reps"], it["weight"]["value"]] }).must_equal [[1, 8, 40.0], [2, 6, 40.0]]
+      _(json["sessions"].first["sets"].map { [it["set_number"], it["reps"], it["weight"]["value"]] })
+        .must_equal [[1, 8, 40.0], [2, 6, 40.0]]
     end
 
     it "gives every weight in the exercise's unit, whatever it was logged in" do
@@ -75,7 +78,8 @@ describe "exercise history API" do
 
       get "/api/exercises/#{squat.id}/history"
 
-      _(json["sessions"].first["sets"].first["target"]).must_equal({ "reps" => 8, "seconds" => nil, "weight" => { "value" => 40.0, "unit" => "lb" } })
+      _(json["sessions"].first["sets"].first["target"])
+        .must_equal({ "reps" => 8, "seconds" => nil, "weight" => { "value" => 40.0, "unit" => "lb" } })
     end
 
     it "keeps the sets of a step that left its workout" do

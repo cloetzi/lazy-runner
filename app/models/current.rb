@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # Who the request is for: set from the session by ApplicationController.
 # Rage keeps CurrentAttributes per fiber, so each request has its own. Code
 # that runs outside a request (an MCP tool, the seed loader, a job) runs

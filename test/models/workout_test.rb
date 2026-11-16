@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require "test_helper"
 
 describe Workout do
@@ -101,8 +103,13 @@ describe Workout do
       _(copy.example_slug).must_be_nil
       _(copy.program).must_be_nil
       _(copy.title).must_equal "#{original.title} (copy)"
-      shape = ->(workout) { workout.blocks.map { [it.label, it.rounds, it.steps.map { |step| [step.exercise_id, step.reps, step.duration_seconds, step.weight, step.equipment_needed] }] } }
-      _(shape.(copy)).must_equal shape.(original)
+      shape = lambda { |workout|
+        workout.blocks.map do |block|
+          steps = block.steps.map { [it.exercise_id, it.reps, it.duration_seconds, it.weight, it.equipment_needed] }
+          [block.label, block.rounds, steps]
+        end
+      }
+      _(shape.call(copy)).must_equal shape.call(original)
       _(copy.blocks.flat_map(&:steps).map(&:id) & original.blocks.flat_map(&:steps).map(&:id)).must_be_empty
     end
 

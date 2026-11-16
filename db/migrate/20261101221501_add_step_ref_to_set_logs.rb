@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # A set log names the step it was logged against in `step_ref`, which stays
 # when the step leaves (`step_id` is nulled then). It tells two steps of the
 # same exercise in a block apart in history, and lets a set the player logs

@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # The session whose finish superseded a suggestion, so reopening or deleting
 # that session can give the suggestion back.
 Sequel.migration do

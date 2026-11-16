@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # One past session as History shows it: the session, how long it took, and
 # what was logged per exercise in the order it was done. A swap is grouped
 # under the exercise done and names the one planned. Like ExerciseHistory it
@@ -33,11 +35,11 @@ class SessionDetail
         instead_of: (first.planned_exercise.values.slice(:id, :slug, :name) if first.swapped?),
         block_label: first.block_label,
         part: first.part || "workout",
-        sets: sets.sort_by { [it.set_number, it.side.to_s] }.map do
+        sets: sets.sort_by { [it.set_number, it.side.to_s] }.map do |set|
           {
-            set_number: it.set_number, side: it.side, status: it.status,
-            reps: it.reps, seconds: it.seconds, weight: Weights.convert(it.weight, unit),
-            target: it.target.merge(weight: Weights.convert(it.target[:weight], unit))
+            set_number: set.set_number, side: set.side, status: set.status,
+            reps: set.reps, seconds: set.seconds, weight: Weights.convert(set.weight, unit),
+            target: set.target.merge(weight: Weights.convert(set.target[:weight], unit))
           }
         end
       }

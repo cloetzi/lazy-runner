@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require "test_helper"
 
 describe "routines API" do
@@ -29,7 +31,7 @@ describe "routines API" do
 
       _(run.slice("title", "sport", "weekdays", "one_off", "starts_on", "ends_on", "minutes", "effort", "created_by"))
         .must_equal("title" => "Easy run", "sport" => "run", "weekdays" => [3, 6], "one_off" => false, "starts_on" => "2026-11-11",
-          "ends_on" => nil, "minutes" => 40, "effort" => "easy", "created_by" => "manual")
+                    "ends_on" => nil, "minutes" => 40, "effort" => "easy", "created_by" => "manual")
       _(days).must_equal [[run["id"], "2026-11-11", "tentative"], [run["id"], "2026-11-14", "tentative"]]
       _(calendar["routines"].map { it["id"] }).must_equal [run["id"]]
     end
@@ -46,7 +48,7 @@ describe "routines API" do
       plan(sport: nil, workout_id: strength.id, weekdays: [], starts_on: "2026-11-12", confirmed: true)
 
       session = calendar["sessions"].first
-      _(session.values_at("date", "status", "routine_date")).must_equal ["2026-11-12", "planned", "2026-11-12"]
+      _(session.values_at("date", "status", "routine_date")).must_equal %w[2026-11-12 planned 2026-11-12]
       _(calendar["routine_days"].first.values_at("state", "session_id")).must_equal ["confirmed", session["id"]]
     end
 
@@ -105,10 +107,10 @@ describe "routines API" do
       put_json path, status: "moved", moved_to: "2026-11-15"
       _(json.values_at("on", "state", "moved")).must_equal ["2026-11-15", "confirmed", true]
       put_json path, status: "skipped"
-      _(json.values_at("on", "state")).must_equal ["2026-11-15", "skipped"]
+      _(json.values_at("on", "state")).must_equal %w[2026-11-15 skipped]
       delete path
       _(last_response.status).must_equal 200
-      _(json.values_at("on", "state")).must_equal ["2026-11-15", "tentative"]
+      _(json.values_at("on", "state")).must_equal %w[2026-11-15 tentative]
       put_json path, status: "moved", moved_to: "2026-11-14"
       _(json.values_at("on", "state", "moved")).must_equal ["2026-11-14", "tentative", false]
     end

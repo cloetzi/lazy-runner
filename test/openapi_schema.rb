@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # Checks JSON against the schemas in the API description, strictly: an object
 # must have exactly the properties its schema lists (allOf parts merged), so a
 # field added to a response without describing it fails too. Covers the parts
@@ -17,7 +19,7 @@ class OpenAPISchema
 
     if schema["oneOf"]
       results = schema["oneOf"].map { errors(value, it, path) }
-      return results.count(&:empty?) == 1 ? [] : ["#{path}: matches #{results.count(&:empty?)} of the oneOf schemas"] + results.min_by(&:size)
+      return results.one?(&:empty?) ? [] : ["#{path}: matches #{results.count(&:empty?)} of the oneOf schemas"] + results.min_by(&:size)
     end
 
     if schema["anyOf"]
@@ -76,7 +78,7 @@ class OpenAPISchema
       when "string" then value.is_a?(String)
       when "integer" then value.is_a?(Integer)
       when "number" then value.is_a?(Numeric)
-      when "boolean" then value == true || value == false
+      when "boolean" then [true, false].include?(value)
       end
     fits ? [] : ["#{path}: #{value.inspect} is not #{schema["type"]}"]
   end

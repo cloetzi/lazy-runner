@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # The families sports belong to (run, ride, hike, ...), from the word lists in
 # public/js/sports.json that the PWA picks icons by. A routine for a sport is
 # fulfilled by an activity of the same family, so whatever shows a run icon

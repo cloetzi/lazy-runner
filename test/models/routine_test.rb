@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require "test_helper"
 
 describe Routine do
@@ -55,13 +57,14 @@ describe Routine do
 
       _(Routine.new(workout_id: theirs.id, starts_on: today, today:).tap(&:valid?).errors[:workout_id]).must_equal ["is not found"]
       strength.archive!
-      _(Routine.new(workout_id: strength.id, starts_on: today, today:).tap(&:valid?).errors[:workout]).must_equal ["is archived; pick another workout"]
+      _(Routine.new(workout_id: strength.id, starts_on: today, today:).tap(&:valid?).errors[:workout])
+        .must_equal ["is archived; pick another workout"]
     end
   end
 
   describe "what fulfils a day" do
     it "is done by an activity of the same sport family on its day" do
-      run = routine(on: d("2026-11-04"))
+      routine(on: d("2026-11-04"))
       trail = run_on("2026-11-04", sport: "TrailRun")
 
       day = days("2026-11-04", "2026-11-04").first
@@ -182,7 +185,8 @@ describe Routine do
       day = lift.confirm!(d("2026-11-13"))
 
       session = day.session
-      _([session.status, session.date, session.routine_id, session.routine_date]).must_equal ["planned", d("2026-11-13"), lift.id, d("2026-11-13")]
+      _([session.status, session.date, session.routine_id, session.routine_date])
+        .must_equal ["planned", d("2026-11-13"), lift.id, d("2026-11-13")]
       _(day.state).must_equal "confirmed"
 
       _(lift.move!(d("2026-11-13"), d("2026-11-14")).on).must_equal d("2026-11-14")
@@ -194,7 +198,7 @@ describe Routine do
     end
 
     it "reads a workout day as done by its session, or by a done session of its workout on the day" do
-      lift = routine(on: d("2026-11-04"), sport: nil, workout_id: strength.id)
+      routine(on: d("2026-11-04"), sport: nil, workout_id: strength.id)
       session_on("2026-11-04", "done", workout: strength)
 
       _(days("2026-11-04", "2026-11-04").first.state).must_equal "done"
@@ -237,7 +241,8 @@ describe Routine do
       _(revised.starts_on).must_equal today
       # Wednesday's confirmation moves with it; Monday's goes.
       _(RoutineDay.select_map(%i[routine_id date])).must_equal [[revised.id, today]]
-      _(states("2026-11-09", "2026-11-13")).must_equal [[run.id, "2026-11-09", "missed"], [revised.id, "2026-11-11", "confirmed"], [revised.id, "2026-11-13", "tentative"]]
+      _(states("2026-11-09", "2026-11-13"))
+        .must_equal [[run.id, "2026-11-09", "missed"], [revised.id, "2026-11-11", "confirmed"], [revised.id, "2026-11-13", "tentative"]]
     end
 
     it "changes the title of a routine with days gone by in place" do
@@ -298,7 +303,8 @@ describe Routine do
 
     it "takes a day gone by but moved forward off the calendar too" do
       lift = routine(on: d("2026-11-04"), sport: nil, workout_id: strength.id)
-      missed = Session.add!(workout: strength, date: d("2026-11-04"), status: "planned", today: d("2026-11-04"), routine_id: lift.id, routine_date: d("2026-11-04"))
+      missed = Session.add!(workout: strength, date: d("2026-11-04"), status: "planned", today: d("2026-11-04"), routine_id: lift.id,
+                            routine_date: d("2026-11-04"))
       missed.today = today
       missed.move!(date: d("2026-11-13"))
       run = routine(on: d("2026-11-04"))

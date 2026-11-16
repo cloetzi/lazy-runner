@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require "test_helper"
 
 describe SetLog do
@@ -42,5 +44,4 @@ describe SetLog do
 
     _(SetLog.where(session:, step_id: nil).count).must_equal 2
   end
-
 end

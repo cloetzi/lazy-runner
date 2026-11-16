@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # An identity at the install's OpenID Connect provider (lib/oidc.rb) that
 # signs its user in: the provider's issuer and the `sub` it gives them. The
 # sign-in itself is in lib/auth/oidc_callback.rb; this is what Settings lists and
@@ -26,9 +28,7 @@ class UserIdentity < Record
   # revoked: whoever could use the identity is out too.
   def unlink!(keep: nil)
     db.transaction do
-      if issuer == Oidc.settings&.issuer && !user.password?
-        raise Refused, "Set a password first: this is the only way you sign in"
-      end
+      raise Refused, "Set a password first: this is the only way you sign in" if issuer == Oidc.settings&.issuer && !user.password?
 
       SignedInDevice.of(user).where(user_identity_id: id).exclude(session_id: keep).delete
       ApiToken.of(user_id).where(user_identity_id: id).delete

@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # Which identity at the OIDC provider a device signed in with, if any, and
 # so which one an API token was made under, so unlinking that identity signs
 # those devices out and revokes those tokens (#210). Unlinked by other means

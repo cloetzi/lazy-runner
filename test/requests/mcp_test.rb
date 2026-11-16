@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require "test_helper"
 
 # A tool answered with an error; the message is its text.
@@ -85,21 +87,25 @@ describe "MCP server" do
     let(:tools) { rpc("tools/list")["tools"].index_by { it["name"] } }
 
     it "lists the read tools marked read-only, then the write tools" do
-      reads = %w[search_exercises get_exercise list_equipment list_workouts get_workout training_summary list_sessions list_activities list_routines
-        list_plan_changes list_examples get_coach_board list_coach_notes]
-      writes = %w[create_workout import_example update_workout duplicate_workout archive_workout set_exercise_weight update_equipment plan_sessions move_session
-        remove_session log_activities plan_routine update_routine end_routine write_coach_note update_coach_note delete_coach_notes resolve_concern propose_goal]
+      reads = %w[search_exercises get_exercise list_equipment list_workouts get_workout training_summary list_sessions list_activities
+                 list_routines list_plan_changes list_examples get_coach_board list_coach_notes]
+      writes = %w[create_workout import_example update_workout duplicate_workout archive_workout set_exercise_weight update_equipment
+                  plan_sessions move_session remove_session log_activities plan_routine update_routine end_routine write_coach_note
+                  update_coach_note delete_coach_notes resolve_concern propose_goal]
 
       _(tools.keys).must_equal reads + writes
       _(tools.values_at(*reads).map { it["annotations"].values_at("readOnlyHint", "destructiveHint") }.uniq).must_equal [[true, false]]
       _(tools.values_at(*writes).map { it["annotations"]["readOnlyHint"] }.uniq).must_equal [false]
-      _(tools.select { |_, tool| tool["annotations"]["destructiveHint"] }.keys).must_equal %w[update_workout archive_workout update_equipment remove_session update_routine end_routine
-        update_coach_note delete_coach_notes]
+      _(tools.select { |_, tool| tool["annotations"]["destructiveHint"] }.keys)
+        .must_equal %w[update_workout archive_workout update_equipment remove_session update_routine end_routine
+                       update_coach_note delete_coach_notes]
     end
 
     it "says a weight applies to every workout, while reps and time are per step" do
-      _(tools["get_exercise"]["description"]).must_include "changing it applies to every workout that uses the exercise, while reps and time are set per workout step"
-      _(tools["get_workout"]["description"]).must_include "changing an exercise's weight applies to every workout that uses it, while reps and time are set per workout step"
+      _(tools["get_exercise"]["description"])
+        .must_include "changing it applies to every workout that uses the exercise, while reps and time are set per workout step"
+      _(tools["get_workout"]["description"])
+        .must_include "changing an exercise's weight applies to every workout that uses it, while reps and time are set per workout step"
       _(tools["set_exercise_weight"]["description"]).must_include "It applies to every workout that uses the exercise"
       _(tools["set_exercise_weight"]["description"]).must_include "they are set per workout step"
     end
@@ -258,8 +264,10 @@ describe "MCP server" do
     end
 
     it "says what it can't change" do
-      _(_ { call_tool("update_equipment", equipment: "stool", owned: true) }.must_raise(McpToolError).message).must_include "list_equipment lists the slugs"
-      _(_ { call_tool("update_equipment", equipment: "mat", weights: [5]) }.must_raise(McpToolError).message).must_include "can only be listed for equipment with a unit"
+      _(_ { call_tool("update_equipment", equipment: "stool", owned: true) }.must_raise(McpToolError).message)
+        .must_include "list_equipment lists the slugs"
+      _(_ { call_tool("update_equipment", equipment: "mat", weights: [5]) }.must_raise(McpToolError).message)
+        .must_include "can only be listed for equipment with a unit"
       _(_ { call_tool("update_equipment", equipment: "mat") }.must_raise(McpToolError).message).must_include "nothing to change"
     end
   end
@@ -303,7 +311,8 @@ describe "MCP server" do
 
       _(programs.first["workouts"].map { it["source"] }.uniq).must_equal ["user"]
       _(programs.last["name"]).must_equal "My workouts"
-      _(programs.last["workouts"].map { it.slice("id", "title", "source") }).must_equal [{ "id" => copy.id, "title" => "My legs", "source" => "user" }]
+      _(programs.last["workouts"].map { it.slice("id", "title", "source") })
+        .must_equal [{ "id" => copy.id, "title" => "My legs", "source" => "user" }]
       _(programs.last.key?("id")).must_equal false
     end
   end
@@ -318,7 +327,8 @@ describe "MCP server" do
       step = found["blocks"].first["steps"].first
 
       _(found.slice("title", "source", "editable")).must_equal({ "title" => "Workout 1", "source" => "user", "editable" => true })
-      _(step["exercise"]).must_equal({ "id" => exercise("goblet-squat").id, "slug" => "goblet-squat", "name" => "Goblet squat", "alternating" => false, "equipment" => ["weight"] })
+      _(step["exercise"]).must_equal({ "id" => exercise("goblet-squat").id, "slug" => "goblet-squat", "name" => "Goblet squat",
+                                       "alternating" => false, "equipment" => ["weight"] })
       # Any weight, so no gear of its own.
       _(step["equipment"]).must_be_nil
       _(step["target"]).must_equal({ "reps" => 8, "weight" => { "value" => 20.0, "unit" => "lb" } })
@@ -370,7 +380,8 @@ describe "MCP server" do
       _(planned.slice("date", "status", "created_by")).must_equal({ "date" => "2026-10-22", "status" => "planned", "created_by" => "llm" })
       _(planned.key?("exercises")).must_equal false
       _(answer["weeks"]).must_equal [
-        { "week_start" => "2026-10-26", "done" => 0, "partial" => 0, "days" => 1 }, { "week_start" => "2026-10-19", "done" => 1, "partial" => 0 }
+        { "week_start" => "2026-10-26", "done" => 0, "partial" => 0,
+          "days" => 1 }, { "week_start" => "2026-10-19", "done" => 1, "partial" => 0 }
       ]
     end
 
@@ -389,7 +400,8 @@ describe "MCP server" do
 
       deadlift = call_tool("training_summary", from: "2026-10-19", to: "2026-10-19")["sessions"].first["exercises"].first
 
-      _(deadlift.slice("per_side", "sets_done", "sets_skipped", "reps")).must_equal({ "per_side" => true, "sets_done" => 2, "sets_skipped" => 0, "reps" => [9, 9, 9] })
+      _(deadlift.slice("per_side", "sets_done", "sets_skipped", "reps"))
+        .must_equal({ "per_side" => true, "sets_done" => 2, "sets_skipped" => 0, "reps" => [9, 9, 9] })
     end
 
     it "runs four weeks on from a first day given alone, into the future too" do
@@ -429,7 +441,8 @@ describe "MCP server" do
 
       answer = call_tool("training_summary", from: "2026-10-01", to: "2026-10-28")
 
-      _(answer["remembered_weights"].map { it.except("updated") }).must_equal [{ "exercise" => "goblet-squat", "name" => "Goblet squat", "value" => 20.0, "unit" => "lb" }]
+      _(answer["remembered_weights"].map { it.except("updated") })
+        .must_equal [{ "exercise" => "goblet-squat", "name" => "Goblet squat", "value" => 20.0, "unit" => "lb" }]
       _(answer.keys).wont_include "pending_suggestions"
     end
 
@@ -444,8 +457,10 @@ describe "MCP server" do
     end
 
     it "says what is wrong with a range" do
-      _(_ { call_tool("training_summary", from: "2026-10-20", to: "2026-10-01") }.must_raise(McpToolError).message).must_include "from must not be after to"
-      _(_ { call_tool("training_summary", from: "2025-01-01", to: "2026-10-01") }.must_raise(McpToolError).message).must_include "at most 366 days"
+      _(_ { call_tool("training_summary", from: "2026-10-20", to: "2026-10-01") }.must_raise(McpToolError).message)
+        .must_include "from must not be after to"
+      _(_ { call_tool("training_summary", from: "2025-01-01", to: "2026-10-01") }.must_raise(McpToolError).message)
+        .must_include "at most 366 days"
       _(_ { call_tool("training_summary", from: "October") }.must_raise(McpToolError).message).must_include "from"
     end
   end
@@ -457,7 +472,8 @@ describe "MCP server" do
 
     let(:blocks) do
       [
-        { label: "Main", rounds: 3, rest_seconds: 60, steps: [{ exercise: "goblet-squat", reps: 8, tempo: "3110" }, { exercise: "plank", duration_seconds: 30 }] },
+        { label: "Main", rounds: 3, rest_seconds: 60,
+          steps: [{ exercise: "goblet-squat", reps: 8, tempo: "3110" }, { exercise: "plank", duration_seconds: 30 }] },
         { label: "Finisher", steps: [{ exercise: "dead-bug", reps: 10 }] }
       ]
     end
@@ -470,7 +486,8 @@ describe "MCP server" do
         squat = built["blocks"].first["steps"].first
 
         _(built.slice("title", "subtitle", "kind", "source", "editable", "cooldown")).must_equal(
-          { "title" => "Legs for skiing", "subtitle" => "Knees over toes", "kind" => "workout", "source" => "llm", "editable" => true, "cooldown" => "none" }
+          { "title" => "Legs for skiing", "subtitle" => "Knees over toes", "kind" => "workout", "source" => "llm", "editable" => true,
+            "cooldown" => "none" }
         )
         _(built["blocks"].map { it.slice("label", "rounds", "rest_seconds") }).must_equal [
           { "label" => "Main", "rounds" => 3, "rest_seconds" => 60 }, { "label" => "Finisher", "rounds" => 1, "rest_seconds" => 0 }
@@ -484,7 +501,7 @@ describe "MCP server" do
       it "names each block and step at fault, and writes nothing" do
         count = Workout.count
         blocks[0][:steps] << { exercise: "burpee", reps: 8 }
-        blocks[1][:steps][0].merge!(duration_seconds: 30)
+        blocks[1][:steps][0][:duration_seconds] = 30
 
         error = _ { create }.must_raise McpToolError
 
@@ -541,7 +558,8 @@ describe "MCP server" do
         warnings = create["warnings"]
 
         _(warnings).must_equal [
-          %(Block 1 (Main), step 1 (two-arm-row): 40 lb is not a weight the user owns for dumbbell (10, 20 lb); give equipment ["kettlebell"] if it is done with that, or give one of those)
+          %(Block 1 (Main), step 1 (two-arm-row): 40 lb is not a weight the user owns for dumbbell (10, 20 lb); ) +
+          %(give equipment ["kettlebell"] if it is done with that, or give one of those)
         ]
       end
 
@@ -574,14 +592,18 @@ describe "MCP server" do
 
         built = create
 
-        _(built["warnings"]).must_equal ["Block 2 (Finisher), step 2 (lateral-step-down): needs step, which the user doesn't own: pick an exercise without it, or update_equipment once they say they have it"]
+        _(built["warnings"]).must_equal [
+          "Block 2 (Finisher), step 2 (lateral-step-down): needs step, which the user doesn't own: pick an exercise without it, " \
+          "or update_equipment once they say they have it"
+        ]
         _(Workout.with_pk(built["id"])).wont_be_nil
       end
 
       it "says equipment it doesn't know is unknown, not missing from the inventory" do
         blocks[1][:steps][0][:equipment] = ["none"]
 
-        _(_ { create }.must_raise(McpToolError).message).must_include "Block 2 (Finisher), step 1 (dead-bug): Equipment none is unknown: no equipment has that slug"
+        _(_ { create }.must_raise(McpToolError).message)
+          .must_include "Block 2 (Finisher), step 1 (dead-bug): Equipment none is unknown: no equipment has that slug"
       end
 
       it "picks a warm-up by id, and says when it is not one" do
@@ -631,12 +653,12 @@ describe "MCP server" do
       it "keeps a step's weights held when sent back as get_workout gave it" do
         copy = call_tool("duplicate_workout", workout_id: workout("cycle-1-workout-1").id)
         held = ->(id) { Workout.find!(id).blocks.flat_map(&:steps).map(&:weights_held) }
-        before = held.(copy["id"])
+        before = held.call(copy["id"])
 
         call_tool("update_workout", workout_id: copy["id"], blocks: call_tool("get_workout", workout_id: copy["id"])["blocks"])
 
         _(before).must_include 1
-        _(held.(copy["id"])).must_equal before
+        _(held.call(copy["id"])).must_equal before
       end
 
       it "keeps the structure when only the title changes" do
@@ -645,14 +667,17 @@ describe "MCP server" do
         updated = call_tool("update_workout", workout_id: built["id"], subtitle: "For the ski season")
 
         _(updated["subtitle"]).must_equal "For the ski season"
-        _(updated["blocks"].map { it["id"] }).must_equal built["blocks"].map { it["id"] }
+        _(updated["blocks"].map { it["id"] }).must_equal(built["blocks"].map { it["id"] })
       end
 
       it "leaves a workout a session is running alone" do
         built = create
         Session.create(workout_id: built["id"], date: Date.new(2026, 10, 20), status: "in_progress")
 
-        error = _ { call_tool("update_workout", workout_id: built["id"], blocks: [{ label: "A", steps: [{ exercise: "plank", duration_seconds: 20 }] }]) }.must_raise McpToolError
+        error = _ do
+          call_tool("update_workout", workout_id: built["id"],
+                                      blocks: [{ label: "A", steps: [{ exercise: "plank", duration_seconds: 20 }] }])
+        end.must_raise McpToolError
 
         _(error.message).must_include "is being trained right now"
         _(Workout.find!(built["id"]).blocks.map(&:label)).must_equal %w[Main Finisher]
@@ -680,9 +705,11 @@ describe "MCP server" do
 
         answer = call_tool("archive_workout", workout_id: built["id"])
 
-        _(answer).must_equal({ "id" => built["id"], "title" => "Legs for skiing", "archived" => true, "removed_sessions" => [{ "id" => coming.id, "date" => "2026-10-22" }], "reframed_workouts" => [] })
+        _(answer).must_equal({ "id" => built["id"], "title" => "Legs for skiing", "archived" => true,
+                               "removed_sessions" => [{ "id" => coming.id, "date" => "2026-10-22" }], "reframed_workouts" => [] })
         _(Session.where(id: missed.id).empty?).must_equal false
-        _(_ { call_tool("update_workout", workout_id: built["id"], title: "Again") }.must_raise(McpToolError).message).must_include "is archived"
+        _(_ { call_tool("update_workout", workout_id: built["id"], title: "Again") }.must_raise(McpToolError).message)
+          .must_include "is archived"
       end
 
       it "names the workouts an archived warm-up leaves" do
@@ -703,7 +730,8 @@ describe "MCP server" do
 
         _(call_tool("archive_workout", workout_id: imported.id, reason: "Replaced by Strength B")["archived"]).must_equal true
         _(imported.refresh.archived?).must_equal true
-        _(PlanChange.where(workout_id: imported.id).select_map(%i[action reason changed_by])).must_equal [["archived", "Replaced by Strength B", "llm"]]
+        _(PlanChange.where(workout_id: imported.id).select_map(%i[action reason changed_by]))
+          .must_equal [["archived", "Replaced by Strength B", "llm"]]
       end
     end
 
@@ -717,7 +745,8 @@ describe "MCP server" do
           { "exercise" => "goblet-squat", "remembered_weight" => { "value" => 20.0, "unit" => "lb" } }
         )
         _(answer["used_in"].map { it["title"] }).must_include "Workout 1"
-        _(call_tool("get_workout", workout_id: workout("cycle-1-workout-1").id)["blocks"].first["steps"].first["target"]["weight"]).must_equal({ "value" => 20.0, "unit" => "lb" })
+        _(call_tool("get_workout", workout_id: workout("cycle-1-workout-1").id)["blocks"].first["steps"].first["target"]["weight"])
+          .must_equal({ "value" => 20.0, "unit" => "lb" })
       end
 
       it "takes 0 as no weight, which wins over the workout's own and reads back as 0" do
@@ -727,7 +756,8 @@ describe "MCP server" do
         _(ExerciseWeight.first!(exercise_id: squat.id).value).must_be_nil
         ExerciseWeight.first!(exercise_id: squat.id).update(unit: "kg")
         _(call_tool("get_exercise", exercise: "goblet-squat")["remembered_weight"]).must_equal({ "value" => 0.0, "unit" => "lb" })
-        _(call_tool("get_workout", workout_id: workout("cycle-1-workout-1").id)["blocks"].first["steps"].first["target"].key?("weight")).must_equal false
+        _(call_tool("get_workout", workout_id: workout("cycle-1-workout-1").id)["blocks"].first["steps"].first["target"].key?("weight"))
+          .must_equal false
       end
 
       it "records the weight set with what it was and the reason" do
@@ -741,12 +771,15 @@ describe "MCP server" do
       end
 
       it "converts a weight in the other unit and snaps it to one owned" do
-        _(call_tool("set_exercise_weight", exercise: squat.id, value: 9, unit: "kg")["remembered_weight"]).must_equal({ "value" => 20.0, "unit" => "lb" })
+        _(call_tool("set_exercise_weight", exercise: squat.id, value: 9, unit: "kg")["remembered_weight"])
+          .must_equal({ "value" => 20.0, "unit" => "lb" })
       end
 
       it "says what is wrong with a weight" do
-        _(_ { call_tool("set_exercise_weight", exercise: "goblet-squat", value: -5) }.must_raise(McpToolError).message).must_include "Value must be greater than or equal to 0"
-        _(_ { call_tool("set_exercise_weight", exercise: "burpee", value: 5) }.must_raise(McpToolError).message).must_include 'no exercise "burpee"'
+        _(_ { call_tool("set_exercise_weight", exercise: "goblet-squat", value: -5) }.must_raise(McpToolError).message)
+          .must_include "Value must be greater than or equal to 0"
+        _(_ { call_tool("set_exercise_weight", exercise: "burpee", value: 5) }.must_raise(McpToolError).message)
+          .must_include 'no exercise "burpee"'
       end
     end
 
@@ -760,7 +793,8 @@ describe "MCP server" do
         answer = call_tool("list_sessions", from: "2026-10-18", to: "2026-10-24")
 
         _(answer.values_at("today", "from", "to")).must_equal %w[2026-10-20 2026-10-18 2026-10-24]
-        _(answer["sessions"].map { it.values_at("id", "status") }).must_equal [[missed.id, "missed"], [done.id, "done"], [coming.id, "planned"]]
+        _(answer["sessions"].map { it.values_at("id", "status") })
+          .must_equal [[missed.id, "missed"], [done.id, "done"], [coming.id, "planned"]]
         _(answer["sessions"].first["created_by"]).must_equal "llm"
         _(answer["sessions"][1]["completion"]["feedback"]).must_equal "right"
         _(answer["sessions"].last["parts"]).must_equal %w[workout cooldown]
@@ -780,21 +814,23 @@ describe "MCP server" do
       end
 
       it "says what is wrong with a range, as the API does" do
-        _(_ { call_tool("list_sessions", from: "2026-10-20", to: "2026-10-01") }.must_raise(McpToolError).message).must_equal "from must not be after to"
+        _(_ { call_tool("list_sessions", from: "2026-10-20", to: "2026-10-01") }.must_raise(McpToolError).message)
+          .must_equal "from must not be after to"
         _(_ { call_tool("list_sessions", status: ["someday"]) }.must_raise(McpToolError).message).must_include "/status/0"
       end
     end
 
     describe "plan_sessions" do
-      let(:workout_1) { workout("cycle-1-workout-1") }
+      let(:workout1) { workout("cycle-1-workout-1") }
 
       it "plans several sessions at once, marked as the assistant's" do
         session_on("2026-10-21", "planned")
 
         answer = call_tool("plan_sessions", sessions: [
-          { date: "2026-10-21", workout_id: workout_1.id, position: 1, note: "Legs before the long run", parts: %w[workout cooldown] },
-          { date: "2026-10-23", workout_id: workout("cycle-1-workout-2").id }
-        ])
+                             { date: "2026-10-21", workout_id: workout1.id, position: 1, note: "Legs before the long run",
+                               parts: %w[workout cooldown] },
+                             { date: "2026-10-23", workout_id: workout("cycle-1-workout-2").id }
+                           ])
 
         _(answer["planned"].map { it.values_at("date", "position", "status", "created_by") }).must_equal [
           ["2026-10-21", 1, "planned", "llm"], ["2026-10-23", 1, "planned", "llm"]
@@ -805,30 +841,33 @@ describe "MCP server" do
 
       it "plans nothing when one session can't be planned, naming it" do
         error = _ do
-          call_tool("plan_sessions", sessions: [{ date: "2026-10-22", workout_id: workout_1.id }, { date: "2026-10-19", workout_id: workout_1.id }])
+          call_tool("plan_sessions",
+                    sessions: [{ date: "2026-10-22", workout_id: workout1.id }, { date: "2026-10-19", workout_id: workout1.id }])
         end.must_raise McpToolError
 
-        _(error.message).must_equal "sessions[1] (2026-10-19, workout #{workout_1.id}): Date must be today or later. Nothing was planned."
+        _(error.message).must_equal "sessions[1] (2026-10-19, workout #{workout1.id}): Date must be today or later. Nothing was planned."
         _(Session.count).must_equal 0
       end
 
       it "says which workout it does not know, or which is archived" do
         archived = Workout.find!(create["id"]).tap(&:archive!)
 
-        _(_ { call_tool("plan_sessions", sessions: [{ date: "2026-10-22", workout_id: 0 }]) }.must_raise(McpToolError).message).must_include "sessions[0]: no workout 0"
-        _(_ { call_tool("plan_sessions", sessions: [{ date: "2026-10-22", workout_id: archived.id }]) }.must_raise(McpToolError).message).must_include "Workout is archived"
+        _(_ { call_tool("plan_sessions", sessions: [{ date: "2026-10-22", workout_id: 0 }]) }.must_raise(McpToolError).message)
+          .must_include "sessions[0]: no workout 0"
+        _(_ { call_tool("plan_sessions", sessions: [{ date: "2026-10-22", workout_id: archived.id }]) }.must_raise(McpToolError).message)
+          .must_include "Workout is archived"
         _(Session.count).must_equal 0
       end
 
       it "reads a date as YYYY-MM-DD only" do
-        error = _ { call_tool("plan_sessions", sessions: [{ date: "11/03/2026", workout_id: workout_1.id }]) }.must_raise McpToolError
+        error = _ { call_tool("plan_sessions", sessions: [{ date: "11/03/2026", workout_id: workout1.id }]) }.must_raise McpToolError
 
-        _(error.message).must_include "sessions[0] (11/03/2026, workout #{workout_1.id}): Date must be a date as YYYY-MM-DD"
+        _(error.message).must_include "sessions[0] (11/03/2026, workout #{workout1.id}): Date must be a date as YYYY-MM-DD"
         _(Session.count).must_equal 0
       end
 
       it "plans at most four weeks of sessions at once" do
-        sessions = Array.new(Session::PLAN_LIMIT + 1) { { date: "2026-10-22", workout_id: workout_1.id } }
+        sessions = Array.new(Session::PLAN_LIMIT + 1) { { date: "2026-10-22", workout_id: workout1.id } }
 
         _(_ { call_tool("plan_sessions", sessions:) }.must_raise(McpToolError).message).must_include "/sessions"
         _(Session.count).must_equal 0
@@ -843,7 +882,8 @@ describe "MCP server" do
         answer = call_tool("move_session", session_id: missed.id, date: "2026-10-21", position: 1, reason: "Moved after the race")
 
         _(answer["session"].values_at("date", "position", "status")).must_equal ["2026-10-21", 1, "planned"]
-        _(answer["days"].transform_values { |day| day.map { it["id"] } }).must_equal({ "2026-10-18" => [], "2026-10-21" => [missed.id, there.id] })
+        _(answer["days"].transform_values { |day| day.map { it["id"] } })
+          .must_equal({ "2026-10-18" => [], "2026-10-21" => [missed.id, there.id] })
       end
 
       it "keeps the note of one it planned unless one is given" do
@@ -856,15 +896,20 @@ describe "MCP server" do
       it "moves the user's session only with a reason, which goes on the change while their note stays" do
         theirs = session_on("2026-10-21", "planned", note: "Mine")
 
-        _(_ { call_tool("move_session", session_id: theirs.id, date: "2026-10-22") }.must_raise(McpToolError).message).must_include "give a `reason`"
-        _(_ { call_tool("move_session", session_id: theirs.id, date: "2026-10-22", reason: "Rest", note: "Theirs") }.must_raise(McpToolError).message).must_include "their note stays"
+        _(_ { call_tool("move_session", session_id: theirs.id, date: "2026-10-22") }.must_raise(McpToolError).message)
+          .must_include "give a `reason`"
+        _(_ do
+          call_tool("move_session", session_id: theirs.id, date: "2026-10-22", reason: "Rest",
+                                    note: "Theirs")
+        end.must_raise(McpToolError).message).must_include "their note stays"
 
         other = session_on("2026-10-21", "planned")
         _(call_tool("move_session", session_id: other.id, position: 1)["session"]["position"]).must_equal 1
         call_tool("move_session", session_id: theirs.id, date: "2026-10-22", reason: "Legs fresh for Sunday")
 
         change = PlanChange.last
-        _(change.values.values_at(:action, :changed_by, :agent_name, :reason, :from_date, :to_date)).must_equal ["moved", "llm", "Trainer agent", "Legs fresh for Sunday", Date.new(2026, 10, 21), Date.new(2026, 10, 22)]
+        _(change.values.values_at(:action, :changed_by, :agent_name, :reason, :from_date, :to_date))
+          .must_equal ["moved", "llm", "Trainer agent", "Legs fresh for Sunday", Date.new(2026, 10, 21), Date.new(2026, 10, 22)]
         _(theirs.refresh.note).must_equal "Mine"
       end
 
@@ -881,13 +926,14 @@ describe "MCP server" do
       it "says a planned session can't go back in time" do
         planned = session_on("2026-10-21", "planned")
 
-        _(_ { call_tool("move_session", session_id: planned.id, date: "2026-10-19", reason: "Earlier") }.must_raise(McpToolError).message).must_equal "Date must be today or later"
+        _(_ { call_tool("move_session", session_id: planned.id, date: "2026-10-19", reason: "Earlier") }.must_raise(McpToolError).message)
+          .must_equal "Date must be today or later"
       end
     end
 
     describe "remove_session" do
       it "takes a planned session off the calendar, the user's included" do
-        first, second = 2.times.map { session_on("2026-10-21", "planned") }
+        first, second = Array.new(2) { session_on("2026-10-21", "planned") }
 
         _(_ { call_tool("remove_session", session_id: first.id) }.must_raise(McpToolError).message).must_include "give a `reason`"
         answer = call_tool("remove_session", session_id: first.id, reason: "Too much this week")
@@ -901,14 +947,16 @@ describe "MCP server" do
       it "keeps history" do
         skipped = session_on("2026-10-19", "skipped")
 
-        _(_ { call_tool("remove_session", session_id: skipped.id) }.must_raise(McpToolError).message).must_include "only a planned session can be removed"
+        _(_ { call_tool("remove_session", session_id: skipped.id) }.must_raise(McpToolError).message)
+          .must_include "only a planned session can be removed"
         _(Session.where(id: skipped.id).empty?).must_equal false
       end
     end
 
     it "builds a workout and plans it through /mcp, which the REST API then reads back" do
       built = create
-      planned = call_tool("plan_sessions", sessions: [{ date: "2026-10-22", workout_id: built["id"], note: "Before the weekend long run" }])["planned"].first
+      planned = call_tool("plan_sessions",
+                          sessions: [{ date: "2026-10-22", workout_id: built["id"], note: "Before the weekend long run" }])["planned"].first
 
       get "/api/workouts/#{built["id"]}"
       _(last_response.status).must_equal 200
@@ -933,7 +981,8 @@ describe "MCP server" do
     let(:garmin_run) do
       {
         date: "2026-11-03", sport: "trail_running", source: "garmin", external_id: 18_234_567_890, title: "Morning trail",
-        started_at: "2026-11-03T06:12:00Z", distance: "5 mi", climb: "820 ft", moving_seconds: 2950.4, elapsed_seconds: 3101, avg_hr: 148.6, max_hr: 171
+        started_at: "2026-11-03T06:12:00Z", distance: "5 mi", climb: "820 ft", moving_seconds: 2950.4, elapsed_seconds: 3101,
+        avg_hr: 148.6, max_hr: 171
       }
     end
 
@@ -958,25 +1007,29 @@ describe "MCP server" do
 
       _(logged.slice("created", "updated", "kept")).must_equal("created" => 1, "updated" => 0, "kept" => 1)
       _(logged["activities"].map { it["outcome"] }).must_equal %w[kept created]
-      _(mine.refresh.values.values_at(:title, :created_by)).must_equal ["Mine", "manual"]
+      _(mine.refresh.values.values_at(:title, :created_by)).must_equal %w[Mine manual]
     end
 
     it "updates what it sent again, keeping the person's RPE and note and the fields left out" do
       first = call_tool("log_activities", activities: [garmin_run])["activities"].first
       Activity.with_pk(first["id"]).update(rpe: 6, note: "Heavy legs")
 
-      again = call_tool("log_activities", activities: [{ date: "2026-11-03", sport: "trail run", source: "garmin", external_id: "18234567890", distance: "8.1 km" }])
+      again = call_tool("log_activities",
+                        activities: [{ date: "2026-11-03", sport: "trail run", source: "garmin", external_id: "18234567890",
+                                       distance: "8.1 km" }])
 
       _(again.slice("created", "updated")).must_equal("created" => 0, "updated" => 1)
       _(again["activities"].first["id"]).must_equal first["id"]
       run = Activity.with_pk(first["id"])
-      _(run.values.slice(:distance_m, :climb_m, :title, :rpe, :note)).must_equal(distance_m: 8100, climb_m: 250, title: "Morning trail", rpe: 6, note: "Heavy legs")
+      _(run.values.slice(:distance_m, :climb_m, :title, :rpe, :note))
+        .must_equal(distance_m: 8100, climb_m: 250, title: "Morning trail", rpe: 6, note: "Heavy legs")
       _(Activity.count).must_equal 1
     end
 
     it "logs nothing when one entry is wrong, and names it" do
       bad_distance = { date: "2026-11-02", sport: "run", distance: "5 parsecs" }
-      _(_ { call_tool("log_activities", activities: [garmin_run, bad_distance]) }.must_raise(McpToolError).message).must_include "activities[1].distance must be metres"
+      _(_ { call_tool("log_activities", activities: [garmin_run, bad_distance]) }.must_raise(McpToolError).message)
+        .must_include "activities[1].distance must be metres"
 
       tomorrow = { date: "2026-11-05", sport: "run" }
       message = _ { call_tool("log_activities", activities: [garmin_run, tomorrow]) }.must_raise(McpToolError).message
@@ -984,8 +1037,10 @@ describe "MCP server" do
       _(message).must_include "Nothing was logged"
 
       us_date = { date: "11/3/2026", sport: "run" }
-      _(_ { call_tool("log_activities", activities: [us_date]) }.must_raise(McpToolError).message).must_equal "activities[0].date must be a date as YYYY-MM-DD"
-      _(_ { call_tool("log_activities", activities: [garmin_run.merge(climb: -3)]) }.must_raise(McpToolError).message).must_include "activities[0].climb must not be negative"
+      _(_ { call_tool("log_activities", activities: [us_date]) }.must_raise(McpToolError).message)
+        .must_equal "activities[0].date must be a date as YYYY-MM-DD"
+      _(_ { call_tool("log_activities", activities: [garmin_run.merge(climb: -3)]) }.must_raise(McpToolError).message)
+        .must_include "activities[0].climb must not be negative"
 
       zoneless = garmin_run.merge(started_at: "2026-11-03T07:12:00")
       _(_ { call_tool("log_activities", activities: [zoneless]) }.must_raise(McpToolError).message).must_include "needs its offset"
@@ -1001,12 +1056,16 @@ describe "MCP server" do
 
     it "takes the user's today, a day either side of the server's" do
       _(call_tool("log_activities", today: "2026-11-05", activities: [{ date: "2026-11-05", sport: "run" }])["created"]).must_equal 1
-      _(_ { call_tool("log_activities", today: "2026-11-07", activities: [{ date: "2026-11-07", sport: "run" }]) }.must_raise(McpToolError).message).must_include "within a day"
+      _(_ do
+        call_tool("log_activities", today: "2026-11-07",
+                                    activities: [{ date: "2026-11-07", sport: "run" }])
+      end.must_raise(McpToolError).message).must_include "within a day"
     end
 
     it "takes no RPE or note, which are the person's" do
       _(_ { call_tool("log_activities", activities: [garmin_run.merge(rpe: 7)]) }.must_raise(McpToolError).message).must_include "/rpe"
-      _(_ { call_tool("log_activities", activities: [garmin_run.merge(note: "Felt great")]) }.must_raise(McpToolError).message).must_include "/note"
+      _(_ { call_tool("log_activities", activities: [garmin_run.merge(note: "Felt great")]) }.must_raise(McpToolError).message)
+        .must_include "/note"
     end
 
     it "lists the user's activities only, with how they read distances" do
@@ -1017,12 +1076,14 @@ describe "MCP server" do
 
       listed = call_tool("list_activities")
 
-      _(listed.slice("today", "from", "to", "distance_unit")).must_equal("today" => "2026-11-04", "from" => "2026-10-08", "to" => "2026-11-04", "distance_unit" => "mi")
+      _(listed.slice("today", "from", "to", "distance_unit"))
+        .must_equal("today" => "2026-11-04", "from" => "2026-10-08", "to" => "2026-11-04", "distance_unit" => "mi")
       _(listed["activities"].map { it.slice("date", "sport", "created_by") }).must_equal [
         { "date" => "2026-11-02", "sport" => "run", "created_by" => "manual" },
         { "date" => "2026-11-03", "sport" => "trail running", "created_by" => "llm" }
       ]
-      _(listed["activities"].first).must_equal("id" => mine.id, "date" => "2026-11-02", "sport" => "run", "distance_m" => 5000, "rpe" => 5, "created_by" => "manual")
+      _(listed["activities"].first)
+        .must_equal("id" => mine.id, "date" => "2026-11-02", "sport" => "run", "distance_m" => 5000, "rpe" => 5, "created_by" => "manual")
       _(call_tool("list_activities", sport: "Trail Running", from: "2026-11-01", to: "2026-11-04")["activities"].size).must_equal 1
       _(_ { call_tool("list_activities", from: "yesterday") }.must_raise(McpToolError).message).must_include "YYYY-MM-DD"
     end
@@ -1034,10 +1095,12 @@ describe "MCP server" do
     after { travel_back }
 
     it "plans a weekly run as the agent's, tentative, with its distance in metres" do
-      planned = call_tool("plan_routine", sport: "Run", weekdays: [3, 6], title: "Easy run", distance: "5 mi", effort: "easy", note: "Keep it chatty")
+      planned = call_tool("plan_routine", sport: "Run", weekdays: [3, 6], title: "Easy run", distance: "5 mi", effort: "easy",
+                                          note: "Keep it chatty")
 
       routine = Routine.with_pk(planned["routine"]["id"])
-      _(routine.values.slice(:sport, :distance_m, :created_by, :starts_on)).must_equal(sport: "run", distance_m: 8047, created_by: "llm", starts_on: Date.new(2026, 11, 11))
+      _(routine.values.slice(:sport, :distance_m, :created_by, :starts_on))
+        .must_equal(sport: "run", distance_m: 8047, created_by: "llm", starts_on: Date.new(2026, 11, 11))
       _(planned["days"].first(2).map { it.values_at("on", "state") }).must_equal [%w[2026-11-11 tentative], %w[2026-11-14 tentative]]
     end
 
@@ -1045,7 +1108,8 @@ describe "MCP server" do
       planned = call_tool("plan_routine", sport: "hike", weekdays: [], starts_on: "2026-11-15")
 
       _(planned["routine"].values_at("one_off", "ends_on")).must_equal [true, "2026-11-15"]
-      _(_ { call_tool("plan_routine", sport: "hike", weekdays: [], starts_on: "2026-11-10") }.must_raise(McpToolError).message).must_include "Starts on must be today or later"
+      _(_ { call_tool("plan_routine", sport: "hike", weekdays: [], starts_on: "2026-11-10") }.must_raise(McpToolError).message)
+        .must_include "Starts on must be today or later"
     end
 
     it "lists routines and their days, with raw counts per state" do
@@ -1054,7 +1118,8 @@ describe "MCP server" do
       listed = call_tool("list_routines", from: "2026-11-02", to: "2026-11-11")
 
       _(listed["routines"].map { it.values_at("id", "created_by") }).must_equal [[run.id, "manual"]]
-      _(listed["days"].map { it.values_at("on", "state") }).must_equal [%w[2026-11-02 missed], %w[2026-11-04 missed], %w[2026-11-09 done], %w[2026-11-11 tentative]]
+      _(listed["days"].map { it.values_at("on", "state") })
+        .must_equal [%w[2026-11-02 missed], %w[2026-11-04 missed], %w[2026-11-09 done], %w[2026-11-11 tentative]]
       _(listed["counts"]).must_equal("missed" => 2, "done" => 1, "tentative" => 1)
     end
 
@@ -1068,7 +1133,8 @@ describe "MCP server" do
 
       _(listed.values_at("from", "to")).must_equal %w[2026-11-04 2026-12-01]
       _(listed["routines"].map { it["title"] }).must_equal ["A week back", "Tempo run", "Last day ahead"]
-      _(listed["days"].map { it.values_at("on", "state") }).must_equal [%w[2026-11-04 missed], %w[2026-11-17 tentative], %w[2026-12-01 tentative]]
+      _(listed["days"].map { it.values_at("on", "state") })
+        .must_equal [%w[2026-11-04 missed], %w[2026-11-17 tentative], %w[2026-12-01 tentative]]
       _(call_tool("list_routines", to: "2026-11-11").values_at("from", "to")).must_equal %w[2026-10-15 2026-11-11]
     end
 
@@ -1082,13 +1148,16 @@ describe "MCP server" do
       listed = call_tool("list_plan_changes")
       _(listed["changes"].map { it.values_at("action", "item_kind", "by", "reason", "undone") }).must_equal [
         ["ended", "routine", "llm", "Race week", nil], ["planned", "routine", "llm", nil, nil],
-        ["moved", "session", "manual", nil, nil], ["moved", "session", "llm", "Rest before the race", true], ["planned", "session", "manual", nil, nil]
+        ["moved", "session", "manual", nil, nil], ["moved", "session", "llm", "Rest before the race", true],
+        ["planned", "session", "manual", nil, nil]
       ]
-      _(listed["changes"].third.values_at("undoes", "from_date", "to_date")).must_equal [listed["changes"].fourth["id"], "2026-11-14", "2026-11-12"]
+      _(listed["changes"].third.values_at("undoes", "from_date", "to_date"))
+        .must_equal [listed["changes"].fourth["id"], "2026-11-14", "2026-11-12"]
       _(call_tool("list_plan_changes", by: "manual")["changes"].size).must_equal 2
       _(listed["changes"].first["was"]).must_include "ends_on"
       _(call_tool("list_plan_changes", since: "2026-11-11")["changes"].size).must_equal 5
-      _(_ { call_tool("list_plan_changes", since: "2026-11-12") }.must_raise(McpToolError).message).must_equal "since must be today (2026-11-11) or earlier"
+      _(_ { call_tool("list_plan_changes", since: "2026-11-12") }.must_raise(McpToolError).message)
+        .must_equal "since must be today (2026-11-11) or earlier"
     end
 
     it "changes and ends only the routines it planned" do
@@ -1148,7 +1217,8 @@ describe "MCP server" do
 
       board = call_tool("get_coach_board")
 
-      _(board["goals"]).must_equal [{ "id" => goal.id, "title" => "Ski season with quiet knees", "target_date" => "2026-12-15", "status" => "active", "position" => 1 }]
+      _(board["goals"]).must_equal [{ "id" => goal.id, "title" => "Ski season with quiet knees", "target_date" => "2026-12-15",
+                                      "status" => "active", "position" => 1 }]
       _(board["dismissed"].map { it["id"] }).must_equal [dismissed.id]
       _(board["status"].slice("body", "author_kind")).must_equal("body" => "Week 3 of 6", "author_kind" => "user")
       _(board["focus"]).must_be_nil
@@ -1166,7 +1236,8 @@ describe "MCP server" do
 
       week = call_tool("get_coach_board")["week"]
 
-      _(week["routines"].map { it.values_at("id", "title", "created_by") }).must_equal [[runs.id, "Easy run", "manual"], [tempo.id, "Tempo", "llm"]]
+      _(week["routines"].map { it.values_at("id", "title", "created_by") })
+        .must_equal [[runs.id, "Easy run", "manual"], [tempo.id, "Tempo", "llm"]]
       _(week["routine_days"].map { it.values_at("routine_id", "on", "state") }).must_equal [
         [runs.id, "2026-11-03", "done"], [tempo.id, "2026-11-05", "tentative"], [runs.id, "2026-11-07", "tentative"]
       ]
@@ -1177,12 +1248,15 @@ describe "MCP server" do
 
       written = call_tool("write_coach_note", kind: "status", body: "Base block, week 3", author_name: "Someone else", activity_id: run.id)
 
-      _(written.slice("kind", "author_kind", "author_name")).must_equal("kind" => "status", "author_kind" => "llm", "author_name" => "Trainer agent")
+      _(written.slice("kind", "author_kind", "author_name"))
+        .must_equal("kind" => "status", "author_kind" => "llm", "author_name" => "Trainer agent")
       _(written["about"]).must_equal("type" => "activity", "id" => run.id, "label" => "Run")
-      _(_ { call_tool("write_coach_note", kind: "concern", body: "Hmm") }.must_raise(McpToolError).message).must_equal "Title can't be blank"
+      _(_ { call_tool("write_coach_note", kind: "concern", body: "Hmm") }.must_raise(McpToolError).message)
+        .must_equal "Title can't be blank"
 
       theirs = Current.set(user: create_user("someone")) { Activity.log!({ date: "2026-11-03", sport: "run" }).first }
-      _(_ { call_tool("write_coach_note", kind: "note", body: "Sneaky", activity_id: theirs.id) }.must_raise(McpToolError).message).must_equal "Activity is not found"
+      _(_ { call_tool("write_coach_note", kind: "note", body: "Sneaky", activity_id: theirs.id) }.must_raise(McpToolError).message)
+        .must_equal "Activity is not found"
     end
 
     it "resolves only the concerns an agent raised" do
@@ -1192,14 +1266,16 @@ describe "MCP server" do
       resolved = call_tool("resolve_concern", note_id: mine["id"], resolution: "Back on track")
       _(resolved.slice("resolution", "resolved")).must_equal("resolution" => "Back on track", "resolved" => "2026-11-04")
 
-      _(_ { call_tool("resolve_concern", note_id: theirs.id, resolution: "Fine") }.must_raise(McpToolError).message).must_include "the person's to resolve"
+      _(_ { call_tool("resolve_concern", note_id: theirs.id, resolution: "Fine") }.must_raise(McpToolError).message)
+        .must_include "the person's to resolve"
       _(theirs.refresh.resolved?).must_equal false
-      _(_ { call_tool("resolve_concern", note_id: mine["id"], resolution: "Again") }.must_raise(McpToolError).message).must_include "already resolved"
+      _(_ { call_tool("resolve_concern", note_id: mine["id"], resolution: "Again") }.must_raise(McpToolError).message)
+        .must_include "already resolved"
     end
 
     it "signs everything it writes with its token's name" do
-      workout_1 = workout("cycle-1-workout-1")
-      call_tool("plan_sessions", sessions: [{ date: "2026-11-05", workout_id: workout_1.id }])
+      workout1 = workout("cycle-1-workout-1")
+      call_tool("plan_sessions", sessions: [{ date: "2026-11-05", workout_id: workout1.id }])
       call_tool("plan_routine", sport: "run", weekdays: [6], title: "Long run")
       routine = call_tool("plan_routine", workout_id: workout("cycle-1-workout-2").id, weekdays: [], starts_on: "2026-11-07")["routine"]
       call_tool("log_activities", activities: [{ date: "2026-11-03", sport: "run", source: "garmin", external_id: "1" }])
@@ -1213,7 +1289,8 @@ describe "MCP server" do
       [Session, Routine, Activity, Goal].each { _(it.select_map(:agent_name).uniq).must_equal ["Trainer agent"] }
       _(CoachNote.select_map(:author_name)).must_equal ["Trainer agent"]
       _(Current.agent_name).must_be_nil
-      _(call_tool("list_sessions", from: "2026-11-01", to: "2026-11-30")["sessions"].map { it["agent_name"] }.uniq).must_equal ["Trainer agent"]
+      _(call_tool("list_sessions", from: "2026-11-01", to: "2026-11-30")["sessions"].map { it["agent_name"] }.uniq)
+        .must_equal ["Trainer agent"]
 
       # The app reads the name wherever it shows what the agent did.
       get "/api/calendar?from=2026-11-01&to=2026-11-08&today=2026-11-04"
@@ -1227,13 +1304,16 @@ describe "MCP server" do
 
       proposal = call_tool("propose_goal", title: "Half marathon under 1:50", reason: "Your long runs got faster", replaces: goal.id)
 
-      _(proposal.slice("status", "reason", "replaces")).must_equal("status" => "proposed", "reason" => "Your long runs got faster", "replaces" => goal.id)
+      _(proposal.slice("status", "reason", "replaces"))
+        .must_equal("status" => "proposed", "reason" => "Your long runs got faster", "replaces" => goal.id)
       _(Goal.active.select_map(:title)).must_equal ["Half marathon under 1:55"]
       _(Goal.with_pk(proposal["id"]).created_by).must_equal "llm"
 
       Goal.with_pk(proposal["id"]).dismiss!
-      _(_ { call_tool("propose_goal", title: "Half marathon under 1:50", reason: "Really") }.must_raise(McpToolError).message).must_include "don't propose it again"
-      _(_ { call_tool("propose_goal", title: "Other", reason: "Why not", replaces: 999_999) }.must_raise(McpToolError).message).must_include "no active goal"
+      _(_ { call_tool("propose_goal", title: "Half marathon under 1:50", reason: "Really") }.must_raise(McpToolError).message)
+        .must_include "don't propose it again"
+      _(_ { call_tool("propose_goal", title: "Other", reason: "Why not", replaces: 999_999) }.must_raise(McpToolError).message)
+        .must_include "no active goal"
     end
 
     it "writes the same note once, and at most #{CoachNote::AGENT_DAILY_LIMIT} a day" do
@@ -1244,7 +1324,8 @@ describe "MCP server" do
       _(again["already_written"]).must_equal true
       _(call_tool("write_coach_note", kind: "note", body: "Easy week", date: "2026-11-06")["id"]).wont_equal first["id"]
       # The name it signs with is its token's, whatever it sends.
-      _(call_tool("write_coach_note", kind: "note", body: "Easy week", date: "2026-11-05", author_name: "Other agent")["id"]).must_equal first["id"]
+      _(call_tool("write_coach_note", kind: "note", body: "Easy week", date: "2026-11-05", author_name: "Other agent")["id"])
+        .must_equal first["id"]
       _(TrainerMcp::BRIEF).must_include "at most #{CoachNote::AGENT_DAILY_LIMIT} a day"
       _(TrainerMcp::BRIEF).must_include "up to #{CoachNote::PAGE_LIMIT} at once"
 
@@ -1256,9 +1337,11 @@ describe "MCP server" do
 
       person_note("note", "Mine do not count")
       (CoachNote::AGENT_DAILY_LIMIT - CoachNote.by_agent.count).times { call_tool("write_coach_note", kind: "note", body: "Note #{it}") }
-      _(_ { call_tool("write_coach_note", kind: "note", body: "One more") }.must_raise(McpToolError).message).must_include "update_coach_note"
+      _(_ { call_tool("write_coach_note", kind: "note", body: "One more") }.must_raise(McpToolError).message)
+        .must_include "update_coach_note"
       _(call_tool("write_coach_note", kind: "note", body: "Note 0")["already_written"]).must_equal true
-      _(_ { call_tool("write_coach_note", kind: "concern", body: "No title") }.must_raise(McpToolError).message).must_equal "Title can't be blank"
+      _(_ { call_tool("write_coach_note", kind: "concern", body: "No title") }.must_raise(McpToolError).message)
+        .must_equal "Title can't be blank"
 
       CoachNote.by_agent.update(created_at: Time.zone.local(2026, 11, 3, 23, 59).to_time)
       _(call_tool("write_coach_note", kind: "note", body: "One more")["body"]).must_equal "One more"
@@ -1270,7 +1353,8 @@ describe "MCP server" do
       reply = CoachNote.create(kind: "note", body: "Mornings, before the easy run.", author_kind: "user", reply_to_id: concern["id"])
 
       board = call_tool("get_coach_board")
-      _(board["concerns"].first["replies"]).must_equal [{ "id" => reply.id, "body" => "Mornings, before the easy run.", "written" => "2026-11-04" }]
+      _(board["concerns"].first["replies"])
+        .must_equal [{ "id" => reply.id, "body" => "Mornings, before the easy run.", "written" => "2026-11-04" }]
       _(board["notes"]).must_be_empty
       listed = call_tool("list_coach_notes")
       _(listed["notes"].map { it["id"] }).must_equal [concern["id"]]
@@ -1313,18 +1397,21 @@ describe "MCP server" do
       _(changed.slice("id", "body", "date")).must_equal("id" => mine["id"], "body" => "Run 8 km Sunday")
       _(changed["about"]["id"]).must_equal run.id
 
-      _(_ { call_tool("update_coach_note", note_id: theirs.id, body: "Knee sore") }.must_raise(McpToolError).message).must_include "the person's"
+      _(_ { call_tool("update_coach_note", note_id: theirs.id, body: "Knee sore") }.must_raise(McpToolError).message)
+        .must_include "the person's"
       _(theirs.refresh.body).must_equal "Knee fine"
       _(call_tool("update_coach_note", note_id: mine["id"], body: "Run 8 km Sunday")["body"]).must_equal "Run 8 km Sunday"
       _(_ { call_tool("update_coach_note", note_id: mine["id"]) }.must_raise(McpToolError).message).must_include "nothing to change"
-      _(_ { call_tool("update_coach_note", note_id: mine["id"], body: " ") }.must_raise(McpToolError).message).must_equal "Body can't be blank"
+      _(_ { call_tool("update_coach_note", note_id: mine["id"], body: " ") }.must_raise(McpToolError).message)
+        .must_equal "Body can't be blank"
 
       other = Current.set(user: create_user("someone")) { CoachNote.create(kind: "note", body: "Not yours", author_kind: "llm") }
-      _(_ { call_tool("update_coach_note", note_id: other.id, body: "Mine now") }.must_raise(McpToolError).message).must_include "no note #{other.id}"
+      _(_ { call_tool("update_coach_note", note_id: other.id, body: "Mine now") }.must_raise(McpToolError).message)
+        .must_include "no note #{other.id}"
     end
 
     it "deletes the agent's notes, all or nothing" do
-      notes = 3.times.map { call_tool("write_coach_note", kind: "note", body: "Run plan #{it}")["id"] }
+      notes = Array.new(3) { call_tool("write_coach_note", kind: "note", body: "Run plan #{it}")["id"] }
       theirs = person_note("note", "Knee fine")
       status = call_tool("write_coach_note", kind: "status", body: "Week 3")
       older = person_note("status", "Week 2")
@@ -1332,10 +1419,12 @@ describe "MCP server" do
 
       refused = _ { call_tool("delete_coach_notes", note_ids: [notes.first, theirs.id]) }.must_raise(McpToolError)
       _(refused.message).must_include "notes #{theirs.id} are the person's"
-      _(_ { call_tool("delete_coach_notes", note_ids: [notes.first, 999_999]) }.must_raise(McpToolError).message).must_include "no notes 999999"
+      _(_ { call_tool("delete_coach_notes", note_ids: [notes.first, 999_999]) }.must_raise(McpToolError).message)
+        .must_include "no notes 999999"
       _(CoachNote.where(id: notes).count).must_equal 3
 
-      _(call_tool("delete_coach_notes", note_ids: notes.reverse + [newest["id"]])).must_equal("deleted" => notes + [newest["id"]], "count" => 4)
+      _(call_tool("delete_coach_notes", note_ids: notes.reverse + [newest["id"]]))
+        .must_equal("deleted" => notes + [newest["id"]], "count" => 4)
       _(CoachNote.select_order_map(:id)).must_equal [theirs.id, status["id"], older.id]
       _(call_tool("get_coach_board")["status"]["body"]).must_equal "Week 2"
     end
@@ -1343,7 +1432,8 @@ describe "MCP server" do
     it "has no tool that edits a goal" do
       names = rpc("tools/list")["tools"].map { it["name"] }
 
-      _(names.grep(/goal|note|concern/)).must_equal %w[list_coach_notes write_coach_note update_coach_note delete_coach_notes resolve_concern propose_goal]
+      _(names.grep(/goal|note|concern/))
+        .must_equal %w[list_coach_notes write_coach_note update_coach_note delete_coach_notes resolve_concern propose_goal]
     end
   end
 
@@ -1351,7 +1441,8 @@ describe "MCP server" do
     schemas = rpc("tools/list")["tools"].map { it["inputSchema"] }
 
     _(schemas.map { it["additionalProperties"] }.uniq).must_equal [false]
-    _(_ { call_tool("list_equipment", owned: true) }.must_raise(McpToolError).message).must_include "`/owned` is a disallowed additional property"
+    _(_ { call_tool("list_equipment", owned: true) }.must_raise(McpToolError).message)
+      .must_include "`/owned` is a disallowed additional property"
     _(_ { call_tool("get_exercise", exercise: "plank", limit: 3) }.must_raise(McpToolError).message).must_include "`/limit`"
   end
 
@@ -1370,9 +1461,9 @@ describe "MCP server" do
                                        "HTTP_ACCEPT" => "application/json", "HTTP_HOST" => host, "HTTP_AUTHORIZATION" => "Bearer #{token}")
       end
 
-      _(app.call(env.("trainer.home.arpa")).first).must_equal 200
-      _(app.call(env.("192.168.1.5:3000")).first).must_equal 200
-      _(app.call(env.("192.168.1.5:8080")).first).must_equal 403
+      _(app.call(env.call("trainer.home.arpa")).first).must_equal 200
+      _(app.call(env.call("192.168.1.5:3000")).first).must_equal 200
+      _(app.call(env.call("192.168.1.5:8080")).first).must_equal 403
     end
   end
 
@@ -1407,7 +1498,7 @@ describe "MCP server" do
     end
 
     it "turns away a user who signed in with a temporary password" do
-      secret = token
+      token
       user.this.update(password_change_required: true)
       post_rpc
 

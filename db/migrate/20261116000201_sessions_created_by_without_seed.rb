@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # Programs and their sessions are no longer seeded, so "seed" left the
 # session creators. A session that still says so counts as the user's.
 Sequel.migration do

@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require "fileutils"
 require "sequel"
 require "time"
@@ -122,9 +124,9 @@ module Database
     backup = File.join(dir, "#{name}-#{at.strftime("%Y%m%dT%H%M%SZ")}-#{level}.sqlite3")
     begin
       db.run("VACUUM INTO #{db.literal(backup)}")
-    rescue Sequel::DatabaseError => e
+    rescue Sequel::DatabaseError => error
       FileUtils.rm_f(backup)
-      raise Error, "couldn't copy the database to #{backup} before migrating it (#{e.message}); " \
+      raise Error, "couldn't copy the database to #{backup} before migrating it (#{error.message}); " \
                    "make room in #{dir} and start again"
     end
     (taken + [File.basename(backup)]).sort.reverse.drop(keep).each { File.delete(File.join(dir, it)) }
@@ -169,7 +171,7 @@ module Database
       db.drop_table(:schema_migrations)
       db.drop_table?(:ar_internal_metadata)
       db.create_table(:schema_migrations) { String :filename, primary_key: true }
-      db[:schema_migrations].import([:filename], applied.map { [it] })
+      db[:schema_migrations].import([:filename], applied.zip)
     end
   end
 end

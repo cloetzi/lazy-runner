@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # The schema as release 0.1.0 left it, the last release whose migrations ran
 # on ActiveRecord: a database ActiveRecord migrated that far is taken over as
 # it is (Database.adopt_active_record!), and a new one starts here. Index and
@@ -141,7 +143,9 @@ Sequel.migration do
       constraint(:steps_target) { (reps !~ nil) | (duration_seconds !~ nil) | (note !~ nil) }
       constraint(:steps_tempo, Sequel.lit("tempo IS NULL OR tempo GLOB '[0-9][0-9][0-9]' OR tempo GLOB '[0-9][0-9][0-9][0-9]'"))
       constraint(:steps_weight_value) { (weight_value =~ nil) | (weight_value >= 0) }
-      constraint(:steps_weight_unit) { ((weight_value =~ nil) =~ (weight_unit =~ nil)) & ((weight_unit =~ nil) | { weight_unit: %w[lb kg] }) }
+      constraint(:steps_weight_unit) do
+        ((weight_value =~ nil) =~ (weight_unit =~ nil)) & ((weight_unit =~ nil) | { weight_unit: %w[lb kg] })
+      end
     end
 
     create_table(:step_equipment) do

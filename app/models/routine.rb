@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # What the user means to do, tentatively: a weekly routine ("run every
 # Wednesday") or a one-off on one day ("maybe a hike on Saturday"). It is a
 # sport, fulfilled by a logged activity of the same family (Sport) on its day,
@@ -28,6 +30,7 @@ class Routine < Record
 
   per_user
   include AgentSigned
+
   json_columns weekdays: []
   many_to_one :workout, key: %i[user_id workout_id], primary_key: %i[user_id id]
   one_to_many :stored_days, class: :RoutineDay
@@ -82,6 +85,7 @@ class Routine < Record
   end
 
   def one_off? = weekdays.empty?
+
   # Ended before today, with no day of it moved (or planned as a session) to
   # today or later.
   def ended?
@@ -89,6 +93,7 @@ class Routine < Record
 
     stored_days_dataset.where(Sequel[:moved_to] >= today).empty? && Session.where(routine_id: id).where(Sequel[:date] >= today).empty?
   end
+
   # Days before today, which stay as they were.
   def history? = starts_on < today
 
@@ -163,7 +168,9 @@ class Routine < Record
     db.transaction do
       if day.session
         session = day.session
-        raise Session::Settled, "session #{session.id} is #{session.shown_status.tr("_", " ")}; only a planned one can be skipped" unless session.status == "planned"
+        unless session.status == "planned"
+          raise Session::Settled, "session #{session.id} is #{session.shown_status.tr("_", " ")}; only a planned one can be skipped"
+        end
 
         session.update(status: "skipped")
       else
@@ -258,7 +265,9 @@ class Routine < Record
         PlanChange.because("its routine changed") { carry_days(today, draft) }
         draft
       else
-        raise Settled, "routine #{id} ended on #{ends_on.iso8601}; plan a new one" if ended? && changes.key?(:ends_on) && draft.ends_on != ends_on
+        if ended? && changes.key?(:ends_on) && draft.ends_on != ends_on
+          raise Settled, "routine #{id} ended on #{ends_on.iso8601}; plan a new one"
+        end
 
         reach = rescheduled || draft.ends_on != ends_on
         set(changes)
@@ -348,7 +357,9 @@ class Routine < Record
     validates_includes CREATORS, :created_by
     validates_includes EFFORTS, :effort, allow_nil: true
     validates_number :minutes, :distance_m, only_integer: true, greater_than: 0, allow_nil: true
-    MAX_LENGTHS.each { |column, length| validates_max_length length, column, allow_nil: true, message: "is longer than #{length} characters" }
+    MAX_LENGTHS.each do |column, length|
+      validates_max_length length, column, allow_nil: true, message: "is longer than #{length} characters"
+    end
     if sport.nil? == workout_id.nil?
       errors.add(:base, "A routine is a sport or a workout, not both") if sport && workout_id
       errors.add(:sport, "can't be blank without a workout") unless sport || workout_id
@@ -356,9 +367,7 @@ class Routine < Record
     unless weekdays.is_a?(Array) && weekdays.all? { it.is_a?(Integer) && WEEKDAYS.cover?(it) }
       errors.add(:weekdays, "must be a list of weekdays, 1 (Monday) to 7 (Sunday)")
     end
-    if starts_on.is_a?(Date) && (new? || column_changed?(:starts_on)) && starts_on < today
-      errors.add(:starts_on, "must be today or later")
-    end
+    errors.add(:starts_on, "must be today or later") if starts_on.is_a?(Date) && (new? || column_changed?(:starts_on)) && starts_on < today
     errors.add(:ends_on, "must not be before starts on") if starts_on.is_a?(Date) && ends_on.is_a?(Date) && ends_on < starts_on
     # Ending it earlier would take away days gone by.
     if !new? && column_changed?(:ends_on) && ends_on.is_a?(Date) && starts_on.is_a?(Date) && starts_on < today && ends_on < today - 1
@@ -378,7 +387,10 @@ class Routine < Record
       value = self[column]
       self[column] = value.strip.presence if value.is_a?(String)
     end
-    self.weekdays = (weekdays || []).map { it.is_a?(String) && it.match?(/\A\d\z/) ? it.to_i : it }.uniq.sort_by { it.is_a?(Integer) ? it : 0 } if weekdays.is_a?(Array)
+    if weekdays.is_a?(Array)
+      days = weekdays.map { it.is_a?(String) && it.match?(/\A\d\z/) ? it.to_i : it }
+      self.weekdays = days.uniq.sort_by { it.is_a?(Integer) ? it : 0 }
+    end
     self.ends_on = starts_on if one_off_shape? && starts_on.is_a?(Date)
   end
 

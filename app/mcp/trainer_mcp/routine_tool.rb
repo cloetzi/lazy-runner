@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module TrainerMcp
   # What the routine tools share: a routine as they answer with it, the
   # fields an agent sends for one, and the rule that the agent changes only
@@ -17,12 +19,15 @@ module TrainerMcp
         type: "array", items: { type: "integer", minimum: 1, maximum: 7 }, uniqueItems: true,
         description: "ISO weekdays, 1 Monday to 7 Sunday, such as [3, 6] for Wednesday and Saturday; [] for a one-off on starts_on."
       },
-      starts_on: { type: "string", format: "date", description: "First day (a one-off's day), YYYY-MM-DD, today or later; today when left out." },
+      starts_on: { type: "string", format: "date",
+                   description: "First day (a one-off's day), YYYY-MM-DD, today or later; today when left out." },
       ends_on: { type: %w[string null], format: "date", description: "Last day, YYYY-MM-DD; runs on when left out." },
       minutes: { type: %w[integer null], minimum: 1, description: "Roughly how long." },
-      distance: { type: %w[number string null], description: "Roughly how far: metres as a number, or text with its unit such as \"8 km\" or \"5 mi\"." },
+      distance: { type: %w[number string null],
+                  description: "Roughly how far: metres as a number, or text with its unit such as \"8 km\" or \"5 mi\"." },
       effort: { type: %w[string null], enum: [*Routine::EFFORTS, nil], description: "How hard it should feel." },
-      note: { type: %w[string null], description: "Why it is there, shown to the user, such as \"Easy, to keep the legs fresh for Saturday\"." }
+      note: { type: %w[string null],
+              description: "Why it is there, shown to the user, such as \"Easy, to keep the legs fresh for Saturday\"." }
     }.freeze
 
     def self.find_routine(id)

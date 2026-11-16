@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # What an API token is good for: `mcp`, the trainer's MCP server alone, or
 # `api`, the REST API under /api as well (for a script). MCP alone is the
 # default, and every token made before this is MCP alone: REST access is

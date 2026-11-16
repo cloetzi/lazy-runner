@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # Workout edits and remembered weights join the record of plan changes
 # (#290): a workout changed or archived (`item_kind` workout, `workout_id`)
 # and an exercise's remembered weight set (`weight`, `exercise_id`), with a
@@ -20,10 +22,18 @@ Sequel.migration do
       add_constraint(:plan_changes_changed_by, changed_by: %w[manual llm])
       add_constraint(:plan_changes_item_kind, item_kind: %w[session routine workout weight])
       add_constraint(:plan_changes_action, action: %w[planned moved removed changed ended archived])
-      add_constraint(:plan_changes_item) { Sequel.~(item_kind: "session") | ((routine_id =~ nil) & (workout_id =~ nil) & (exercise_id =~ nil)) }
-      add_constraint(:plan_changes_routine_item) { Sequel.~(item_kind: "routine") | ((session_id =~ nil) & (workout_id =~ nil) & (exercise_id =~ nil)) }
-      add_constraint(:plan_changes_workout_item) { Sequel.~(item_kind: "workout") | ((session_id =~ nil) & (routine_id =~ nil) & (exercise_id =~ nil)) }
-      add_constraint(:plan_changes_weight_item) { Sequel.~(item_kind: "weight") | ((session_id =~ nil) & (routine_id =~ nil) & (workout_id =~ nil)) }
+      add_constraint(:plan_changes_item) do
+        Sequel.~(item_kind: "session") | ((routine_id =~ nil) & (workout_id =~ nil) & (exercise_id =~ nil))
+      end
+      add_constraint(:plan_changes_routine_item) do
+        Sequel.~(item_kind: "routine") | ((session_id =~ nil) & (workout_id =~ nil) & (exercise_id =~ nil))
+      end
+      add_constraint(:plan_changes_workout_item) do
+        Sequel.~(item_kind: "workout") | ((session_id =~ nil) & (routine_id =~ nil) & (exercise_id =~ nil))
+      end
+      add_constraint(:plan_changes_weight_item) do
+        Sequel.~(item_kind: "weight") | ((session_id =~ nil) & (routine_id =~ nil) & (workout_id =~ nil))
+      end
     end
     # Apart: Sequel adds CHECKs in one copy only when nothing else is in the block.
     alter_table(:plan_changes) do

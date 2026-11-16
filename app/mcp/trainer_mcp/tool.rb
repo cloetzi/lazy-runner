@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module TrainerMcp
   # A tool: `answer` returns what the tool says, which goes back as compact
   # JSON text. A mistake in the arguments (an unknown slug, a bad date, a
@@ -25,8 +27,10 @@ module TrainerMcp
     # model's own message: a record that doesn't validate, a workout that is
     # read-only or being trained, a session no longer planned. The API's
     # rescue_from list (ApplicationController) names the same errors.
-    REFUSALS = [Problem, Record::NotFound, Workout::ReadOnly, Workout::Running, Session::Settled, Routine::Settled, Example::AlreadyImported, Goal::NotProposed, CoachNote::NotAConcern, PlanChange::NotUndoable,
-               Record::UserOnly, CoachNote::DailyLimit].freeze
+    REFUSALS = [
+      Problem, Record::NotFound, Workout::ReadOnly, Workout::Running, Session::Settled, Routine::Settled, Example::AlreadyImported,
+      Goal::NotProposed, CoachNote::NotAConcern, PlanChange::NotUndoable, Record::UserOnly, CoachNote::DailyLimit
+    ].freeze
 
     def self.inherited(tool)
       super
@@ -47,7 +51,7 @@ module TrainerMcp
     def self.call(server_context: nil, **arguments)
       user = user_for(server_context)
       arguments = arguments.merge(user:) if answer_takes_user?
-      agent_name = server_context&.auth_info&.claims&.dig("agent_name")
+      agent_name = server_context&.auth_info&.then { it.claims&.dig("agent_name") }
       Current.set(user:, agent_name:, plan_batch: nil) { text(JSON.generate(answer(**arguments))) }
     rescue *REFUSALS => error
       text(error.message, error: true)

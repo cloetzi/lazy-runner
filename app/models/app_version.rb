@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # The version of the running app and the commit it was built from. The
 # release workflow bakes both into the image (APP_VERSION from release-please,
 # APP_COMMIT, see the Dockerfile); any other build is "dev", with the commit of

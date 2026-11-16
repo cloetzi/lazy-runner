@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module Api
   # Invite links, for the owner: how anyone else gets an account. Needs a
   # signed-in browser: an API token can't manage users or invites.

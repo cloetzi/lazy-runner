@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # The part of the session a set was logged in (warmup, workout or cooldown),
 # kept on the set like its block and target, so History and the coach can
 # tell the main workout from its framing after the workout changes (#265).

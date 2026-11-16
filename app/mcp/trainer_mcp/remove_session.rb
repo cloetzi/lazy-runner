@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module TrainerMcp
   class RemoveSession < SessionTool
     description <<~TEXT.squish

@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module TrainerMcp
   class UpdateWorkout < WorkoutTool
     description <<~TEXT.squish
@@ -15,7 +17,9 @@ module TrainerMcp
         workout_id: { type: "integer", description: "The workout's id, from list_workouts." },
         **FIELDS,
         blocks: BLOCKS,
-        reason: { type: "string", description: "Why, shown to the user with the change, such as \"One more round in block B: the last two weeks felt easy\". Required for a workout the user made (`source: user`)." }
+        reason: { type: "string",
+                  description: "Why, shown to the user with the change, such as \"One more round in block B: the last two weeks felt " \
+                               "easy\". Required for a workout the user made (`source: user`)." }
       },
       required: %w[workout_id]
     )

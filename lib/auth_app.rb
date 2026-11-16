@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require "roda"
 require_relative "secrets"
 require_relative "setup_code"
@@ -35,8 +37,8 @@ class AuthApp < Roda
 
   # Rodauth's own routes.
   PREFIX = Auth::Access::SIGN_IN
-  INVITE_GONE = "This invite link has expired, been used or been revoked; ask for a new one".freeze
-  WRONG_SETUP_CODE = "Wrong setup code. It is the newest one in the server's log; a restart prints a new one".freeze
+  INVITE_GONE = "This invite link has expired, been used or been revoked; ask for a new one"
+  WRONG_SETUP_CODE = "Wrong setup code. It is the newest one in the server's log; a restart prints a new one"
   # Argon2id at the cost real passwords are hashed with: verifying against
   # it takes as long as verifying a real one.
   HASH_COST = (Rage.env.test? ? { t_cost: 1, m_cost: 5, p_cost: 1 } : { t_cost: 2, m_cost: 16, p_cost: 1 }).freeze
@@ -62,7 +64,9 @@ class AuthApp < Roda
     @hash_seconds = @hash_seconds ? (@hash_seconds * 0.9) + (took * 0.1) : took
   end
 
-  def self.hash_seconds = @hash_seconds
+  class << self
+    attr_reader :hash_seconds
+  end
 
   # Measured warm: the first verify in a process also maps Argon2's memory.
   dummy_verify("never a password either")

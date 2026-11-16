@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # Every user's data is their own (#175). The personal tables are dropped and
 # made again with a `user_id` (deleted with its user), so nothing kept from
 # before belongs to anyone: the data of the one-user install goes. The
@@ -147,7 +149,9 @@ Sequel.migration do
         constraint(:steps_target) { (reps !~ nil) | (duration_seconds !~ nil) | (note !~ nil) }
         constraint(:steps_tempo, Sequel.lit("tempo IS NULL OR tempo GLOB '[0-9][0-9][0-9]' OR tempo GLOB '[0-9][0-9][0-9][0-9]'"))
         constraint(:steps_weight_value) { (weight_value =~ nil) | (weight_value >= 0) }
-        constraint(:steps_weight_unit) { ((weight_value =~ nil) =~ (weight_unit =~ nil)) & ((weight_unit =~ nil) | { weight_unit: %w[lb kg] }) }
+        constraint(:steps_weight_unit) do
+          ((weight_value =~ nil) =~ (weight_unit =~ nil)) & ((weight_unit =~ nil) | { weight_unit: %w[lb kg] })
+        end
       end
 
       create_table(:step_equipment) do

@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module TrainerMcp
   class ListActivities < ActivityTool
     description <<~TEXT.squish
@@ -24,7 +26,7 @@ module TrainerMcp
 
       {
         **today_and_weekday, from: range.begin.iso8601, to: range.end.iso8601,
-        distance_unit: Setting.current.distance_unit, activities: activities.all.map { shown(it) }
+                             distance_unit: Setting.current.distance_unit, activities: activities.all.map { shown(it) }
       }
     end
   end

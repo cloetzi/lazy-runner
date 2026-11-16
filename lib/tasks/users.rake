@@ -1,4 +1,27 @@
+# frozen_string_literal: true
+
 require "io/console"
+
+# Helpers for the tasks below, kept off the top level.
+module UserTasks
+  module_function
+
+  # "username: That username is taken. Try another.": the API's messages
+  # say what is wrong but not which field, which a shell needs.
+  def field_messages(error)
+    fields = error.field_errors || {}
+    fields.empty? ? error.message : fields.map { |field, message| "#{field}: #{message}" }.join("; ")
+  end
+
+  # The owner's first password, from PASSWORD for a scripted install, else
+  # asked for without echo.
+  def owner_password
+    ENV["PASSWORD"].presence || begin
+      print "Password: "
+      $stdin.noecho(&:gets).to_s.chomp.tap { puts }
+    end
+  end
+end
 
 # Accounts from a shell on the server, for whoever runs the install: making
 # the owner without the setup code (scripted installs), finding a username
@@ -10,11 +33,11 @@ namespace :users do
     abort "This install already has users; sign in instead." unless User.empty?
 
     username = ENV.fetch("USERNAME") { abort "Set USERNAME." }
-    AuthApp.rodauth.create_account(login: username, password: owner_password)
+    AuthApp.rodauth.create_account(login: username, password: UserTasks.owner_password)
     SetupCode.consume!
     puts "Created the owner account #{username}."
-  rescue Rodauth::InternalRequestError => e
-    abort "Not created: #{field_messages(e)}"
+  rescue Rodauth::InternalRequestError => error
+    abort "Not created: #{UserTasks.field_messages(error)}"
   end
 
   desc "List the users, owners first: rake users:list"
@@ -48,23 +71,7 @@ namespace :users do
       and must choose a new one then. Their devices are signed out, their API tokens
       revoked, their sign-ins with the OIDC provider unlinked and any lockout lifted.
     TEXT
-  rescue Rodauth::InternalRequestError => e
-    abort "Not changed: #{e.message}"
-  end
-
-  # "username: That username is taken. Try another.": the API's messages
-  # say what is wrong but not which field, which a shell needs.
-  def field_messages(error)
-    fields = error.field_errors || {}
-    fields.empty? ? error.message : fields.map { |field, message| "#{field}: #{message}" }.join("; ")
-  end
-
-  # The owner's first password, from PASSWORD for a scripted install, else
-  # asked for without echo.
-  def owner_password
-    ENV["PASSWORD"].presence || begin
-      print "Password: "
-      $stdin.noecho(&:gets).to_s.chomp.tap { puts }
-    end
+  rescue Rodauth::InternalRequestError => error
+    abort "Not changed: #{error.message}"
   end
 end

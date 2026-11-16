@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module TrainerMcp
   class TrainingSummary < Tool
     description <<~TEXT.squish
@@ -16,23 +18,25 @@ module TrainerMcp
     input_schema(
       properties: {
         from: { type: "string", format: "date", description: "First day, YYYY-MM-DD. Default: 27 days before `to`." },
-        to: { type: "string", format: "date", description: "Last day, YYYY-MM-DD; may be in the future. Default: today, or 27 days after `from` when only that is given." }
+        to: { type: "string", format: "date",
+              description: "Last day, YYYY-MM-DD; may be in the future. Default: today, or 27 days after `from` when only that is given." }
       }
     )
     annotations(title: "Training summary", **READ_ONLY)
 
     def self.answer(from: nil, to: nil)
       range = days(from, to)
-      from, to = range.begin, range.end
+      from = range.begin
+      to = range.end
 
       sessions = Session.eager({ workout: { blocks: :steps } }, :completion, set_logs: [{ exercise: :equipment }, :planned_exercise])
         .where(date: from..to).in_order.all
 
       compact(
         **today_and_weekday, from: from.iso8601, to: to.iso8601,
-        weeks: weeks(sessions, from, to),
-        sessions: sessions.map { session(it) },
-        remembered_weights: remembered_weights
+                             weeks: weeks(sessions, from, to),
+                             sessions: sessions.map { session(it) },
+                             remembered_weights: remembered_weights
       )
     end
 
@@ -71,8 +75,8 @@ module TrainerMcp
           block: logged[:block_label], part: logged[:part],
           per_side: (true if per_side),
           target: sets.first[:target],
-          sets_done: rounds.(done).size,
-          sets_skipped: (rounds.(sets) - rounds.(done)).size,
+          sets_done: rounds.call(done).size,
+          sets_skipped: (rounds.call(sets) - rounds.call(done)).size,
           reps: done.filter_map { it[:reps] }.presence,
           seconds: done.filter_map { it[:seconds] }.presence,
           weights: done.filter_map { it[:weight] }.uniq.presence
@@ -81,8 +85,9 @@ module TrainerMcp
     end
 
     def self.remembered_weights
-      ExerciseWeight.eager(exercise: :equipment).all.sort_by { it.exercise.name }.map do
-        { exercise: it.exercise.slug, name: it.exercise.name, **remembered_weight(it, it.exercise.weight_unit), updated: it.updated_at.in_time_zone.to_date.iso8601 }
+      ExerciseWeight.eager(exercise: :equipment).all.sort_by { it.exercise.name }.map do |weight|
+        { exercise: weight.exercise.slug, name: weight.exercise.name, **remembered_weight(weight, weight.exercise.weight_unit),
+          updated: weight.updated_at.in_time_zone.to_date.iso8601 }
       end
     end
   end

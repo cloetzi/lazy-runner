@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module Api
   class CoachController < ApplicationController
     # The Coach tab: goals, status, focus, concerns, notes and this week.

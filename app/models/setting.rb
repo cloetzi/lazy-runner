@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # A user's settings, one row each: the unit weights are shown in (lb or kg)
 # and the one distances are (km or mi). Weights are still kept in each
 # exercise's own unit, and distances in metres; this is how they are shown,

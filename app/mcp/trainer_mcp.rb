@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # The MCP server at /mcp: tools for an assistant acting as a personal trainer,
 # who reads the exercise library, the equipment owned, the workouts and the
 # training history, builds workouts from library exercises and plans them on
@@ -21,7 +23,8 @@ module TrainerMcp
 
   TOOLS = [
     SearchExercises, GetExercise, ListEquipment, ListWorkouts, GetWorkout, TrainingSummary, ListSessions, ListActivities,
-    ListRoutines, ListPlanChanges, ListExamples, GetCoachBoard, ListCoachNotes, CreateWorkout, ImportExample, UpdateWorkout, DuplicateWorkout, ArchiveWorkout,
+    ListRoutines, ListPlanChanges, ListExamples, GetCoachBoard, ListCoachNotes,
+    CreateWorkout, ImportExample, UpdateWorkout, DuplicateWorkout, ArchiveWorkout,
     SetExerciseWeight, UpdateEquipment, PlanSessions, MoveSession, RemoveSession, LogActivities, PlanRoutine, UpdateRoutine, EndRoutine,
     WriteCoachNote, UpdateCoachNote, DeleteCoachNotes, ResolveConcern, ProposeGoal
   ].freeze
@@ -51,7 +54,7 @@ module TrainerMcp
   def self.app(allowed_hosts: ENV.fetch("MCP_ALLOWED_HOSTS", ""))
     MCP::Server::Transports::StreamableHTTPTransport.new(
       server, stateless: true, enable_json_response: true, token_verifier: TokenVerifier.new,
-      allowed_hosts: allowed_hosts.split(",").map(&:strip).reject(&:empty?)
+              allowed_hosts: allowed_hosts.split(",").map(&:strip).reject(&:empty?)
     )
   end
 

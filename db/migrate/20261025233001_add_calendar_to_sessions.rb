@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # A day on the calendar can hold several sessions: `position` orders them
 # (1 first), and `note` keeps the planner's reason for one ("easy legs, long
 # run on Saturday"). Existing days are numbered by id.

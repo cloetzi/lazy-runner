@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # A user's program: one imported from an example (Example, db/examples),
 # whose slug `example_slug` keeps.
 class Program < Record

@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require "roda/session_middleware"
 require_relative "../secrets"
 

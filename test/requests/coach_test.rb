@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require "test_helper"
 
 describe "coach API" do
@@ -6,20 +8,24 @@ describe "coach API" do
   before { travel_to Time.utc(2026, 11, 4, 12) }
   after { travel_back }
 
-  def note(kind = "note", body = "Easy week", **fields) = CoachNote.create(kind:, body:, author_kind: "user", title: (body if kind == "concern"), **fields)
+  def note(kind = "note", body = "Easy week", **fields)
+    CoachNote.create(kind:, body:, author_kind: "user", title: (body if kind == "concern"), **fields)
+  end
 
   describe "goals" do
     it "adds goals in order, and lists active, proposed and past ones apart" do
       post_json "/api/goals", title: "Ski season with quiet knees", target_date: "2026-12-15", why: "Sore knees on descents"
       _(last_response.status).must_equal 201
-      _(json.slice("title", "status", "position", "created_by")).must_equal("title" => "Ski season with quiet knees", "status" => "active", "position" => 1, "created_by" => "user")
+      _(json.slice("title", "status", "position", "created_by"))
+        .must_equal("title" => "Ski season with quiet knees", "status" => "active", "position" => 1, "created_by" => "user")
       post_json "/api/goals", title: "Half marathon under 1:50"
       post_json "/api/goals", title: "Core twice a week", position: 1
       Goal.propose!(title: "Run a 10k", reason: "You run more than you lift")
 
       get "/api/goals"
 
-      _(json["goals"].map { [it["title"], it["position"]] }).must_equal [["Core twice a week", 1], ["Ski season with quiet knees", 2], ["Half marathon under 1:50", 3]]
+      _(json["goals"].map { [it["title"], it["position"]] })
+        .must_equal [["Core twice a week", 1], ["Ski season with quiet knees", 2], ["Half marathon under 1:50", 3]]
       _(json["proposals"].map { it["title"] }).must_equal ["Run a 10k"]
       _(json["past"]).must_be_empty
     end
@@ -200,7 +206,7 @@ describe "coach API" do
         [{ reply_to_id: coach.id, author_kind: "human", author_name: "Jo" }, "author_kind", "must be user for a reply"],
         [{ reply_to_id: coach.id, date: "2026-11-03" }, "date", "is the note's, not a reply's"]
       ].each do |fields, field, message|
-        post_json "/api/coach/notes", { kind: "note", body: "Hi" }.merge(fields)
+        post_json "/api/coach/notes", { kind: "note", body: "Hi", **fields }
         _(last_response.status).must_equal 422
         _(json["error"]["fields"][field]).must_include message
       end
@@ -290,7 +296,7 @@ describe "coach API" do
     end
 
     it "pages through the journal, newest first, by kind" do
-      notes = 5.times.map { note("note", "Note #{it}") }
+      notes = Array.new(5) { note("note", "Note #{it}") }
       note("status", "Base block")
 
       get "/api/coach/notes?kind=note&limit=2"
@@ -354,7 +360,8 @@ describe "coach API" do
 
       post_json "/api/coach/tidy", before: "2026-11-01"
       _(json).must_equal("deleted" => 3)
-      _(CoachNote.select_map(:id).sort).must_equal [answered, reply, open_concern, current_focus, yours, current_status, recent].map(&:id).sort
+      _(CoachNote.select_map(:id).sort)
+        .must_equal [answered, reply, open_concern, current_focus, yours, current_status, recent].map(&:id).sort
       _([old, old_status, resolved].map { CoachNote.where(id: it.id).count }).must_equal [0, 0, 0]
 
       get "/api/coach/tidy"
@@ -388,7 +395,8 @@ describe "coach API" do
       _(json["proposals"].map { it["id"] }).must_equal [proposal.id]
       _(json["status"]["id"]).must_equal status.id
       _(json["status"]["replaces"]["id"]).must_equal old_status.id
-      _(json["focus"].slice("id", "author_kind", "author_name", "replaces")).must_equal("id" => focus.id, "author_kind" => "llm", "author_name" => "Trainer agent", "replaces" => nil)
+      _(json["focus"].slice("id", "author_kind", "author_name", "replaces"))
+        .must_equal("id" => focus.id, "author_kind" => "llm", "author_name" => "Trainer agent", "replaces" => nil)
       _(json["concerns"].map { it["id"] }).must_equal [open.id]
       _(json["notes"].map { it["id"] }).must_equal [journal.id, resolved.id, old_status.id]
       _(json["week"].slice("from", "to")).must_equal("from" => "2026-11-02", "to" => "2026-11-08")
@@ -396,7 +404,8 @@ describe "coach API" do
       _(json["week"]["sessions"].map { it["id"] }).must_equal [session.id]
       _(json["week"]["notes"].map { it["id"] }).must_equal [journal.id]
       _(json["week"]["routines"].map { it["id"] }).must_equal [long_run.id]
-      _(json["week"]["routine_days"].map { it.values_at("routine_id", "on", "state") }).must_equal [[long_run.id, "2026-11-08", "tentative"]]
+      _(json["week"]["routine_days"].map { it.values_at("routine_id", "on", "state") })
+        .must_equal [[long_run.id, "2026-11-08", "tentative"]]
     end
 
     it "counts the goals achieved or dropped, not the dismissed proposals" do
@@ -411,7 +420,7 @@ describe "coach API" do
     end
 
     it "says where the journal's next page starts" do
-      notes = 11.times.map { note("note", "Note #{it}") }
+      notes = Array.new(11) { note("note", "Note #{it}") }
 
       get "/api/coach"
 

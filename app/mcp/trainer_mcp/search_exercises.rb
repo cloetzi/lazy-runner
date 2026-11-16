@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module TrainerMcp
   class SearchExercises < Tool
     description <<~TEXT.squish
@@ -39,11 +41,12 @@ module TrainerMcp
 
       {
         count: exercises.size,
-        exercises: exercises.map do
+        exercises: exercises.map do |exercise|
           compact(
-            id: it.id, slug: it.slug, name: it.name, category: it.category, areas: it.areas, pattern: it.pattern,
-            unilateral: it.unilateral, alternating: it.alternating, equipment: it.equipment_slugs,
-            default_reps: it.default_reps, default_seconds: it.default_seconds, cues: it.cues
+            id: exercise.id, slug: exercise.slug, name: exercise.name, category: exercise.category, areas: exercise.areas,
+            pattern: exercise.pattern, unilateral: exercise.unilateral, alternating: exercise.alternating,
+            equipment: exercise.equipment_slugs, default_reps: exercise.default_reps, default_seconds: exercise.default_seconds,
+            cues: exercise.cues
           )
         end
       }

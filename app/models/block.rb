@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # A circuit of a workout, whose user's it is.
 class Block < Record
   # A workout is something a person does in one go: these bound what one
@@ -13,7 +15,7 @@ class Block < Record
   one_to_many :steps, order: :position
 
   def estimated_seconds
-    rounds * steps.sum(&:estimated_seconds) + (rounds - 1) * rest_seconds
+    (rounds * steps.sum(&:estimated_seconds)) + ((rounds - 1) * rest_seconds)
   end
 
   def as_json(*)

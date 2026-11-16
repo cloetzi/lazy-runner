@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 class Step < Record
   # The signed-in user's: those of their workouts' blocks (see Record.per_user).
   per_user(:block_id) { Block.select(:id) }
@@ -127,7 +129,7 @@ class Step < Record
 
   def estimated_seconds
     work = timed? ? duration_seconds : (reps || 1) * seconds_per_rep
-    sides * work + SETUP_SECONDS
+    (sides * work) + SETUP_SECONDS
   end
 
   # `equipment` and `weights_held` are the step's own, nil while it follows
@@ -187,6 +189,10 @@ class Step < Record
   def sides_match_exercise
     return unless exercise && per_side != exercise.unilateral
 
-    errors.add(:per_side, exercise.unilateral ? "must be set, #{exercise.slug} is done one side at a time" : "must not be set, #{exercise.slug} works both sides at once")
+    if exercise.unilateral
+      errors.add(:per_side, "must be set, #{exercise.slug} is done one side at a time")
+    else
+      errors.add(:per_side, "must not be set, #{exercise.slug} works both sides at once")
+    end
   end
 end

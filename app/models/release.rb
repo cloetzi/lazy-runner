@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require "digest"
 
 # The release id of the app in public/: a digest of every file in it, so it

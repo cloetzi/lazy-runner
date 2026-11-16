@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require "test_helper"
 
 describe SeedLoader do
@@ -106,7 +108,8 @@ describe SeedLoader do
     end
 
     it "retires it when sets were done of it, keeping them" do
-      SetLog.create(session: session_on(Date.current), step: step_for("cycle-1-workout-1", "goblet-squat"), exercise: gone, set_number: 1, reps: 20)
+      SetLog.create(session: session_on(Date.current), step: step_for("cycle-1-workout-1", "goblet-squat"), exercise: gone, set_number: 1,
+                    reps: 20)
 
       SeedLoader.load!
 

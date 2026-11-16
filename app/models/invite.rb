@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require "digest"
 require "securerandom"
 
@@ -26,7 +28,7 @@ class Invite < Record
     # A refused label leaves the expired ones be.
     invite = db.transaction do
       sweep!(now)
-      create(label:, digest: digest(token), expires_at: now + DAYS * 86_400)
+      create(label:, digest: digest(token), expires_at: now + (DAYS * 86_400))
     end
     [invite, token]
   end

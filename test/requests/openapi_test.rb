@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require "test_helper"
 
 describe "API description" do
@@ -68,7 +70,8 @@ describe "API description" do
   it "describes the body of every success response but a 204" do
     successes = spec["paths"].flat_map do |path, operations|
       operations.except("parameters").flat_map do |method, operation|
-        operation["responses"].select { |status, _| status.start_with?("2") }.map { |status, response| ["#{method.upcase} #{path} #{status}", response] }
+        successes = operation["responses"].select { |status, _| status.start_with?("2") }
+        successes.map { |status, response| ["#{method.upcase} #{path} #{status}", response] }
       end
     end
 
@@ -81,7 +84,8 @@ describe "API description" do
   end
 
   it "points every error response at the shared error shape" do
-    refs = spec["paths"].values.flat_map { it.except("parameters").values }.flat_map { it["responses"].reject { |status, _| status.start_with?("2") }.values }
+    operations = spec["paths"].values.flat_map { it.except("parameters").values }
+    refs = operations.flat_map { |operation| operation["responses"].reject { |status, _| status.start_with?("2") }.values }
 
     _(refs).wont_be_empty
     _(refs.map { it["$ref"] }.uniq - spec["components"]["responses"].keys.map { "#/components/responses/#{it}" }).must_be_empty
@@ -90,7 +94,8 @@ describe "API description" do
   # The YAML can't read Ruby constants, so this keeps the two together.
   it "states a workout's limits as the models keep them" do
     schemas = spec["components"]["schemas"]
-    step, block = schemas["StepInput"]["properties"], schemas["BlockInput"]["properties"]
+    step = schemas["StepInput"]["properties"]
+    block = schemas["BlockInput"]["properties"]
 
     _([step["reps"]["maximum"], step["duration_seconds"]["maximum"], step["note"]["maxLength"]])
       .must_equal [Step::MAX_REPS, Step::MAX_SECONDS, Step::MAX_NOTE]

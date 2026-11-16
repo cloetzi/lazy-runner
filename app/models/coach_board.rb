@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # The Coach tab in one read: the goals that anchor it (and proposals
 # waiting), the current status and focus, the open concerns, the latest of
 # the journal, and the week around `today` as a plain list of what is on it.

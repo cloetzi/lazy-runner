@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # What a workout edit changed (#290), for the record of plan changes: the
 # workout as it was and is (`snapshot`, in the form Workout#revise! takes,
 # so undo can write it back), and a short line a person reads ("Block B: 3
@@ -33,7 +35,7 @@ module WorkoutChange
     blocks = workout.blocks_dataset.select_map(:id).to_set
     steps = Step.where(block_id: blocks.to_a).select_map(:id).to_set
     was.merge("blocks" => was["blocks"].map do |block|
-      block = blocks.include?(block["id"]) ? block : block.except("id")
+      block = block.except("id") unless blocks.include?(block["id"])
       block.merge("steps" => block["steps"].map { steps.include?(it["id"]) ? it : it.except("id") })
     end)
   end
@@ -91,7 +93,7 @@ module WorkoutChange
     # The items of `was` and `now` that are the same one, in `now`'s order:
     # by id, else by `same`. Answers the pairs, those only in `now` and
     # those only in `was`.
-    def match(was, now, &same)
+    def match(was, now, &)
       left = was.dup
       # One whose id is still sent is that one, never another's match.
       sent = now.filter_map { it["id"] }
@@ -99,7 +101,7 @@ module WorkoutChange
       added = []
       now.each do |item|
         found = (left.find { it["id"] && it["id"] == item["id"] } if item["id"])
-        found ||= left.find { !sent.include?(it["id"]) && same.(it, item) } unless item["id"] && was.any? { it["id"] == item["id"] }
+        found ||= left.find { !sent.include?(it["id"]) && yield(it, item) } unless item["id"] && was.any? { it["id"] == item["id"] }
         found ? (pairs << [left.delete_at(left.index { it.equal?(found) }), item]) : added << item
       end
       [pairs, added, left]
@@ -137,7 +139,11 @@ module WorkoutChange
       changes = STEP_FIELDS.filter_map do |field, unit|
         next if was[field] == now[field]
 
-        now[field].nil? ? "no #{unit == "s" ? "time" : unit}" : amount(field, now[field], unit, was[field])
+        if now[field].nil?
+          "no #{unit == "s" ? "time" : unit}"
+        else
+          amount(field, now[field], unit, was[field])
+        end
       end
       changes << "weight #{weight(now["weight"])} (was #{weight(was["weight"])})" if was["weight"] != now["weight"]
       changes << "another note" if was["note"] != now["note"]
@@ -147,15 +153,23 @@ module WorkoutChange
     end
 
     def amount(field, value, unit, was)
-      shown = field == "tempo" ? "tempo #{value}" : field == "duration_seconds" ? "#{value} s" : "#{value} #{unit}"
-      was.nil? ? shown : "#{shown} (was #{field == "duration_seconds" ? "#{was} s" : was})"
+      shown = if field == "tempo"
+                "tempo #{value}"
+              else
+                field == "duration_seconds" ? "#{value} s" : "#{value} #{unit}"
+              end
+      if was.nil?
+        shown
+      else
+        "#{shown} (was #{field == "duration_seconds" ? "#{was} s" : was})"
+      end
     end
 
     def weight(weight)
       return "none" unless weight
 
       value = weight["value"].to_f
-      "#{value % 1 == 0 ? value.to_i : value} #{weight["unit"]}"
+      "#{(value % 1).zero? ? value.to_i : value} #{weight["unit"]}"
     end
 
     def rounds(count) = count == 1 ? "1 round" : "#{count} rounds"

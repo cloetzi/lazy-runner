@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module Api
   class EquipmentController < ApplicationController
     # The equipment catalogue, in display order, with what the user owns.

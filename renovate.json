@@ -57,6 +57,13 @@
       "semanticCommitType": "fix"
     },
     {
+      "description": "RuboCop and its plugins in their own PR, as chore(deps) since they don't ship: a new cop that flags the code then holds up only them.",
+      "matchManagers": ["bundler"],
+      "matchPackageNames": ["rubocop", "rubocop-*"],
+      "groupName": "RuboCop",
+      "semanticCommitType": "chore"
+    },
+    {
       "description": ".ruby-version and Gemfile.lock's RUBY VERSION in one PR.",
       "matchManagers": ["ruby-version", "custom.regex"],
       "matchDepNames": ["ruby"],

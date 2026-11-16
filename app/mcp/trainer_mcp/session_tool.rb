@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module TrainerMcp
   # What the calendar tools share: a session as they answer with it.
   class SessionTool < Tool
@@ -37,7 +39,9 @@ module TrainerMcp
       compact(
         id: session.id, date: session.date.iso8601, position: session.position, status: session.shown_status,
         created_by: session.created_by, agent_name: session.agent_name, note: session.note, parts: session.part_kinds,
-        workout: session.workout.then { { id: it.id, title: it.title, kind: it.kind, source: it.source, archived: (true if it.archived?) } },
+        workout: session.workout.then do |workout|
+          { id: workout.id, title: workout.title, kind: workout.kind, source: workout.source, archived: (true if workout.archived?) }
+        end,
         minutes: minutes[[session.workout_id, session.part_kinds]] ||= session.parts.sum(&:estimated_minutes),
         completion: session.completion&.as_json&.except(:finished_at)
       )

@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # Equipment that any owned gear in set weights stands in for (#225): the
 # generic "weight" an exercise needs when a dumbbell or a kettlebell will do.
 Sequel.migration do

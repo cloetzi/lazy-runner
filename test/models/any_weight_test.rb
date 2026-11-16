@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require "test_helper"
 
 # The generic weight (#225): exercises that need one weight, any dumbbell or
@@ -34,9 +36,8 @@ describe "the generic weight" do
 
   it "names the owned item with the weight set in the player" do
     squat = exercise("goblet-squat").id
-    workout = Workout.create_with!({ kind: "workout", title: "Squats", blocks: [{ label: "A", steps: [
-      { exercise_id: squat, reps: 8, weight: { value: 40, unit: "lb" } }, { exercise_id: squat, reps: 8, weight: { value: 30, unit: "lb" } }
-    ] }] }, source: "user")
+    steps = [40, 30].map { { exercise_id: squat, reps: 8, weight: { value: it, unit: "lb" } } }
+    workout = Workout.create_with!({ kind: "workout", title: "Squats", blocks: [{ label: "A", steps: }] }, source: "user")
     ExerciseWeight.where(exercise_id: squat).delete
 
     items = PlayerPlan.new([workout.refresh], weights: {}).items.select { it[:exercise] }
@@ -47,9 +48,8 @@ describe "the generic weight" do
   it "says which owned item carries each weight the stepper moves through" do
     step = Step.new(reps: 8).tap { it.exercise = exercise("goblet-squat") }
 
-    _(step.any_weight).must_equal({ slug: "weight", carriers: [
-      { value: 10.0, equipment: "dumbbell" }, { value: 20.0, equipment: "dumbbell" }, { value: 40.0, equipment: "kettlebell" }
-    ] })
+    carriers = [{ value: 10.0, equipment: "dumbbell" }, { value: 20.0, equipment: "dumbbell" }, { value: 40.0, equipment: "kettlebell" }]
+    _(step.any_weight).must_equal({ slug: "weight", carriers: })
     row = Step.new(reps: 8).tap { it.exercise = exercise("two-arm-row") }
     _(row.any_weight).must_be_nil
   end

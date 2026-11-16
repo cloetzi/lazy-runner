@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require "securerandom"
 
 # A workout's whole structure, its blocks and their steps, written in one go
@@ -90,8 +92,9 @@ class WorkoutStructure
     return add("blocks", "Blocks", "can be at most #{MAX_BLOCKS} blocks") || [] if @input.size > MAX_BLOCKS
 
     labels = {}
-    @input.each_with_index.filter_map do |attrs, index|
-      path, where = "blocks[#{index}]", "Block #{index + 1}"
+    blocks = @input.each_with_index.filter_map do |attrs, index|
+      path = "blocks[#{index}]"
+      where = "Block #{index + 1}"
       next add(path, where, "must be an object") unless attrs.is_a?(Hash)
 
       attrs = attrs.transform_keys(&:to_s)
@@ -103,12 +106,15 @@ class WorkoutStructure
       block.set(label:, position: index + 1, rounds: attrs["rounds"] || 1, rest_seconds: attrs["rest_seconds"] || 0)
       collect(block, path, where)
       if label.present? && labels.key?(label)
-        add("#{path}.label", where, "is already the label of block #{labels[label] + 1}", "Label #{label} is already the label of block #{labels[label] + 1}")
+        add("#{path}.label", where, "is already the label of block #{labels[label] + 1}",
+            "Label #{label} is already the label of block #{labels[label] + 1}")
       end
       labels[label] ||= index
 
       [block, read_steps(block, attrs["steps"], path, where)]
-    end.tap { too_long(it) }
+    end
+    too_long(blocks)
+    blocks
   end
 
   # Every round of every step is a screen of the player, one a side for a
@@ -136,7 +142,7 @@ class WorkoutStructure
     end
   end
 
-  def read_step(block, attrs, position, path, where)
+  def read_step(_block, attrs, position, path, where)
     return add(path, where, "must be an object") unless attrs.is_a?(Hash)
 
     attrs = attrs.transform_keys(&:to_s)
@@ -190,13 +196,17 @@ class WorkoutStructure
     return [nil, nil] if value.nil?
 
     value = { "value" => value } if value.is_a?(Numeric)
-    return add("#{path}.weight", where, "must be a number, or an object with its value", "Weight must be a number such as 20, or an object such as {\"value\": 20, \"unit\": \"lb\"}") || [nil, nil] unless value.is_a?(Hash)
+    unless value.is_a?(Hash)
+      return add("#{path}.weight", where, "must be a number, or an object with its value",
+                 "Weight must be a number such as 20, or an object such as {\"value\": 20, \"unit\": \"lb\"}") || [nil, nil]
+    end
 
     value = value.transform_keys(&:to_s)
     unknown_keys(value, WEIGHT_KEYS, "#{path}.weight", where)
     if value["value"].nil? && value["unit"]
       sent = JSON.generate(value)
-      return add("#{path}.weight.value", where, "is required", "Weight #{sent} has no value: send {\"value\": 20, \"unit\": \"lb\"} with the number, or leave weight out for none") || [nil, nil]
+      hint = "Weight #{sent} has no value: send {\"value\": 20, \"unit\": \"lb\"} with the number, or leave weight out for none"
+      return add("#{path}.weight.value", where, "is required", hint) || [nil, nil]
     end
     return [value["value"], value["unit"]] if value["value"].nil? || exercise.nil?
 
@@ -209,11 +219,16 @@ class WorkoutStructure
   # its exercise names anyway is no gear of its own either.
   def equipment(slugs, exercise, path, where)
     return [] if slugs.nil?
-    return add("#{path}.equipment", where, "must be a list of equipment slugs", "Equipment must be a list of equipment slugs") || [] unless slugs.is_a?(Array)
+    unless slugs.is_a?(Array)
+      return add("#{path}.equipment", where, "must be a list of equipment slugs", "Equipment must be a list of equipment slugs") || []
+    end
 
     slugs = slugs.map(&:to_s).uniq
     unknown = slugs - @equipment.keys
-    add("#{path}.equipment", where, "names unknown equipment: #{unknown.join(", ")}", "Equipment #{unknown.join(", ")} is unknown: no equipment has that slug") if unknown.any?
+    if unknown.any?
+      add("#{path}.equipment", where, "names unknown equipment: #{unknown.join(", ")}",
+          "Equipment #{unknown.join(", ")} is unknown: no equipment has that slug")
+    end
     return [] if exercise&.same_gear?(slugs)
 
     @equipment.values_at(*slugs).compact

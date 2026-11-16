@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # A run, ride, hike or any other sport, as it happened: logged by hand in the
 # app, or sent by a script or an agent with the numbers its source gave.
 # Nothing derived is kept (no pace, load or score): only the user, or a
@@ -17,7 +19,8 @@ class Activity < Record
   include AgentSigned
 
   # What a client may send for an activity.
-  FIELDS = %i[date started_at sport title moving_seconds elapsed_seconds distance_m climb_m avg_hr max_hr rpe note source external_id routine_id routine_date].freeze
+  FIELDS = %i[date started_at sport title moving_seconds elapsed_seconds distance_m climb_m avg_hr max_hr rpe note source external_id
+              routine_id routine_date].freeze
   # What a change may touch: where it came from stays.
   CHANGEABLE = (FIELDS - %i[source external_id]).freeze
   NUMBERS = %i[moving_seconds elapsed_seconds distance_m climb_m avg_hr max_hr].freeze
@@ -94,8 +97,8 @@ class Activity < Record
       # one is seen through the other.
       rows = {}
       read = ->(dataset) { dataset.all.map { rows[it.id] ||= it } }
-      @by_ref = refs.empty? ? {} : read.(Activity.where(client_ref: refs)).to_h { [it.client_ref, it] }
-      @by_pair = sources.empty? ? {} : read.(Activity.where(Sequel.|(*sources))).to_h { [[it.source, it.external_id], it] }
+      @by_ref = refs.empty? ? {} : read.call(Activity.where(client_ref: refs)).to_h { [it.client_ref, it] }
+      @by_pair = sources.empty? ? {} : read.call(Activity.where(Sequel.|(*sources))).to_h { [[it.source, it.external_id], it] }
     end
 
     def by_ref(ref) = @by_ref[ref]
@@ -201,7 +204,15 @@ class Activity < Record
     @started_at_unread = nil
     if value.is_a?(String)
       text = value.strip
-      value = text.empty? ? nil : (Time.iso8601(text) rescue (@started_at_unread = text))
+      value = if text.empty?
+                nil
+              else
+                begin
+                  Time.iso8601(text)
+                rescue StandardError
+                  (@started_at_unread = text)
+                end
+              end
     end
     super(@started_at_unread ? nil : value)
   end
@@ -248,12 +259,12 @@ class Activity < Record
     validates_includes CREATORS, :created_by
     validates_number(*NUMBERS, only_integer: true, at_least: 0, allow_nil: true)
     validates_number :rpe, only_integer: true, within: 1..10, allow_nil: true
-    MAX_LENGTHS.each { |column, length| validates_max_length length, column, allow_nil: true, message: "is longer than #{length} characters" }
+    MAX_LENGTHS.each do |column, length|
+      validates_max_length length, column, allow_nil: true, message: "is longer than #{length} characters"
+    end
     errors.add(:started_at, "must be a time as ISO 8601") if @started_at_unread
     errors.add(:source, "can't be blank when external_id is given") if external_id.present? && source.blank?
-    if date.is_a?(Date) && (new? || column_changed?(:date)) && date > today
-      errors.add(:date, "must not be after today")
-    end
+    errors.add(:date, "must not be after today") if date.is_a?(Date) && (new? || column_changed?(:date)) && date > today
     routine_day_own if new? || column_changed?(:routine_id) || column_changed?(:routine_date)
   end
 
@@ -273,7 +284,9 @@ class Activity < Record
     return errors.add(:routine_date, "is not a day of the routine") unless routine_date.is_a?(Date) && routine.day?(routine_date)
 
     shows_on = RoutineDay.first(routine_id: routine.id, date: routine_date)&.moved_to || routine_date
-    return errors.add(:routine_date, "shows on #{shows_on.iso8601}, after the activity; move the day first") if date.is_a?(Date) && shows_on > date
+    if date.is_a?(Date) && shows_on > date
+      return errors.add(:routine_date, "shows on #{shows_on.iso8601}, after the activity; move the day first")
+    end
 
     taken = Activity.where(routine_id: routine.id, routine_date:).exclude(id:)
     errors.add(:routine_date, "already has an activity linked") unless taken.empty?

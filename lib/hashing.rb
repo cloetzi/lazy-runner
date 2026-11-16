@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # Runs Argon2 on a thread of its own. The server runs one worker, whose
 # requests are fibers on one thread: a hash there (about 100 ms of CPU in
 # C) would hold up every other request until it is done, which a request
@@ -47,8 +49,8 @@ module Hashing
       job = nil # nothing of the job (a password, a request) outlives it
       begin
         answer.push(true, work.call)
-      rescue Exception => e # anything at all: the caller re-raises it, the worker carries on
-        answer.push(false, e)
+      rescue Exception => error # rubocop:disable Lint/RescueException -- anything at all: the caller re-raises it, the worker carries on
+        answer.push(false, error)
       end
       work = answer = nil
       writer.write(".")

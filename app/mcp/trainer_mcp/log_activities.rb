@@ -1,14 +1,18 @@
+# frozen_string_literal: true
+
 module TrainerMcp
   class LogActivities < ActivityTool
     # The fields an entry may hold. `rpe` and `note` are the person's, so
     # they are left to the app.
     ENTRY = {
       date: { type: "string", format: "date", description: "The day it started on, in the user's own time, YYYY-MM-DD; not after today." },
-      sport: { type: "string", description: "Such as run, trail run, ride, hike, swim or ski (Garmin's running or trail_running read as words)." },
+      sport: { type: "string",
+               description: "Such as run, trail run, ride, hike, swim or ski (Garmin's running or trail_running read as words)." },
       source: { type: "string", description: "Where it comes from, such as garmin. With external_id, it is how a resend finds it." },
       external_id: { type: %w[string integer], description: "Its id at the source, such as the Garmin activity id." },
       title: { type: "string", description: "Its name at the source." },
-      started_at: { type: "string", format: "date-time", description: "When it started, ISO 8601 with its offset or Z, such as 2026-11-03T06:12:00Z." },
+      started_at: { type: "string", format: "date-time",
+                    description: "When it started, ISO 8601 with its offset or Z, such as 2026-11-03T06:12:00Z." },
       distance: { type: %w[number string], description: "Metres as a number, or text with its unit: \"5 mi\", \"10.2 km\", \"800 m\"." },
       climb: { type: %w[number string], description: "Elevation gain: metres as a number, or text with its unit such as \"1200 ft\"." },
       moving_seconds: { type: "number", minimum: 0, maximum: 10_000_000, description: "Moving time in seconds." },
@@ -30,7 +34,9 @@ module TrainerMcp
     TEXT
     input_schema(
       properties: {
-        today: { type: "string", format: "date", description: "The user's today, YYYY-MM-DD, when it differs from the server's (a day either side at most); no date may be after it." },
+        today: { type: "string", format: "date",
+                 description: "The user's today, YYYY-MM-DD, when it differs from the server's (a day either side at most); no date " \
+                              "may be after it." },
         activities: {
           type: "array", minItems: 1, maxItems: Activity::BATCH_LIMIT,
           items: { type: "object", properties: ENTRY, required: %w[date sport], additionalProperties: false }
@@ -47,7 +53,8 @@ module TrainerMcp
       # A pair sent twice is one activity, counted once.
       counted = outcomes.uniq { it.first.id }
 
-      { created: counted.count { it.last == :created }, updated: counted.count { it.last == :updated }, kept: counted.count { it.last == :kept }, activities: logged }
+      tally = counted.map(&:last).tally
+      { created: tally.fetch(:created, 0), updated: tally.fetch(:updated, 0), kept: tally.fetch(:kept, 0), activities: logged }
     rescue Activity::EntryInvalid => error
       raise Problem, "#{error.message}. Nothing was logged; fix it and send the whole list again."
     end
@@ -59,7 +66,7 @@ module TrainerMcp
       return server if text.nil?
 
       given = Date.iso8601(date(text, :today))
-      raise Problem, "today must be within a day of the server's (#{server.iso8601})" unless (server - 1..server + 1).cover?(given)
+      raise Problem, "today must be within a day of the server's (#{server.iso8601})" unless ((server - 1)..(server + 1)).cover?(given)
 
       given
     end

@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require "json"
 
 # What every request to the API and the MCP server goes through before the
@@ -30,7 +32,7 @@ module ApiBoundary
   # array, a number) with an empty 400, and Rodauth's routes with a 500.
   # /mcp reads its own body (the mcp gem answers JSON-RPC errors).
   class JsonBody
-    NOT_AN_OBJECT = "Send the body as a JSON object".freeze
+    NOT_AN_OBJECT = "Send the body as a JSON object"
 
     def initialize(app)
       @app = app

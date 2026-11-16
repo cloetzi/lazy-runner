@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module Api
   class MeController < ApplicationController
     skip_before_action :password_chosen!
@@ -21,7 +23,8 @@ module Api
     def show
       return render(json: { user: Current.user.as_json, coach_unseen: coach_unseen }) if Current.user
 
-      render json: AuthApp.error_body(401, "Sign in to continue", setup_required: User.empty?, sign_in_with: Oidc.settings&.name), status: :unauthorized
+      render json: AuthApp.error_body(401, "Sign in to continue", setup_required: User.empty?, sign_in_with: Oidc.settings&.name),
+             status: :unauthorized
     end
 
     private

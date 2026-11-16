@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require "test_helper"
 
 # Dates and date ranges as the API and the MCP tools read them.

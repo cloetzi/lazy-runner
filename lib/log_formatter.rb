@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require "json"
 
 # Rage's JSON log lines, with what a client can put in them escaped. Rage

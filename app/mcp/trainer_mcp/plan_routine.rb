@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module TrainerMcp
   class PlanRoutine < RoutineTool
     description <<~TEXT.squish
@@ -19,7 +21,8 @@ module TrainerMcp
     def self.answer(**arguments)
       routine = Routine.plan!(attributes(arguments), created_by: "llm")
       today = Time.zone.today
-      { routine: shown(routine), days: RoutineCalendar.new(today..today + 27).days.select { it.routine.id == routine.id }.map { shown_day(it) } }
+      days = RoutineCalendar.new(today..(today + 27)).days.select { it.routine.id == routine.id }
+      { routine: shown(routine), days: days.map { shown_day(it) } }
     end
   end
 end
