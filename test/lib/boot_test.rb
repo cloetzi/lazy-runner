@@ -48,7 +48,7 @@ describe "booting against an existing database" do
       RUBY
 
       # Request bodies of 1 MB at most.
-      _(after).must_equal("current" => true, "connections" => 0, "exercises" => Exercise.count, "sessions" => 0, "max_body" => 1)
+      _(after).must_equal({ "current" => true, "connections" => 0, "exercises" => Exercise.count, "sessions" => 0, "max_body" => 1 })
       # Data from before users is nobody's: it goes, kept in a copy, which
       # like the database itself only the app's user can read.
       copy = File.join(dir, "production.before-per-user.sqlite3")

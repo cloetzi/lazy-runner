@@ -35,7 +35,7 @@ describe "settings API" do
     it "keeps the distance unit apart from the weight unit" do
       patch_json "/api/settings", distance_unit: "mi"
 
-      _(json.slice("unit", "distance_unit")).must_equal("unit" => "lb", "distance_unit" => "mi")
+      _(json.slice("unit", "distance_unit")).must_equal({ "unit" => "lb", "distance_unit" => "mi" })
       patch_json "/api/settings", distance_unit: "furlong"
       _(last_response.status).must_equal 422
       _(json["error"]["fields"]).must_equal({ "distance_unit" => ["is not included in the list"] })

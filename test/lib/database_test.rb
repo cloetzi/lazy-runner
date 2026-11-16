@@ -217,7 +217,7 @@ describe Database do
     Database.migrate!(db)
 
     was = ->(id) { JSON.parse(db[:plan_changes].where(id:).get(:was)) }
-    _(was.call(seeded)).must_equal("workout_id" => 1, "date" => "2026-11-12", "created_by" => "manual", "agent_name" => nil)
+    _(was.call(seeded)).must_equal({ "workout_id" => 1, "date" => "2026-11-12", "created_by" => "manual", "agent_name" => nil })
     _(was.call(planned)["created_by"]).must_equal "llm"
   end
 

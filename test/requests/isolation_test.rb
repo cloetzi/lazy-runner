@@ -66,7 +66,7 @@ describe "one user's data, kept from another" do
 
     get "/api/workouts/#{workout("cycle-1-workout-1").id}"
     targets = json["blocks"].flat_map { it["steps"] }.to_h { [it["exercise"]["slug"], it] }
-    _(targets["reverse-fly"]["target"]["weight"]).must_equal("value" => 10.0, "unit" => "lb")
+    _(targets["reverse-fly"]["target"]["weight"]).must_equal({ "value" => 10.0, "unit" => "lb" })
   end
 
   it "answers 404 for their workouts, whatever is asked" do

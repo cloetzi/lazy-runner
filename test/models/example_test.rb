@@ -36,7 +36,7 @@ describe Example do
     as_new_user do
       program = Example.find!("cycle-1").import!
 
-      _(program.values.slice(:example_slug, :name, :source)).must_equal(example_slug: "cycle-1", name: "Cycle 1", source: "user")
+      _(program.values.slice(:example_slug, :name, :source)).must_equal({ example_slug: "cycle-1", name: "Cycle 1", source: "user" })
       _(program.workouts.map(&:example_slug)).must_equal %w[cycle-1-warmup cycle-1-workout-1 cycle-1-workout-2 cycle-1-cooldown]
       main = workout("cycle-1-workout-1")
       _(main.framed.map(&:example_slug)).must_equal %w[cycle-1-warmup cycle-1-workout-1 cycle-1-cooldown]
@@ -54,7 +54,7 @@ describe Example do
       steps = program.workouts.flat_map { it.blocks.flat_map(&:steps) }
       _(steps.flat_map { it.exercise.equipment_slugs }).must_be_empty
       _(steps.size).must_equal 29
-      _(step("no-gear-a", "split-squat").values.slice(:reps, :tempo, :per_side)).must_equal(reps: 8, tempo: "3111", per_side: true)
+      _(step("no-gear-a", "split-squat").values.slice(:reps, :tempo, :per_side)).must_equal({ reps: 8, tempo: "3111", per_side: true })
     end
   end
 
@@ -63,8 +63,8 @@ describe Example do
   end
 
   it "keeps every weight the user owns as it is" do
-    _(step("cycle-1-workout-1", "goblet-squat").weight).must_equal(value: 40.0, unit: "lb")
-    _(step("cycle-1-workout-1", "reverse-fly").weight).must_equal(value: 10.0, unit: "lb")
+    _(step("cycle-1-workout-1", "goblet-squat").weight).must_equal({ value: 40.0, unit: "lb" })
+    _(step("cycle-1-workout-1", "reverse-fly").weight).must_equal({ value: 10.0, unit: "lb" })
   end
 
   it "snaps each weight to the nearest one owned of its gear" do
@@ -73,9 +73,9 @@ describe Example do
       own("dumbbell", [8, 12])
       Example.find!("cycle-1").import!
 
-      _(step("cycle-1-workout-1", "goblet-squat").weight).must_equal(value: 35.0, unit: "lb")
+      _(step("cycle-1-workout-1", "goblet-squat").weight).must_equal({ value: 35.0, unit: "lb" })
       # 10 lb is as near 8 as 12: the lighter one.
-      _(step("cycle-1-workout-1", "reverse-fly").weight).must_equal(value: 8.0, unit: "lb")
+      _(step("cycle-1-workout-1", "reverse-fly").weight).must_equal({ value: 8.0, unit: "lb" })
     end
   end
 
@@ -87,9 +87,9 @@ describe Example do
       deadlift = step("cycle-1-workout-1", "straight-leg-deadlift")
       _(deadlift.weight).must_be_nil
       _(deadlift.equipment_needed).must_equal ["kettlebell"]
-      _(step("cycle-1-workout-1", "reverse-fly").weight).must_equal(value: 10.0, unit: "lb")
+      _(step("cycle-1-workout-1", "reverse-fly").weight).must_equal({ value: 10.0, unit: "lb" })
       # Any weight does for a goblet squat: the dumbbell's.
-      _(step("cycle-1-workout-1", "goblet-squat").weight).must_equal(value: 10.0, unit: "lb")
+      _(step("cycle-1-workout-1", "goblet-squat").weight).must_equal({ value: 10.0, unit: "lb" })
     end
   end
 
