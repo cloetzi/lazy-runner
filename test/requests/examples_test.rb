@@ -15,8 +15,8 @@ describe "example programs API" do
       _(last_response.status).must_equal 200
       _(json.map { it["slug"] }).must_equal %w[cycle-1 home-strength no-gear]
       cycle = json.first
-      _(cycle.slice("name", "imported")).must_equal("name" => "Cycle 1", "imported" => false)
-      _(cycle["workouts"].map { it.slice("slug", "kind") }.first).must_equal("slug" => "cycle-1-warmup", "kind" => "warmup")
+      _(cycle.slice("name", "imported")).must_equal({ "name" => "Cycle 1", "imported" => false })
+      _(cycle["workouts"].map { it.slice("slug", "kind") }.first).must_equal({ "slug" => "cycle-1-warmup", "kind" => "warmup" })
       _(cycle["workouts"].map { it["estimated_minutes"] }).must_be(:all?, Integer)
       _(cycle["equipment"]).must_include "kettlebell"
       session_a = json.find { it["slug"] == "home-strength" }["workouts"].first
@@ -38,7 +38,7 @@ describe "example programs API" do
       cycle = fit["cycle-1"]
       _(cycle["missing_exercises"]).must_be :>, 0
       _(cycle["gear"].find { it["slug"] == "dumbbell" })
-        .must_equal("slug" => "dumbbell", "name" => equipment("dumbbell").name, "owned" => true)
+        .must_equal({ "slug" => "dumbbell", "name" => equipment("dumbbell").name, "owned" => true })
       _(cycle["gear"].find { it["slug"] == "kettlebell" }["owned"]).must_equal false
       # Any dumbbell will do for an exercise that needs just a weight.
       _(cycle["gear"].find { it["slug"] == "weight" }["owned"]).must_equal true
@@ -63,7 +63,7 @@ describe "example programs API" do
       post_json "/api/examples/cycle-1/import"
 
       _(last_response.status).must_equal 201
-      _(json.slice("example_slug", "name")).must_equal("example_slug" => "cycle-1", "name" => "Cycle 1")
+      _(json.slice("example_slug", "name")).must_equal({ "example_slug" => "cycle-1", "name" => "Cycle 1" })
       _(json["workouts"].map { it["example_slug"] }).must_equal %w[cycle-1-warmup cycle-1-workout-1 cycle-1-workout-2 cycle-1-cooldown]
       _(json["workouts"].map { it["source"] }.uniq).must_equal ["user"]
 
@@ -77,7 +77,7 @@ describe "example programs API" do
 
       _(last_response.status).must_equal 409
       _(json["error"])
-        .must_equal("code" => "already_imported", "message" => "Cycle 1 is already imported; import it again with copy to add another")
+        .must_equal({ "code" => "already_imported", "message" => "Cycle 1 is already imported; import it again with copy to add another" })
 
       post_json "/api/examples/cycle-1/import", copy: true
       _(last_response.status).must_equal 201
@@ -90,10 +90,10 @@ describe "example programs API" do
 
       get "/api/workouts/#{json["workouts"][1]["id"]}"
       steps = json["blocks"].flat_map { it["steps"] }.index_by { it["exercise"]["slug"] }
-      _(steps["reverse-fly"]["weight"]).must_equal("value" => 12.0, "unit" => "lb")
+      _(steps["reverse-fly"]["weight"]).must_equal({ "value" => 12.0, "unit" => "lb" })
       _(steps["straight-leg-deadlift"]["weight"]).must_be_nil
       _(steps["straight-leg-deadlift"]["equipment_needed"]).must_equal ["kettlebell"]
-      _(steps["goblet-squat"]["weight"]).must_equal("value" => 12.0, "unit" => "lb")
+      _(steps["goblet-squat"]["weight"]).must_equal({ "value" => 12.0, "unit" => "lb" })
     end
 
     it "keeps one user's import apart from another's" do

@@ -30,8 +30,8 @@ describe "routines API" do
       run = plan(title: "Easy run", minutes: 40, effort: "easy")
 
       _(run.slice("title", "sport", "weekdays", "one_off", "starts_on", "ends_on", "minutes", "effort", "created_by"))
-        .must_equal("title" => "Easy run", "sport" => "run", "weekdays" => [3, 6], "one_off" => false, "starts_on" => "2026-11-11",
-                    "ends_on" => nil, "minutes" => 40, "effort" => "easy", "created_by" => "manual")
+        .must_equal({ "title" => "Easy run", "sport" => "run", "weekdays" => [3, 6], "one_off" => false, "starts_on" => "2026-11-11",
+                      "ends_on" => nil, "minutes" => 40, "effort" => "easy", "created_by" => "manual" })
       _(days).must_equal [[run["id"], "2026-11-11", "tentative"], [run["id"], "2026-11-14", "tentative"]]
       _(calendar["routines"].map { it["id"] }).must_equal [run["id"]]
     end
@@ -55,10 +55,10 @@ describe "routines API" do
     it "refuses a start before the sender's today, a routine of nothing, and confirming a weekly one" do
       post_json "/api/routines", sport: "run", weekdays: [3], starts_on: "2026-11-10"
       _(last_response.status).must_equal 422
-      _(json["error"]["fields"]).must_equal("starts_on" => ["must be today or later"])
+      _(json["error"]["fields"]).must_equal({ "starts_on" => ["must be today or later"] })
 
       post_json "/api/routines", weekdays: [3]
-      _(json["error"]["fields"]).must_equal("sport" => ["can't be blank without a workout"])
+      _(json["error"]["fields"]).must_equal({ "sport" => ["can't be blank without a workout"] })
 
       post_json "/api/routines", sport: "run", weekdays: [3], confirmed: true
       _(last_response.status).must_equal 409
@@ -77,7 +77,7 @@ describe "routines API" do
       post_json "/api/routines", workout_id: theirs.id, weekdays: [3]
 
       _(last_response.status).must_equal 422
-      _(json["error"]["fields"]).must_equal("workout_id" => ["is not found"])
+      _(json["error"]["fields"]).must_equal({ "workout_id" => ["is not found"] })
     end
   end
 
@@ -130,7 +130,7 @@ describe "routines API" do
 
       put_json "/api/routines/#{run["id"]}/days/2026-11-11", status: "moved", moved_to: "2026-11-10"
       _(last_response.status).must_equal 422
-      _(json["error"]["fields"]).must_equal("moved_to" => ["must be today or later"])
+      _(json["error"]["fields"]).must_equal({ "moved_to" => ["must be today or later"] })
 
       put_json "/api/routines/#{run["id"]}/days/2026-11-11", status: "moved"
       _(last_response.status).must_equal 400
@@ -171,12 +171,12 @@ describe "routines API" do
       lift = plan(sport: nil, workout_id: strength.id, weekdays: [3])
 
       post_json "/api/activities", date: "2026-11-11", sport: "run", routine_id: theirs.id, routine_date: "2026-11-11"
-      _(json["error"]["fields"]).must_equal("routine_id" => ["is not found"])
+      _(json["error"]["fields"]).must_equal({ "routine_id" => ["is not found"] })
       post_json "/api/activities", date: "2026-11-11", sport: "run", routine_id: lift["id"], routine_date: "2026-11-11"
-      _(json["error"]["fields"]).must_equal("routine_id" => ["is a workout routine; its session fulfils it"])
+      _(json["error"]["fields"]).must_equal({ "routine_id" => ["is a workout routine; its session fulfils it"] })
       run = plan(weekdays: [3])
       post_json "/api/activities", date: "2026-11-11", sport: "run", routine_id: run["id"], routine_date: "2026-11-12"
-      _(json["error"]["fields"]).must_equal("routine_date" => ["is not a day of the routine"])
+      _(json["error"]["fields"]).must_equal({ "routine_date" => ["is not a day of the routine"] })
     end
 
     it "are listed on Today for its date" do

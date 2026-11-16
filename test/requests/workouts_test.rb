@@ -30,7 +30,7 @@ describe "workouts API" do
       get "/api/workouts/#{seeded.id}"
 
       _(json.slice("source", "editable", "warmup", "cooldown", "example_slug")).must_equal(
-        "source" => "user", "editable" => true, "warmup" => nil, "cooldown" => nil, "example_slug" => "cycle-1-workout-1"
+        { "source" => "user", "editable" => true, "warmup" => nil, "cooldown" => nil, "example_slug" => "cycle-1-workout-1" }
       )
       _(json["framed"].map { it["example_slug"] }).must_equal %w[cycle-1-warmup cycle-1-workout-1 cycle-1-cooldown]
     end
@@ -145,7 +145,8 @@ describe "workouts API" do
       ]
       squat, lunge = json["blocks"].first["steps"]
       _(squat.slice("position", "reps", "tempo", "weight", "per_side"))
-        .must_equal("position" => 1, "reps" => 8, "tempo" => "3110", "weight" => { "value" => 20.0, "unit" => "lb" }, "per_side" => false)
+        .must_equal({ "position" => 1, "reps" => 8, "tempo" => "3110", "weight" => { "value" => 20.0, "unit" => "lb" },
+                      "per_side" => false })
       _(lunge.slice("per_side", "weight")).must_equal({ "per_side" => true, "weight" => { "value" => 10.0, "unit" => "lb" } })
       _(json["framed"].map { it["id"] }).must_equal [json["id"]]
       _(json["plan"]["items"]).wont_be_empty
@@ -195,12 +196,12 @@ describe "workouts API" do
 
       _(last_response.status).must_equal 422
       _(json["error"]["fields"]).must_equal(
-        "blocks[0].rounds" => ["must be less than or equal to 20"],
-        "blocks[0].rest_seconds" => ["must be less than or equal to 600"],
-        "blocks[0].steps[0].reps" => ["must be less than or equal to 1000"],
-        "blocks[1].steps[0].duration_seconds" => ["must be less than or equal to 3600"],
-        "blocks[1].steps[0].note" => ["is longer than 500 characters"],
-        "title" => ["is longer than 100 characters"]
+        { "blocks[0].rounds" => ["must be less than or equal to 20"],
+          "blocks[0].rest_seconds" => ["must be less than or equal to 600"],
+          "blocks[0].steps[0].reps" => ["must be less than or equal to 1000"],
+          "blocks[1].steps[0].duration_seconds" => ["must be less than or equal to 3600"],
+          "blocks[1].steps[0].note" => ["is longer than 500 characters"],
+          "title" => ["is longer than 100 characters"] }
       )
       _(Workout.count).must_equal count
     end
@@ -208,16 +209,16 @@ describe "workouts API" do
     it "counts rounds across steps and blocks" do
       step = { exercise_id: exercise("plank").id, duration_seconds: 30 }
       post_json "/api/workouts", new_workout(blocks: Array.new(13) { { label: "B#{it}", steps: [step] } })
-      _(json["error"]["fields"]).must_equal("blocks" => ["can be at most 12 blocks"])
+      _(json["error"]["fields"]).must_equal({ "blocks" => ["can be at most 12 blocks"] })
 
       post_json "/api/workouts", new_workout(blocks: [{ label: "A", steps: Array.new(31) { step } }])
-      _(json["error"]["fields"]).must_equal("blocks[0].steps" => ["can be at most 30 steps"])
+      _(json["error"]["fields"]).must_equal({ "blocks[0].steps" => ["can be at most 30 steps"] })
 
       blocks = Array.new(2) { { label: "B#{it}", rounds: 20, steps: Array.new(8) { step } } }
       post_json "/api/workouts", new_workout(blocks:)
       _(last_response.status).must_equal 422
       _(json["error"]["fields"])
-        .must_equal("blocks" => ["add up to 320 steps across their rounds and sides; a workout can have at most 300"])
+        .must_equal({ "blocks" => ["add up to 320 steps across their rounds and sides; a workout can have at most 300"] })
 
       blocks[1][:rounds] = 15
       post_json "/api/workouts", new_workout(blocks:)
@@ -227,7 +228,7 @@ describe "workouts API" do
       sided = { exercise_id: exercise("half-kneel-quad-stretch").id, duration_seconds: 30 }
       post_json "/api/workouts", new_workout(blocks: [{ label: "A", rounds: 20, steps: Array.new(8) { sided } }])
       _(json["error"]["fields"])
-        .must_equal("blocks" => ["add up to 320 steps across their rounds and sides; a workout can have at most 300"])
+        .must_equal({ "blocks" => ["add up to 320 steps across their rounds and sides; a workout can have at most 300"] })
     end
 
     it "picks a warm-up and cool-down" do

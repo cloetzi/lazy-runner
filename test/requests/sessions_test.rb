@@ -826,7 +826,7 @@ describe "sessions API" do
 
       _(last_response.status).must_equal 200
       _(json["completion"].slice("rpe", "feedback", "note", "ended_early", "finished_at")).must_equal(
-        "rpe" => 7, "feedback" => "right", "note" => "Knee felt fine", "ended_early" => true, "finished_at" => finished_at
+        { "rpe" => 7, "feedback" => "right", "note" => "Knee felt fine", "ended_early" => true, "finished_at" => finished_at }
       )
     end
 

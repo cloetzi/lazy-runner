@@ -287,10 +287,10 @@ describe "MCP server" do
       inventory("kettlebell").update(weights: [35])
       program = call_tool("import_example", example: "home-strength", copy: true)
 
-      _(program.slice("example_slug", "name")).must_equal("example_slug" => "home-strength", "name" => "Home strength (copy)")
+      _(program.slice("example_slug", "name")).must_equal({ "example_slug" => "home-strength", "name" => "Home strength (copy)" })
       _(program["workouts"].map { it["source"] }.uniq).must_equal ["llm"]
       squat = Workout.find!(program["workouts"].first["id"]).blocks.flat_map(&:steps).find { it.exercise.slug == "goblet-squat" }
-      _(squat.weight).must_equal(value: 35.0, unit: "lb")
+      _(squat.weight).must_equal({ value: 35.0, unit: "lb" })
       _(Program.with_pk(program["id"]).source).must_equal "llm"
     end
 
@@ -643,8 +643,8 @@ describe "MCP server" do
 
         change = call_tool("list_plan_changes")["changes"].first
         _(change.slice("item_kind", "action", "workout_id", "title", "by", "agent_name", "reason")).must_equal(
-          "item_kind" => "workout", "action" => "changed", "workout_id" => theirs.id, "title" => theirs.title,
-          "by" => "llm", "agent_name" => "Trainer agent", "reason" => "The last two weeks felt easy"
+          { "item_kind" => "workout", "action" => "changed", "workout_id" => theirs.id, "title" => theirs.title,
+            "by" => "llm", "agent_name" => "Trainer agent", "reason" => "The last two weeks felt easy" }
         )
         _(change["summary"]).must_equal "#{sent.first["rounds"]} rounds in block #{sent.first["label"]} (was #{sent.first["rounds"] - 1})"
         _(change.key?("was")).must_equal false
@@ -765,8 +765,8 @@ describe "MCP server" do
 
         change = call_tool("list_plan_changes")["changes"].first
         _(change.slice("item_kind", "exercise_id", "title", "by", "reason", "was", "now")).must_equal(
-          "item_kind" => "weight", "exercise_id" => squat.id, "title" => squat.name, "by" => "llm", "reason" => "You asked for heavier",
-          "was" => { "value" => nil, "unit" => nil }, "now" => { "value" => 25.0, "unit" => "lb" }
+          { "item_kind" => "weight", "exercise_id" => squat.id, "title" => squat.name, "by" => "llm", "reason" => "You asked for heavier",
+            "was" => { "value" => nil, "unit" => nil }, "now" => { "value" => 25.0, "unit" => "lb" } }
         )
       end
 
@@ -989,12 +989,12 @@ describe "MCP server" do
     it "logs a backfill as the agent's, converting distances to metres" do
       logged = call_tool("log_activities", activities: [garmin_run, { date: "2026-11-01", sport: "ride", distance: 21_500.4 }])
 
-      _(logged.slice("created", "updated")).must_equal("created" => 2, "updated" => 0)
+      _(logged.slice("created", "updated")).must_equal({ "created" => 2, "updated" => 0 })
       _(logged["activities"].map { it["outcome"] }).must_equal %w[created created]
       run = Activity.with_pk(logged["activities"].first["id"])
       _(run.values.slice(:sport, :source, :external_id, :distance_m, :climb_m, :moving_seconds, :avg_hr, :created_by)).must_equal(
-        sport: "trail running", source: "garmin", external_id: "18234567890", distance_m: 8047, climb_m: 250,
-        moving_seconds: 2950, avg_hr: 149, created_by: "llm"
+        { sport: "trail running", source: "garmin", external_id: "18234567890", distance_m: 8047, climb_m: 250,
+          moving_seconds: 2950, avg_hr: 149, created_by: "llm" }
       )
       _(run.started_at).must_equal Time.utc(2026, 11, 3, 6, 12)
       _(Activity.with_pk(logged["activities"].last["id"]).distance_m).must_equal 21_500
@@ -1005,7 +1005,7 @@ describe "MCP server" do
 
       logged = call_tool("log_activities", activities: [garmin_run, { date: "2026-11-01", sport: "ride", distance: 21_500 }])
 
-      _(logged.slice("created", "updated", "kept")).must_equal("created" => 1, "updated" => 0, "kept" => 1)
+      _(logged.slice("created", "updated", "kept")).must_equal({ "created" => 1, "updated" => 0, "kept" => 1 })
       _(logged["activities"].map { it["outcome"] }).must_equal %w[kept created]
       _(mine.refresh.values.values_at(:title, :created_by)).must_equal %w[Mine manual]
     end
@@ -1018,11 +1018,11 @@ describe "MCP server" do
                         activities: [{ date: "2026-11-03", sport: "trail run", source: "garmin", external_id: "18234567890",
                                        distance: "8.1 km" }])
 
-      _(again.slice("created", "updated")).must_equal("created" => 0, "updated" => 1)
+      _(again.slice("created", "updated")).must_equal({ "created" => 0, "updated" => 1 })
       _(again["activities"].first["id"]).must_equal first["id"]
       run = Activity.with_pk(first["id"])
       _(run.values.slice(:distance_m, :climb_m, :title, :rpe, :note))
-        .must_equal(distance_m: 8100, climb_m: 250, title: "Morning trail", rpe: 6, note: "Heavy legs")
+        .must_equal({ distance_m: 8100, climb_m: 250, title: "Morning trail", rpe: 6, note: "Heavy legs" })
       _(Activity.count).must_equal 1
     end
 
@@ -1050,7 +1050,7 @@ describe "MCP server" do
     it "counts a pair sent twice once, a float id matching its integer" do
       logged = call_tool("log_activities", activities: [garmin_run, garmin_run.merge(external_id: 18_234_567_890.0, title: "Trail loop")])
 
-      _(logged.slice("created", "updated")).must_equal("created" => 1, "updated" => 0)
+      _(logged.slice("created", "updated")).must_equal({ "created" => 1, "updated" => 0 })
       _(Activity.select_map(%i[external_id title])).must_equal [["18234567890", "Trail loop"]]
     end
 
@@ -1077,13 +1077,14 @@ describe "MCP server" do
       listed = call_tool("list_activities")
 
       _(listed.slice("today", "from", "to", "distance_unit"))
-        .must_equal("today" => "2026-11-04", "from" => "2026-10-08", "to" => "2026-11-04", "distance_unit" => "mi")
+        .must_equal({ "today" => "2026-11-04", "from" => "2026-10-08", "to" => "2026-11-04", "distance_unit" => "mi" })
       _(listed["activities"].map { it.slice("date", "sport", "created_by") }).must_equal [
         { "date" => "2026-11-02", "sport" => "run", "created_by" => "manual" },
         { "date" => "2026-11-03", "sport" => "trail running", "created_by" => "llm" }
       ]
       _(listed["activities"].first)
-        .must_equal("id" => mine.id, "date" => "2026-11-02", "sport" => "run", "distance_m" => 5000, "rpe" => 5, "created_by" => "manual")
+        .must_equal({ "id" => mine.id, "date" => "2026-11-02", "sport" => "run", "distance_m" => 5000, "rpe" => 5,
+                      "created_by" => "manual" })
       _(call_tool("list_activities", sport: "Trail Running", from: "2026-11-01", to: "2026-11-04")["activities"].size).must_equal 1
       _(_ { call_tool("list_activities", from: "yesterday") }.must_raise(McpToolError).message).must_include "YYYY-MM-DD"
     end
@@ -1100,7 +1101,7 @@ describe "MCP server" do
 
       routine = Routine.with_pk(planned["routine"]["id"])
       _(routine.values.slice(:sport, :distance_m, :created_by, :starts_on))
-        .must_equal(sport: "run", distance_m: 8047, created_by: "llm", starts_on: Date.new(2026, 11, 11))
+        .must_equal({ sport: "run", distance_m: 8047, created_by: "llm", starts_on: Date.new(2026, 11, 11) })
       _(planned["days"].first(2).map { it.values_at("on", "state") }).must_equal [%w[2026-11-11 tentative], %w[2026-11-14 tentative]]
     end
 
@@ -1120,7 +1121,7 @@ describe "MCP server" do
       _(listed["routines"].map { it.values_at("id", "created_by") }).must_equal [[run.id, "manual"]]
       _(listed["days"].map { it.values_at("on", "state") })
         .must_equal [%w[2026-11-02 missed], %w[2026-11-04 missed], %w[2026-11-09 done], %w[2026-11-11 tentative]]
-      _(listed["counts"]).must_equal("missed" => 2, "done" => 1, "tentative" => 1)
+      _(listed["counts"]).must_equal({ "missed" => 2, "done" => 1, "tentative" => 1 })
     end
 
     it "looks a week back and three weeks ahead without dates, so a one-off planned for next week shows" do
@@ -1168,7 +1169,7 @@ describe "MCP server" do
       planned = call_tool("plan_routine", sport: "ride", weekdays: [6])["routine"]
       changed = call_tool("update_routine", routine_id: planned["id"], weekdays: [7], minutes: 90)
       _(changed["routine"].values_at("id", "weekdays", "minutes")).must_equal [planned["id"], [7], 90]
-      _(call_tool("end_routine", routine_id: planned["id"])).must_equal("id" => planned["id"], "outcome" => "deleted")
+      _(call_tool("end_routine", routine_id: planned["id"])).must_equal({ "id" => planned["id"], "outcome" => "deleted" })
     end
 
     it "turns its workout routine into a run" do
@@ -1220,11 +1221,11 @@ describe "MCP server" do
       _(board["goals"]).must_equal [{ "id" => goal.id, "title" => "Ski season with quiet knees", "target_date" => "2026-12-15",
                                       "status" => "active", "position" => 1 }]
       _(board["dismissed"].map { it["id"] }).must_equal [dismissed.id]
-      _(board["status"].slice("body", "author_kind")).must_equal("body" => "Week 3 of 6", "author_kind" => "user")
+      _(board["status"].slice("body", "author_kind")).must_equal({ "body" => "Week 3 of 6", "author_kind" => "user" })
       _(board["focus"]).must_be_nil
       _(board["concerns"].map { it["id"] }).must_equal [concern.id]
-      _(board.slice("today", "weekday")).must_equal("today" => "2026-11-04", "weekday" => "Wednesday")
-      _(board["week"].slice("from", "to")).must_equal("from" => "2026-11-02", "to" => "2026-11-08")
+      _(board.slice("today", "weekday")).must_equal({ "today" => "2026-11-04", "weekday" => "Wednesday" })
+      _(board["week"].slice("from", "to")).must_equal({ "from" => "2026-11-02", "to" => "2026-11-08" })
       _(board["week"]["activities"].map { it["id"] }).must_equal [run.id]
     end
 
@@ -1249,8 +1250,8 @@ describe "MCP server" do
       written = call_tool("write_coach_note", kind: "status", body: "Base block, week 3", author_name: "Someone else", activity_id: run.id)
 
       _(written.slice("kind", "author_kind", "author_name"))
-        .must_equal("kind" => "status", "author_kind" => "llm", "author_name" => "Trainer agent")
-      _(written["about"]).must_equal("type" => "activity", "id" => run.id, "label" => "Run")
+        .must_equal({ "kind" => "status", "author_kind" => "llm", "author_name" => "Trainer agent" })
+      _(written["about"]).must_equal({ "type" => "activity", "id" => run.id, "label" => "Run" })
       _(_ { call_tool("write_coach_note", kind: "concern", body: "Hmm") }.must_raise(McpToolError).message)
         .must_equal "Title can't be blank"
 
@@ -1264,7 +1265,7 @@ describe "MCP server" do
       theirs = person_note("concern", "Sore", title: "Left knee")
 
       resolved = call_tool("resolve_concern", note_id: mine["id"], resolution: "Back on track")
-      _(resolved.slice("resolution", "resolved")).must_equal("resolution" => "Back on track", "resolved" => "2026-11-04")
+      _(resolved.slice("resolution", "resolved")).must_equal({ "resolution" => "Back on track", "resolved" => "2026-11-04" })
 
       _(_ { call_tool("resolve_concern", note_id: theirs.id, resolution: "Fine") }.must_raise(McpToolError).message)
         .must_include "the person's to resolve"
@@ -1305,7 +1306,7 @@ describe "MCP server" do
       proposal = call_tool("propose_goal", title: "Half marathon under 1:50", reason: "Your long runs got faster", replaces: goal.id)
 
       _(proposal.slice("status", "reason", "replaces"))
-        .must_equal("status" => "proposed", "reason" => "Your long runs got faster", "replaces" => goal.id)
+        .must_equal({ "status" => "proposed", "reason" => "Your long runs got faster", "replaces" => goal.id })
       _(Goal.active.select_map(:title)).must_equal ["Half marathon under 1:55"]
       _(Goal.with_pk(proposal["id"]).created_by).must_equal "llm"
 
@@ -1373,13 +1374,13 @@ describe "MCP server" do
 
       all = call_tool("list_coach_notes")
       _(all["notes"].map { it["id"] }).must_equal [status["id"], theirs.id, mine["id"]]
-      _(all.slice("count", "today")).must_equal("count" => 3, "today" => "2026-11-04")
+      _(all.slice("count", "today")).must_equal({ "count" => 3, "today" => "2026-11-04" })
       _(call_tool("list_coach_notes", author: "llm")["notes"].map { it["id"] }).must_equal [status["id"], mine["id"]]
       _(call_tool("list_coach_notes", kind: "status")["notes"].map { it["id"] }).must_equal [status["id"]]
       _(call_tool("list_coach_notes", from: "2026-11-05", to: "2026-11-30")["notes"].map { it["id"] }).must_equal [mine["id"]]
 
       page = call_tool("list_coach_notes", limit: 2)
-      _(page.slice("count", "before")).must_equal("count" => 3, "before" => theirs.id)
+      _(page.slice("count", "before")).must_equal({ "count" => 3, "before" => theirs.id })
       rest = call_tool("list_coach_notes", limit: 2, before: page["before"])
       _(rest["notes"].map { it["id"] }).must_equal [mine["id"]]
       _(rest["before"]).must_be_nil
@@ -1394,7 +1395,7 @@ describe "MCP server" do
       run, = Activity.log!({ date: "2026-11-03", sport: "run" })
 
       changed = call_tool("update_coach_note", note_id: mine["id"], body: "Run 8 km Sunday", activity_id: run.id, date: nil)
-      _(changed.slice("id", "body", "date")).must_equal("id" => mine["id"], "body" => "Run 8 km Sunday")
+      _(changed.slice("id", "body", "date")).must_equal({ "id" => mine["id"], "body" => "Run 8 km Sunday" })
       _(changed["about"]["id"]).must_equal run.id
 
       _(_ { call_tool("update_coach_note", note_id: theirs.id, body: "Knee sore") }.must_raise(McpToolError).message)
@@ -1424,7 +1425,7 @@ describe "MCP server" do
       _(CoachNote.where(id: notes).count).must_equal 3
 
       _(call_tool("delete_coach_notes", note_ids: notes.reverse + [newest["id"]]))
-        .must_equal("deleted" => notes + [newest["id"]], "count" => 4)
+        .must_equal({ "deleted" => notes + [newest["id"]], "count" => 4 })
       _(CoachNote.select_order_map(:id)).must_equal [theirs.id, status["id"], older.id]
       _(call_tool("get_coach_board")["status"]["body"]).must_equal "Week 2"
     end

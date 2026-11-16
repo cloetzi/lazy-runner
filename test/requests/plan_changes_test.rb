@@ -57,7 +57,7 @@ describe "plan changes API" do
     it "refuses an unknown author" do
       get "/api/plan_changes", by: "coach"
       _(last_response.status).must_equal 400
-      _(json["error"]["fields"]).must_equal("by" => ["must be manual or llm"])
+      _(json["error"]["fields"]).must_equal({ "by" => ["must be manual or llm"] })
     end
   end
 

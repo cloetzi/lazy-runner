@@ -12,8 +12,8 @@ describe "equipment API" do
       _(last_response.status).must_equal 200
       _(json.map { it["slug"] }).must_equal %w[mat bench stability_ball weight dumbbell kettlebell hangboard step]
       _(json.find { it["slug"] == "dumbbell" }).must_equal(
-        "id" => equipment("dumbbell").id, "slug" => "dumbbell", "name" => "Dumbbells",
-        "owned" => true, "weights" => [10, 20], "unit" => "lb", "any_weight" => false
+        { "id" => equipment("dumbbell").id, "slug" => "dumbbell", "name" => "Dumbbells",
+          "owned" => true, "weights" => [10, 20], "unit" => "lb", "any_weight" => false }
       )
     end
 
@@ -34,19 +34,19 @@ describe "equipment API" do
       equipment("step").update(retired: true)
       get "/api/equipment"
 
-      _(json.find { it["slug"] == "hangboard" }.slice("owned", "weights")).must_equal("owned" => false, "weights" => [])
+      _(json.find { it["slug"] == "hangboard" }.slice("owned", "weights")).must_equal({ "owned" => false, "weights" => [] })
       _(json.map { it["slug"] }).wont_include "step"
     end
 
     it "lists the generic weight as owned with the gear in set weights, with all their weights" do
       get "/api/equipment"
       _(json.find { it["slug"] == "weight" }.slice("owned", "weights", "unit", "any_weight")).must_equal(
-        "owned" => true, "weights" => [10, 20, 40], "unit" => "lb", "any_weight" => true
+        { "owned" => true, "weights" => [10, 20, 40], "unit" => "lb", "any_weight" => true }
       )
 
       Equipment.weighted.all.each { inventory(it.slug).update(owned: false) }
       get "/api/equipment"
-      _(json.find { it["slug"] == "weight" }.slice("owned", "weights")).must_equal("owned" => false, "weights" => [])
+      _(json.find { it["slug"] == "weight" }.slice("owned", "weights")).must_equal({ "owned" => false, "weights" => [] })
     end
   end
 
@@ -117,12 +117,12 @@ describe "equipment API" do
       patch_json "/api/equipment/#{equipment("kettlebell").id}", unit: "kg", weights: [16, 24]
 
       _(last_response.status).must_equal 200
-      _(json.slice("weights", "unit")).must_equal("weights" => [16, 24], "unit" => "kg")
+      _(json.slice("weights", "unit")).must_equal({ "weights" => [16, 24], "unit" => "kg" })
       _(equipment("kettlebell").unit).must_equal "lb"
       _(Current.set(user: someone) { inventory("kettlebell").unit }).must_equal "lb"
 
       patch_json "/api/equipment/#{equipment("kettlebell").id}", unit: "lb"
-      _(json.slice("weights", "unit")).must_equal("weights" => [16, 24], "unit" => "lb")
+      _(json.slice("weights", "unit")).must_equal({ "weights" => [16, 24], "unit" => "lb" })
     end
 
     it "relabels the weights that were owned ones of an item when its unit changes" do

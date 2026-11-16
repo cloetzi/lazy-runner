@@ -39,7 +39,9 @@ then `BASE_URL=http://localhost:3999 SERVER_LOG=/tmp/e2e.log npm run test:e2e`.
 
 - **Tests use Minitest spec style with expectations**: `describe`/`it` and
   `_(value).must_equal expected`, `_ { ... }.must_raise Error`. Never `assert_*`,
-  never RSpec.
+  never RSpec. An expected hash goes in braces,
+  `must_equal({ "a" => 1 })`: without them Minitest 6.1 takes it for
+  keywords and compares with nil.
 - Versions have one source of truth each: Ruby in `.ruby-version` (read by the
   Gemfile, CI and the Docker build arg), Node in `.node-version`. Never repeat
   a version number elsewhere.

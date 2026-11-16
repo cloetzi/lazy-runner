@@ -567,8 +567,8 @@ describe Oidc do
     found = settings("OIDC_ISSUER" => "https://id.example.test", "OIDC_CLIENT_ID" => "app", "OIDC_CLIENT_SECRET" => "s",
                      "OIDC_REDIRECT_URI" => CALLBACK)
     _(found.to_h).must_equal(
-      issuer: "https://id.example.test", client_id: "app", client_secret: "s", name: "single sign-on",
-      auto_signup: false, redirect_uri: CALLBACK, auth_method: :basic, signing_alg: "RS256"
+      { issuer: "https://id.example.test", client_id: "app", client_secret: "s", name: "single sign-on",
+        auto_signup: false, redirect_uri: CALLBACK, auth_method: :basic, signing_alg: "RS256" }
     )
     found = settings(
       "OIDC_ISSUER" => "https://id.example.test", "OIDC_CLIENT_ID" => "app", "OIDC_CLIENT_SECRET" => "s", "OIDC_REDIRECT_URI" => CALLBACK,

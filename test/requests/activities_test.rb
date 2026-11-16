@@ -18,8 +18,8 @@ describe "activities API" do
 
       _(last_response.status).must_equal 201
       _(json.slice("date", "sport", "title", "moving_seconds", "distance_m", "climb_m", "rpe", "created_by"))
-        .must_equal("date" => "2026-11-01", "sport" => "run", "title" => "Easy loop", "moving_seconds" => 1800,
-                    "distance_m" => 5000, "climb_m" => 40, "rpe" => nil, "created_by" => "manual")
+        .must_equal({ "date" => "2026-11-01", "sport" => "run", "title" => "Easy loop", "moving_seconds" => 1800,
+                      "distance_m" => 5000, "climb_m" => 40, "rpe" => nil, "created_by" => "manual" })
       _(Activity.count).must_equal 1
     end
 
@@ -33,7 +33,7 @@ describe "activities API" do
       _(last_response.status).must_equal 200
       _(json["id"]).must_equal id
       _(json.slice("distance_m", "rpe", "note", "title"))
-        .must_equal("distance_m" => 5050, "rpe" => 6, "note" => "windy", "title" => "Easy loop")
+        .must_equal({ "distance_m" => 5050, "rpe" => 6, "note" => "windy", "title" => "Easy loop" })
     end
 
     it "answers a client_ref it has seen with that activity again" do
@@ -50,7 +50,7 @@ describe "activities API" do
     it "refuses a day after the sender's today, counted from their own date" do
       post_json "/api/activities", **loop_run, date: "2026-11-03"
       _(last_response.status).must_equal 422
-      _(json["error"]["fields"]).must_equal("date" => ["must not be after today"])
+      _(json["error"]["fields"]).must_equal({ "date" => ["must not be after today"] })
 
       post_json "/api/activities", **loop_run, date: "2026-11-03", today: "2026-11-03"
       _(last_response.status).must_equal 201
@@ -61,7 +61,7 @@ describe "activities API" do
 
       _(last_response.status).must_equal 422
       _(json["error"]["fields"]).must_equal(
-        "date" => ["is invalid"], "sport" => ["can't be blank"], "rpe" => ["must be in 1..10"], "distance_m" => ["must be an integer"]
+        { "date" => ["is invalid"], "sport" => ["can't be blank"], "rpe" => ["must be in 1..10"], "distance_m" => ["must be an integer"] }
       )
     end
 
@@ -78,7 +78,7 @@ describe "activities API" do
         post_json "/api/activities", activities: [loop_run, loop_run.merge(climb_m: -3)]
 
         _(last_response.status).must_equal 422
-        _(json["error"]["fields"]).must_equal("activities[1].climb_m" => ["must be greater than or equal to 0"])
+        _(json["error"]["fields"]).must_equal({ "activities[1].climb_m" => ["must be greater than or equal to 0"] })
         _(json["error"]["message"]).must_equal "activities[1]: Climb m must be greater than or equal to 0"
         _(Activity.count).must_equal 0
       end
@@ -87,14 +87,14 @@ describe "activities API" do
         post_json "/api/activities", activities: Array.new(501) { loop_run }
 
         _(last_response.status).must_equal 400
-        _(json["error"]["fields"]).must_equal("activities" => ["must hold at most 500 activities"])
+        _(json["error"]["fields"]).must_equal({ "activities" => ["must hold at most 500 activities"] })
       end
 
       it "must be a list" do
         post_json "/api/activities", activities: loop_run
 
         _(last_response.status).must_equal 400
-        _(json["error"]["fields"]).must_equal("activities" => ["must be a list"])
+        _(json["error"]["fields"]).must_equal({ "activities" => ["must be a list"] })
       end
     end
   end
@@ -127,7 +127,7 @@ describe "activities API" do
 
       _(last_response.status).must_equal 200
       _(json.slice("note", "rpe", "title", "source", "external_id"))
-        .must_equal("note" => "hills", "rpe" => nil, "title" => "Run", "source" => "garmin", "external_id" => "1")
+        .must_equal({ "note" => "hills", "rpe" => nil, "title" => "Run", "source" => "garmin", "external_id" => "1" })
     end
 
     it "moves an activity to another day up to the sender's today" do

@@ -76,8 +76,8 @@ describe PlanChange do
       _([latest.action, latest.session_id, latest.from_date, latest.reason, latest.title])
         .must_equal ["removed", nil, d("2026-11-12"), "Too close to the long run", strength.title]
       _(latest.was).must_equal(
-        "workout_id" => strength.id, "date" => "2026-11-12", "position" => 1, "note" => "Legs", "parts" => %w[workout],
-        "created_by" => "llm", "agent_name" => "Coach agent", "routine_id" => nil, "routine_date" => nil
+        { "workout_id" => strength.id, "date" => "2026-11-12", "position" => 1, "note" => "Legs", "parts" => %w[workout],
+          "created_by" => "llm", "agent_name" => "Coach agent", "routine_id" => nil, "routine_date" => nil }
       )
     end
 
@@ -120,9 +120,9 @@ describe PlanChange do
       _(changed.was).must_equal({ "minutes" => 40, "note" => nil })
       _(changed.now).must_equal({ "minutes" => 50, "note" => "Easy" })
       _(ended.was).must_equal(
-        "title" => nil, "sport" => "run", "workout_id" => nil, "weekdays" => [3], "starts_on" => "2026-11-11", "ends_on" => nil,
-        "minutes" => 50, "distance_m" => nil, "effort" => nil, "note" => "Easy", "created_by" => "manual", "agent_name" => nil,
-        "id" => run.id
+        { "title" => nil, "sport" => "run", "workout_id" => nil, "weekdays" => [3], "starts_on" => "2026-11-11", "ends_on" => nil,
+          "minutes" => 50, "distance_m" => nil, "effort" => nil, "note" => "Easy", "created_by" => "manual", "agent_name" => nil,
+          "id" => run.id }
       )
     end
 

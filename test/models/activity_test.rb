@@ -58,12 +58,12 @@ describe Activity do
     it "refuses a start that isn't ISO 8601" do
       error = _ { log(started_at: "this morning") }.must_raise Sequel::ValidationFailed
 
-      _(error.errors.to_h).must_equal(started_at: ["must be a time as ISO 8601"])
+      _(error.errors.to_h).must_equal({ started_at: ["must be a time as ISO 8601"] })
     end
 
     it "refuses a day after the sender's today, and takes today itself" do
       error = _ { log(date: "2026-11-03") }.must_raise Sequel::ValidationFailed
-      _(error.errors.to_h).must_equal(date: ["must not be after today"])
+      _(error.errors.to_h).must_equal({ date: ["must not be after today"] })
 
       _(log(date: "2026-11-02").first.date).must_equal today
     end
@@ -79,10 +79,10 @@ describe Activity do
       error = _ { log(distance_m: -1, moving_seconds: 1.5, avg_hr: "fast", rpe: 11) }.must_raise Sequel::ValidationFailed
 
       _(error.errors.to_h).must_equal(
-        distance_m: ["must be greater than or equal to 0"],
-        moving_seconds: ["must be an integer"],
-        avg_hr: ["is not a number"],
-        rpe: ["must be in 1..10"]
+        { distance_m: ["must be greater than or equal to 0"],
+          moving_seconds: ["must be an integer"],
+          avg_hr: ["is not a number"],
+          rpe: ["must be in 1..10"] }
       )
     end
 
@@ -90,9 +90,9 @@ describe Activity do
       error = _ { Activity.log!({ external_id: "9" }, today:) }.must_raise Sequel::ValidationFailed
 
       _(error.errors.to_h).must_equal(
-        date: ["can't be blank"],
-        sport: ["can't be blank"],
-        source: ["can't be blank when external_id is given"]
+        { date: ["can't be blank"],
+          sport: ["can't be blank"],
+          source: ["can't be blank when external_id is given"] }
       )
     end
   end
@@ -223,7 +223,7 @@ describe Activity do
         Activity.log_all!([{ date: "2026-11-01", sport: "run" }, { date: "2026-11-01", sport: "run", distance_m: -5 }], today:)
       end.must_raise Activity::EntryInvalid
 
-      _(error.fields).must_equal("activities[1].distance_m" => ["must be greater than or equal to 0"])
+      _(error.fields).must_equal({ "activities[1].distance_m" => ["must be greater than or equal to 0"] })
       _(Activity.count).must_equal 0
     end
 
@@ -246,13 +246,13 @@ describe Activity do
     it "refuses a list or object as an id rather than keeping it as text" do
       error = _ { log(source: "garmin", external_id: { id: 5 }) }.must_raise Sequel::ValidationFailed
 
-      _(error.errors.to_h).must_equal(external_id: ["is invalid"])
+      _(error.errors.to_h).must_equal({ external_id: ["is invalid"] })
     end
 
     it "names an entry that isn't an object" do
       error = _ { Activity.log_all!([{ date: "2026-11-01", sport: "run" }, "run"], today:) }.must_raise Activity::EntryInvalid
 
-      _(error.fields).must_equal("activities[1]" => ["must be an object"])
+      _(error.fields).must_equal({ "activities[1]" => ["must be an object"] })
     end
   end
 

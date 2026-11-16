@@ -17,7 +17,7 @@ describe "coach API" do
       post_json "/api/goals", title: "Ski season with quiet knees", target_date: "2026-12-15", why: "Sore knees on descents"
       _(last_response.status).must_equal 201
       _(json.slice("title", "status", "position", "created_by"))
-        .must_equal("title" => "Ski season with quiet knees", "status" => "active", "position" => 1, "created_by" => "user")
+        .must_equal({ "title" => "Ski season with quiet knees", "status" => "active", "position" => 1, "created_by" => "user" })
       post_json "/api/goals", title: "Half marathon under 1:50"
       post_json "/api/goals", title: "Core twice a week", position: 1
       Goal.propose!(title: "Run a 10k", reason: "You run more than you lift")
@@ -35,11 +35,11 @@ describe "coach API" do
       second = Goal.add!(title: "Two")
 
       patch_json "/api/goals/#{second.id}", position: 1, why: "Because"
-      _(json.slice("position", "why")).must_equal("position" => 1, "why" => "Because")
+      _(json.slice("position", "why")).must_equal({ "position" => 1, "why" => "Because" })
       _(Goal.active.in_order.select_map(:id)).must_equal [second.id, first.id]
 
       patch_json "/api/goals/#{second.id}", status: "achieved"
-      _(json.slice("status", "position")).must_equal("status" => "achieved", "position" => nil)
+      _(json.slice("status", "position")).must_equal({ "status" => "achieved", "position" => nil })
       _(json["decided_at"]).wont_be_nil
       _(first.refresh.position).must_equal 1
 
@@ -52,10 +52,10 @@ describe "coach API" do
 
       patch_json "/api/goals/#{goal.id}", status: "proposed"
       _(last_response.status).must_equal 422
-      _(json["error"]["fields"]).must_equal("status" => ["must be one of active, achieved, dropped"])
+      _(json["error"]["fields"]).must_equal({ "status" => ["must be one of active, achieved, dropped"] })
 
       post_json "/api/goals", title: " "
-      _(json["error"]["fields"]).must_equal("title" => ["can't be blank"])
+      _(json["error"]["fields"]).must_equal({ "title" => ["can't be blank"] })
     end
 
     it "accepts a proposal in the place of the goal it replaces" do
@@ -66,7 +66,7 @@ describe "coach API" do
 
       post_json "/api/goals/#{proposal.id}/accept"
 
-      _(json.slice("status", "position")).must_equal("status" => "active", "position" => 2)
+      _(json.slice("status", "position")).must_equal({ "status" => "active", "position" => 2 })
       _(old.refresh.status).must_equal "dropped"
       _(Goal.active.in_order.select_map(:title)).must_equal ["Core", "Half marathon under 1:50", "Ski"]
 
@@ -134,20 +134,20 @@ describe "coach API" do
       post_json "/api/coach/notes", kind: "concern", title: "Tight calf", body: "After run club", date: "2026-11-03"
       _(last_response.status).must_equal 201
       _(json.slice("kind", "author_kind", "author_name", "date", "resolved_at")).must_equal(
-        "kind" => "concern", "author_kind" => "user", "author_name" => nil, "date" => "2026-11-03", "resolved_at" => nil
+        { "kind" => "concern", "author_kind" => "user", "author_name" => nil, "date" => "2026-11-03", "resolved_at" => nil }
       )
 
       post_json "/api/coach/notes", kind: "note", body: "Good pacing", author_kind: "human", author_name: "Mara"
-      _(json.slice("author_kind", "author_name")).must_equal("author_kind" => "human", "author_name" => "Mara")
+      _(json.slice("author_kind", "author_name")).must_equal({ "author_kind" => "human", "author_name" => "Mara" })
 
       post_json "/api/coach/notes", kind: "note", body: "Who?", author_kind: "human"
-      _(json["error"]["fields"]).must_equal("author_name" => ["can't be blank"])
+      _(json["error"]["fields"]).must_equal({ "author_name" => ["can't be blank"] })
     end
 
     it "needs a title for a concern" do
       post_json "/api/coach/notes", kind: "concern", body: "Knee"
 
-      _(json["error"]["fields"]).must_equal("title" => ["can't be blank"])
+      _(json["error"]["fields"]).must_equal({ "title" => ["can't be blank"] })
     end
 
     it "keeps an agent's note as it wrote it, but lets it be resolved or deleted" do
@@ -173,7 +173,7 @@ describe "coach API" do
       _(last_response.status).must_equal 201
       reply = json
       _(reply.slice("reply_to_id", "author_kind", "date", "session_id", "replies")).must_equal(
-        "reply_to_id" => asked.id, "author_kind" => "user", "date" => nil, "session_id" => nil, "replies" => []
+        { "reply_to_id" => asked.id, "author_kind" => "user", "date" => nil, "session_id" => nil, "replies" => [] }
       )
 
       get "/api/coach"
@@ -232,15 +232,15 @@ describe "coach API" do
       session = session_on(Date.new(2026, 11, 2))
 
       post_json "/api/coach/notes", kind: "note", body: "Felt easy", activity_id: activity.id
-      _(json["about"]).must_equal("type" => "activity", "id" => activity.id, "date" => "2026-11-03", "label" => "Run club")
+      _(json["about"]).must_equal({ "type" => "activity", "id" => activity.id, "date" => "2026-11-03", "label" => "Run club" })
       post_json "/api/coach/notes", kind: "note", body: "Heavy legs", session_id: session.id
-      _(json["about"].slice("type", "label")).must_equal("type" => "session", "label" => session.workout.title)
+      _(json["about"].slice("type", "label")).must_equal({ "type" => "session", "label" => session.workout.title })
 
       someone = create_user("someone")
       theirs = Current.set(user: someone) { Activity.log!({ date: "2026-11-03", sport: "ride" }).first }
       post_json "/api/coach/notes", kind: "note", body: "Sneaky", activity_id: theirs.id
       _(last_response.status).must_equal 422
-      _(json["error"]["fields"]).must_equal("activity_id" => ["is not found"])
+      _(json["error"]["fields"]).must_equal({ "activity_id" => ["is not found"] })
     end
 
     it "keeps a note when the activity it was about is deleted" do
@@ -261,7 +261,7 @@ describe "coach API" do
       _(json["resolution"]).must_equal "Gone after a week"
 
       patch_json "/api/coach/notes/#{concern.id}", resolved: false
-      _(json.slice("resolved_at", "resolution")).must_equal("resolved_at" => nil, "resolution" => nil)
+      _(json.slice("resolved_at", "resolution")).must_equal({ "resolved_at" => nil, "resolution" => nil })
 
       patch_json "/api/coach/notes/#{note.id}", resolved: true
       _(last_response.status).must_equal 409
@@ -274,7 +274,7 @@ describe "coach API" do
 
       travel_to Time.utc(2026, 11, 6, 12)
       patch_json "/api/coach/notes/#{concern.id}", resolved: true
-      _(json.slice("resolved_at", "resolution")).must_equal("resolved_at" => resolved_at, "resolution" => "Easy week")
+      _(json.slice("resolved_at", "resolution")).must_equal({ "resolved_at" => resolved_at, "resolution" => "Easy week" })
       patch_json "/api/coach/notes/#{concern.id}", resolution: "New shoes"
       _(json["resolution"]).must_equal "New shoes"
 
@@ -288,7 +288,7 @@ describe "coach API" do
       written = note
 
       patch_json "/api/coach/notes/#{written.id}", body: "Hard week", title: "Week 3"
-      _(json.slice("body", "title")).must_equal("body" => "Hard week", "title" => "Week 3")
+      _(json.slice("body", "title")).must_equal({ "body" => "Hard week", "title" => "Week 3" })
 
       delete "/api/coach/notes/#{written.id}"
       _(last_response.status).must_equal 204
@@ -356,10 +356,10 @@ describe "coach API" do
       recent = agent("note", "Session B today")
 
       get "/api/coach/tidy?before=2026-11-01"
-      _(json).must_equal("count" => 3)
+      _(json).must_equal({ "count" => 3 })
 
       post_json "/api/coach/tidy", before: "2026-11-01"
-      _(json).must_equal("deleted" => 3)
+      _(json).must_equal({ "deleted" => 3 })
       _(CoachNote.select_map(:id).sort)
         .must_equal [answered, reply, open_concern, current_focus, yours, current_status, recent].map(&:id).sort
       _([old, old_status, resolved].map { CoachNote.where(id: it.id).count }).must_equal [0, 0, 0]
@@ -396,10 +396,10 @@ describe "coach API" do
       _(json["status"]["id"]).must_equal status.id
       _(json["status"]["replaces"]["id"]).must_equal old_status.id
       _(json["focus"].slice("id", "author_kind", "author_name", "replaces"))
-        .must_equal("id" => focus.id, "author_kind" => "llm", "author_name" => "Trainer agent", "replaces" => nil)
+        .must_equal({ "id" => focus.id, "author_kind" => "llm", "author_name" => "Trainer agent", "replaces" => nil })
       _(json["concerns"].map { it["id"] }).must_equal [open.id]
       _(json["notes"].map { it["id"] }).must_equal [journal.id, resolved.id, old_status.id]
-      _(json["week"].slice("from", "to")).must_equal("from" => "2026-11-02", "to" => "2026-11-08")
+      _(json["week"].slice("from", "to")).must_equal({ "from" => "2026-11-02", "to" => "2026-11-08" })
       _(json["week"]["activities"].map { it["id"] }).must_equal [run.id]
       _(json["week"]["sessions"].map { it["id"] }).must_equal [session.id]
       _(json["week"]["notes"].map { it["id"] }).must_equal [journal.id]
@@ -447,7 +447,7 @@ describe "coach API" do
       get "/api/coach"
 
       _(json.slice("goals", "proposals", "past_goals", "status", "focus", "concerns", "notes")).must_equal(
-        "goals" => [], "proposals" => [], "past_goals" => 0, "status" => nil, "focus" => nil, "concerns" => [], "notes" => []
+        { "goals" => [], "proposals" => [], "past_goals" => 0, "status" => nil, "focus" => nil, "concerns" => [], "notes" => [] }
       )
     end
   end
