@@ -63,10 +63,11 @@ as null when it has no value (`nullable`).
   sessions, sets, weights, settings, what equipment is owned)
   is the user's own. Another user's id is a 404, as an id that names nothing
   is, and a `client_ref` is the user's own.
-- **Today** is the server's day in `TZ` when a request sends no `date`.
-  Planning and moving sessions take the client's own `today` when it is
-  within a day of the server's, so a phone in another time zone, or just
-  past midnight, plans on its own today. A session's `started_at` and its
+- **Today** is the client's own `today` when a request sends one within a
+  day of the server's, else the server's day in `TZ`: what is planned,
+  missed and moved, and the day a request without a `date` reads, count
+  from it, so a phone in another time zone, or just past midnight, plans on
+  its own today. A malformed `today` is a 400. A session's `started_at` and its
   `finished_at` may come from the device (never later than now), so a run
   synced late keeps its times.
 - **The calendar is sessions, activities and dated notes.** `GET /api/calendar` gives a

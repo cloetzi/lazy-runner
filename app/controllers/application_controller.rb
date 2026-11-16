@@ -86,9 +86,9 @@ class ApplicationController < RageController::API
     Current.agent_name = request.env["lazy_runner.agent_name"]
     # The plan changes one request makes share a batch (PlanChange).
     Current.plan_batch = nil
-    # The day the request counts from (Current.today), read here so a
-    # malformed one is a 400 before anything is written or rendered.
-    Current.client_today = (DateRange.date(params[:today], :today) if params[:today].present?)
+    # The day the request counts from (Current.today), settled here once, so
+    # a malformed one is a 400 before anything is written or rendered.
+    Current.client_today = (Current.within_a_day(DateRange.date(params[:today], :today)) if params[:today].present?)
   end
 
   # A user given a temporary password (the owner reset theirs) chooses

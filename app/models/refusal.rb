@@ -3,7 +3,9 @@
 # What the app refuses, as against a bug: a record that isn't there, a
 # change only the user may make, a session no longer planned. Each kind says
 # how the API answers it (`refuses_with :conflict`), and the MCP tools give
-# its message back as a tool error, so a new one needs naming only here.
+# its message back as a tool error, so a new one is named once, where it is
+# raised. (Errors that carry a record's or a list's field errors, such as
+# WorkoutStructure::Invalid, keep handlers of their own.)
 class Refusal < StandardError
   class << self
     # The HTTP status and the error code (config/openapi_components.yml)

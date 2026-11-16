@@ -59,17 +59,13 @@ module TrainerMcp
       raise Problem, "#{error.message}. Nothing was logged; fix it and send the whole list again."
     end
 
-    # The user's today as the API takes it (ApplicationController#given_today):
-    # a day either side of the server's; nil, the server's, when not sent.
+    # The user's today as the API takes it (Current.within_a_day): a day
+    # either side of the server's; nil, the server's, when not sent.
     def self.user_today(text)
       return if text.nil?
 
-      server = Time.zone.today
-
-      given = Date.iso8601(date(text, :today))
-      raise Problem, "today must be within a day of the server's (#{server.iso8601})" unless ((server - 1)..(server + 1)).cover?(given)
-
-      given
+      Current.within_a_day(Date.iso8601(date(text, :today))) ||
+        raise(Problem, "today must be within a day of the server's (#{Time.zone.today.iso8601})")
     end
 
     # An entry as Activity.log_all! takes it: lengths in metres, times and
