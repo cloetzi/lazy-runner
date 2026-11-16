@@ -17,7 +17,7 @@ components:
           properties:
             code:
               type: string
-              enum: [bad_request, unauthorized, password_change_required, forbidden, not_found, no_workouts, conflict, already_imported, user_mismatch, invalid, too_many_requests, server_error]
+              enum: [bad_request, unauthorized, password_change_required, forbidden, not_found, no_workouts, conflict, already_imported, user_mismatch, invalid, too_many_requests, server_error, unavailable]
             message:
               type: string
               description: What went wrong, in a sentence a person can read.

@@ -29,10 +29,12 @@
 // user_mismatch drops it unseen, as the clearing would have.
 //
 // A server error usually means an outage, and the queue waits for it to end.
-// But a change that hits a bug answers 5xx for good, and would hold up every
-// change behind it. So when the server answers 5xx while it is reachable (a
-// GET /api/version right after succeeds), the head entry gets a strike, and
-// after three it is parked: set aside with the server's answer, together with
+// But a change that hits a bug answers 500 for good, and would hold up every
+// change behind it. So when the app itself answers that it hit a bug (a 500
+// with its `server_error` code, not a proxy's 502/503/504, nor the app's 503
+// for a locked or full database) while it is reachable (a GET /api/version
+// right after succeeds), the head entry gets a strike, and after three, each
+// within an hour of the last, it is parked: set aside with the server's answer, together with
 // the queued changes that refer to it, while the rest carries on. The user
 // sees the parked changes in Settings and retries or discards them.
 
@@ -49,6 +51,9 @@ const KEEP_REJECTED = 50;
 const KEEP_RESULTS = 10;
 // Server errors, with the server reachable, before a change is parked.
 export const PARK_AFTER = 3;
+// The time after a change's last strike in which the next must come, else
+// the count starts again: failures days apart are not one bug.
+export const STRIKE_WINDOW_MS = 60 * 60 * 1000;
 
 // `strikes` counts the server errors of the entry at the head of the queue;
 // `parking` is set from a park until a change goes through (see strike).
@@ -60,7 +65,11 @@ async function classify(response, entry) {
   if (response.redirected) return { outcome: "retry", waiting: "auth" };
   const json = AUTH.has(response.status) && response.status !== 403 ? undefined : await response.json().catch(() => undefined);
   if (AUTH.has(response.status) && !(response.status === 403 && json?.error?.code)) return { outcome: "retry", waiting: "auth" };
-  if (response.status >= 500) return { outcome: "retry", waiting: "server", status: response.status, error: errorMessage(json, response.status) };
+  if (response.status >= 500) {
+    // Only the app's own answer that it hit a bug can count against the change.
+    const bug = response.status === 500 && json?.error?.code === "server_error";
+    return { outcome: "retry", waiting: "server", ...(bug && { status: response.status, error: errorMessage(json, response.status) }) };
+  }
   if (LATER.has(response.status)) return { outcome: "retry", waiting: "server" };
   if (response.status === 409 && json?.error?.code === "user_mismatch") return { outcome: "discard" };
 
@@ -214,9 +223,13 @@ export function createOutbox({
     if (refresh().parking || !(await reachable())) return false;
     refresh();
     if (!same(data.queue[0], entry)) return false;
-    const count = same(data.strikes?.entry, entry) ? data.strikes.count + 1 : 1;
+    const at = now();
+    // A strike kept from before strikes had a time (`last` missing) starts again.
+    const gap = Date.parse(at) - Date.parse(data.strikes?.last);
+    const recent = same(data.strikes?.entry, entry) && gap >= 0 && gap <= STRIKE_WINDOW_MS;
+    const count = recent ? data.strikes.count + 1 : 1;
     if (count < PARK_AFTER) {
-      data.strikes = { entry, count };
+      data.strikes = { entry, count, last: at };
       save();
       return false;
     }
@@ -228,10 +241,15 @@ export function createOutbox({
     return true;
   }
 
+  // Queued by someone other than who is signed in on this device now.
+  const othersChange = (entry) => {
+    const current = user();
+    return entry.user != null && current != null && entry.user !== current;
+  };
+
   async function send(entry) {
     // Someone else's change, before anything else: never sent, never shown.
-    const current = user();
-    if (entry.user != null && current != null && entry.user !== current) return { outcome: "discard" };
+    if (othersChange(entry)) return { outcome: "discard" };
 
     const path = resolve(entry.path);
     // What it refers to was rejected before this outbox kept dependants.
@@ -258,7 +276,9 @@ export function createOutbox({
   async function run() {
     while (refresh().queue.length > 0) {
       const entry = data.queue[0];
-      const group = parkedFor(entry);
+      // Checked by send() too, but first here: someone else's change never
+      // joins a parked group, where it would show in Settings.
+      const group = othersChange(entry) ? null : parkedFor(entry);
       if (group) {
         data.queue.shift();
         group.entries.push(entry);
@@ -340,6 +360,8 @@ export function createOutbox({
     parked: () => refresh().parked.map((group) => ({
       ...group, entries: group.entries.map((e) => ({ ...e })), dependants: split(group).drop.length - 1,
     })),
+    // How many changes are parked, counting those that build on them.
+    parkedCount: () => refresh().parked.reduce((n, group) => n + group.entries.length, 0),
     // Puts a parked group back at the head of the queue for one more try:
     // another server error parks it again straight away. It waits for a
     // flush under way (here, or in another tab with Web Locks), since one
@@ -351,7 +373,7 @@ export function createOutbox({
         if (!group) return run();
         data.parked = data.parked.filter((g) => g !== group);
         data.queue.unshift(...group.entries);
-        data.strikes = { entry: group.entries[0], count: PARK_AFTER - 1 };
+        data.strikes = { entry: group.entries[0], count: PARK_AFTER - 1, last: now() };
         data.parking = false;
         save();
         return run();

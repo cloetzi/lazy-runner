@@ -262,8 +262,12 @@ export function welcomeHref(next) {
 
 // The note above a page with changes waiting to sync, as HTML. When they wait
 // for a sign-in, it links to the sign-in page, which comes back to `here`.
+// When the server answers but keeps failing (an outage behind a proxy, a full
+// disk, or a second change failing after one was parked), it says so, since
+// the queue waits for the server then and nothing else would tell.
 export function syncNote(pending, waiting, here) {
   const changes = `${pending} ${pending === 1 ? "change" : "changes"}`;
+  if (waiting === "server") return `${changes} waiting to sync: the server isn't saving changes at the moment, they'll go once it does`;
   if (waiting !== "auth") return `${changes} waiting to sync`;
   return `<a href="${escape(signInHref(here))}">Sign in again</a> to sync ${changes}`;
 }

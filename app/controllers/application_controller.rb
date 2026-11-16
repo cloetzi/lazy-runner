@@ -30,11 +30,40 @@ class ApplicationController < RageController::API
 
   class Forbidden < StandardError; end
 
+  # What SQLite answers when the database can't take a write just now: held
+  # by another process past the busy timeout, or the disk full or failing.
+  # The request may well succeed later.
+  # Or every request waiting its turn on the one connection for too long.
+  UNAVAILABLE = [
+    SQLite3::BusyException, SQLite3::LockedException, SQLite3::FullException, SQLite3::IOException, Sequel::PoolTimeout
+  ].freeze
+
+  # Whether `error` is one of those, as raised or as Sequel wrapped it. A
+  # bug raised while handling one is still a bug.
+  def self.unavailable?(error)
+    while error
+      return true if UNAVAILABLE.any? { error.is_a?(it) }
+      return false unless error.is_a?(Sequel::DatabaseError)
+
+      error = error.cause
+    end
+    false
+  end
+
   # A bug: logged, and answered in the one shape. Declared first, so every
-  # handler below comes before it (Rage tries the last declared first).
+  # handler below comes before it (Rage tries the last declared first). A
+  # database that can't be written for now is a 503 `unavailable` instead,
+  # so a client retries rather than taking its change for the cause (the
+  # PWA's outbox sets aside a change that keeps getting a `server_error`).
   rescue_from StandardError do |error|
-    Rage.logger.error("#{error.class}: #{error.message}\n#{Array(error.backtrace).first(10).join("\n")}")
-    render_error :internal_server_error, "server_error", "Something went wrong on the server; the log says what"
+    if ApplicationController.unavailable?(error)
+      Rage.logger.warn("#{error.class}: #{error.message}")
+      headers["retry-after"] = "5"
+      render_error :service_unavailable, "unavailable", "The database can't save anything at the moment; try again later"
+    else
+      Rage.logger.error("#{error.class}: #{error.message}\n#{Array(error.backtrace).first(10).join("\n")}")
+      render_error :internal_server_error, "server_error", "Something went wrong on the server; the log says what"
+    end
   end
 
   # Text that isn't UTF-8 (a stray %FF in the path or query, a raw byte in

@@ -46,7 +46,8 @@ as null when it has no value (`nullable`).
   `already_imported` (409, an example imported before), `user_mismatch`
   (409, a write for another user than the one signed in), `invalid` (422),
   `too_many_requests` (429, with `Retry-After`), `server_error` (500, a
-  bug; the log has the details).
+  bug; the log has the details), `unavailable` (503, the database can't be
+  written for now: locked by another process, or the disk full).
   `bad_request` and `invalid` name the offending `fields`. A required id
   left out is a `bad_request` ("step_id is required"); an id that names
   nothing is a `not_found`. A value of the wrong type (an object where text

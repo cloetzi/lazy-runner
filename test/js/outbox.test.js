@@ -407,7 +407,7 @@ test("a change that keeps failing is parked and the rest is sent", async () => {
 });
 
 test("server errors during an outage do not count", async () => {
-  const server = fakeServer(failing(PARK_AFTER + 2, 502), { version: { status: 502 } });
+  const server = fakeServer(failing(PARK_AFTER + 2), { version: { status: 502 } });
   const outbox = createOutbox({ storage: memoryStorage(), fetch: server.fetch });
 
   outbox.enqueue({ method: "POST", path: "/a" });
@@ -686,4 +686,103 @@ test("a retry waits for a flush under way, so nothing in flight is sent twice", 
   await flushing;
   assert.equal(await retried, true);
   assert.deepEqual(server.calls.slice(PARK_AFTER).map((c) => c.path), ["/slow", "/a"]);
+});
+
+test("a proxy's 502, 503 or 504 never counts, even with the app reachable", async () => {
+  for (const status of [502, 503, 504]) {
+    const server = fakeServer(Array.from({ length: PARK_AFTER + 1 }, () => ({ status, html: true })));
+    const outbox = createOutbox({ storage: memoryStorage(), fetch: server.fetch });
+
+    outbox.enqueue({ method: "POST", path: "/a" });
+    for (let i = 0; i <= PARK_AFTER; i++) assert.equal(await outbox.flush(), false);
+    assert.deepEqual(outbox.parked(), [], `status ${status}`);
+    assert.equal(outbox.waiting(), "server");
+  }
+});
+
+test("only the app's own server_error counts: not its 503 for a locked database, nor a 500 page from elsewhere", async () => {
+  const unavailable = { status: 503, json: { error: { code: "unavailable", message: "The database is busy" } } };
+  const server = fakeServer([
+    ...Array(PARK_AFTER).fill(unavailable), ...Array(PARK_AFTER).fill({ status: 500, html: true }),
+  ]);
+  const outbox = createOutbox({ storage: memoryStorage(), fetch: server.fetch });
+
+  outbox.enqueue({ method: "POST", path: "/a" });
+  for (let i = 0; i < 2 * PARK_AFTER; i++) assert.equal(await outbox.flush(), false);
+  assert.deepEqual(outbox.parked(), []);
+  assert.equal(outbox.pending(), 1);
+});
+
+test("strikes more than an hour apart start the count again", async () => {
+  let clock = Date.parse("2026-11-15T10:00:00Z");
+  const server = fakeServer(failing(2 * PARK_AFTER - 1));
+  const outbox = createOutbox({ storage: memoryStorage(), fetch: server.fetch, now: () => new Date(clock).toISOString() });
+
+  outbox.enqueue({ method: "POST", path: "/a" });
+  for (let i = 1; i < PARK_AFTER; i++) await outbox.flush();
+  clock += 61 * 60 * 1000;
+  // The first strike of a new count, not the last of the old one.
+  for (let i = 1; i < PARK_AFTER; i++) await outbox.flush();
+  assert.deepEqual(outbox.parked(), []);
+  // Within the hour of the last strike, the next one parks it.
+  clock += 59 * 60 * 1000;
+  await outbox.flush();
+  assert.equal(outbox.parked().length, 1);
+});
+
+test("strikes each within the hour of the last park a change, however long they take in all", async () => {
+  let clock = Date.parse("2026-11-15T10:00:00Z");
+  const server = fakeServer(failing(PARK_AFTER));
+  const outbox = createOutbox({ storage: memoryStorage(), fetch: server.fetch, now: () => new Date(clock).toISOString() });
+
+  outbox.enqueue({ method: "POST", path: "/a" });
+  for (let i = 0; i < PARK_AFTER; i++) {
+    await outbox.flush();
+    clock += 40 * 60 * 1000;
+  }
+  assert.equal(outbox.parked().length, 1);
+});
+
+test("a strike kept without a time, or from a clock set back, starts the count again", async () => {
+  const storage = memoryStorage();
+  const entry = { method: "POST", path: "/a" };
+  let clock = Date.parse("2026-11-15T10:00:00Z");
+  const now = () => new Date(clock).toISOString();
+  storage.setItem("outbox", JSON.stringify({ queue: [entry], strikes: { entry, count: PARK_AFTER - 1 } }));
+  const server = fakeServer(failing(PARK_AFTER));
+  const outbox = createOutbox({ storage, fetch: server.fetch, now });
+
+  await outbox.flush();
+  assert.deepEqual(outbox.parked(), []);
+  clock -= 10 * 60 * 1000;
+  await outbox.flush();
+  assert.deepEqual(outbox.parked(), []);
+  assert.equal(JSON.parse(storage.getItem("outbox")).strikes.count, 1);
+});
+
+test("someone else's queued change is dropped, never taken into a parked group", async () => {
+  const server = fakeServer(failing(PARK_AFTER));
+  let signedIn = 1;
+  const outbox = createOutbox({ storage: memoryStorage(), fetch: server.fetch, user: () => signedIn, id: () => "p1" });
+
+  outbox.enqueue({ method: "POST", path: "/api/sessions", saveAs: "run:a" });
+  for (let i = 0; i < PARK_AFTER; i++) await outbox.flush();
+  outbox.enqueue({ method: "POST", path: "/api/sessions/{run:a}/sets" });
+  signedIn = 2;
+  assert.equal(await outbox.flush(), true);
+
+  assert.deepEqual(outbox.parked()[0].entries.map((e) => e.path), ["/api/sessions"]);
+  assert.equal(outbox.pending(), 0);
+  assert.equal(server.calls.length, PARK_AFTER);
+});
+
+test("counts the parked changes with those that build on them", async () => {
+  const server = fakeServer(failing(PARK_AFTER));
+  const outbox = createOutbox({ storage: memoryStorage(), fetch: server.fetch });
+
+  assert.equal(outbox.parkedCount(), 0);
+  outbox.enqueue({ method: "POST", path: "/api/sessions", saveAs: "run:a" });
+  outbox.enqueue({ method: "POST", path: "/api/sessions/{run:a}/sets" });
+  for (let i = 0; i < PARK_AFTER; i++) await outbox.flush();
+  assert.equal(outbox.parkedCount(), 2);
 });
