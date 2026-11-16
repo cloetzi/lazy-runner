@@ -67,3 +67,19 @@ test("keeps running when storage is blocked", () => {
   assert.equal(store.load(), null);
   store.clear();
 });
+
+test("keeps a stretch's count-up and its cues, and brings it back counting up", () => {
+  const storage = memoryStorage();
+  const marks = [{ seconds: 30, cue: "switch" }, { seconds: 60, cue: "target" }];
+  const run = { id: "a1" };
+
+  createRunStore(storage).save(run, { now: 5, phase: "hold", timer: countdown.start(countdown.createCountUp(marks), 0), timerNow: 72_000 });
+  const saved = createRunStore(storage).load().timer;
+  const { phase, timer } = restoredTimer(saved);
+
+  assert.deepEqual(saved, { phase: "hold", totalMs: 60_000, elapsedMs: 72_000, up: true, marks: [{ ms: 30_000, cue: "switch" }, { ms: 60_000, cue: "target" }] });
+  assert.equal(phase, "hold");
+  assert.equal(countdown.isRunning(timer), false);
+  assert.equal(countdown.displaySeconds(timer, 0), 72);
+  assert.equal(countdown.isFinished(timer, 0), false);
+});

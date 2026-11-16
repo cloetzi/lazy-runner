@@ -19,8 +19,12 @@ past sessions went.
   when the exercise is done one side at a time (unilateral): then its reps or
   seconds count for each side. An alternating exercise (a dead bug) switches
   sides within one set, and its reps count both sides together: 10 is 5 a
-  side. A workout's kind is warmup, workout (a main workout) or cooldown; a
-  main workout runs framed by a warm-up and a cool-down.
+  side. A stretch (category stretch) held for seconds counts up in the app,
+  both sides on one screen, and the person may hold it longer: give its
+  seconds per side as the target rather than writing the time in a note.
+  Anything else in seconds counts down. A workout's kind is warmup, workout
+  (a main workout) or cooldown; a main workout runs framed by a warm-up and a
+  cool-down.
 - **Activities** are the runs, rides, hikes and any other sport, as they
   happened: logged by hand in the app, or sent by you or a script with the
   numbers their source gave (metres, seconds, heart rate). Nothing is derived

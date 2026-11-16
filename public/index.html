@@ -125,7 +125,8 @@
           <p class="side-badge" id="side" hidden></p>
           <p class="set-badge" id="set-label" hidden></p>
         </div>
-        <!-- The count, inside a ring that drains for holds, lead-ins and rests.
+        <!-- The count, inside a ring that drains for holds, lead-ins and rests
+             and fills for a stretch, which counts up (the mark: switch sides).
              It keeps its place and size in every phase; a tap pauses a
              countdown. In a set of reps, − and + beside it log what was done. -->
         <div class="count-box" id="count-box">
@@ -134,6 +135,7 @@
             <circle class="core" cx="50" cy="50" r="40"/>
             <circle class="track" cx="50" cy="50" r="46"/>
             <circle class="arc" id="ring-arc" cx="50" cy="50" r="46" pathLength="1"/>
+            <circle class="mark" id="ring-mark" cx="50" cy="96" r="3.2"/>
           </svg>
           <p class="target" id="target"><span id="target-shown" aria-hidden="true"></span><span id="target-spoken" class="visually-hidden"></span></p>
           <p class="count-unit" id="count-unit" aria-hidden="true"></p>

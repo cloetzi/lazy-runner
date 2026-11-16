@@ -154,6 +154,14 @@ measured against the room it has, not the window.
 - **The load line** is a card of its own: the gear and its weight
   ("Kettlebell, 40 lb"), then − and + at `--control-md`.
 - **The progress bar fills by time**, not by screens (`progressAt`).
+- **A stretch counts up** (`countsUp`): "0:18" in a ring that fills toward
+  its seconds in `--stretch`, under a Hold badge, then stays full with a
+  faint core and keeps counting: holding longer is fine, and nothing ends it
+  but Done. Both sides of a per-side stretch are one screen with one clock
+  ("Both sides"): a mark on the ring and the switch tone at one side's
+  target, one soft tone at the whole, and the time held split evenly between
+  the sides' logs. A stretch with only a note counts up with no target. Every
+  other timed exercise keeps its countdown.
 
 A rest prepares the next set: "Up next · set 2 of 3" over the exercise's
 name, its reps and tempo, its load line, and How to and Swap for it (both

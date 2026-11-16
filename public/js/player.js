@@ -7,9 +7,10 @@ import { shownValue } from "./weights.js";
 
 // Where Back goes: the step before, skipping rests, since a rest on its own
 // has nothing to redo.
+// Both sides of a stretch are one screen, so Back lands on its left side.
 export function previousIndex(items, index) {
   for (let i = index - 1; i >= 0; i--) {
-    if (items[i].type !== "rest") return i;
+    if (items[i].type !== "rest") return i > 0 && bothSides(items, i - 1) ? i - 1 : i;
   }
   return Math.max(0, Math.min(index, items.length - 1));
 }
@@ -29,7 +30,7 @@ export function switchesSides(items, index) {
 // be another exercise or block, so "End rest now"). Every countdown
 // pauses with the Pause button beside it, or by tapping the time.
 export function mainActionLabel(phase, next = null) {
-  if (phase === "reps" || phase === "work") return "Done";
+  if (phase === "reps" || phase === "work" || phase === "hold") return "Done";
   if (phase === "rest") return next?.block.round > 1 ? `Start set ${next.block.round} now` : "End rest now";
   // A lead-in counts down by itself; the button cuts it short.
   return "Start now";
@@ -48,6 +49,62 @@ export function tapAccepted(changedAt, now) {
 export const MIN_HOLD_SECONDS = 3;
 export function holdStatus(held, planned) {
   return held >= Math.min(MIN_HOLD_SECONDS, planned ?? MIN_HOLD_SECONDS) ? "done" : "skipped";
+}
+
+// A stretch counts up rather than down: held as long as it feels right, its
+// seconds the target. Every other timed exercise keeps its countdown, and a
+// stretch counted in reps stays a set of reps.
+export function countsUp(item) {
+  return item?.type === "exercise" && item.exercise?.category === "stretch" && !item.reps;
+}
+
+// Whether the item at `index` is the left side of a stretch with its right
+// side straight after: both sides are one screen with one clock, switched
+// when ready, with no tap in between.
+export function bothSides(items, index) {
+  const item = items[index];
+  const after = items[index + 1];
+  return countsUp(item) && item.side === "left" && after?.side === "right" &&
+    after.step_id === item.step_id && after.block.round === item.block.round && after.exercise?.id === item.exercise?.id;
+}
+
+// How many items the screen at `index` stands for: two for both sides of a
+// stretch, else one.
+export function screenSpan(items, index) {
+  return bothSides(items, index) ? 2 : 1;
+}
+
+// The cues of a stretch's clock: the switch at one side's target, then one
+// soft tone at the whole target. None for a stretch without seconds.
+export function holdMarks(items, index) {
+  const seconds = items[index]?.seconds;
+  if (!seconds) return [];
+  return bothSides(items, index)
+    ? [{ seconds, cue: "switch" }, { seconds: seconds * 2, cue: "target" }]
+    : [{ seconds, cue: "target" }];
+}
+
+// The sets a stretch held for `held` seconds logs ({ index, seconds, status }):
+// each side's share, evenly, since the clock can't tell when the switch came.
+export function holdLogs(items, index, held) {
+  if (!bothSides(items, index)) return [{ index, seconds: held, status: holdStatus(held, items[index].seconds) }];
+  const left = Math.ceil(held / 2);
+  return [left, held - left].map((seconds, i) => ({ index: index + i, seconds, status: holdStatus(seconds, items[index + i].seconds) }));
+}
+
+// Seconds as a clock: 18 -> "0:18", 72 -> "1:12".
+export function clockText(seconds) {
+  return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`;
+}
+
+// The line under a stretch's count: what it aims for, then that it got
+// there. Both sides: "switch at 0:30", "30 s a side", "target reached".
+export function holdUnit(items, index, held) {
+  const target = items[index]?.seconds;
+  if (!target) return "held";
+  if (!bothSides(items, index)) return held < target ? `of ${clockText(target)}` : "target reached";
+  if (held < target) return `switch at ${clockText(target)}`;
+  return held < target * 2 ? `${target} s a side` : "target reached";
 }
 
 // Seconds the button beside a countdown adds: more time to set up, or a
@@ -343,16 +400,18 @@ export function unloggedExercises(items, from, end, logged = {}) {
 // "Rest, 60 seconds. Next: Straight-leg deadlift". `weight` is the weight in
 // the unit shown ({ value, unit }), if the step takes one; `switching` when
 // the step is the right side straight after the left.
-export function stepAnnouncement(item, { weight = null, next = null, switching = false } = {}) {
+export function stepAnnouncement(item, { weight = null, next = null, switching = false, both = false } = {}) {
   if (item.type === "rest") {
     const rest = `Rest, ${spokenCount(item.seconds, "second")}`;
     return next ? `${rest}. Next: ${next.exercise.name}` : rest;
   }
   const bits = [item.exercise.name];
-  if (item.side) bits.push(`${item.side} side`);
+  if (both) bits.push("both sides, left first");
+  else if (item.side) bits.push(`${item.side} side`);
   const set = setLabel(item);
   if (set) bits.push(set.toLowerCase());
-  bits.push(spokenAmount(item));
+  const amount = spokenAmount(item);
+  bits.push(both && amount ? `${amount} each side` : amount);
   bits.push(spokenWeight(weight, item.weights_held));
   const sentence = bits.filter(Boolean).join(", ");
   return switching ? `Switch sides. ${sentence}` : sentence;
@@ -369,6 +428,7 @@ export function repsCount(item, done) {
 
 export function spokenTarget(item, { phase, seconds = null } = {}) {
   if (phase === "reps") return spokenAmount(item) || "Go";
+  if (phase === "hold") return `${spokenCount(seconds ?? 0, "second")} held`;
   return seconds == null ? "" : spokenCount(seconds, "second");
 }
 

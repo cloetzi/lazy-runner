@@ -47,7 +47,9 @@ export function setRequest(run, item, status, { reps = item.reps, seconds = item
     target: { reps: planned.reps ?? null, seconds: planned.seconds ?? null, weight: planned.weight ?? null },
   };
   if (item.planned) body.exercise_id = item.exercise.id;
-  if (item.mode === "reps") body.reps = status === "done" ? reps : null;
+  // A set counted in reps logs them; a hold, or a stretch with only a note,
+  // the seconds it was held.
+  if (item.mode === "reps" && item.reps != null) body.reps = status === "done" ? reps : null;
   else body.seconds = status === "done" ? seconds : null;
   return { method: "POST", path: `${sessionPath(run)}/sets`, body };
 }

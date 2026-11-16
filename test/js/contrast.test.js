@@ -59,6 +59,8 @@ const pairs = [
   ["--focus", "--surface", 3, "focus ring on cards"],
   ["--focus", "--bg", 3, "focus ring on the page"],
   ["--rest", "--bg", 3, "the rest ring"],
+  ["--stretch", "--bg", 3, "a stretch's ring"],
+  ["--stretch", "--surface", 3, "the mark on a stretch's ring"],
 ];
 
 // Parts of the figure drawn over each other must stay apart. The accent

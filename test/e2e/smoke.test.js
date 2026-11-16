@@ -205,7 +205,17 @@ test("runs Workout 1, finishes offline and syncs once back online", async () => 
   assert.ok(start.y + start.height <= page.viewportSize().height, "Start is below the fold");
   await page.locator("#ready-go").click();
 
-  // The warm-up comes first; skip the rest of it in one go, which can be undone.
+  // The warm-up opens with a stretch: past its lead-in it counts up, both
+  // sides on one screen with one clock.
+  await page.locator("#player").getByText("Half-kneel quad stretch", { exact: true }).waitFor();
+  await tapMain(page); // Start now
+  await page.locator('#player[data-phase="hold"]').waitFor();
+  assert.equal(await page.locator("#side").textContent(), "Both sides");
+  assert.match(await page.locator("#target-shown").textContent(), /^0:\d\d$/);
+  assert.equal(await page.locator("#count-unit").textContent(), "switch at 0:20");
+  await accessible(page, "a stretch");
+
+  // Skip the rest of the warm-up in one go, which can be undone.
   await page.locator("#skip-part").click();
   await page.locator("#player").getByText("Goblet squat", { exact: true }).waitFor();
   await page.locator("#toast").getByRole("button", { name: "Undo" }).click();
