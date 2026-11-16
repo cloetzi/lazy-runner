@@ -18,14 +18,14 @@ test("has nothing to show until an agent did something", () => {
   assert.deepEqual(newsGroups(empty, { today }), []);
 });
 
-test("says what each agent did, a line each, the latest agent first", () => {
+test("says what each agent did, what it wrote first, the latest agent first", () => {
   const news = {
     ...empty, latest: at(11),
     changes: [
       change({ id: 5, action: "moved", from_date: "2026-11-21", to_date: "2026-11-19", was: { date: "2026-11-21" }, undoable: true, created_at: at(11) }),
       change({ id: 4, to_date: "2026-12-03" }),
       change({ id: 3, to_date: "2026-11-16" }),
-      change({ id: 2, item_kind: "routine", title: "Long run", action: "changed", from_date: "2026-11-22", to_date: "2026-11-22", was: { distance_m: 16000 }, now: { distance_m: 18000 }, undoable: true }),
+      change({ id: 2, item_kind: "routine", title: "Long run", action: "changed", from_date: "2026-11-22", to_date: "2026-11-22", was: { distance_m: 16000 }, now: { distance_m: 18000 }, undoable: true, reason: "The 16 km felt easy." }),
       change({ id: 6, action: "removed", from_date: "2026-11-20", to_date: null, undoable: false, agent_name: "Trainer", created_at: at(9) }),
     ],
     notes: [{ kind: "status", author_name: "Coach agent", created_at: at(10) }, { kind: "status", author_name: "Coach agent", created_at: at(10) }, { kind: "note", author_name: "Coach agent", created_at: at(10) }, { kind: "note", author_name: "Coach agent", created_at: at(10) }],
@@ -35,15 +35,18 @@ test("says what each agent did, a line each, the latest agent first", () => {
   const groups = newsGroups(news, { today });
   assert.deepEqual(groups.map((g) => g.who), ["Coach agent", "Trainer"]);
   assert.equal(groups[0].when, writtenAt(at(11), today));
-  assert.deepEqual(groups[0].items.map((i) => i.text), [
-    "Planned 2 sessions, Nov 16 to Dec 3",
-    "Changed Long run: 16.0 km → 18.0 km",
-    "Moved Session B from Sat 21 to Thu 19",
-    "Copied 8 activities from Garmin, Oct 27 to Nov 15",
-    "Wrote 2 statuses and 2 notes; proposed 2 goals",
+  // The goals it proposed are not said: they wait on the page until answered.
+  assert.deepEqual(groups[0].items.map((i) => [i.kind, i.text]), [
+    ["wrote", "Wrote 2 statuses and 2 notes"],
+    ["change", "Planned 2 sessions, Nov 16 to Dec 3"],
+    ["change", "Changed Long run: 16.0 km → 18.0 km"],
+    ["change", "Moved Session B from Sat 21 to Thu 19"],
+    ["copied", "Copied 8 activities from Garmin, Oct 27 to Nov 15"],
   ]);
-  assert.deepEqual(groups[0].items.map((i) => i.href), ["/calendar.html#2026-11-16", "/calendar.html#2026-11-22", "/calendar.html#2026-11-19", "/calendar.html#2026-11-15", null]);
-  assert.deepEqual(groups[0].items.map((i) => i.undo?.id ?? null), [null, 2, 5, null, null]);
+  assert.deepEqual(groups[0].items.map((i) => i.href), [null, "/calendar.html#2026-11-16", "/calendar.html#2026-11-22", "/calendar.html#2026-11-19", "/calendar.html#2026-11-15"]);
+  assert.deepEqual(groups[0].items.map((i) => i.undo?.id ?? null), [null, null, 2, 5, null]);
+  // A change carries the reason the agent gave for it.
+  assert.deepEqual(groups[0].items.map((i) => i.reason), [null, null, "The 16 km felt easy.", null, null]);
   assert.deepEqual(groups[1].items.map((i) => [i.text, i.undo]), [["Removed Session B from Fri 20", null]]);
   assert.equal(newsCount(news), 5 + 4 + 2 + 8);
 });
@@ -55,7 +58,14 @@ test("one planned session or routine gets its own line", () => {
 
 test("one of a kind reads as a or an", () => {
   const groups = newsGroups({ ...empty, notes: [{ kind: "focus", created_at: at(10) }], goals: [{ created_at: at(10) }], activities: [{ count: 1, from: "2026-11-15", to: "2026-11-15", sources: [], created_at: at(9) }] }, { today });
-  assert.deepEqual(groups[0].items.map((i) => i.text), ["Copied an activity, Nov 15", "Wrote a focus; proposed a goal"]);
+  assert.deepEqual(groups[0].items.map((i) => i.text), ["Wrote a focus", "Copied an activity, Nov 15"]);
+});
+
+test("an agent that only proposed goals has nothing to say: its proposals wait on the page", () => {
+  const news = { ...empty, goals: [{ agent_name: "Trainer", created_at: at(10) }] };
+  assert.deepEqual(newsGroups(news, { today }).map((g) => [g.who, g.items]), [["Trainer", []]]);
+  assert.equal(hasNews(news), true);
+  assert.equal(newsCount(news), 1);
 });
 
 test("marks it seen up to the newest thing shown", () => {

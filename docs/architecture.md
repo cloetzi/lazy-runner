@@ -168,9 +168,10 @@ flowchart LR
 Plain ES modules in `public/js/`, no framework, no build step. Pages:
 `index.html` (Today, Workouts, History, a workout, the player, by URL hash),
 `calendar.html` (a week, or a month from the tablet tier, with sessions,
-activities and the coach's notes on its days), `coach.html` (what is new, status, focus,
-concerns, this week a line per day opening it on the Calendar, goals and
-notes, two columns in landscape; `coach-page.js`, sheets in
+activities and the coach's notes on its days), `coach.html` (what is new or waits for an answer as a band, the
+status, focus and open concerns as one card, goals and this week as seven
+days of tiles opening the Calendar, and the notes as a timeline, two
+columns in landscape; `coach-page.js`, sheets in
 `coach-sheets.js`, shared with the Calendar), `library.html`
 (exercises), `equipment.html`, `settings.html` (five sections, each with its own
 address: `#training`, `#account` with sign-out, the password and signed-in
@@ -207,10 +208,10 @@ distances and times, activity requests and their queued overlay, when Today
 asks how hard one was, the km/mi copy), `routines.js` (what a routine is
 called, how a day of it reads on the device's today, queued activities that
 tick a day off, the routine form and its requests), `coach.js` (who wrote a note, the
-week as days, the note and goal forms and their requests), `plan-changes.js`
+week as days, the journal's filters, the note and goal forms and their requests), `plan-changes.js`
 (what an agent's change to the plan says on the calendar, and the undo
 request), `coach-news.js` (Coach's "Since you last looked", grouped by
-agent), `week.js` (how a week adds up: planned against
+agent, each change with its reason), `week.js` (how a week adds up: planned against
 done by kind, distance sums), `unit-setting.js` (the lb/kg and km/mi settings and this
 device's copy of each), `catalog.js`, `inventory.js`, `gear.js` (owned and
 missing gear, what an item unlocks, how an example fits), `figure.js`

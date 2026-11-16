@@ -53,9 +53,11 @@ returns. Until 1.0 a release can break things; the changelog says what.
   or once as a Maybe or Planned. Their days show dashed until you say you're
   going; a logged activity of the same sport ticks the day off, and one that
   didn't happen says so. Move a day, skip a week, or log it right there.
-- **Coach:** a Coach tab opens on the coach's current reading: what is new,
-  status, focus and open concerns, then this week with the planned runs (a
-  tap opens the day on the calendar), your goals and a journal of notes. You, a
+- **Coach:** a Coach tab opens on what is new since you last looked (each
+  change your coach agent made, with its reason and a way back) and the
+  coach's current reading: status, focus and the concerns it watches. Your
+  goals and this week sit beside it (a tap opens the day on the calendar),
+  and the notes run under it as a timeline. You, a
   coach you name, or an agent over MCP write them; only you change goals, and
   an agent's proposed goal waits for you to accept or dismiss it. Notes dated
   to a day show on the calendar. Reply to a coach's note and the reply sits

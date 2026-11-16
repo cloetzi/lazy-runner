@@ -104,6 +104,55 @@ function openAgentNoteSheet({ note, onDelete, onReply }) {
   showSheet(dialog);
 }
 
+// An open concern, with everything that can be done with it: Resolve, a
+// reply when someone else wrote it (each reply of yours with its Edit),
+// and Edit, or Delete for an agent's, which stays as it wrote it.
+// `onResolve()`, `onReply()`, `onEditReply(reply)` and `onEdit()` open
+// what comes next once this has closed; `onDelete()` deletes it, resolving
+// to a problem to show or nothing.
+export function openConcernSheet({ note, onResolve, onReply, onEditReply, onEdit, onDelete }) {
+  const dialog = sheet("concern-sheet");
+  const about = aboutLabel(note);
+  const agent = note.author_kind === "llm";
+  dialog.innerHTML = html`
+    <form class="howto agent-note" novalidate>
+      <header>
+        <h2>${note.title ?? KIND_LABELS.concern}</h2>
+        <button class="icon-button" type="button" data-close aria-label="Close">${icon("close")}</button>
+      </header>
+      <p class="note-by">${byline(note)}${about ? html` <span class="tag">${about}</span>` : ""}</p>
+      <p class="entry-body">${note.body}</p>
+      ${repliesHtml(note, (r) => html` <button class="quiet small" type="button" data-edit-reply="${r.id}" aria-label="Edit your reply">Edit</button>`)}
+      <p class="form-error" role="alert" hidden></p>
+      <button class="primary" type="button" data-resolve>${icon("check")}Resolve</button>
+      <div class="sheet-actions">
+        ${note.author_kind !== "user" ? html`<button class="secondary" type="button" data-reply>Reply</button>` : ""}
+        ${agent ? "" : html`<button class="secondary" type="button" data-edit>Edit</button>`}
+      </div>
+      ${agent ? html`
+        <p class="muted small-print">An agent's concern stays as it wrote it. A reply goes under it, and your coach agent reads it with the concern.</p>
+        <div class="danger-zone"><button class="quiet small danger" type="button" data-delete>${icon("trash")}Delete the concern</button></div>` : ""}
+    </form>`;
+  const form = dialog.querySelector("form");
+  // What comes next opens once this sheet has closed.
+  const then = (next) => () => { dialog.close(); next(); };
+  form.querySelector("[data-close]").addEventListener("click", () => dialog.close());
+  form.querySelector("[data-resolve]").addEventListener("click", then(onResolve));
+  form.querySelector("[data-reply]")?.addEventListener("click", then(onReply));
+  form.querySelector("[data-edit]")?.addEventListener("click", then(onEdit));
+  form.querySelectorAll("[data-edit-reply]").forEach((button) => button.addEventListener("click",
+    then(() => onEditReply(note.replies.find((r) => String(r.id) === button.dataset.editReply)))));
+  form.querySelector("[data-delete]")?.addEventListener("click", async () => {
+    if (!confirm(deleteQuestion(note, "this concern"))) return;
+    const problem = await onDelete();
+    if (!problem) return dialog.close();
+    const error = form.querySelector(".form-error");
+    error.textContent = problem;
+    error.hidden = false;
+  });
+  showSheet(dialog);
+}
+
 // Deleting a note deletes the replies under it: the question says so.
 export const deleteQuestion = (note, what = "this note") => {
   const n = note?.replies?.length ?? 0;

@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
-  authorLabel, authorBadge, agentName, plannedBy, writtenDay, knownCoaches, weekDays, notesByDay, notesAbout, howItFelt, journalPath, tidyRequest, noteFields, goalFields,
+  authorLabel, authorBadge, agentName, plannedBy, writtenDay, knownCoaches, weekDays, notesByDay, notesAbout, howItFelt, journalPath, writtenMonth, sameReview, focusLines, tidyRequest, noteFields, goalFields,
   noteRequest, changeNoteRequest, resolveRequest, reopenRequest, deleteNoteRequest,
   addGoalRequest, changeGoalRequest, acceptRequest, dismissRequest, movedPosition,
 } from "../../public/js/coach.js";
@@ -114,11 +114,36 @@ test("says how a done session felt", () => {
   assert.equal(howItFelt(null), "");
 });
 
-test("pages the journal under a filter, statuses and focus left to their own line", () => {
-  assert.equal(journalPath("all"), "/api/coach/notes?journal=true&limit=20&kind=note,concern");
-  assert.equal(journalPath("coach", 41), "/api/coach/notes?journal=true&limit=20&kind=note,concern&author=human,llm&before=41");
+test("pages the journal under a filter, the statuses and focus since replaced in their place", () => {
+  assert.equal(journalPath("all"), "/api/coach/notes?journal=true&limit=20");
+  assert.equal(journalPath("you"), "/api/coach/notes?journal=true&limit=20&author=user");
+  assert.equal(journalPath("coach", 41), "/api/coach/notes?journal=true&limit=20&author=human,llm&before=41");
+  assert.equal(journalPath("concerns"), "/api/coach/notes?journal=true&limit=20&kind=concern");
   assert.equal(journalPath("nonsense"), journalPath("all"));
   assert.deepEqual(tidyRequest("2026-11-01"), { method: "POST", path: "/api/coach/tidy", body: { before: "2026-11-01" } });
+});
+
+test("names the month a note was written in, for the timeline's dividers", () => {
+  assert.equal(writtenMonth(note({ created_at: "2026-11-03T12:00:00Z" })), "November 2026");
+  assert.equal(writtenMonth(note({ created_at: "2026-10-30T12:00:00Z" })), "October 2026");
+});
+
+test("one review wrote the status and the focus when the same author wrote both on the same day", () => {
+  const agent = { author_kind: "llm", author_name: "Coach agent", created_at: "2026-11-03T12:00:00Z" };
+  assert.equal(sameReview(note({ kind: "status", ...agent }), note({ kind: "focus", ...agent, created_at: "2026-11-03T12:05:00Z" })), true);
+  assert.equal(sameReview(note({ kind: "status", ...agent }), note({ kind: "focus", ...agent, created_at: "2026-11-05T12:00:00Z" })), false);
+  assert.equal(sameReview(note({ kind: "status", ...agent }), note({ kind: "focus", ...agent, author_name: "Trainer" })), false);
+  assert.equal(sameReview(note({ kind: "status", ...agent }), note({ kind: "focus", created_at: agent.created_at })), false);
+  // An agent from before agents were named is the same one either way.
+  assert.equal(sameReview(note({ kind: "status", ...agent, author_name: null }), note({ kind: "focus", ...agent, author_name: undefined })), true);
+  assert.equal(sameReview(note({ kind: "status" }), null), false);
+  assert.equal(sameReview(null, null), false);
+});
+
+test("reads a focus as its lines, blanks dropped", () => {
+  assert.deepEqual(focusLines(note({ body: "Two strength sessions.\n\n  Step-downs from the low step. \nLong run flat." })), ["Two strength sessions.", "Step-downs from the low step.", "Long run flat."]);
+  assert.deepEqual(focusLines(note({ body: "Keep both sessions." })), ["Keep both sessions."]);
+  assert.deepEqual(focusLines(null), []);
 });
 
 test("reads the note form: blanks left out of a new note, cleared on an edit", () => {
