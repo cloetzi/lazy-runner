@@ -26,7 +26,7 @@ module Api
     def create
       user = Current.user!
       identity = SignedInDevice.identity_id(user, SignedInDevice.current_key(rodauth))
-      token, secret = ApiToken.issue!(user, params[:name], scope: string_param(:scope) || "mcp", user_identity_id: identity)
+      token, secret = ApiToken.issue!(user, string_param(:name), scope: string_param(:scope) || "mcp", user_identity_id: identity)
       render json: { token: token.as_json, secret: }, status: :created
     end
 

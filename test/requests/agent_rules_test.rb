@@ -152,12 +152,18 @@ describe "an agent on the REST API" do
       _(CoachNote.by_agent.count).must_equal CoachNote::AGENT_DAILY_LIMIT
     end
 
-    it "can't reply to a note: replying is the user's" do
-      own = Current.set(agent_name: "Coach agent") { CoachNote.create(kind: "note", body: "How are the knees?", author_kind: "llm") }
+    it "can't reply to a note, whoever wrote it: replying is the user's" do
+      notes = [
+        Current.set(agent_name: "Coach agent") { CoachNote.create(kind: "note", body: "How are the knees?", author_kind: "llm") },
+        CoachNote.create(kind: "note", body: "Knees fine", author_kind: "user"),
+        CoachNote.create(kind: "note", body: "Rest Friday", author_kind: "human", author_name: "Jo")
+      ]
 
-      _(as_agent(:post, "/api/coach/notes", { kind: "note", body: "Fine", reply_to_id: own.id }).status).must_equal 403
-      _(json["error"]).must_equal({ "code" => "forbidden", "message" => "a reply is the user's; an agent writes a note of its own" })
-      _(CoachNote.count).must_equal 1
+      notes.each do |note|
+        _(as_agent(:post, "/api/coach/notes", { kind: "note", body: "Fine", reply_to_id: note.id }).status).must_equal 403
+        _(json["error"]).must_equal({ "code" => "forbidden", "message" => "a reply is the user's; an agent writes a note of its own" })
+      end
+      _(CoachNote.count).must_equal 3
     end
 
     it "leaves the user's notes as they wrote them" do

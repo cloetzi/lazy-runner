@@ -33,7 +33,8 @@ describe "API tokens" do
       _(json["error"]["fields"].keys).must_equal ["name"]
 
       post_json "/api/account/tokens", name: { "a" => 1 }
-      _(last_response.status).must_equal 422
+      _(last_response.status).must_equal 400
+      _(json["error"]["fields"].keys).must_equal ["name"]
       _(ApiToken.count).must_equal 0
     end
 
