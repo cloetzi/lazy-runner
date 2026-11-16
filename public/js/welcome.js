@@ -86,8 +86,8 @@ async function loadDays() {
     toPlan = plan;
     const names = plan.workouts.map((w) => w.title);
     hint.textContent = `Tap your training days. ${names.length > 1 ? `${names.join(" and ")} take turns on them` : `${names[0]} goes on them`}, every week, as Maybe days you confirm or move on the Calendar.`;
-    days.innerHTML = WEEKDAY_SHORT.map((name, i) => html`
-      <label><input type="checkbox" name="weekday" value="${i + 1}" aria-label="${WEEKDAY_NAMES[i]}"><span aria-hidden="true">${name}</span></label>`).join("");
+    days.innerHTML = html`${WEEKDAY_SHORT.map((name, i) => html`
+      <label><input type="checkbox" name="weekday" value="${i + 1}" aria-label="${WEEKDAY_NAMES[i]}"><span aria-hidden="true">${name}</span></label>`)}`;
     days.hidden = false;
   } catch {
     hint.textContent = "Plan your days on the Calendar once the server can be reached.";

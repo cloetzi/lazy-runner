@@ -306,7 +306,7 @@ function renderDay() {
   // A rest day can still hold a warm-up or cool-down planned on its own.
   list.hidden = day.length < (source === "default" ? 1 : 2);
   if (list.hidden) return;
-  list.innerHTML = day.map((s) => {
+  list.innerHTML = html`${day.map((s) => {
     const current = session?.id === s.id;
     const mark = current && ["planned", "in_progress"].includes(s.status) ? "next" : markFor(s, date, null);
     const meta = [current ? "On the card" : STATUS_LABELS[mark], `${s.workout.estimated_minutes} min`].join(" · ");
@@ -320,7 +320,7 @@ function renderDay() {
           </span>
         </button>
       </li>`;
-  }).join("");
+  })}`;
 }
 
 function renderToday() {
@@ -1088,7 +1088,7 @@ function showReady() {
   state.readyGear = gear;
   const owned = ownedEquipment();
   // Gear the user doesn't own is no row to tick: it says so, with the ways out.
-  $("ready-pickup").innerHTML = gear.map((row, i) => missingGear(row.equipment ? [row.equipment] : [], owned).length ? html`
+  $("ready-pickup").innerHTML = html`${gear.map((row, i) => missingGear(row.equipment ? [row.equipment] : [], owned).length ? html`
     <li class="ready-missing"><div class="row"><span class="row-text">
       <span class="row-title">${gearTitle(row)}</span>
       <span class="row-meta">${row.exercises.join(", ")}</span>
@@ -1096,20 +1096,20 @@ function showReady() {
     <li><label class="row check-row"><input type="checkbox"><span class="row-text">
       <span class="row-title">${gearTitle(row)}</span>
       <span class="row-meta">${row.exercises.join(", ")}</span>
-    </span></label></li>`).join("");
+    </span></label></li>`)}`;
   $("ready-go").textContent = startLabel(run.items[run.index] ?? run.items[0]);
   $("ready-need").hidden = gear.length === 0;
   $("ready-weights").hidden = run.targets.length === 0;
   const changes = readyChanges();
   $("ready-changes").innerHTML = agentChangesHtml(workoutChanges(changes, [...new Set(run.items.map((item) => item.workout.id))]));
-  $("ready-targets").innerHTML = run.targets.map((t, i) => {
+  $("ready-targets").innerHTML = html`${run.targets.map((t, i) => {
     const change = weightChange(changes, t.exercise.id);
     // In its own unit, the gear's, as the stepper beside it shows it.
     const line = change && changeHtml(change, { today: localToday(), tag: "p" });
     return html`<li><span>${t.exercise.name}</span>
       ${weightStepper(t.exercise.name, shownLoad(t.weight, t.weights_held), html`data-target="${i}"`)}
       ${line ? html`<div class="agent-change">${line}${undoButton(change, `${t.exercise.name}'s weight`)}</div>` : ""}</li>`;
-  }).join("");
+  })}`;
   show("ready");
 }
 
@@ -1525,7 +1525,7 @@ function render() {
     renderLoadLine(item);
     setText("details", details(item));
     renderGear(item, run.index);
-    setHtml("cues", item.exercise.cues.map((cue) => html`<li>${cue}</li>`).join(""));
+    setHtml("cues", html`${item.exercise.cues.map((cue) => html`<li>${cue}</li>`)}`);
   }
   // A set of reps counts what was done, the target until changed: "7" over
   // "of 8", with − and + either side.
@@ -1699,7 +1699,7 @@ function renderGear(item, index) {
   const names = item ? equipmentNames(otherGear(item)) : [];
   setHidden("equipment", names.length === 0);
   $("equipment").classList.toggle("changed", names.length > 0 && equipmentChanges(state.run.items, index));
-  setHtml("equipment", names.map((name) => html`<li>${name}</li>`).join(""));
+  setHtml("equipment", html`${names.map((name) => html`<li>${name}</li>`)}`);
 }
 
 function label(item) {
@@ -1834,11 +1834,11 @@ function showFinish() {
   const plural = (n, word) => `${n} ${n === 1 ? word : `${word}s`}`;
   $("finish-title").textContent = run.endedEarly ? `${run.title}: ended early` : `${run.title} done`;
   $("finish-badge").classList.toggle("partial", !!run.endedEarly);
-  $("finish-stats").innerHTML = [
+  $("finish-stats").innerHTML = html`${[
     [done === exercises ? exercises : `${done}/${exercises}`, "exercises"],
     [sets === planned ? sets : `${sets}/${planned}`, "sets"],
     [run.minutes, run.minutes === 1 ? "minute" : "minutes"],
-  ].map(([value, label]) => html`<div><dt>${label}</dt><dd>${value}</dd></div>`).join("");
+  ].map(([value, label]) => html`<div><dt>${label}</dt><dd>${value}</dd></div>`)}`;
   const summary = [skipped && `${skipped} skipped`, swaps && plural(swaps, "swap"), framingLine(frames)].filter(Boolean).join(" · ");
   $("summary").textContent = summary;
   $("summary").hidden = !summary;
@@ -1854,11 +1854,11 @@ function showFinish() {
 function renderChanges() {
   const changes = Object.entries(state.run.weights);
   $("changes-box").hidden = changes.length === 0;
-  $("changes").innerHTML = changes.map(([id, c]) => html`
+  $("changes").innerHTML = html`${changes.map(([id, c]) => html`
     <li class="${c.keep ? "" : "undone"}">
       <span>${c.name}: ${shownWeight(c.keep ? c.to : c.from)}</span>
       <button class="secondary small" data-toggle-change="${id}">${c.keep ? `Undo (${shownWeight(c.from)})` : `Keep ${shownWeight(c.to)}`}</button>
-    </li>`).join("");
+    </li>`)}`;
 }
 
 // Both answers are picked first and saved together, so a mis-tap can be fixed.
@@ -1959,10 +1959,10 @@ async function openHistory() {
     $("history-week").textContent = [`This week: ${week} ${week === 1 ? "session" : "sessions"} done${partial ? `, ${partial} ended early` : ""}`,
       stale || staleExercises ? STALE_NOTE : ""].filter(Boolean).join(" · ");
     $("history-list").innerHTML = history.sessions.length
-      ? history.sessions.map(historyRow).join("")
+      ? html`${history.sessions.map(historyRow)}`
       : html`<li class="row muted">Nothing in the last four weeks yet. <a href="/#today">Go to Today</a> to train.</li>`;
     $("history-exercises").innerHTML = exercises.length
-      ? exercises.map(exerciseRow).join("")
+      ? html`${exercises.map(exerciseRow)}`
       : html`<li class="row muted">Exercises show up here once you log a set.</li>`;
   } catch (error) {
     $("history-list").innerHTML = html`<li class="row">${loadProblem("the history", error)}</li>`;
@@ -1998,7 +1998,7 @@ async function openExerciseHistory(id) {
       stale ? STALE_NOTE : "",
     ].filter(Boolean).join(" · ");
     $("exercise-history-list").innerHTML = history.sessions.length
-      ? history.sessions.map(exerciseSessionRow).join("")
+      ? html`${history.sessions.map(exerciseSessionRow)}`
       : html`<li class="row muted">Nothing logged yet.</li>`;
   } catch (error) {
     $("exercise-history-list").innerHTML = html`<li class="row">${loadProblem("this exercise's history", error)}</li>`;
@@ -2040,14 +2040,14 @@ async function openSession(id) {
     const parts = sessionParts(session.exercises);
     const rows = parts.find((part) => part.part === "workout")?.entries ?? [];
     $("session-exercises").innerHTML = session.exercises.length
-      ? rows.map(sessionExerciseRow).join("")
+      ? html`${rows.map(sessionExerciseRow)}`
       : html`<li class="muted">No sets were logged in this session.</li>`;
     $("session-exercises").hidden = session.exercises.length > 0 && rows.length === 0;
-    $("session-frames").innerHTML = parts.filter((part) => part.part !== "workout").map((part) => html`
+    $("session-frames").innerHTML = html`${parts.filter((part) => part.part !== "workout").map((part) => html`
       <details class="session-part">
         <summary>${partLine(part)}</summary>
         <ul class="list">${part.entries.map(sessionExerciseRow)}</ul>
-      </details>`).join("");
+      </details>`)}`;
     Object.assign($("session-delete").dataset, { delete: session.id, label: `${session.workout.title} on ${date}` });
     $("session-delete").hidden = false;
   } catch (error) {

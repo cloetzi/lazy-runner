@@ -28,7 +28,7 @@ const units = document.getElementById("units");
 const distanceUnits = document.getElementById("distance-units");
 const leadIn = document.querySelector('[data-setting="leadIn"]');
 document.getElementById("gear-lead-in").textContent = GEAR_LEAD_IN;
-leadIn.innerHTML = LEAD_IN_CHOICES.map((seconds) => html`<button data-value="${seconds}">${seconds} s</button>`).join("");
+leadIn.innerHTML = html`${LEAD_IN_CHOICES.map((seconds) => html`<button data-value="${seconds}">${seconds} s</button>`)}`;
 
 // A device that can't vibrate (an iPad, an iPhone) has nothing to choose:
 // the row is left out rather than shown with a note.
@@ -121,7 +121,7 @@ const savedAt = (iso) => new Date(iso).toLocaleString(undefined, { day: "numeric
 function renderUnsent() {
   const parked = outbox?.parked() ?? [];
   $("unsent").hidden = parked.length === 0;
-  $("unsent-list").innerHTML = parked.map((group) => {
+  $("unsent-list").innerHTML = html`${parked.map((group) => {
     const more = group.dependants;
     const follows = more > 0 ? html` <span class="muted">and ${more} ${more === 1 ? "change" : "changes"} that build on it</span>` : "";
     const answer = group.status && !group.error?.includes(String(group.status)) ? `${group.error} (${group.status})` : group.error;
@@ -134,7 +134,7 @@ function renderUnsent() {
         <button class="secondary small danger" data-discard-unsent="${group.id}">Discard</button>
       </span>
     </li>`;
-  }).join("");
+  })}`;
 }
 
 $("unsent-list").onclick = async (event) => {
@@ -241,12 +241,12 @@ async function loadDevices() {
     $("sign-out-others").hidden = true;
     return;
   }
-  $("devices").innerHTML = devices.map((device) => html`
+  $("devices").innerHTML = html`${devices.map((device) => html`
     <li>
       <span class="device-name">${deviceName(device.device)}${device.current ? html` <strong>(this device)</strong>` : ""}<br>
         <span class="muted">${lastUsed(device.last_used_at)}</span></span>
       ${device.current ? "" : html`<button class="secondary small danger" data-sign-out-device="${device.id}">Sign out</button>`}
-    </li>`).join("");
+    </li>`)}`;
   $("sign-out-others").hidden = !devices.some((device) => !device.current);
 }
 
@@ -300,7 +300,7 @@ async function ownerSend(path, options) {
   }
 }
 
-const joined = (time) => {
+const joinedOn = (time) => {
   const date = new Date(time);
   return Number.isNaN(date.getTime()) ? "" : `joined ${date.toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" })}`;
 };
@@ -323,22 +323,22 @@ async function loadUsers() {
     return;
   }
   const me = storedAccount(storage)?.id;
-  $("user-list").innerHTML = users.map((user) => html`
+  $("user-list").innerHTML = html`${users.map((user) => html`
     <li>
       <span class="device-name"><strong>${user.username}</strong>${user.id === me ? " (you)" : ""}<br>
-        <span class="muted">${[user.owner ? "owner" : "", user.password_change_required ? "temporary password" : "", joined(user.created_at)].filter(Boolean).join(" · ")}</span></span>
+        <span class="muted">${[user.owner ? "owner" : "", user.password_change_required ? "temporary password" : "", joinedOn(user.created_at)].filter(Boolean).join(" · ")}</span></span>
       ${user.id === me ? "" : html`<span class="account-actions">
         <button class="secondary small" data-reset-user="${user.id}" data-name="${user.username}">Reset password</button>
         <button class="secondary small danger" data-remove-user="${user.id}" data-name="${user.username}">Remove</button>
       </span>`}
-    </li>`).join("");
+    </li>`)}`;
   $("invite-list").innerHTML = invites.length === 0
     ? html`<li class="muted">No invites waiting.</li>`
-    : invites.map((invite) => html`
+    : html`${invites.map((invite) => html`
     <li>
       <span class="device-name">${invite.label ? html`<strong>${invite.label}</strong>` : "Invite link"}<br><span class="muted">works until ${until(invite.expires_at)}</span></span>
       <button class="secondary small danger" data-revoke-invite="${invite.id}">Revoke</button>
-    </li>`).join("");
+    </li>`)}`;
 }
 
 $("user-list").onclick = async (event) => {
@@ -556,12 +556,12 @@ async function loadIdentities() {
     : `Link your ${provider} sign-in to use it instead of a password.`;
   // The only way in can't be unlinked: set a password first.
   const canUnlink = (identity) => data.password || !identity.current;
-  $("identity-list").innerHTML = data.identities.map((identity) => html`
+  $("identity-list").innerHTML = html`${data.identities.map((identity) => html`
     <li>
       <span class="device-name">${identity.username ?? provider}<br>
         <span class="muted">${identity.last_used_at ? lastUsed(identity.last_used_at) : "never used"}</span></span>
       ${canUnlink(identity) ? html`<button class="secondary small danger" data-unlink="${identity.id}">Unlink</button>` : ""}
-    </li>`).join("");
+    </li>`)}`;
   $("link-identity").textContent = `Link ${provider}`;
   $("link-identity").hidden = linked;
   if (oidcResult && !$("identities-outcome").dataset.shown) {
@@ -626,12 +626,12 @@ async function loadTokens() {
   if (shown && shown === shownTokenId && !tokens.some((token) => String(token.id) === shown)) hideSecret();
   $("tokens").innerHTML = tokens.length === 0
     ? html`<li class="muted">No tokens yet.</li>`
-    : tokens.map((token) => html`
+    : html`${tokens.map((token) => html`
     <li>
       <span class="device-name">${token.name}<br>
         <span class="muted">${token.scope === "api" ? "MCP and REST" : "MCP only"} · ${token.last_used_at ? lastUsed(token.last_used_at) : "never used"}</span></span>
       <button class="secondary small danger" data-revoke-token="${token.id}" data-name="${token.name}">Revoke</button>
-    </li>`).join("");
+    </li>`)}`;
 }
 
 $("tokens").onclick = async (event) => {

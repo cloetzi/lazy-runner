@@ -1,14 +1,14 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readdirSync, readFileSync } from "node:fs";
-import { html, raw, joined, isHtml, icon, authorLine } from "../../public/js/html.js";
+import { html, joined, inLine, icon, authorLine } from "../../public/js/html.js";
 
 const JS = new URL("../../public/js/", import.meta.url);
 
 test("escapes every value, quotes included, and keeps the template's own markup", () => {
   const name = `<img src=x onerror="alert(1)"> & 'co'`;
   const out = html`<li title="${name}">${name}</li>`;
-  assert.ok(isHtml(out));
+  assert.equal(typeof out, "object");
   assert.equal(String(out), '<li title="&#60;img src=x onerror=&#34;alert(1)&#34;&#62; &#38; &#39;co&#39;">' +
     "&#60;img src=x onerror=&#34;alert(1)&#34;&#62; &#38; &#39;co&#39;</li>");
 });
@@ -24,9 +24,10 @@ test("writes nothing for null, undefined and false, and 0 as 0", () => {
   assert.equal(String(html`[${null}${undefined}${false}${0}]`), "[0]");
 });
 
-test("raw and joined build html, joined escaping text but not html", () => {
-  assert.equal(String(html`${raw("<hr>")}`), "<hr>");
-  assert.equal(String(raw(null)), "");
+test("joined and inLine build html, escaping text but not html", () => {
+  assert.equal(String(inLine("p", "a\"b", "<x>")), '<p class="a&#34;b">&#60;x&#62;</p>');
+  assert.equal(String(inLine("span", "c", html`<i>y</i>`)), '<span class="c"><i>y</i></span>');
+  assert.equal(String(inLine("<script>", "c", "z")), '<span class="c">z</span>');
   assert.equal(String(joined(["a<b", html`<i>c</i>`], " · ")), "a&#60;b · <i>c</i>");
   assert.equal(String(joined([], ", ")), "");
 });
@@ -52,6 +53,11 @@ test("icons and author lines are html, their text escaped", () => {
 function literals(source) {
   const found = [];
   let i = 0;
+  // Where `text` next starts, or the end of the source when it never does.
+  const endOf = (text, from) => {
+    const at = source.indexOf(text, from);
+    return at === -1 ? source.length : at;
+  };
   const quoted = () => {
     const quote = source[i];
     const start = i++;
@@ -90,8 +96,8 @@ function literals(source) {
     while (i < source.length) {
       const c = source[i];
       if (c === end && depth === 0) return;
-      if (c === "/" && source[i + 1] === "/") i = source.indexOf("\n", i);
-      else if (c === "/" && source[i + 1] === "*") i = source.indexOf("*/", i) + 2;
+      if (c === "/" && source[i + 1] === "/") i = endOf("\n", i);
+      else if (c === "/" && source[i + 1] === "*") i = endOf("*/", i) + 2;
       else if (c === "/" && /(?:[(,=:[!&|?{};]|return)\s*$/.test(source.slice(Math.max(0, i - 20), i))) regex();
       else if (c === "\"" || c === "'") quoted();
       else if (c === "`") template();
@@ -141,20 +147,24 @@ test("markup is written only in html`` templates, so every value in it is escape
       if (/<[a-z/!]/i.test(text) || /(^|[\s"'`])[a-z-]+="/.test(text)) offences.push(`${name}:${lineOf(source, literal.start)} ${literal.text.slice(0, 80)}`);
     }
   }
-  // The placeholder shown in a text field, and html.js and plan-changes.js
-  // opening a tag they are passed (raw, from a fixed list of callers).
-  const allowed = [/^settings\.js:\d+ "<token>"$/, /^(html|plan-changes)\.js:\d+ `<\/?\$\{tag\}/];
+  // The placeholder shown in a text field.
+  const allowed = [/^settings\.js:\d+ "<token>"$/];
   assert.deepEqual(offences.filter((offence) => !allowed.some((pattern) => pattern.test(offence))), []);
 });
 
-test("nothing goes to innerHTML or insertAdjacentHTML as a plain template, and nothing escapes by hand", () => {
+test("html stays html: no plain template goes to innerHTML, and no html is added or joined into a string", () => {
   const offences = [];
   for (const name of modules) {
     const source = readFileSync(new URL(name, JS), "utf8");
-    for (const match of source.matchAll(/(?:innerHTML|outerHTML)\s*\+?=\s*`|insertAdjacentHTML\([^,]+,\s*`/g)) {
-      offences.push(`${name}:${lineOf(source, match.index)}`);
+    const at = (index, what) => offences.push(`${name}:${lineOf(source, index)} ${what}`);
+    for (const match of source.matchAll(/(?:innerHTML|outerHTML)\s*\+?=\s*`|insertAdjacentHTML\([^,]+,\s*`/g)) at(match.index, "plain template");
+    // A list of html goes into html`${list}`, which keeps it html.
+    for (const match of source.matchAll(/\.join\(""\)/g)) if (name !== "html.js" && !/names$/.test(source.slice(0, match.index))) at(match.index, "join");
+    for (const literal of literals(source).filter((l) => l.tagged)) {
+      const before = source.slice(0, literal.start - 4).trimEnd();
+      const after = source.slice(literal.start + literal.text.length).trimStart();
+      if (before.endsWith("+") || after.startsWith("+")) at(literal.start, "added");
     }
-    if (name !== "html.js" && /import \{[^}]*\bescape\b[^}]*\} from "\.\/html\.js"/.test(source)) offences.push(`${name} imports escape`);
   }
   assert.deepEqual(offences, []);
 });

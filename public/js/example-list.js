@@ -54,7 +54,7 @@ export function mountExamples({ list, error, done, href = "/#workouts", onImport
       list.innerHTML = html`<li class="muted">The list shows when the server is reachable.</li>`;
       return;
     }
-    list.innerHTML = byFit(examples).map((example) => html`
+    list.innerHTML = html`${byFit(examples).map((example) => html`
       <li>
         <div class="example-head">
           <span class="device-name"><strong>${example.name}</strong><br>
@@ -73,7 +73,7 @@ export function mountExamples({ list, error, done, href = "/#workouts", onImport
               <span class="muted">${(workout.exercises ?? []).join(", ")}</span></li>`)}</ul>
           ${example.imported ? html`<button class="quiet small" data-import="${example.slug}" data-name="${example.name}" data-copy="true">Import another copy</button>` : ""}
         </details>
-      </li>`).join("");
+      </li>`)}`;
   }
 
   list.onclick = async (event) => {

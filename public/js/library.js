@@ -188,8 +188,8 @@ function remember(value) {
   }
 }
 
-document.getElementById("library-areas").innerHTML = [{ id: "", label: "All areas" }, ...AREAS]
-  .map((area) => html`<button data-area="${area.id}">${area.label}</button>`).join("");
+document.getElementById("library-areas").innerHTML = html`${[{ id: "", label: "All areas" }, ...AREAS]
+  .map((area) => html`<button data-area="${area.id}">${area.label}</button>`)}`;
 document.getElementById("review-controls").hidden = !review;
 
 for (const controls of document.querySelectorAll(".library-controls")) {

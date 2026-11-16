@@ -473,7 +473,7 @@ function pick(title, onPick, current = null) {
     stills.forEach((figure) => figure.destroy());
     stills = [];
     const list = dialog.querySelector("#picker-list");
-    list.innerHTML = shown.length ? shown.map(pickerRow).join("") : html`<li><p class="muted">Nothing matches. Try another area, or Everything.</p></li>`;
+    list.innerHTML = shown.length ? html`${shown.map(pickerRow)}` : html`<li><p class="muted">Nothing matches. Try another area, or Everything.</p></li>`;
     for (const box of list.querySelectorAll("[data-still]")) {
       const exercise = shown[Number(box.dataset.still)];
       if (exercise.animation) stills.push(createFigure(box, exercise.animation, { still: true }));

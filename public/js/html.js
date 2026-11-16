@@ -1,9 +1,9 @@
-export function escape(text) {
+function escape(text) {
   return String(text).replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
 }
 
-// HTML that is safe to put on the page: what html`` builds, and what raw()
-// vouches for. Assigned to innerHTML, it is its text.
+// HTML that is safe to put on the page: only html`` (and the helpers here
+// built on it) makes one. Assigned to innerHTML, it is its text.
 class Html {
   constructor(text) {
     this.text = text;
@@ -13,12 +13,6 @@ class Html {
     return this.text;
   }
 }
-
-// Markup known to be safe as it is (a fixed string, or one built by hand
-// from escaped parts), to go into an html`` template unescaped.
-export const raw = (text) => new Html(String(text ?? ""));
-
-export const isHtml = (value) => value instanceof Html;
 
 // What a value becomes inside html``: Html as it is, a list item by item,
 // nothing for null, undefined or false, and anything else as escaped text.
@@ -52,11 +46,17 @@ export function icon(name, label) {
   return label ? html`${svg}<span class="visually-hidden">${label}</span>` : svg;
 }
 
+// `content` in a line of its own (tag "p") or within one ("span"), with
+// `className`: the two a caller can ask for.
+export function inLine(tag, className, content) {
+  return tag === "p" ? html`<p class="${className}">${content}</p>` : html`<span class="${className}">${content}</span>`;
+}
+
 // Who put something on the calendar, when it was not you: the agent's icon
 // and a line such as "Coach agent · planned today" (plannedBy in coach.js).
 // Empty for yours. Never colour alone: the icon and the name say it.
 export function authorLine(text, tag = "span") {
-  return text ? html`${raw(`<${tag} class="author-line">`)}${icon("agent")}<span>${text}</span>${raw(`</${tag}>`)}` : "";
+  return text ? inLine(tag, "author-line", html`${icon("agent")}<span>${text}</span>`) : "";
 }
 
 // A button waiting on the server: disabled, with the busy spinner (app.css)

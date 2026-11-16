@@ -174,9 +174,9 @@ function render() {
   // Side by side, the left holds what stands now (the reading and the goals
   // it ties back to), the right what happened by date (the week, the notes).
   const reading = html`${newsCard()}${currentCard("status", board.status)}${currentCard("focus", board.focus)}${concernsCard(board)}`;
-  $("coach-board").innerHTML = [empty ? introCard() : "", wide.matches
+  $("coach-board").innerHTML = html`${empty ? introCard() : ""}${wide.matches
     ? html`<div class="coach-column coach-reading">${reading}${goalsCard(board)}</div><div class="coach-column">${weekCard(board)}${notesCard(board)}</div>`
-    : html`<div class="coach-column">${reading}${weekCard(board)}${goalsCard(board)}${notesCard(board)}</div>`].join("");
+    : html`<div class="coach-column">${reading}${weekCard(board)}${goalsCard(board)}${notesCard(board)}</div>`}`;
 }
 
 // Until anything is written: what the page is for, and the two ways in.
