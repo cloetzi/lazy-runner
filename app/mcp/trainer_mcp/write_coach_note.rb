@@ -4,7 +4,9 @@ module TrainerMcp
   class WriteCoachNote < CoachTool
     description <<~TEXT.squish
       Write on the user's Coach tab, as yourself (`author_kind: llm`, signed with your API token's name). `status` is where things stand and `focus`
-      what to work on: each replaces the current one, which stays in the journal. A `concern` is something to watch,
+      what to work on: each replaces the current one, which stays in the journal. The Coach page opens on them: give a
+      status a `title`, its headline there, of at most eight words, and write a focus as up to three lines, one thing to
+      do each, separated by line breaks, without dashes or numbers (the page draws the list). A `concern` is something to watch,
       open until resolved (resolve_concern). A `note` goes in the journal. Tie each to a goal. A note can be about a
       `date`, an `activity_id` or a `session_id`. Write a new note only for something new: to correct or add to one you
       wrote, update_coach_note it (list_coach_notes finds it). The same note sent again (the same day, for a plain note) is not written twice
@@ -14,8 +16,9 @@ module TrainerMcp
     input_schema(
       properties: {
         kind: { type: "string", enum: CoachNote::KINDS },
-        title: { type: "string", description: "A short headline; needed for a concern." },
-        body: { type: "string", description: "The note, a few plain sentences." },
+        title: { type: "string",
+                 description: "A short headline; needed for a concern. A status's is the page's headline: at most eight words." },
+        body: { type: "string", description: "The note, a few plain sentences. A focus: up to three lines, one thing to do each." },
         date: { type: "string", format: "date",
                 description: "The day it is about, YYYY-MM-DD. Not for what a planned session or run is for: that goes in its own note." },
         activity_id: { type: "integer", description: "The activity it is about." },

@@ -10,8 +10,9 @@ module TrainerMcp
     input_schema(
       properties: {
         note_id: { type: "integer", description: "The note, from list_coach_notes or get_coach_board." },
-        title: { type: "string", description: "A short headline; a concern needs one." },
-        body: { type: "string", description: "The note, a few plain sentences." },
+        title: { type: "string",
+                 description: "A short headline; a concern needs one. A status's is the page's headline: at most eight words." },
+        body: { type: "string", description: "The note, a few plain sentences. A focus: up to three lines, one thing to do each." },
         date: { type: %w[string null], format: "date", description: "The day it is about, YYYY-MM-DD." },
         activity_id: { type: %w[integer null], description: "The activity it is about." },
         session_id: { type: %w[integer null], description: "The session it is about, from list_sessions." }
