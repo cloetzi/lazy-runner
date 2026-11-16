@@ -23,8 +23,8 @@ test("says what each agent did, what it wrote first, the latest agent first", ()
     ...empty, latest: at(11),
     changes: [
       change({ id: 5, action: "moved", from_date: "2026-11-21", to_date: "2026-11-19", was: { date: "2026-11-21" }, undoable: true, created_at: at(11) }),
-      change({ id: 4, to_date: "2026-12-03" }),
-      change({ id: 3, to_date: "2026-11-16" }),
+      change({ id: 4, to_date: "2026-12-03", reason: "Base block." }),
+      change({ id: 3, to_date: "2026-11-16", reason: "Base block." }),
       change({ id: 2, item_kind: "routine", title: "Long run", action: "changed", from_date: "2026-11-22", to_date: "2026-11-22", was: { distance_m: 16000 }, now: { distance_m: 18000 }, undoable: true, reason: "The 16 km felt easy." }),
       change({ id: 6, action: "removed", from_date: "2026-11-20", to_date: null, undoable: false, agent_name: "Trainer", created_at: at(9) }),
     ],
@@ -45,10 +45,15 @@ test("says what each agent did, what it wrote first, the latest agent first", ()
   ]);
   assert.deepEqual(groups[0].items.map((i) => i.href), [null, "/calendar.html#2026-11-16", "/calendar.html#2026-11-22", "/calendar.html#2026-11-19", "/calendar.html#2026-11-15"]);
   assert.deepEqual(groups[0].items.map((i) => i.undo?.id ?? null), [null, null, 2, 5, null]);
-  // A change carries the reason the agent gave for it.
-  assert.deepEqual(groups[0].items.map((i) => i.reason), [null, null, "The 16 km felt easy.", null, null]);
+  // A change carries the reason the agent gave for it; sessions planned together say the one they share.
+  assert.deepEqual(groups[0].items.map((i) => i.reason), [null, "Base block.", "The 16 km felt easy.", null, null]);
   assert.deepEqual(groups[1].items.map((i) => [i.text, i.undo]), [["Removed Session B from Fri 20", null]]);
   assert.equal(newsCount(news), 5 + 4 + 2 + 8);
+});
+
+test("sessions planned together for different reasons say none", () => {
+  const groups = newsGroups({ ...empty, changes: [change({ reason: "Base block." }), change({ id: 2, to_date: "2026-11-20", reason: "Makes up for Friday." })] }, { today });
+  assert.deepEqual(groups[0].items.map((i) => [i.text, i.reason]), [["Planned 2 sessions, Nov 18 to Nov 20", null]]);
 });
 
 test("one planned session or routine gets its own line", () => {

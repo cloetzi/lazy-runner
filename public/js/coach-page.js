@@ -6,13 +6,13 @@ import { STATE_LABELS, routineTitle } from "./routines.js";
 import { routineTile } from "./routine-sheets.js";
 import { activityTitle, sportIcon, preferredDistanceUnit } from "./activities.js";
 import {
-  authorLabel, authorBadge, writtenOn, writtenMonth, knownCoaches, weekDays, agentName, sameReview, focusLines,
+  authorLabel, writtenOn, writtenMonth, knownCoaches, weekDays, agentName, sameReview, focusLines,
   KIND_LABELS, JOURNAL_FILTERS, journalPath, tidyCountPath, tidyRequest,
   noteRequest, changeNoteRequest, resolveRequest, deleteNoteRequest,
   addGoalRequest, changeGoalRequest, deleteGoalRequest, acceptRequest, dismissRequest, movedPosition,
 } from "./coach.js";
 import {
-  openNoteSheet, openGoalSheet, openResolveSheet, openTidySheet, openReplySheet, openConcernSheet, repliesHtml, byline as author, aboutLabel, aboutChoices,
+  openNoteSheet, openGoalSheet, openResolveSheet, openTidySheet, openReplySheet, openConcernSheet, repliesHtml, byline as author, badgeHtml, aboutLabel, aboutChoices,
 } from "./coach-sheets.js";
 import { newsGroups, hasNews, newsCount, seenRequest } from "./coach-news.js";
 import { undoButton, undoRequest } from "./plan-changes.js";
@@ -232,11 +232,11 @@ function newBand(board, fresh) {
     // The proposals close the one agent's rows, so the band ends on what waits.
     const closing = !several && i === groups.length - 1 ? waiting : "";
     return html`
-      ${several ? who(group) : ""}
+      ${several && group.items.length ? who(group) : ""}
       ${told.length ? html`<ul class="new-told">${told.map((item) => html`
         <li>
           ${what(item)}
-          ${item.kind === "wrote" ? html`<a class="link" href="${written}" aria-label="${`Read what ${group.who} wrote`}">Read</a>` : show(item)}
+          ${item.kind === "wrote" ? html`<a class="link" href="${written}" data-read aria-label="${`Read what ${group.who} wrote`}">Read</a>` : show(item)}
         </li>`)}</ul>` : ""}
       ${asked.length || closing ? html`<ul class="new-rows">${asked.map((item) => html`
         <li class="new-row">
@@ -302,7 +302,7 @@ function readingCard({ status, focus, concerns }, fresh) {
   const part = (kind, note, body, signed) => html`
     <div class="reading-part">
       <div class="reading-head">
-        <h2 class="eyebrow" id="${kind}-title">${KIND_LABELS[kind]}</h2>${newBadge(note && fresh.has(note.id))}
+        <h2 class="eyebrow">${KIND_LABELS[kind]}</h2>${newBadge(note && fresh.has(note.id))}
         ${note ? html`<span class="reading-actions">${replyButton(note)}${moreButton(note)}</span>` : ""}
       </div>
       ${note ? body : html`<p class="muted">${kind === "status"
@@ -313,7 +313,7 @@ function readingCard({ status, focus, concerns }, fresh) {
     </div>`;
   const watching = concerns.length ? html`
     <div class="reading-part watching">
-      <div class="reading-head"><h2 class="eyebrow" id="concerns-title">Watching</h2><span class="eyebrow-count" aria-label="${concerns.length === 1 ? "1 open concern" : `${concerns.length} open concerns`}">${concerns.length}</span></div>
+      <div class="reading-head"><h2 class="eyebrow">Watching</h2><span class="eyebrow-count"><span aria-hidden="true">${concerns.length}</span><span class="visually-hidden">${concerns.length === 1 ? "1 open concern" : `${concerns.length} open concerns`}</span></span></div>
       <ul class="watch-list">${concerns.map((note) => html`
         <li><button class="row watch" data-concern="${note.id}">
           <span class="concern-dot" aria-hidden="true"></span>
@@ -330,9 +330,9 @@ function readingCard({ status, focus, concerns }, fresh) {
       ${part("status", status, status && html`
         ${status.title ? html`<p class="reading-headline">${status.title}</p>` : ""}
         <p class="${status.title ? "reading-body" : "reading-body lead"}">${status.body}</p>`, !together)}
-      ${part("focus", focus, focus && (lines.length > 1
-        ? html`${focus.title ? html`<p class="reading-headline small">${focus.title}</p>` : ""}<ul class="focus-lines">${lines.map((line) => html`<li>${line}</li>`)}</ul>`
-        : html`${focus.title ? html`<p class="reading-headline small">${focus.title}</p>` : ""}<p class="reading-body lead">${focus.body}</p>`), true)}
+      ${part("focus", focus, focus && html`
+        ${focus.title ? html`<p class="reading-headline small">${focus.title}</p>` : ""}
+        ${lines.length > 1 ? html`<ul class="focus-lines">${lines.map((line) => html`<li>${line}</li>`)}</ul>` : html`<p class="reading-body lead">${lines[0] ?? focus.body}</p>`}`, true)}
       ${watching}
     </section>`;
 }
@@ -398,21 +398,23 @@ function pastGoals() {
 // This week as seven days, each a column of the Calendar's tiles (a done
 // session filled, a missed one struck, a planned run outlined) that opens
 // its day on the Calendar. A run that ticked off its routine's day shows
-// once, as the run. The tiles are a picture; each day says what is on it
+// once, as the run; the notes dated to a day are one tile. The tiles are a picture; each day says what is on it
 // to a screen reader.
 function weekStrip({ week }) {
   const now = today();
   const tile = (classes, glyph) => html`<span class="sport-tile small ${classes}">${icon(glyph)}</span>`;
-  const days = weekDays(week, now).map(({ date, sessions, routineDays, activities }) => {
+  const days = weekDays(week, now).map(({ date, sessions, routineDays, activities, notes }) => {
     const tiles = [
       ...sessions.map(({ mark }) => tile(mark, "workouts")),
       ...routineDays.map(({ day, routine }) => routineTile(routine, day.state, "small")),
       ...activities.map(({ activity }) => tile("done", sportIcon(activity.sport))),
+      ...(notes.length ? [html`<span class="note-tile small">${icon("coach")}</span>`] : []),
     ];
     const said = [
       ...sessions.map(({ session, mark }) => `${session.workout.title}, ${STATUS_LABELS[mark].toLowerCase()}`),
       ...routineDays.map(({ day, routine }) => `${routine ? routineTitle(routine) : "Routine"}, ${STATE_LABELS[day.state].toLowerCase()}`),
       ...activities.map(({ activity }) => activityTitle(activity)),
+      ...(notes.length ? [notes.length === 1 ? "1 note" : `${notes.length} notes`] : []),
     ];
     return html`
       <li>
@@ -468,8 +470,7 @@ function timeline({ notes }, fresh) {
 }
 
 function timelineEntry(note, fresh) {
-  const badge = authorBadge(note);
-  const who = html`<span class="author-badge ${note.author_kind}" aria-hidden="true">${badge.icon ? icon(badge.icon) : badge.initials}</span>`;
+  const who = badgeHtml(note);
   const earlier = note.kind === "status" || note.kind === "focus";
   if (earlier && !state.unfolded.has(note.id)) {
     return html`
@@ -485,7 +486,7 @@ function timelineEntry(note, fresh) {
   }
   const kind = earlier ? `Earlier ${KIND_LABELS[note.kind].toLowerCase()}` : note.kind === "concern" ? `Concern${note.resolved_at ? ", resolved" : ""}` : "";
   return html`
-    <li class="timeline-entry" id="note-${note.id}">
+    <li class="timeline-entry">
       ${who}
       <div class="timeline-body">
         <div class="timeline-top">
@@ -553,6 +554,13 @@ function editGoal(goal = null) {
   });
 }
 
+// Gives the focus back to what was pressed once the board was drawn again
+// after a wait: only when drawing it lost the focus (it is nowhere), not
+// when the user has moved on, and without scrolling back to it.
+function refocus(element) {
+  if (document.activeElement === document.body) element?.focus({ preventScroll: true });
+}
+
 async function moveGoal(id, direction) {
   const position = movedPosition(state.board.goals, id, direction);
   if (position == null) return;
@@ -560,7 +568,7 @@ async function moveGoal(id, direction) {
   if (problem) alert(problem);
   // The list is drawn again: the arrow pressed keeps the focus, or its neighbour at an end.
   const pressed = document.querySelector(`[data-goal-${direction < 0 ? "up" : "down"}="${id}"]`);
-  (pressed?.disabled ? document.querySelector(`[data-goal-${direction < 0 ? "down" : "up"}="${id}"]`) : pressed)?.focus();
+  refocus(pressed?.disabled ? document.querySelector(`[data-goal-${direction < 0 ? "down" : "up"}="${id}"]`) : pressed);
 }
 
 async function decide(request) {
@@ -600,7 +608,7 @@ async function filter(key) {
   document.querySelector(`[data-filter="${key}"]`)?.focus();
   await loadJournal();
   render();
-  document.querySelector(`[data-filter="${key}"]`)?.focus();
+  refocus(document.querySelector(`[data-filter="${key}"]`));
 }
 
 // Tidy up: the agent's notes written before a day go, after a count.
@@ -653,6 +661,11 @@ $("coach-board").addEventListener("click", (event) => {
     if (!confirm(`Delete "${d.title}" for good?`)) return;
     return decide(deleteGoalRequest({ id: d.deleteGoal }));
   }
+});
+
+// Read, on what an agent wrote: when it leads to the notes, they show all of them.
+$("coach-board").addEventListener("click", (event) => {
+  if (event.target.closest("a[data-read]")?.hash === "#notes") filter("all");
 });
 
 // One way in for writing: the sheet asks whether it is a note, a concern, a status or a focus.

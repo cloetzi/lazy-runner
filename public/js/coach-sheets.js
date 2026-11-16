@@ -60,9 +60,14 @@ function deleteOnPress(dialog, form, question, onDelete) {
 
 // Who wrote a note and when, with their badge: "Coach agent · Nov 9".
 export function byline(note) {
-  const badge = authorBadge(note);
-  return html`<span class="author"><span class="author-badge ${note.author_kind}" aria-hidden="true">${badge.icon ? icon(badge.icon) : badge.initials}</span>
+  return html`<span class="author">${badgeHtml(note)}
     <strong>${authorLabel(note)}</strong><span class="muted"> · ${writtenOn(note)}</span></span>`;
+}
+
+// The author's badge on its own: a person, the agent's icon, or a coach's initials.
+export function badgeHtml(note) {
+  const badge = authorBadge(note);
+  return html`<span class="author-badge ${note.author_kind}" aria-hidden="true">${badge.icon ? icon(badge.icon) : badge.initials}</span>`;
 }
 
 // What a note is about, as a tag: "Session A, Nov 9", or its day.

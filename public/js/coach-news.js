@@ -66,7 +66,8 @@ function changeItem(change, today, unit, weightUnit) {
 // each item { kind, text, reason, href, title, undo } (reason, href and undo
 // may be null; a workout's href opens it, with `showLabel` naming that).
 // First what it wrote (kind "wrote"), then the plan (kind "change"): planned
-// sessions add up to one line ("Planned 6 sessions, Nov 16 to Dec 3"), then
+// sessions add up to one line ("Planned 6 sessions, Nov 16 to Dec 3", with
+// the reason they share), then
 // the other changes in the order made. Then the activities copied (kind
 // "copied"). An agent that only proposed goals has a group with no items.
 export function newsGroups(news, { today, unit = "km", weightUnit } = {}) {
@@ -88,7 +89,9 @@ export function newsGroups(news, { today, unit = "km", weightUnit } = {}) {
     const items = [];
     if (sessions.length > 1) {
       const days = sessions.map((c) => c.to_date).sort();
-      items.push({ kind: "change", text: `Planned ${sessions.length} sessions, ${span(days[0], days.at(-1))}`, reason: null, href: calendarHref(days[0]), title: "them", undo: null });
+      // The reason, when the sessions were all planned for the same one.
+      const reasons = [...new Set(sessions.map((c) => c.reason || null))];
+      items.push({ kind: "change", text: `Planned ${sessions.length} sessions, ${span(days[0], days.at(-1))}`, reason: reasons.length === 1 ? reasons[0] : null, href: calendarHref(days[0]), title: "them", undo: null });
     }
     for (const change of [...g.plan].reverse()) {
       if (sessions.length > 1 && sessions.includes(change)) continue;
