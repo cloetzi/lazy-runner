@@ -30,11 +30,23 @@ class ApplicationController < RageController::API
 
   class Forbidden < StandardError; end
 
+  # What SQLite answers when the database can't take a write just now: held
+  # by another process past the busy timeout, or the disk full or failing.
+  # The request may well succeed later.
+  UNAVAILABLE = [SQLite3::BusyException, SQLite3::LockedException, SQLite3::FullException, SQLite3::IOException].freeze
+
   # A bug: logged, and answered in the one shape. Declared first, so every
-  # handler below comes before it (Rage tries the last declared first).
+  # handler below comes before it (Rage tries the last declared first). A
+  # database that can't be written for now is a 503 `unavailable` instead,
+  # so a client retries rather than taking its change for the cause (the
+  # PWA's outbox sets aside a change that keeps getting a `server_error`).
   rescue_from StandardError do |error|
     Rage.logger.error("#{error.class}: #{error.message}\n#{Array(error.backtrace).first(10).join("\n")}")
-    render_error :internal_server_error, "server_error", "Something went wrong on the server; the log says what"
+    if UNAVAILABLE.any? { (error.cause || error).is_a?(it) }
+      render_error :service_unavailable, "unavailable", "The database can't save anything at the moment; try again later"
+    else
+      render_error :internal_server_error, "server_error", "Something went wrong on the server; the log says what"
+    end
   end
 
   # Text that isn't UTF-8 (a stray %FF in the path or query, a raw byte in

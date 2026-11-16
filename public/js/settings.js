@@ -153,7 +153,7 @@ $("unsent-list").onclick = async (event) => {
 };
 
 $("sign-out").onclick = async () => {
-  const pending = (outbox?.pending() ?? 0) + (outbox?.parked().reduce((n, group) => n + group.entries.length, 0) ?? 0);
+  const pending = (outbox?.pending() ?? 0) + (outbox?.parkedCount() ?? 0);
   if (pending > 0) {
     const changes = `${pending} ${pending === 1 ? "change" : "changes"}`;
     if (!confirm(`${changes} on this device haven't synced yet. Signing out deletes them. Sign out anyway?`)) return;

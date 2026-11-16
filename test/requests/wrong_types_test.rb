@@ -221,4 +221,22 @@ describe "wrongly typed parameters" do
   ensure
     AppVersion.define_singleton_method(:version, version)
   end
+
+  it "answers a database it can't write for now as unavailable, to try again later" do
+    version = AppVersion.method(:version)
+    [SQLite3::BusyException, SQLite3::FullException].each do |cause|
+      # Sequel wraps what SQLite raises, as it does in a real write.
+      AppVersion.define_singleton_method(:version) do
+        raise cause, "database is locked"
+      rescue cause => error
+        raise Sequel::DatabaseError, "#{error.class}: #{error.message}"
+      end
+      get "/api/version"
+
+      _(last_response.status).must_equal 503
+      _(json["error"]["code"]).must_equal "unavailable"
+    end
+  ensure
+    AppVersion.define_singleton_method(:version, version)
+  end
 end

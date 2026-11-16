@@ -2174,7 +2174,7 @@ function renderSync() {
   const pending = outbox.pending();
   $("sync").hidden = pending === 0;
   $("sync").innerHTML = syncNote(pending, outbox.waiting(), location);
-  const parked = outbox.parked().reduce((n, group) => n + group.entries.length, 0);
+  const parked = outbox.parkedCount();
   $("sync-parked").hidden = parked === 0;
   $("sync-parked").innerHTML = parked === 0 ? "" : parkedNote(parked);
   renderRejected();
