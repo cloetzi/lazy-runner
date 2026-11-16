@@ -57,7 +57,7 @@
       "semanticCommitType": "fix"
     },
     {
-      "description": "RuboCop, its plugins and bundler-audit in their own PR, as chore(deps) since they don't ship: a new cop that flags the code then holds up only them.",
+      "description": "RuboCop, its plugins and bundler-audit in their own PR, as chore(deps) since they don't ship: a new cop that flags the code, or a new audit check, then holds up only them.",
       "matchManagers": ["bundler"],
       "matchPackageNames": ["rubocop", "rubocop-*", "bundler-audit"],
       "groupName": "lint tools",

@@ -190,10 +190,13 @@ describe "library API" do
       ensure
         Workout.db.loggers.delete(counter)
       end
+      # Signed in first, so both counts are of the list alone.
+      get "/api/me"
       before = selects.call
 
       # More workouts of the user's own, framed by a program's warm-up and a
-      # cool-down of their own.
+      # cool-down of their own, and another program.
+      Example.find!("home-strength").import!(copy: true)
       warmup = workout("cycle-1-warmup")
       cooldown = Workout.create_with!({ kind: "cooldown", title: "Stretch",
                                         blocks: [{ label: "A", steps: [{ exercise_id: exercise("plank").id, duration_seconds: 30 }] }] })
