@@ -89,8 +89,15 @@ describe "API tokens" do
       _(last_response.status).must_equal 422
       _(json["error"]["fields"].keys).must_equal ["scope"]
 
-      post_json "/api/account/tokens", name: "Script", scope: { "a" => 1 }
+      # A wrong type or a blank is refused, not taken for the default.
+      post_json "/api/account/tokens", name: "Script", scope: ""
       _(last_response.status).must_equal 422
+      _(json["error"]["fields"].keys).must_equal ["scope"]
+      [{ "a" => 1 }, [], ["api"]].each do |scope|
+        post_json "/api/account/tokens", name: "Script", scope: scope
+        _(last_response.status).must_equal 400
+        _(json["error"]["fields"].keys).must_equal ["scope"]
+      end
       _(ApiToken.count).must_equal 0
     end
 

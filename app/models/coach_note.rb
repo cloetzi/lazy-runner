@@ -128,6 +128,8 @@ class CoachNote < Record
       value = self[column]
       self[column] = value.strip.presence if value.is_a?(String)
     end
+    # A reply is the user's answer to a note: an agent writes a note of its own.
+    Record.user_only!("a reply is the user's; an agent writes a note of its own") if new? && !reply_to_id.nil?
     # What a token writes is the agent's, whatever the request says.
     self.author_kind = "llm" if Current.agent_name && new?
     self.author_name = nil if author_kind == "user"

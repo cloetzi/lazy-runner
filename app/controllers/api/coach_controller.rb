@@ -95,10 +95,12 @@ module Api
     #   at most 20 a day (409 past that).
     #   `reply_to_id` makes it a reply to a note the user didn't write: a
     #   plain note of theirs, shown under that note (its `replies`) rather
-    #   than on its own, and deleted with it.
+    #   than on its own, and deleted with it; an API token can't reply
+    #   (403).
     # @request #/components/schemas/CoachNoteInput
     # @response 201 #/components/schemas/CoachNote
     # @response 400 #/components/responses/BadRequest
+    # @response 403 #/components/responses/Forbidden
     # @response 409 #/components/responses/Conflict
     # @response 422 #/components/responses/Invalid
     def create_note

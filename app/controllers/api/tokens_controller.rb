@@ -21,11 +21,12 @@ module Api
     #   own notes. `secret` is the token: it is shown this once.
     # @request { name: String, scope?: [mcp, api] }
     # @response 201 #/components/schemas/NewApiToken
+    # @response 400 #/components/responses/BadRequest
     # @response 422 #/components/responses/Invalid
     def create
       user = Current.user!
       identity = SignedInDevice.identity_id(user, SignedInDevice.current_key(rodauth))
-      token, secret = ApiToken.issue!(user, params[:name], scope: params[:scope].presence || "mcp", user_identity_id: identity)
+      token, secret = ApiToken.issue!(user, params[:name], scope: string_param(:scope) || "mcp", user_identity_id: identity)
       render json: { token: token.as_json, secret: }, status: :created
     end
 
