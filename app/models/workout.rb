@@ -43,14 +43,17 @@ class Workout < Record
   # user's first program with one not archived, else of their own; nil when
   # there is none.
   def self.suggested
-    Program.order(:id).all.lazy.filter_map { next_up(it) }.first ||
-      next_of(active.where(kind: "workout", program_id: nil).order(:position, :id).all)
+    programs = Program.order(:id).all.lazy.map(&:workouts)
+    suggested_from([*programs, -> { active.where(program_id: nil).order(:position, :id).all }])
   end
 
-  # The program's main workout after the last one done, in program order;
-  # nil when the program has none.
-  def self.next_up(program)
-    next_of(program.workouts_dataset.where(kind: "workout").all)
+  # The same from workouts loaded already: each program's in order, then the
+  # user's own, as lists (or blocks giving one, read only when reached).
+  def self.suggested_from(lists)
+    lists.lazy.filter_map do |list|
+      mains = (list.respond_to?(:call) ? list.call : list).select { it.kind == "workout" }
+      next_of(mains) if mains.any?
+    end.first
   end
 
   # The workout after the last one of them done, round in order.
@@ -83,19 +86,20 @@ class Workout < Record
   # Today offers when nothing is planned.
   def self.catalog
     last_done = Session.where(status: "done").group(:workout_id).select_hash(:workout_id, Sequel.function(:max, :date).as(:last_done))
-    up_next = suggested
+    programs = Program.eager(workouts: { blocks: { steps: [:equipment, { exercise: :equipment }] } }).order(:id).all
+    own = active.where(program_id: nil).expanded.order(:position, :id).all
+    up_next = suggested_from([*programs.map(&:workouts), own])
+    # The warm-ups and cool-downs the cards count in: active workouts (one
+    # archived is unlinked), so loaded already.
+    loaded = (programs.flat_map(&:workouts) + own).index_by(&:id)
     cards = lambda { |workouts|
       workouts.map do |workout|
-        workout.card(up_next: workout.id == up_next&.id, last_done: last_done[workout.id]&.then { Date.iso8601(it.to_s) })
+        workout.card(up_next: workout.id == up_next&.id, last_done: last_done[workout.id]&.then { Date.iso8601(it.to_s) }, loaded:)
       end
     }
-    programs = Program.eager(workouts: { blocks: { steps: [:equipment, { exercise: :equipment }] } }).order(:id).all.map do |program|
-      { id: program.id, name: program.name, workouts: cards.call(program.workouts) }
-    end
     # A program whose workouts were all archived has nothing to show.
-    programs.reject! { it[:workouts].empty? }
-    own = active.where(program_id: nil).eager(blocks: { steps: [:equipment, { exercise: :equipment }] }).order(:position, :id).all
-    own.any? ? programs << { id: nil, name: "My workouts", workouts: cards.call(own) } : programs
+    listed = programs.reject { it.workouts.empty? }.map { { id: it.id, name: it.name, workouts: cards.call(it.workouts) } }
+    own.any? ? listed << { id: nil, name: "My workouts", workouts: cards.call(own) } : listed
   end
 
   # The kinds named in a "warmup,cooldown" list (or array), or nil for all.
@@ -317,14 +321,18 @@ class Workout < Record
 
   # A workout in a list: what it holds, how long it runs with its warm-up
   # and cool-down (`framed_minutes`), and when it was last done.
-  def card(up_next: false, last_done: nil)
+  # `loaded` has workouts by id, loaded with what `expanded` loads (the
+  # catalog's); without the parts there, they are read again.
+  def card(up_next: false, last_done: nil, loaded: {})
     steps = blocks.flat_map(&:steps)
+    ids = framed_ids
+    framed_minutes = (ids.all? { loaded.key?(it) } ? loaded.values_at(*ids) : framed).sum(&:estimated_minutes)
     summary.merge(
       exercises: steps.map { it.exercise.name }.uniq,
       exercise_ids: steps.map(&:exercise_id).uniq,
       equipment: steps.flat_map(&:equipment_needed).uniq,
       up_next:,
-      framed_minutes: framed.sum(&:estimated_minutes),
+      framed_minutes:,
       last_done: last_done&.iso8601
     )
   end

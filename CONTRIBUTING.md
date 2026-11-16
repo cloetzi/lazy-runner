@@ -25,6 +25,7 @@ bundle install
 bundle exec rage s          # dev server on http://localhost:3000 (migrates and seeds on boot)
 bundle exec rake test       # Ruby tests (Minitest)
 bundle exec rubocop         # lint (.rubocop.yml); -a fixes what is safe to fix
+bundle exec bundle-audit check --update  # locked gems against known advisories
 npm test                    # player logic tests (node:test, no dependencies)
 npm ci && npm run test:e2e  # browser smoke test (Playwright) against a server with a fresh database at BASE_URL
 docker build --build-arg RUBY_VERSION="$(cat .ruby-version)" -t lazy-runner .
@@ -54,7 +55,7 @@ then `BASE_URL=http://localhost:3999 SERVER_LOG=/tmp/e2e.log npm run test:e2e`.
   entry saying why. Not covered: the vendored Swagger UI (by hand) and the
   Debian release in the session-start hook's fallback image.
 - CI runs on GitHub-hosted runners (`ubuntu-latest`) and only tests and
-  lints: Ruby, RuboCop, node and e2e as parallel jobs, toolchains from setup
+  lints: Ruby, RuboCop with the gem audit, node and e2e as parallel jobs, toolchains from setup
   actions reading the version files, dependencies cached. The image is built only for a release
   (`.github/workflows/release.yml`). Keep branch builds lean.
 - Commits follow [Conventional Commits](https://www.conventionalcommits.org/):

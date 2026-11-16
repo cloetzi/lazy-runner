@@ -179,6 +179,39 @@ describe "library API" do
       _(workouts.first["framed_minutes"]).must_equal workouts.first["estimated_minutes"]
     end
 
+    it "reads the list in the same number of queries, however many workouts it holds" do
+      selects = lambda do
+        found = []
+        counter = Logger.new(nil)
+        counter.define_singleton_method(:info) { |message = nil| found << message if message.to_s.include?("SELECT") }
+        Workout.db.loggers << counter
+        get "/api/workouts"
+        found.size
+      ensure
+        Workout.db.loggers.delete(counter)
+      end
+      # Signed in first, so both counts are of the list alone.
+      get "/api/me"
+      before = selects.call
+
+      # More workouts of the user's own, framed by a program's warm-up and a
+      # cool-down of their own, and another program.
+      Example.find!("home-strength").import!(copy: true)
+      warmup = workout("cycle-1-warmup")
+      cooldown = Workout.create_with!({ kind: "cooldown", title: "Stretch",
+                                        blocks: [{ label: "A", steps: [{ exercise_id: exercise("plank").id, duration_seconds: 30 }] }] })
+      3.times do |i|
+        Workout.create_with!({ kind: "workout", title: "Mine #{i}", warmup: warmup.id, cooldown: cooldown.id,
+                               blocks: [{ label: "A", steps: [{ exercise_id: exercise("plank").id, duration_seconds: 60 }] }] })
+      end
+      _(selects.call).must_equal before
+      mine = json.last["workouts"]
+      _(mine.size).must_equal 4
+      framed = Workout.first!(title: "Mine 0")
+      _(framed.framed_ids).must_equal [warmup.id, framed.id, cooldown.id]
+      _(mine.find { it["id"] == framed.id }["framed_minutes"]).must_equal framed.framed.sum(&:estimated_minutes)
+    end
+
     it "marks the main workout that is up next and when each was last done" do
       session_on("2026-10-20", "done")
       session_on("2026-10-22", "skipped")
