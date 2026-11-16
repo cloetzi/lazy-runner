@@ -10,7 +10,11 @@ export function createRunStore(storage, key = RUN_KEY) {
     // Stamps the run and keeps where its countdown was, paused.
     save(run, { now = Date.now(), phase = null, timer = null, timerNow = 0 } = {}) {
       run.touchedAt = now;
-      run.timer = timer && { phase, totalMs: timer.totalMs, elapsedMs: countdown.elapsed(timer, timerNow) };
+      run.timer = timer && {
+        phase, totalMs: timer.totalMs, elapsedMs: countdown.elapsed(timer, timerNow),
+        // A stretch's clock counts up, with its cues.
+        ...(timer.up ? { up: true, marks: timer.marks } : {}),
+      };
       try {
         storage.setItem(key, JSON.stringify(run));
         return true;
@@ -41,5 +45,8 @@ export function createRunStore(storage, key = RUN_KEY) {
 // runs unseen.
 export function restoredTimer(saved) {
   if (!saved) return null;
-  return { phase: saved.phase, timer: { ...countdown.createCountdown(saved.totalMs / 1000), elapsedMs: saved.elapsedMs } };
+  const timer = saved.up
+    ? { ...countdown.createCountUp(), totalMs: saved.totalMs, marks: saved.marks ?? [] }
+    : countdown.createCountdown(saved.totalMs / 1000);
+  return { phase: saved.phase, timer: { ...timer, elapsedMs: saved.elapsedMs } };
 }

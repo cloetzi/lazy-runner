@@ -31,6 +31,7 @@
   --warning-tint: #fbf0d9;
   --warning-ink: #7a4f00;     /* warning text on --warning-tint */
   --rest: #23708f;
+  --stretch: #6a55a3;         /* a stretch held: calm, apart from work and rest */
   --border: #dedcd6;          /* decorative: card edges, dividers */
   --control-border: #8f8a80;  /* outlines that mark a control: 3:1 or more */
   --focus: #1f6feb;
@@ -104,6 +105,7 @@
     --warning-tint: #3a3020;
     --warning-ink: #f0c46a;
     --rest: #5fb3d9;
+    --stretch: #b3a2e6;
     --border: #2c323a;
     --control-border: #6b7380;
     --focus: #79b8ff;
@@ -1288,6 +1290,7 @@ button.step-name .icon { color: var(--muted); }
 }
 #player:is([data-phase="work"], [data-phase="switch"]) .phase-badge { background: var(--accent-tint); border-color: var(--accent-ink); color: var(--accent-ink); }
 #player[data-phase="rest"] .phase-badge { background: color-mix(in srgb, var(--rest) 14%, var(--surface)); border-color: var(--rest); }
+#player[data-phase="hold"] .phase-badge { background: color-mix(in srgb, var(--stretch) 14%, var(--surface)); border-color: var(--stretch); }
 /* The side as a large letter in a disc, and the word. */
 .badges > .side-badge { border-color: var(--text); padding-left: var(--space-1); }
 .side-letter {
@@ -1307,6 +1310,7 @@ button.step-name .icon { color: var(--muted); }
 }
 #player:is([data-phase="work"], [data-phase="switch"]) .count-box { --ring-colour: var(--accent-bright); }
 #player[data-phase="rest"] .count-box { --ring-colour: var(--rest); }
+#player[data-phase="hold"] .count-box { --ring-colour: var(--stretch); }
 .count-box.pausable { cursor: pointer; }
 /* A set of reps: − and + either side of the number, which counts what was
    done; the box may grow wider than the ring for them. */
@@ -1337,6 +1341,10 @@ button.step-name .icon { color: var(--muted); }
 /* A rest's core breathes slowly; paused, the ring dims. */
 .ring .core { fill: var(--ring-colour); stroke: none; opacity: 0; transform-origin: center; }
 #player[data-phase="rest"] .ring .core { opacity: 0.14; animation: breathe 8s ease-in-out infinite; }
+/* A stretch's ring fills instead, with a mark where both sides switch, and
+   past its target the core takes a faint tint: there, and still going. */
+.ring .mark { fill: var(--surface); stroke: var(--ring-colour); stroke-width: 2.5; visibility: hidden; }
+.count-box.reached .ring .core { opacity: 0.08; }
 body.paused .ring :is(.track, .arc) { opacity: 0.4; }
 body.paused .ring .core { animation-play-state: paused; }
 @keyframes breathe { from, to { transform: scale(0.82); } 50% { transform: scale(1); } }
@@ -1348,6 +1356,7 @@ body.paused .ring .core { animation-play-state: paused; }
 /* Longer counts and words step down so they stay inside the ring. */
 .target[data-len="3"] { font-size: calc(var(--ring) * 0.32); }
 .target[data-len="5"] { font-size: calc(var(--ring) * 0.2); }
+.target[data-len="clock"] { font-size: calc(var(--ring) * 0.26); }
 .target[data-len="long"] { max-width: calc(var(--ring) * 0.72); font-size: max(var(--text-lg), calc(var(--ring) * 0.1)); line-height: 1.15; }
 #player[data-phase="rest"] .target { color: var(--rest); }
 /* The unit, or "Paused" in its place, so the count never moves. */

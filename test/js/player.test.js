@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { previousIndex, switchesSides, mainActionLabel, stepAnnouncement, spokenTarget, spokenWeight, tapAccepted, TAP_GUARD_MS, holdStatus, MIN_HOLD_SECONDS, unloggedExercises, plannedExercise, swapExercise, swapRun, shortlist, SHORTLIST, resumeChoice, sessionProgress, endsEarly, loggedFromServer, pickUpIndex, partEnd, setLabel, minutesLeft, progressAt, tempoText, leadInSeconds, GEAR_LEAD_IN, extraSeconds, repsCount, upNextLabel, upNextDetails, equipmentChanges, finishSummary, framingLine, itemPart, swapTargets } from "../../public/js/player.js";
+import { previousIndex, switchesSides, mainActionLabel, stepAnnouncement, spokenTarget, spokenWeight, tapAccepted, TAP_GUARD_MS, holdStatus, MIN_HOLD_SECONDS, unloggedExercises, plannedExercise, swapExercise, swapRun, shortlist, SHORTLIST, resumeChoice, sessionProgress, endsEarly, loggedFromServer, pickUpIndex, partEnd, setLabel, minutesLeft, progressAt, tempoText, leadInSeconds, GEAR_LEAD_IN, extraSeconds, repsCount, upNextLabel, upNextDetails, equipmentChanges, finishSummary, framingLine, itemPart, swapTargets, countsUp, bothSides, screenSpan, holdMarks, holdLogs, clockText, holdUnit } from "../../public/js/player.js";
 
 const squat = { id: 1, name: "Goblet squat", equipment: ["dumbbell"], default_reps: 8, default_seconds: null };
 const deadlift = { id: 2, name: "Straight-leg deadlift", equipment: ["dumbbell"], default_reps: 12, default_seconds: null };
@@ -491,4 +491,72 @@ test("Get ready's weights follow a swap made there", () => {
     allowed_weights: [10, 20], equipment: ["dumbbell"], weight_equipment: "dumbbell", any_weight: null,
   });
   assert.equal(swapTargets(targets, items)[1].weight_equipment, null);
+});
+
+const pigeon = { id: 20, name: "Pigeon stretch", category: "stretch", equipment: [] };
+const stretchSide = (side, overrides = {}) => set(pigeon, 1, {
+  mode: "timed", reps: null, seconds: 30, tempo: null, weight: null, weight_unit: null, step_id: 30, side, equipment: [], ...overrides,
+});
+
+test("counts up for a stretch held or with only a note, not for one in reps or anything else", () => {
+  assert.equal(countsUp(stretchSide(null)), true);
+  assert.equal(countsUp(stretchSide(null, { mode: "reps", seconds: null, note: "Hold 30 to 45 s" })), true);
+  assert.equal(countsUp(stretchSide(null, { mode: "reps", reps: 8, seconds: null })), false);
+  assert.equal(countsUp(set(plank, 1, { mode: "timed", reps: null, seconds: 60 })), false);
+  assert.equal(countsUp(rest(1)), false);
+});
+
+test("runs both sides of a stretch as one screen", () => {
+  const items = [stretchSide("left"), stretchSide("right"), set(squat, 1, { side: "left" }), set(squat, 1, { side: "right" })];
+
+  assert.equal(bothSides(items, 0), true);
+  assert.equal(bothSides(items, 1), false);
+  assert.equal(bothSides(items, 2), false);
+  assert.deepEqual([0, 2].map((i) => screenSpan(items, i)), [2, 1]);
+  // A right side alone, as a swap can leave it, is a screen of its own.
+  assert.equal(bothSides([stretchSide("left"), stretchSide("right", { step_id: 31 })], 0), false);
+});
+
+test("goes back to the left side of a stretch run as both sides", () => {
+  const items = [set(squat, 1), stretchSide("left"), stretchSide("right"), rest(1), set(squat, 2)];
+
+  assert.equal(previousIndex(items, 4), 1);
+  assert.equal(previousIndex(items, 1), 0);
+});
+
+test("cues the switch at one side's target and a soft tone at the whole target", () => {
+  const items = [stretchSide("left"), stretchSide("right"), stretchSide(null, { step_id: 31 })];
+
+  assert.deepEqual(holdMarks(items, 0), [{ seconds: 30, cue: "switch" }, { seconds: 60, cue: "target" }]);
+  assert.deepEqual(holdMarks(items, 2), [{ seconds: 30, cue: "target" }]);
+  assert.deepEqual(holdMarks([stretchSide(null, { seconds: null })], 0), []);
+});
+
+test("logs each side's share of a stretch held as both sides", () => {
+  const items = [stretchSide("left"), stretchSide("right"), stretchSide(null, { step_id: 31 })];
+
+  assert.deepEqual(holdLogs(items, 0, 73), [{ index: 0, seconds: 37, status: "done" }, { index: 1, seconds: 36, status: "done" }]);
+  assert.deepEqual(holdLogs(items, 2, 41), [{ index: 2, seconds: 41, status: "done" }]);
+  assert.deepEqual(holdLogs(items, 0, 1).map((log) => log.status), ["skipped", "skipped"]);
+  // One hold: a short one is done on both sides or on neither.
+  assert.deepEqual(holdLogs(items, 0, 5).map((log) => log.status), ["done", "done"]);
+});
+
+test("says what a stretch aims for under its clock, then that it got there", () => {
+  const items = [stretchSide("left"), stretchSide("right"), stretchSide(null, { step_id: 31 }), stretchSide(null, { step_id: 32, seconds: null })];
+
+  assert.deepEqual([18, 30, 59, 60].map((held) => holdUnit(items, 0, held)), ["switch at 0:30", "30 s a side", "30 s a side", "target reached"]);
+  assert.deepEqual([18, 30].map((held) => holdUnit(items, 2, held)), ["of 0:30", "target reached"]);
+  assert.equal(holdUnit(items, 3, 18), "held");
+  const noted = [stretchSide("left", { seconds: null }), stretchSide("right", { seconds: null })];
+  assert.equal(holdUnit(noted, 0, 18), "switch when ready");
+  assert.deepEqual([0, 18, 72, 600].map(clockText), ["0:00", "0:18", "1:12", "10:00"]);
+});
+
+test("names a stretch's both sides and its count-up for a screen reader", () => {
+  assert.equal(stepAnnouncement(stretchSide("left"), { both: true }), "Pigeon stretch, both sides, left first, set 1 of 2, 30 seconds each side");
+  assert.equal(spokenTarget(stretchSide("left"), { phase: "hold", seconds: 18 }), "18 seconds held");
+  const noted = stretchSide("left", { mode: "reps", seconds: null, note: "until it eases" });
+  assert.equal(stepAnnouncement(noted, { both: true }), "Pigeon stretch, both sides, left first, set 1 of 2, until it eases");
+  assert.equal(mainActionLabel("hold"), "Done");
 });

@@ -10,7 +10,7 @@ import { html, icon, authorLine, busy, showSheet } from "./html.js";
 import { offlineToday } from "./offline.js";
 import { setupRows, setupLeft } from "./setup.js";
 import { blockName, blockSummary, stepSummary, alternatingText, setWeight, includedKinds, framingFor, framePlan, gearList, carrierOf } from "./workout.js";
-import { previousIndex, switchesSides, mainActionLabel, stepAnnouncement, spokenTarget, tapAccepted, holdStatus, unloggedExercises, plannedExercise, swapRun, resumeChoice, sessionProgress, endsEarly, loggedFromServer, pickUpIndex, partEnd, setLabel, minutesLeft, tempoText, leadInSeconds, extraSeconds, progressAt, repsCount, upNextLabel, upNextDetails, equipmentChanges, finishSummary, framingLine, swapTargets } from "./player.js";
+import { previousIndex, switchesSides, mainActionLabel, stepAnnouncement, spokenTarget, tapAccepted, holdStatus, unloggedExercises, plannedExercise, swapRun, resumeChoice, sessionProgress, endsEarly, loggedFromServer, pickUpIndex, partEnd, setLabel, minutesLeft, tempoText, leadInSeconds, extraSeconds, progressAt, repsCount, upNextLabel, upNextDetails, equipmentChanges, finishSummary, framingLine, swapTargets, countsUp, bothSides, screenSpan, holdMarks, holdLogs, clockText, holdUnit } from "./player.js";
 import { rpeOptions, toggleRpe } from "./rpe-picker.js";
 import { openSwap, prefetchAlternatives, forgetAlternatives } from "./swap.js";
 import { mountNav } from "./nav.js";
@@ -1243,6 +1243,9 @@ function goTo(index) {
   } else if (item.mode === "timed") {
     // Seconds to get into position, as set on the Settings page.
     startCountdown("lead", leadInSeconds(run.items, index, readSettings(storage).leadIn));
+  } else if (countsUp(item)) {
+    // A stretch with only a note: its clock starts with the screen.
+    startHold();
   } else {
     stopTimer();
     state.phase = "reps";
@@ -1260,6 +1263,13 @@ function current() {
 function startCountdown(phase, seconds) {
   state.phase = phase;
   state.timer = countdown.start(countdown.createCountdown(seconds), performance.now());
+  state.lastElapsed = 0;
+}
+
+// A stretch's clock counts up from here, as long as it is held.
+function startHold() {
+  state.phase = "hold";
+  state.timer = countdown.start(countdown.createCountUp(holdMarks(state.run.items, state.run.index)), performance.now());
   state.lastElapsed = 0;
 }
 
@@ -1291,6 +1301,14 @@ function onMainAction() {
     const held = Math.round(countdown.elapsed(state.timer, performance.now()) / 1000);
     logSet(current(), holdStatus(held, current().seconds), { seconds: held });
     goTo(state.run.index + 1);
+  } else if (state.phase === "hold") {
+    // Held as long as it was: both sides of a stretch log their share.
+    const index = state.run.index;
+    const held = Math.round(countdown.elapsed(state.timer, performance.now()) / 1000);
+    for (const log of holdLogs(state.run.items, index, held)) {
+      logSet(state.run.items[log.index], log.status, { index: log.index, seconds: log.seconds });
+    }
+    goTo(index + screenSpan(state.run.items, index));
   } else if (state.phase === "lead") {
     startWork();
     saveRun();
@@ -1351,8 +1369,12 @@ function undoSkip() {
 function onSkip() {
   // Skip takes the place the rest's button had a moment ago.
   if (!tapAccepted(state.mainChangedAt, performance.now())) return;
-  if (current().type === "exercise") logSet(current(), "skipped");
-  goTo(state.run.index + 1);
+  const index = state.run.index;
+  const span = screenSpan(state.run.items, index);
+  for (let i = index; i < index + span; i++) {
+    if (state.run.items[i].type === "exercise") logSet(state.run.items[i], "skipped", { index: i });
+  }
+  goTo(index + span);
 }
 
 function tick() {
@@ -1364,6 +1386,8 @@ function tick() {
   const cues = countdown.cuesBetween(state.timer, state.lastElapsed, elapsed)
     .filter((cue) => !(state.phase === "lead" && cue !== "tick"));
   cues.forEach(beep);
+  // Said as well, for a screen reader or with the beeps off.
+  if (state.phase === "hold" && cues.includes("switch")) announce("Switch sides when ready");
   state.lastElapsed = elapsed;
 
   if (countdown.isFinished(state.timer, now)) {
@@ -1378,7 +1402,8 @@ function tick() {
 }
 
 function startWork() {
-  startCountdown("work", current().seconds);
+  if (countsUp(current())) startHold();
+  else startCountdown("work", current().seconds);
   state.mainChangedAt = performance.now();
   announce("Go");
   // Emit the start beep immediately rather than on the next tick.
@@ -1499,10 +1524,12 @@ function render() {
   const seconds = state.timer ? countdown.displaySeconds(state.timer, now) : null;
   const next = resting ? nextExercise() : null;
   const switchingSides = !resting && switching(item, now);
+  const both = !resting && bothSides(run.items, run.index);
+  const holding = state.phase === "hold" && !resting;
   // One colour per phase, on the badge and the ring; the badge says the word.
   const phase = resting ? "rest" : switchingSides ? "switch" : state.phase;
   if ($("player").dataset.phase !== phase) $("player").dataset.phase = phase;
-  setText("phase", { lead: "Get ready", work: "Go", rest: "Rest", switch: "Switch sides" }[phase] ?? "");
+  setText("phase", { lead: "Get ready", work: "Go", hold: "Hold", rest: "Rest", switch: "Switch sides" }[phase] ?? "");
   setHidden("phase", phase === "reps");
   // A rest prepares the next set: what it is, how much, the load to pick up.
   setHidden("up-next", !next);
@@ -1520,8 +1547,10 @@ function render() {
     setText("set-label", setLabel(item));
     setHidden("set-label", !setLabel(item));
     setHidden("side", !item.side);
-    // The side as a large letter as well as the word.
-    setHtml("side", item.side ? html`<span class="side-letter" aria-hidden="true">${item.side === "left" ? "L" : "R"}</span>${item.side === "left" ? "Left" : "Right"} side` : "");
+    // The side as a large letter as well as the word; both sides of a
+    // stretch as words alone.
+    if (both) setHtml("side", html`Both sides`);
+    else setHtml("side", item.side ? html`<span class="side-letter" aria-hidden="true">${item.side === "left" ? "L" : "R"}</span>${item.side === "left" ? "Left" : "Right"} side` : "");
     renderLoadLine(item);
     setText("details", details(item));
     renderGear(item, run.index);
@@ -1535,17 +1564,26 @@ function render() {
   $("count-box").classList.toggle("counting", counting);
   const count = counting ? repsCount(item, repsDone()) : null;
   // A set with no reps to log shows its note ("max"), or "Go".
-  const shown = counting ? repsDone() : state.phase === "reps" && !resting ? item.note ?? "Go" : seconds;
+  const shown = counting ? repsDone() : state.phase === "reps" && !resting ? item.note ?? "Go" : holding ? clockText(seconds) : seconds;
   // A countdown keeps the size of its longest number all the way down.
   const longest = state.timer ? String(Math.ceil(state.timer.totalMs / 1000)) : "";
-  renderTarget(shown, count?.spoken ?? spokenTarget(item, { phase: state.phase, seconds }), longest);
-  const unit = state.timer ? (seconds === 1 ? "second" : "seconds") : count?.unit ?? "";
+  renderTarget(shown, count?.spoken ?? spokenTarget(item, { phase: state.phase, seconds }), longest, holding);
+  const unit = holding ? holdUnit(run.items, run.index, seconds) : state.timer ? (seconds === 1 ? "second" : "seconds") : count?.unit ?? "";
   setText("count-unit", paused ? "" : unit);
 
   // The ring drains for holds, lead-ins and rests; a set of reps has none,
   // and the count keeps its place either way.
   setStyle("ring", "visibility", state.timer ? "visible" : "hidden");
-  if (state.timer) setStyle("ring-arc", "strokeDashoffset", String(-(1 - countdown.remainingMs(state.timer, now) / state.timer.totalMs)));
+  // A stretch's ring fills toward its target instead, with a mark where
+  // both sides switch, and stays full past it; one with no target has none.
+  if (holding) {
+    setStyle("ring-arc", "strokeDashoffset", String(1 - countdown.filled(state.timer, now)));
+  } else if (state.timer) {
+    setStyle("ring-arc", "strokeDashoffset", String(-(1 - countdown.remainingMs(state.timer, now) / state.timer.totalMs)));
+  }
+  setStyle("ring-arc", "visibility", holding && !state.timer.totalMs ? "hidden" : "");
+  setStyle("ring-mark", "visibility", holding && both && state.timer.totalMs ? "visible" : "hidden");
+  $("count-box").classList.toggle("reached", holding && !!state.timer.totalMs && countdown.filled(state.timer, now) >= 1);
 
   // A rest shows the next exercise standing still: a moving figure reads
   // as "do this now".
@@ -1554,9 +1592,11 @@ function render() {
   setHidden("howto-open", resting && !next);
   setHidden("swap-open", resting && !next);
 
-  const after = run.items[run.index + 1];
+  // The screen after this one, past both sides of a stretch.
+  const afterIndex = run.index + (resting ? 1 : screenSpan(run.items, run.index));
+  const after = run.items[afterIndex];
   // A rest already says what is next.
-  setText("next", resting ? "" : after ? `Next: ${label(after)}` : "Last one");
+  setText("next", resting ? "" : after ? `Next: ${label(after, bothSides(run.items, afterIndex))}` : "Last one");
 
   // A rest has one way forward: the main button, quiet and in the rest colour.
   setText("main-action", mainActionLabel(state.phase, next));
@@ -1569,12 +1609,13 @@ function render() {
 
 // The big count as it shows, and as words for a screen reader ("8 reps",
 // "45 seconds"), which reads the words alone.
-function renderTarget(shown, spoken, longest = "") {
+function renderTarget(shown, spoken, longest = "", clock = false) {
   const text = String(shown ?? "");
   setText("target-shown", text);
-  // Longer counts and words take a smaller size, so they stay in the ring.
+  // Longer counts and words take a smaller size, so they stay in the ring;
+  // a stretch's clock ("0:18", "1:12") has a size of its own.
   const size = Math.max(text.length, longest.length);
-  const length = size <= 2 ? "" : size <= 3 ? "3" : size <= 5 ? "5" : "long";
+  const length = clock ? "clock" : size <= 2 ? "" : size <= 3 ? "3" : size <= 5 ? "5" : "long";
   if ($("target").dataset.len !== length) $("target").dataset.len = length;
   setText("target-spoken", spoken);
 }
@@ -1584,7 +1625,7 @@ function announceStep() {
   const item = current();
   if (item.type === "rest") return announce(stepAnnouncement(item, { next: nextExercise() }));
   const weight = takesWeight(item) && item.weight ? inUnit(item.weight, state.unit) : null;
-  announce(stepAnnouncement(item, { weight, switching: switching(item) }));
+  announce(stepAnnouncement(item, { weight, switching: switching(item), both: bothSides(state.run.items, state.run.index) }));
 }
 
 // Keeps the same animation running across re-renders; swaps it when the
@@ -1667,8 +1708,8 @@ function details(item) {
   if (item.planned) bits.push(`instead of ${item.planned.exercise.name}`);
   if (item.reps && item.exercise.alternating) bits.push(alternatingText(item.reps));
   if (item.tempo) bits.push(tempoText(item.tempo));
-  if (item.mode === "timed" && state.phase === "lead") bits.push(`${item.seconds} s`);
-  if (item.note && (item.mode === "timed" || item.reps)) bits.push(item.note);
+  if (item.mode === "timed" && state.phase === "lead") bits.push(bothSides(state.run.items, state.run.index) ? `${item.seconds} s each side` : `${item.seconds} s`);
+  if (item.note && (item.mode === "timed" || item.reps || countsUp(item))) bits.push(item.note);
   return bits.join(" · ");
 }
 
@@ -1702,9 +1743,9 @@ function renderGear(item, index) {
   setHtml("equipment", html`${names.map((name) => html`<li>${name}</li>`)}`);
 }
 
-function label(item) {
+function label(item, both = false) {
   if (item.type === "rest") return `rest ${item.seconds} s`;
-  return item.side ? `${item.exercise.name} (${item.side})` : item.exercise.name;
+  return item.side && !both ? `${item.exercise.name} (${item.side})` : item.exercise.name;
 }
 
 function nextExerciseIndex() {
@@ -2105,7 +2146,14 @@ function resume(run) {
   requestWakeLock();
   prefetchSwaps();
   goTo(run.index);
-  // Come back paused where the countdown was, so nothing runs unseen.
+  // Come back paused where the countdown was, so nothing runs unseen; a
+  // stretch's clock started by coming back starts paused.
+  if (!saved && state.phase === "hold") {
+    state.timer = countdown.pause(state.timer, performance.now());
+    saveRun();
+    render();
+    announce("Paused");
+  }
   if (saved && state.timer) {
     state.phase = saved.phase;
     state.timer = saved.timer;

@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import {
   extend, elapsed,
   createCountdown, start, pause, isRunning, remainingMs, displaySeconds, isFinished, cuesBetween,
+  createCountUp, filled,
 } from "../../public/js/countdown.js";
 
 test("counts down from start", () => {
@@ -59,4 +60,35 @@ test("extend adds time and keeps what has elapsed", () => {
 
   assert.equal(displaySeconds(longer, 3000), 12);
   assert.equal(elapsed(longer, 3000), 3000);
+});
+
+test("a count-up shows the seconds gone and never finishes", () => {
+  const c = start(createCountUp([{ seconds: 30, cue: "target" }]), 1000);
+  assert.equal(displaySeconds(c, 1000), 0);
+  assert.equal(displaySeconds(c, 19_900), 18);
+  assert.equal(displaySeconds(c, 73_000), 72);
+  assert.equal(isFinished(c, 999_999), false);
+});
+
+test("a count-up fills toward its target and stays full past it", () => {
+  const c = start(createCountUp([{ seconds: 30, cue: "switch" }, { seconds: 60, cue: "target" }]), 0);
+  assert.equal(filled(c, 15_000), 0.25);
+  assert.equal(filled(c, 90_000), 1);
+  assert.equal(filled(start(createCountUp(), 0), 90_000), 0);
+});
+
+test("a count-up pauses and goes on like a countdown", () => {
+  let c = start(createCountUp(), 0);
+  c = pause(c, 4000);
+  assert.equal(displaySeconds(c, 60_000), 4);
+  c = start(c, 60_000);
+  assert.equal(displaySeconds(c, 62_000), 6);
+});
+
+test("a count-up cues its start and each mark, with no ticks", () => {
+  const c = createCountUp([{ seconds: 30, cue: "switch" }, { seconds: 60, cue: "target" }]);
+  const cues = [];
+  for (let t = -100; t <= 70_000; t += 100) cues.push(...cuesBetween(c, t, t + 100));
+  assert.deepEqual(cues, ["start", "switch", "target"]);
+  assert.deepEqual(cuesBetween(c, 25_000, 65_000), ["switch", "target"]);
 });

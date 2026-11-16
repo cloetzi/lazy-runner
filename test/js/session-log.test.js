@@ -162,3 +162,20 @@ test("sends a run in order once the server is back", async () => {
   ]);
   assert.deepEqual(outbox.result(key), { session: { id: 42 }, completion: {} });
 });
+
+test("logs the seconds a stretch with only a note was held", () => {
+  const stretch = set({ reps: null, note: "Hold 30 to 45 s", exercise: { id: 9, name: "Pigeon stretch", category: "stretch" } });
+  const { body } = setRequest(run(), stretch, "done", { seconds: 41 });
+
+  assert.equal(body.seconds, 41);
+  assert.equal(body.reps, undefined);
+  assert.equal(setRequest(run(), stretch, "skipped").body.seconds, null);
+});
+
+test("still logs reps, not seconds, for a set with only a note that isn't a stretch", () => {
+  const max = set({ reps: null, note: "max" });
+  const { body } = setRequest(run(), max, "done");
+
+  assert.equal("reps" in body, true);
+  assert.equal("seconds" in body, false);
+});

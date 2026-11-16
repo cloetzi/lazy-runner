@@ -111,5 +111,7 @@ function play(cue, delay = 0) {
     case "end": tone(660, 0.2, delay); tone(660, 0.2, delay + 0.25); break;
     // Rising pair, unlike the falling end beep, so it is heard as "now the other side".
     case "switch": tone(880, 0.15, delay); tone(1320, 0.25, delay + 0.18); break;
+    // A stretch's target: one low, longer tone, a nudge rather than an alarm.
+    case "target": tone(523, 0.6, delay); break;
   }
 }

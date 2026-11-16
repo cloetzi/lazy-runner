@@ -45,6 +45,8 @@ const PATTERNS = {
   tick: [60],
   end: [150, 100, 150],
   switch: [400, 120, 120],
+  // A stretch's target reached: one soft buzz, nothing to hurry for.
+  target: [200],
 };
 
 export function vibrationPattern(cue) {
