@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.9.0](https://github.com/cloetzi/lazy-runner/compare/v0.8.0...v0.9.0) (2026-11-16)
+
+
+### Features
+
+* **coach:** give news, the coach's reading, goals and notes their own look ([#27](https://github.com/cloetzi/lazy-runner/issues/27)) ([6138d66](https://github.com/cloetzi/lazy-runner/commit/6138d66e5d19174a67da886ab88f36c2b92a5c52)), closes [#23](https://github.com/cloetzi/lazy-runner/issues/23)
+* **mcp:** tell the coach agent how a status, a focus and a reason read on the Coach page ([#30](https://github.com/cloetzi/lazy-runner/issues/30)) ([1dbd36f](https://github.com/cloetzi/lazy-runner/commit/1dbd36f0faab2fa4fe63c21ae421ca010d73624b)), closes [#24](https://github.com/cloetzi/lazy-runner/issues/24)
+* **player:** stretches count up, both sides on one screen ([#26](https://github.com/cloetzi/lazy-runner/issues/26)) ([a34ea65](https://github.com/cloetzi/lazy-runner/commit/a34ea656c0b537b0d90441d123237f6c84045341))
+
 ## [0.8.0](https://github.com/cloetzi/lazy-runner/compare/v0.7.0...v0.8.0) (2026-11-16)
 
 
