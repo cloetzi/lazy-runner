@@ -27,7 +27,7 @@ jobs:
           bundler-cache: true
       - run: bundle exec rake test
 
-  # Only the development group: RuboCop doesn't load the app.
+  # Only the development group: RuboCop and bundler-audit don't load the app.
   lint:
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -40,6 +40,8 @@ jobs:
           bundler-cache: true
       # Offences as annotations on the pull request.
       - run: bundle exec rubocop --format github
+      # The locked gems against the Ruby advisory database, fetched fresh.
+      - run: bundle exec bundle-audit check --update
 
   node:
     runs-on: ubuntu-latest

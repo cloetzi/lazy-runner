@@ -30,8 +30,10 @@ group :test do
   gem "rack-test"
 end
 
-# Linting (.rubocop.yml): bundle exec rubocop.
+# Linting (.rubocop.yml): bundle exec rubocop. Known advisories for the
+# locked gems: bundle exec bundle-audit check --update.
 group :development do
+  gem "bundler-audit", require: false
   gem "rubocop", require: false
   gem "rubocop-minitest", require: false
   gem "rubocop-performance", require: false
