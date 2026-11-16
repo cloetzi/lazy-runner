@@ -171,3 +171,11 @@ test("logs the seconds a stretch with only a note was held", () => {
   assert.equal(body.reps, undefined);
   assert.equal(setRequest(run(), stretch, "skipped").body.seconds, null);
 });
+
+test("still logs reps, not seconds, for a set with only a note that isn't a stretch", () => {
+  const max = set({ reps: null, note: "max" });
+  const { body } = setRequest(run(), max, "done");
+
+  assert.equal("reps" in body, true);
+  assert.equal("seconds" in body, false);
+});

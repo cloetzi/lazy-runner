@@ -1304,7 +1304,7 @@ function onMainAction() {
   } else if (state.phase === "hold") {
     // Held as long as it was: both sides of a stretch log their share.
     const index = state.run.index;
-    const held = countdown.displaySeconds(state.timer, performance.now());
+    const held = Math.round(countdown.elapsed(state.timer, performance.now()) / 1000);
     for (const log of holdLogs(state.run.items, index, held)) {
       logSet(state.run.items[log.index], log.status, { index: log.index, seconds: log.seconds });
     }
@@ -1386,6 +1386,8 @@ function tick() {
   const cues = countdown.cuesBetween(state.timer, state.lastElapsed, elapsed)
     .filter((cue) => !(state.phase === "lead" && cue !== "tick"));
   cues.forEach(beep);
+  // Said as well, for a screen reader or with the beeps off.
+  if (state.phase === "hold" && cues.includes("switch")) announce("Switch sides when ready");
   state.lastElapsed = elapsed;
 
   if (countdown.isFinished(state.timer, now)) {
@@ -2144,7 +2146,14 @@ function resume(run) {
   requestWakeLock();
   prefetchSwaps();
   goTo(run.index);
-  // Come back paused where the countdown was, so nothing runs unseen.
+  // Come back paused where the countdown was, so nothing runs unseen; a
+  // stretch's clock started by coming back starts paused.
+  if (!saved && state.phase === "hold") {
+    state.timer = countdown.pause(state.timer, performance.now());
+    saveRun();
+    render();
+    announce("Paused");
+  }
   if (saved && state.timer) {
     state.phase = saved.phase;
     state.timer = saved.timer;

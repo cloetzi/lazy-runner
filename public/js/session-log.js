@@ -3,7 +3,7 @@
 // the caller queues them. The session is named by `run.ref` until the server
 // gives it an id, so sets and the finish can be queued while offline.
 
-import { itemPart } from "./player.js";
+import { itemPart, countsUp } from "./player.js";
 
 const sessionPath = (run) => `/api/sessions/{${run.ref}}`;
 
@@ -49,7 +49,7 @@ export function setRequest(run, item, status, { reps = item.reps, seconds = item
   if (item.planned) body.exercise_id = item.exercise.id;
   // A set counted in reps logs them; a hold, or a stretch with only a note,
   // the seconds it was held.
-  if (item.mode === "reps" && item.reps != null) body.reps = status === "done" ? reps : null;
+  if (item.mode === "reps" && !countsUp(item)) body.reps = status === "done" ? reps : null;
   else body.seconds = status === "done" ? seconds : null;
   return { method: "POST", path: `${sessionPath(run)}/sets`, body };
 }

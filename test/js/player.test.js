@@ -538,6 +538,8 @@ test("logs each side's share of a stretch held as both sides", () => {
   assert.deepEqual(holdLogs(items, 0, 73), [{ index: 0, seconds: 37, status: "done" }, { index: 1, seconds: 36, status: "done" }]);
   assert.deepEqual(holdLogs(items, 2, 41), [{ index: 2, seconds: 41, status: "done" }]);
   assert.deepEqual(holdLogs(items, 0, 1).map((log) => log.status), ["skipped", "skipped"]);
+  // One hold: a short one is done on both sides or on neither.
+  assert.deepEqual(holdLogs(items, 0, 5).map((log) => log.status), ["done", "done"]);
 });
 
 test("says what a stretch aims for under its clock, then that it got there", () => {
@@ -546,11 +548,15 @@ test("says what a stretch aims for under its clock, then that it got there", () 
   assert.deepEqual([18, 30, 59, 60].map((held) => holdUnit(items, 0, held)), ["switch at 0:30", "30 s a side", "30 s a side", "target reached"]);
   assert.deepEqual([18, 30].map((held) => holdUnit(items, 2, held)), ["of 0:30", "target reached"]);
   assert.equal(holdUnit(items, 3, 18), "held");
+  const noted = [stretchSide("left", { seconds: null }), stretchSide("right", { seconds: null })];
+  assert.equal(holdUnit(noted, 0, 18), "switch when ready");
   assert.deepEqual([0, 18, 72, 600].map(clockText), ["0:00", "0:18", "1:12", "10:00"]);
 });
 
 test("names a stretch's both sides and its count-up for a screen reader", () => {
   assert.equal(stepAnnouncement(stretchSide("left"), { both: true }), "Pigeon stretch, both sides, left first, set 1 of 2, 30 seconds each side");
   assert.equal(spokenTarget(stretchSide("left"), { phase: "hold", seconds: 18 }), "18 seconds held");
+  const noted = stretchSide("left", { mode: "reps", seconds: null, note: "until it eases" });
+  assert.equal(stepAnnouncement(noted, { both: true }), "Pigeon stretch, both sides, left first, set 1 of 2, until it eases");
   assert.equal(mainActionLabel("hold"), "Done");
 });

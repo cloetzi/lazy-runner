@@ -85,11 +85,13 @@ export function holdMarks(items, index) {
 }
 
 // The sets a stretch held for `held` seconds logs ({ index, seconds, status }):
-// each side's share, evenly, since the clock can't tell when the switch came.
+// each side's share, evenly, since the clock can't tell when the switch came,
+// and done or skipped together, as the one hold it was.
 export function holdLogs(items, index, held) {
-  if (!bothSides(items, index)) return [{ index, seconds: held, status: holdStatus(held, items[index].seconds) }];
+  const status = holdStatus(held, items[index].seconds);
+  if (!bothSides(items, index)) return [{ index, seconds: held, status }];
   const left = Math.ceil(held / 2);
-  return [left, held - left].map((seconds, i) => ({ index: index + i, seconds, status: holdStatus(seconds, items[index + i].seconds) }));
+  return [left, held - left].map((seconds, i) => ({ index: index + i, seconds, status }));
 }
 
 // Seconds as a clock: 18 -> "0:18", 72 -> "1:12".
@@ -101,7 +103,7 @@ export function clockText(seconds) {
 // there. Both sides: "switch at 0:30", "30 s a side", "target reached".
 export function holdUnit(items, index, held) {
   const target = items[index]?.seconds;
-  if (!target) return "held";
+  if (!target) return bothSides(items, index) ? "switch when ready" : "held";
   if (!bothSides(items, index)) return held < target ? `of ${clockText(target)}` : "target reached";
   if (held < target) return `switch at ${clockText(target)}`;
   return held < target * 2 ? `${target} s a side` : "target reached";
@@ -410,8 +412,9 @@ export function stepAnnouncement(item, { weight = null, next = null, switching =
   else if (item.side) bits.push(`${item.side} side`);
   const set = setLabel(item);
   if (set) bits.push(set.toLowerCase());
+  // A stretch with only a note says the note as it is.
   const amount = spokenAmount(item);
-  bits.push(both && amount ? `${amount} each side` : amount);
+  bits.push(both && item.mode === "timed" && amount ? `${amount} each side` : amount);
   bits.push(spokenWeight(weight, item.weights_held));
   const sentence = bits.filter(Boolean).join(", ");
   return switching ? `Switch sides. ${sentence}` : sentence;
