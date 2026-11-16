@@ -631,13 +631,18 @@ test("sets a goal on the Coach tab, writes a status, and accepts the agent's pro
   await goalSheet.getByRole("button", { name: "Save" }).click();
   await page.locator(".goal-list").getByText('Ski season & "quiet" knees').waitFor();
 
-  await page.locator('[data-write="status"]').click();
+  // One Write button: the sheet asks what kind of note it is.
+  await page.getByRole("button", { name: "Write", exact: true }).click();
   const noteSheet = page.locator("#note-sheet");
+  await noteSheet.locator('input[name="kind"][value="status"]').check();
+  await noteSheet.locator('input[name="title"]').fill("Settling in");
   await noteSheet.locator('textarea[name="body"]').fill("Base block, week 1.");
   await noteSheet.locator('select[name="author"]').selectOption("other");
   await noteSheet.locator('input[name="authorName"]').fill("Mara");
   await noteSheet.getByRole("button", { name: "Save" }).click();
-  await page.locator("#status-title").locator("..").locator("..").getByText("Base block, week 1.").waitFor();
+  // The status leads the coach's reading, its title as the headline.
+  await page.locator(".coach-reading .reading-headline").getByText("Settling in").waitFor();
+  await page.locator(".coach-reading").getByText("Base block, week 1.").waitFor();
   const board = await getJson("/api/coach");
   assert.equal(board.status.author_kind, "human");
   assert.equal(board.status.author_name, "Mara");
@@ -658,8 +663,11 @@ test("sets a goal on the Coach tab, writes a status, and accepts the agent's pro
   assert.equal(asked.status(), 200);
   await agent.dispose();
   await page.reload();
-  // Waiting, it is one line; Review opens it, saying what Accept does.
-  await page.getByText("1 goal proposal waiting").waitFor();
+  // What the agent did is news, in the band over the page; what it wrote is marked New where it lives.
+  await page.locator(".coach-new .new-told").getByText("Wrote a concern").waitFor();
+  await page.locator(".coach-reading .watching").getByText("New", { exact: true }).waitFor();
+  // Waiting, the proposal is one line there; Review opens it, saying what Accept does.
+  await page.getByText("1 goal proposal waits for your answer").waitFor();
   await page.getByRole("button", { name: /Review/ }).click();
   await page.locator(".proposal").getByText("It becomes goal 2, at the end of your list.").waitFor();
   await accessible(page, "the Coach tab with a goal proposal open");
@@ -667,14 +675,25 @@ test("sets a goal on the Coach tab, writes a status, and accepts the agent's pro
   await page.locator(".goal-list").getByText("Core twice a week").waitFor();
   assert.deepEqual((await getJson("/api/goals")).goals.map((g) => g.title), ['Ski season & "quiet" knees', "Core twice a week"]);
 
-  // The agent's concern takes a reply, which shows under it.
-  await page.locator("#concerns-title").locator("../..").getByRole("button", { name: "Reply" }).click();
+  // The news goes once it is marked seen, and the New marks with it.
+  await page.getByRole("button", { name: "Mark as seen" }).click();
+  await page.locator(".coach-new").waitFor({ state: "detached" });
+  assert.equal(await page.locator("#coach-board .badge").count(), 0);
+
+  // The agent's concern opens with what can be done with it; a reply shows under it.
+  await page.locator("[data-concern]").click();
+  const concernSheet = page.locator("#concern-sheet");
+  await concernSheet.getByRole("button", { name: "Resolve" }).waitFor();
+  await accessible(page, "the concern sheet");
+  await concernSheet.getByRole("button", { name: "Reply" }).click();
   const replySheet = page.locator("#reply-sheet");
   await replySheet.getByText("Two sessions missed. When suits you?").waitFor();
   await accessible(page, "the reply sheet");
   await replySheet.locator('textarea[name="body"]').fill("Mornings, before the easy run.");
   await replySheet.getByRole("button", { name: "Save reply" }).click();
-  await page.locator(".note-replies").getByText("Mornings, before the easy run.").waitFor();
+  await page.locator("[data-concern]").getByText("1 reply").waitFor();
+  await page.locator("[data-concern]").click();
+  await concernSheet.locator(".note-replies").getByText("Mornings, before the easy run.").waitFor();
   assert.equal((await getJson("/api/coach")).concerns[0].replies[0].body, "Mornings, before the easy run.");
   assert.deepEqual(errors, []);
   await context.close();

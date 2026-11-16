@@ -1,9 +1,10 @@
 // "Since you last looked" on Coach, kept free of the DOM so node can
 // test it: what agents did since the user last marked it seen (GET
-// /api/coach/news), one group per agent, newest first, a line per change
-// to the plan and a line each for the activities copied and the notes and
-// goals written. A change links to its day on the Calendar and, while it can
-// be, offers the button that takes it back.
+// /api/coach/news), one group per agent, newest first: a line for the notes
+// written, a line per change to the plan with the reason given for it, and a
+// line for the activities copied. A change links to its day on the Calendar
+// and, while it can be, offers the button that takes it back. The goals an
+// agent proposed are not said here: they wait on the page until answered.
 
 import { shortDay } from "./calendar.js";
 import { AGENT_NAME, writtenDay } from "./coach.js";
@@ -29,12 +30,12 @@ export function writtenAt(time, today) {
 
 const calendarHref = (date) => `/calendar.html#${date}`;
 
-// A change to the plan as a line: what happened, the day to show, and the
-// change when it can be taken back.
+// A change to the plan as a line: what happened, why (the reason the agent
+// gave), the day to show, and the change when it can be taken back.
 function changeItem(change, today, unit, weightUnit) {
   const title = change.title || { session: "a session", routine: "a routine", workout: "a workout", weight: "an exercise" }[change.item_kind];
   const day = (iso) => dayNear(iso, today);
-  const item = (text, date) => ({ text, href: date ? calendarHref(date) : null, title, undo: undoLabel(change) ? change : null });
+  const item = (text, date) => ({ kind: "change", text, reason: change.reason || null, href: date ? calendarHref(date) : null, title, undo: undoLabel(change) ? change : null });
   if (change.item_kind === "weight") {
     return { ...item(`Set ${title} to ${rememberedText(change.now, weightUnit)} (was ${rememberedText(change.was, weightUnit)})`, null), title: `${title}'s weight` };
   }
@@ -62,11 +63,13 @@ function changeItem(change, today, unit, weightUnit) {
 }
 
 // The news in groups, one per agent, the latest first: { who, when, items },
-// each item { text, href, title, undo } (href and undo may be null; a
-// workout's href opens it, with `showLabel` naming that). First
-// the plan: planned sessions add up to one line ("Planned 6 sessions, Nov
-// 16 to Dec 3"), then the other changes in the order made. Then the
-// activities copied, then the notes and goals written.
+// each item { kind, text, reason, href, title, undo } (reason, href and undo
+// may be null; a workout's href opens it, with `showLabel` naming that).
+// First what it wrote (kind "wrote"), then the plan (kind "change"): planned
+// sessions add up to one line ("Planned 6 sessions, Nov 16 to Dec 3", with
+// the reason they share), then
+// the other changes in the order made. Then the activities copied (kind
+// "copied"). An agent that only proposed goals has a group with no items.
 export function newsGroups(news, { today, unit = "km", weightUnit } = {}) {
   const groups = new Map();
   const group = (name, time) => {
@@ -86,7 +89,9 @@ export function newsGroups(news, { today, unit = "km", weightUnit } = {}) {
     const items = [];
     if (sessions.length > 1) {
       const days = sessions.map((c) => c.to_date).sort();
-      items.push({ text: `Planned ${sessions.length} sessions, ${span(days[0], days.at(-1))}`, href: calendarHref(days[0]), title: "them", undo: null });
+      // The reason, when the sessions were all planned for the same one.
+      const reasons = [...new Set(sessions.map((c) => c.reason || null))];
+      items.push({ kind: "change", text: `Planned ${sessions.length} sessions, ${span(days[0], days.at(-1))}`, reason: reasons.length === 1 ? reasons[0] : null, href: calendarHref(days[0]), title: "them", undo: null });
     }
     for (const change of [...g.plan].reverse()) {
       if (sessions.length > 1 && sessions.includes(change)) continue;
@@ -95,14 +100,13 @@ export function newsGroups(news, { today, unit = "km", weightUnit } = {}) {
     }
     for (const copied of g.copied) {
       const from = copied.sources.length ? ` from ${listed(copied.sources.map(sourceLabel))}` : "";
-      items.push({ text: `Copied ${plural(copied.count, "activity", "activities")}${from}, ${span(copied.from, copied.to)}`, href: calendarHref(copied.to), title: "them", undo: null });
+      items.push({ kind: "copied", text: `Copied ${plural(copied.count, "activity", "activities")}${from}, ${span(copied.from, copied.to)}`, reason: null, href: calendarHref(copied.to), title: "them", undo: null });
     }
     const wrote = ["status", "focus", "concern", "note"].map((kind) => {
       const count = g.notes.filter((n) => n.kind === kind).length;
       return count ? plural(count, kind, { status: "statuses", focus: "focus notes" }[kind]) : null;
     }).filter(Boolean);
-    const said = [wrote.length && `wrote ${listed(wrote)}`, g.goals.length && `proposed ${plural(g.goals.length, "goal")}`].filter(Boolean).join("; ");
-    if (said) items.push({ text: said[0].toUpperCase() + said.slice(1), href: null, title: null, undo: null });
+    if (wrote.length) items.unshift({ kind: "wrote", text: `Wrote ${listed(wrote)}`, reason: null, href: null, title: null, undo: null });
     return { who: g.who, when: g.latest ? writtenAt(g.latest, today) : "", items };
   });
 }

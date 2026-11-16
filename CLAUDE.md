@@ -168,12 +168,14 @@ included; no Docker per test run. How:
   button that takes them back (`plan-changes.js`, sent at once). Activities keep what was sent (metres, seconds) and
   nothing derived; `activities.js` gives known sports their sprite icon.
   The Coach page (`coach-page.js`, sheets in `coach-sheets.js`, logic in
-  `coach.js`) draws `/api/coach`: goals (only the user writes them; an
-  agent's `proposed` ones wait for Accept or Dismiss), the newest status and
-  focus, open concerns and the journal, under "Since you last looked"
-  (`/api/coach/news`, `coach-news.js`): what agents did since the user marked
-  it seen (`users.coach_seen_at`), which `/api/me` counts for the dot on the
-  Coach tab (`showCoachNews` in `nav.js`). Its writes, and notes written on the
+  `coach.js`) draws `/api/coach` as four kinds of thing, each with its own
+  look (`docs/design.md`): a band for "Since you last looked"
+  (`/api/coach/news`, `coach-news.js`: what agents did since the user marked
+  it seen, `users.coach_seen_at`, which `/api/me` counts for the dot on the
+  Coach tab, `showCoachNews` in `nav.js`) and an agent's `proposed` goals,
+  which wait there for Accept or Dismiss; the newest status and focus and
+  the open concerns as one card; goals (only the user writes them) and the
+  week in outlined panels; the journal as a timeline. Its writes, and notes written on the
   Calendar, go straight through `send` rather than the outbox.
 - `public/sw.js` the service worker: the shell cached as one unit per release
   (`app/models/release.rb`), the API network first with a capped cache as the

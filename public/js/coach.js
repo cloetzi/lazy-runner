@@ -1,12 +1,12 @@
 // The Coach tab's logic, kept free of the DOM so node can test it: who wrote
-// a note, the week as days, what a note or goal form sends, and the
-// requests for goals and notes.
+// a note, the week as days, the journal's filters, what a note or goal form
+// sends, and the requests for goals and notes.
 //
 // Goals are the user's: the app adds, edits and orders them, and accepts or
 // dismisses what an agent proposed. Notes are written by the user ("You"), a
 // coach they name, or an agent (over MCP, never from here).
 
-import { weekOf, shortDay, localToday, addDays, inOrder, upNext, markFor } from "./calendar.js";
+import { weekOf, shortDay, monthLabel, localToday, addDays, inOrder, upNext, markFor } from "./calendar.js";
 import { withActivities, listed } from "./routines.js";
 import { FEEDBACK } from "./history.js";
 
@@ -133,12 +133,13 @@ export function howItFelt(completion) {
   return [completion.rpe && `RPE ${completion.rpe}`, FEEDBACK[completion.feedback], completion.ended_early && "ended early"].filter(Boolean).join(" · ");
 }
 
-// The journal's filters, each the query that keeps its notes. Statuses and
-// focus are left out: the journal folds the earlier ones into one line.
+// The journal's filters, each the query that keeps its notes. The journal
+// holds everything but the current status and focus and the open concerns:
+// the notes, the concerns resolved and the statuses and focus since replaced.
 export const JOURNAL_FILTERS = [
-  { key: "all", label: "All", query: "kind=note,concern" },
-  { key: "you", label: "Yours", query: "kind=note,concern&author=user" },
-  { key: "coach", label: "Your coach", query: "kind=note,concern&author=human,llm" },
+  { key: "all", label: "All", query: "" },
+  { key: "you", label: "Yours", query: "author=user" },
+  { key: "coach", label: "Your coach", query: "author=human,llm" },
   { key: "concerns", label: "Concerns", query: "kind=concern" },
 ];
 
@@ -146,8 +147,23 @@ export const JOURNAL_FILTERS = [
 // before the note `before` when given.
 export function journalPath(filter, before = null) {
   const { query } = JOURNAL_FILTERS.find((f) => f.key === filter) ?? JOURNAL_FILTERS[0];
-  return `/api/coach/notes?journal=true&limit=20&${query}${before == null ? "" : `&before=${before}`}`;
+  return `/api/coach/notes?journal=true&limit=20${query && `&${query}`}${before == null ? "" : `&before=${before}`}`;
 }
+
+// The month a note was written in, on this device: "November 2026".
+export const writtenMonth = (note) => monthLabel(localDate(note.created_at));
+
+// Whether one review wrote both: the same author on the same day. The page
+// then signs the status and the focus once.
+export function sameReview(status, focus) {
+  return Boolean(status && focus) && status.author_kind === focus.author_kind &&
+    (status.author_name ?? null) === (focus.author_name ?? null) && localDate(status.created_at) === localDate(focus.created_at);
+}
+
+// A focus as its lines, blanks dropped: one thing to do each, without the
+// dash, bullet or number it may have been written with (the page draws its
+// own). One line (or none) reads as a paragraph instead.
+export const focusLines = (note) => (note?.body ?? "").split("\n").map((line) => line.trim().replace(/^(?:[-*•–]|\d{1,2}[.)])\s+/, "")).filter(Boolean);
 
 export const tidyCountPath = (before) => `/api/coach/tidy?before=${before}`;
 export const tidyRequest = (before) => ({ method: "POST", path: "/api/coach/tidy", body: { before } });

@@ -45,11 +45,29 @@ function saveOnSubmit(dialog, form, read, save) {
   });
 }
 
+// Delete, once confirmed with `question`: the sheet closes when it is gone,
+// and shows the problem when it could not be deleted.
+function deleteOnPress(dialog, form, question, onDelete) {
+  form.querySelector("[data-delete]")?.addEventListener("click", async () => {
+    if (!confirm(question)) return;
+    const problem = await onDelete();
+    if (!problem) return dialog.close();
+    const error = form.querySelector(".form-error");
+    error.textContent = problem;
+    error.hidden = false;
+  });
+}
+
 // Who wrote a note and when, with their badge: "Coach agent · Nov 9".
 export function byline(note) {
-  const badge = authorBadge(note);
-  return html`<span class="author"><span class="author-badge ${note.author_kind}" aria-hidden="true">${badge.icon ? icon(badge.icon) : badge.initials}</span>
+  return html`<span class="author">${badgeHtml(note)}
     <strong>${authorLabel(note)}</strong><span class="muted"> · ${writtenOn(note)}</span></span>`;
+}
+
+// The author's badge on its own: a person, the agent's icon, or a coach's initials.
+export function badgeHtml(note) {
+  const badge = authorBadge(note);
+  return html`<span class="author-badge ${note.author_kind}" aria-hidden="true">${badge.icon ? icon(badge.icon) : badge.initials}</span>`;
 }
 
 // What a note is about, as a tag: "Session A, Nov 9", or its day.
@@ -93,14 +111,49 @@ function openAgentNoteSheet({ note, onDelete, onReply }) {
     dialog.close();
     openReplySheet({ note, onSave: onReply });
   });
-  form.querySelector("[data-delete]").addEventListener("click", async () => {
-    if (!confirm(deleteQuestion(note))) return;
-    const problem = await onDelete();
-    if (!problem) return dialog.close();
-    const error = form.querySelector(".form-error");
-    error.textContent = problem;
-    error.hidden = false;
-  });
+  deleteOnPress(dialog, form, deleteQuestion(note), onDelete);
+  showSheet(dialog);
+}
+
+// An open concern, with everything that can be done with it: Resolve, a
+// reply when someone else wrote it (each reply of yours with its Edit),
+// and Edit, or Delete for an agent's, which stays as it wrote it.
+// `onResolve()`, `onReply()`, `onEditReply(reply)` and `onEdit()` open
+// what comes next once this has closed; `onDelete()` deletes it, resolving
+// to a problem to show or nothing.
+export function openConcernSheet({ note, onResolve, onReply, onEditReply, onEdit, onDelete }) {
+  const dialog = sheet("concern-sheet");
+  const about = aboutLabel(note);
+  const agent = note.author_kind === "llm";
+  dialog.innerHTML = html`
+    <form class="howto agent-note" novalidate>
+      <header>
+        <h2>${note.title ?? KIND_LABELS.concern}</h2>
+        <button class="icon-button" type="button" data-close aria-label="Close">${icon("close")}</button>
+      </header>
+      <p class="note-by">${byline(note)}${about ? html` <span class="tag">${about}</span>` : ""}</p>
+      <p class="entry-body">${note.body}</p>
+      ${repliesHtml(note, (r) => html` <button class="quiet small" type="button" data-edit-reply="${r.id}" aria-label="Edit your reply">Edit</button>`)}
+      <p class="form-error" role="alert" hidden></p>
+      <button class="primary" type="button" data-resolve>${icon("check")}Resolve</button>
+      <div class="sheet-actions">
+        ${note.author_kind !== "user" ? html`<button class="secondary" type="button" data-reply>Reply</button>` : ""}
+        ${agent ? "" : html`<button class="secondary" type="button" data-edit>Edit</button>`}
+      </div>
+      ${agent ? html`
+        <p class="muted small-print">An agent's concern stays as it wrote it. A reply goes under it, and your coach agent reads it with the concern.</p>
+        <div class="danger-zone"><button class="quiet small danger" type="button" data-delete>${icon("trash")}Delete the concern</button></div>` : ""}
+    </form>`;
+  const form = dialog.querySelector("form");
+  // What comes next opens once this sheet has closed.
+  const then = (next) => () => { dialog.close(); next(); };
+  form.querySelector("[data-close]").addEventListener("click", () => dialog.close());
+  form.querySelector("[data-resolve]").addEventListener("click", then(onResolve));
+  form.querySelector("[data-reply]")?.addEventListener("click", then(onReply));
+  form.querySelector("[data-edit]")?.addEventListener("click", then(onEdit));
+  form.querySelectorAll("[data-edit-reply]").forEach((button) => button.addEventListener("click",
+    then(() => onEditReply(note.replies.find((r) => String(r.id) === button.dataset.editReply)))));
+  deleteOnPress(dialog, form, deleteQuestion(note, "this concern"), onDelete);
   showSheet(dialog);
 }
 
@@ -139,14 +192,7 @@ export function openReplySheet({ note, reply = null, onSave, onDelete }) {
     const body = form.elements.body.value.trim();
     return { fields: reply ? { body } : { kind: "note", body, reply_to_id: note.id }, problems: body ? [] : ["Write a few words."] };
   }, onSave);
-  form.querySelector("[data-delete]")?.addEventListener("click", async () => {
-    if (!confirm("Delete this reply?")) return;
-    const problem = await onDelete();
-    if (!problem) return dialog.close();
-    const error = form.querySelector(".form-error");
-    error.textContent = problem;
-    error.hidden = false;
-  });
+  deleteOnPress(dialog, form, "Delete this reply?", onDelete);
   showSheet(dialog);
   form.elements.body.focus();
 }
@@ -227,15 +273,7 @@ export function openNoteSheet({ note = null, kind = "note", date = "", about = [
     nameField.hidden = authorSelect.value !== "other";
     if (!nameField.hidden) form.elements.authorName.focus();
   });
-  form.querySelector("[data-delete]")?.addEventListener("click", async () => {
-    if (!confirm(deleteQuestion(note))) return;
-    const problem = await onDelete();
-    if (problem) {
-      const error = form.querySelector(".form-error");
-      error.textContent = problem;
-      error.hidden = false;
-    } else dialog.close();
-  });
+  deleteOnPress(dialog, form, deleteQuestion(note), onDelete);
 
   const read = () => noteFields({
     kind: kindNow(), title: form.elements.title.value, body: form.elements.body.value,

@@ -103,6 +103,19 @@ components, pages, player, figure.
   focus to its heading.
 - **Accessibility in the smoke test**: `test/e2e/smoke.test.js` runs
   axe-core (WCAG A and AA, best practices) on the main screens and sheets.
+- **Coach, four looks for four kinds of thing** (`coach-page.js`): what is
+  new or waits for an answer is an `--accent-tint` band that goes away once
+  it is marked seen and answered (a plain line for what only tells you
+  something, a white row for a change that can be taken back, with the
+  reason the agent gave, and for goal proposals); the coach's reading
+  (status with its title as the headline, focus a line per thing to do, the
+  open concerns under Watching in `--warning-tint`) is the page's one white
+  card; what stands (goals, this week as seven days of calendar tiles) sits
+  in quiet outlined panels; the notes are a flat timeline on the page, a
+  status or focus since replaced folded to one line in its place. What an
+  agent wrote since you last looked carries a New badge where it lives. In
+  landscape from 60rem the reading and the notes are the left column, the
+  band, the goals and the week the right. One Write button, in the header.
 - **Calendar marks**: one tile for every item, a session's with the
   workouts icon, an activity's or a routine day's with its sport's
   (`.sport-tile` in `app.css`): dashed is Maybe, outlined is Planned, filled
