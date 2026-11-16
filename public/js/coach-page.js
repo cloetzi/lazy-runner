@@ -3,6 +3,7 @@ import { getJson, loadProblem, offline, paths, sendChange, STALE_NOTE } from "./
 import { html, icon } from "./html.js";
 import { localToday, shortDay, longDay, weekdayDay, STATUS_LABELS } from "./calendar.js";
 import { STATE_LABELS, routineTitle } from "./routines.js";
+import { routineTile } from "./routine-sheets.js";
 import { activityTitle, sportIcon, preferredDistanceUnit } from "./activities.js";
 import {
   authorLabel, authorBadge, writtenOn, writtenMonth, knownCoaches, weekDays, agentName, sameReview, focusLines,
@@ -168,10 +169,11 @@ function render() {
   // One column, fastest-changing first: what is new, the reading, what
   // stands, the record. Side by side in landscape, the reading leads on the
   // left with the notes under it; what is new, the goals and the week sit
-  // beside it.
+  // beside it, and come first in the page's order (app.css places them),
+  // so what waits for an answer is reached before the notes.
   $("coach-board").classList.toggle("wide", wide.matches);
   $("coach-board").innerHTML = html`${empty ? introCard() : ""}${wide.matches
-    ? html`<div class="coach-main">${readingCard(board, fresh)}${timeline(board, fresh)}</div><div class="coach-side">${newBand(board, fresh)}${pinned}</div>`
+    ? html`<div class="coach-side">${newBand(board, fresh)}${pinned}</div><div class="coach-main">${readingCard(board, fresh)}${timeline(board, fresh)}</div>`
     : html`${newBand(board, fresh)}${readingCard(board, fresh)}<div class="coach-pinned">${pinned}</div>${timeline(board, fresh)}`}`;
 }
 
@@ -193,9 +195,10 @@ const newBadge = (on) => (on ? html` <span class="badge">New</span>` : "");
 // "Since you last looked", and what waits for an answer: gone when there is
 // neither. What only tells you something is a plain line, with Show (its
 // day on the Calendar) or Read (where it is on this page); a change that
-// can be taken back is a row with its reason and the button, and so are the
-// goal proposals. Mark as seen clears the news, up to the newest thing
-// shown; proposals stay until answered.
+// can be taken back is a row with the button, and so are the goal
+// proposals. Either way a change says the reason the agent gave. Several
+// agents each get their name over what they did. Mark as seen clears the
+// news, up to the newest thing shown; proposals stay until answered.
 function newBand(board, fresh) {
   const news = hasNews(state.news);
   const { proposals, goals } = board;
@@ -203,9 +206,6 @@ function newBand(board, fresh) {
   // A copy kept on the device can't say what can still be taken back.
   const live = !state.newsStale;
   const groups = news ? newsGroups(state.news, { today: today(), unit: unit() }) : [];
-  const items = groups.flatMap((group) => group.items);
-  const told = items.filter((item) => !(live && item.undo));
-  const asked = items.filter((item) => live && item.undo);
   // What was written is in the reading when a status, focus or concern is new, else among the notes.
   const written = [board.status, board.focus, ...board.concerns].some((note) => note && fresh.has(note.id)) ? "#reading" : "#notes";
   const agents = [...new Set(proposals.map((p) => agentName(p)))];
@@ -221,29 +221,40 @@ function newBand(board, fresh) {
       </button>
       ${state.reviewing ? proposals.map((p, i) => proposalHtml(p, i, goals, byId)) : ""}
     </li>` : "";
+  const who = (group) => html`<p class="new-who">${group.who}<span class="muted"> · ${group.when}</span></p>`;
+  const show = (item) => (item.href ? html`<a class="link" href="${item.href}" aria-label="${item.showLabel ?? `Show ${item.title} on the calendar`}">Show</a>` : "");
+  const what = (item) => html`<span class="new-text"><span class="new-what">${item.text}</span>${item.reason ? html`<span class="new-reason">${item.reason}</span>` : ""}</span>`;
+  // One agent signs in the head; several each sign what they did.
+  const several = groups.length > 1;
+  const did = groups.map((group, i) => {
+    const told = group.items.filter((item) => !(live && item.undo));
+    const asked = group.items.filter((item) => live && item.undo);
+    // The proposals close the one agent's rows, so the band ends on what waits.
+    const closing = !several && i === groups.length - 1 ? waiting : "";
+    return html`
+      ${several ? who(group) : ""}
+      ${told.length ? html`<ul class="new-told">${told.map((item) => html`
+        <li>
+          ${what(item)}
+          ${item.kind === "wrote" ? html`<a class="link" href="${written}" aria-label="${`Read what ${group.who} wrote`}">Read</a>` : show(item)}
+        </li>`)}</ul>` : ""}
+      ${asked.length || closing ? html`<ul class="new-rows">${asked.map((item) => html`
+        <li class="new-row">
+          ${what(item)}
+          <span class="new-actions">${show(item)}${undoButton(item.undo, item.title, { disabled: state.busy })}</span>
+        </li>`)}${closing}</ul>` : ""}`;
+  });
   return html`
     <section class="coach-new" aria-labelledby="news-title">
       <header class="coach-new-head">
         <div>
           <h2 id="news-title">${news ? "Since you last looked" : "Waiting for you"}</h2>
-          ${groups.map((group) => html`<p class="new-who">${group.who}<span class="muted"> · ${group.when}</span></p>`)}
+          ${several ? "" : groups.map(who)}
         </div>
         ${news ? html`<button class="secondary small" data-seen${state.busy || !live ? " disabled" : ""}>Mark as seen</button>` : ""}
       </header>
-      ${told.length ? html`<ul class="new-told">${told.map((item) => html`
-        <li>
-          <span>${item.text}</span>
-          ${item.kind === "wrote" ? html`<a class="link" href="${written}" aria-label="Read what was written">Read</a>`
-            : item.href ? html`<a class="link" href="${item.href}" aria-label="${item.showLabel ?? `Show ${item.title} on the calendar`}">Show</a>` : ""}
-        </li>`)}</ul>` : ""}
-      ${asked.length || waiting ? html`<ul class="new-rows">${asked.map((item) => html`
-        <li class="new-row">
-          <span class="new-text"><span class="new-what">${item.text}</span>${item.reason ? html`<span class="new-reason">${item.reason}</span>` : ""}</span>
-          <span class="new-actions">
-            ${item.href ? html`<a class="link" href="${item.href}" aria-label="${item.showLabel ?? `Show ${item.title} on the calendar`}">Show</a>` : ""}
-            ${undoButton(item.undo, item.title, { disabled: state.busy })}
-          </span>
-        </li>`)}${waiting}</ul>` : ""}
+      ${did}
+      ${waiting && groups.length !== 1 ? html`<ul class="new-rows">${waiting}</ul>` : ""}
     </section>`;
 }
 
@@ -295,7 +306,8 @@ function readingCard({ status, focus, concerns }, fresh) {
         ${note ? html`<span class="reading-actions">${replyButton(note)}${moreButton(note)}</span>` : ""}
       </div>
       ${note ? body : html`<p class="muted">${kind === "status"
-        ? `Where things stand: written by you or your coach${state.agentSeen ? " or your coach agent" : ""}.` : "What to work on next."}</p>`}
+        ? `Where things stand: written by you or your coach${state.agentSeen ? " or your coach agent" : ""}.` : "What to work on next."}</p>
+        <div class="entry-actions"><button class="quiet small" data-write="${kind}">${icon("plus")}Write ${kind === "status" ? "a status" : "a focus"}</button></div>`}
       ${note ? replies(note) : ""}
       ${note && signed ? html`<p class="note-by">${author(note)}</p>` : ""}
     </div>`;
@@ -327,7 +339,7 @@ function readingCard({ status, focus, concerns }, fresh) {
 
 // Goals: what stands for months, the titles and their dates; a goal opens
 // to be edited. Edit shows the rest: Add, the arrows that order them (side
-// by side, 44 px each) and the past goals.
+// by side, 44 px each) and the past goals, which also show with no goal left.
 function goalsPanel({ goals, past_goals: past }) {
   const editing = state.editingGoals;
   const ordering = editing && goals.length > 1;
@@ -356,14 +368,14 @@ function goalsPanel({ goals, past_goals: past }) {
     <section class="pinned coach-goals${editing ? " editing" : ""}" id="goals" aria-labelledby="goals-title">
       <header class="pinned-head"><h2 class="eyebrow" id="goals-title">Goals</h2>${head}</header>
       ${list}
-      ${editing ? html`
-        ${ordering ? html`<p class="muted small-print">Put what matters most at the top.</p>` : ""}
-        <div class="goal-tools">
-          <button class="secondary small" data-add-goal>${icon("plus")}Add a goal</button>
+      ${ordering ? html`<p class="muted small-print">Put what matters most at the top.</p>` : ""}
+      ${editing || !goals.length ? html`
+        ${editing || (past && !state.past) ? html`<div class="goal-tools">
+          ${editing ? html`<button class="secondary small" data-add-goal>${icon("plus")}Add a goal</button>` : ""}
           ${past && !state.past ? html`<button class="quiet small" data-past>Past goals</button>` : ""}
-        </div>
-        ${state.past?.length ? pastGoals() : ""}
-        ${state.agentSeen ? html`<p class="muted small-print">Only you change goals; your coach agent can propose one.</p>` : ""}` : ""}
+        </div>` : ""}
+        ${state.past?.length ? pastGoals() : ""}` : ""}
+      ${editing && state.agentSeen ? html`<p class="muted small-print">Only you change goals; your coach agent can propose one.</p>` : ""}
     </section>`;
 }
 
@@ -394,7 +406,7 @@ function weekStrip({ week }) {
   const days = weekDays(week, now).map(({ date, sessions, routineDays, activities }) => {
     const tiles = [
       ...sessions.map(({ mark }) => tile(mark, "workouts")),
-      ...routineDays.map(({ day, routine }) => tile(day.state === "confirmed" ? "planned" : day.state, routine?.sport ? sportIcon(routine.sport) : "workouts")),
+      ...routineDays.map(({ day, routine }) => routineTile(routine, day.state, "small")),
       ...activities.map(({ activity }) => tile("done", sportIcon(activity.sport))),
     ];
     const said = [
@@ -466,6 +478,7 @@ function timelineEntry(note, fresh) {
         <button class="timeline-fold" data-unfold="${note.id}" aria-expanded="false">
           <span class="tag">Earlier ${KIND_LABELS[note.kind].toLowerCase()}</span>
           <span class="timeline-fold-text">${note.title ?? note.body}</span>
+          ${newBadge(fresh.has(note.id))}
           <span class="timeline-when">${writtenOn(note)}</span>
         </button>
       </li>`;
@@ -483,7 +496,10 @@ function timelineEntry(note, fresh) {
         <p class="entry-body">${note.body}</p>
         ${note.resolved_at ? html`<p class="muted small-print">Resolved ${writtenOn({ created_at: note.resolved_at })}${note.resolution ? html`: ${note.resolution}` : ""}</p>` : ""}
         ${replies(note)}
-        ${note.author_kind !== "user" ? html`<div class="entry-actions">${replyButton(note)}</div>` : ""}
+        ${note.author_kind !== "user" || earlier ? html`<div class="entry-actions">
+          ${replyButton(note)}
+          ${earlier ? html`<button class="quiet small" data-fold="${note.id}" aria-expanded="true" aria-label="${`Close ${noteName(note)}`}">Close</button>` : ""}
+        </div>` : ""}
       </div>
     </li>`;
 }
@@ -625,7 +641,9 @@ $("coach-board").addEventListener("click", (event) => {
     const note = find(d.note);
     return writeReply(note, note?.replies.find((r) => String(r.id) === d.editReply));
   }
-  if (d.unfold) { state.unfolded.add(Number(d.unfold)); return redraw(`#note-${d.unfold} [data-more]`); }
+  if (d.write) return writeNote(d.write);
+  if (d.unfold) { state.unfolded.add(Number(d.unfold)); return redraw(`[data-fold="${d.unfold}"]`); }
+  if (d.fold) { state.unfolded.delete(Number(d.fold)); return redraw(`[data-unfold="${d.fold}"]`); }
   if (d.older !== undefined) return older();
   if (d.filter) return filter(d.filter);
   if (d.tidy !== undefined) return tidy();

@@ -24,7 +24,7 @@ function sheet(id) {
 // (C6): dashed while Maybe, outlined once Planned, filled when Done, faded and
 // struck when Skipped or Missed. A confirmed day reads as Planned, like a session.
 // The tile a routine shows: its sport's icon (or the workouts icon), in its state.
-function tile(routine, state, size = "", agent = false) {
+export function routineTile(routine, state, size = "", agent = false) {
   const glyph = routine?.sport ? sportIcon(routine.sport) : "workouts";
   return html`<span class="sport-tile ${state === "confirmed" ? "planned" : state}${size ? ` ${size}` : ""}" aria-hidden="true">${icon(glyph)}${agent ? html`<span class="tile-agent"></span>` : ""}</span>`;
 }
@@ -37,7 +37,7 @@ export function routineRow(day, routine, unit, attribute, today, change = null) 
   return html`
     <li class="cal-row routine-row ${day.state}">
       <button class="row" ${attribute}="${dayKey(day)}">
-        ${tile(routine, day.state)}
+        ${routineTile(routine, day.state)}
         <span class="row-text">
           <span class="row-title${day.state === "skipped" || day.state === "missed" ? " struck" : ""}">${routine ? routineTitle(routine) : "Routine"}</span>
           <span class="row-meta">${meta}</span>
@@ -53,7 +53,7 @@ export function routineRow(day, routine, unit, attribute, today, change = null) 
 // planned it) and its title; the planned distance and time are in the day under the grid.
 export function routineChip(day, routine) {
   const gone = day.state === "skipped" || day.state === "missed";
-  return html`<li class="chip routine-chip">${tile(routine, day.state, "chip-tile", routine?.created_by === "llm")}<span class="chip-label${gone ? " struck" : ""}">${routine ? routineTitle(routine) : "Routine"}</span></li>`;
+  return html`<li class="chip routine-chip">${routineTile(routine, day.state, "chip-tile", routine?.created_by === "llm")}<span class="chip-label${gone ? " struck" : ""}">${routine ? routineTitle(routine) : "Routine"}</span></li>`;
 }
 
 export const dayKey = (day) => `${day.routine_id}:${day.date}`;
@@ -81,7 +81,7 @@ export function openRoutineDaySheet({ day, routine, unit, today, on, change = nu
   dialog.innerHTML = html`
     <form method="dialog" class="howto routine-day-sheet" novalidate>
       <header>
-        <h2>${tile(routine, day.state, "small")} ${routineTitle(routine)}</h2>
+        <h2>${routineTile(routine, day.state, "small")} ${routineTitle(routine)}</h2>
         <button class="icon-button" value="close" aria-label="Close">${icon("close")}</button>
       </header>
       <p class="muted">${facts.join(" · ")}</p>

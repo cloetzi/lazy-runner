@@ -45,6 +45,19 @@ function saveOnSubmit(dialog, form, read, save) {
   });
 }
 
+// Delete, once confirmed with `question`: the sheet closes when it is gone,
+// and shows the problem when it could not be deleted.
+function deleteOnPress(dialog, form, question, onDelete) {
+  form.querySelector("[data-delete]")?.addEventListener("click", async () => {
+    if (!confirm(question)) return;
+    const problem = await onDelete();
+    if (!problem) return dialog.close();
+    const error = form.querySelector(".form-error");
+    error.textContent = problem;
+    error.hidden = false;
+  });
+}
+
 // Who wrote a note and when, with their badge: "Coach agent · Nov 9".
 export function byline(note) {
   const badge = authorBadge(note);
@@ -93,14 +106,7 @@ function openAgentNoteSheet({ note, onDelete, onReply }) {
     dialog.close();
     openReplySheet({ note, onSave: onReply });
   });
-  form.querySelector("[data-delete]").addEventListener("click", async () => {
-    if (!confirm(deleteQuestion(note))) return;
-    const problem = await onDelete();
-    if (!problem) return dialog.close();
-    const error = form.querySelector(".form-error");
-    error.textContent = problem;
-    error.hidden = false;
-  });
+  deleteOnPress(dialog, form, deleteQuestion(note), onDelete);
   showSheet(dialog);
 }
 
@@ -142,14 +148,7 @@ export function openConcernSheet({ note, onResolve, onReply, onEditReply, onEdit
   form.querySelector("[data-edit]")?.addEventListener("click", then(onEdit));
   form.querySelectorAll("[data-edit-reply]").forEach((button) => button.addEventListener("click",
     then(() => onEditReply(note.replies.find((r) => String(r.id) === button.dataset.editReply)))));
-  form.querySelector("[data-delete]")?.addEventListener("click", async () => {
-    if (!confirm(deleteQuestion(note, "this concern"))) return;
-    const problem = await onDelete();
-    if (!problem) return dialog.close();
-    const error = form.querySelector(".form-error");
-    error.textContent = problem;
-    error.hidden = false;
-  });
+  deleteOnPress(dialog, form, deleteQuestion(note, "this concern"), onDelete);
   showSheet(dialog);
 }
 
@@ -188,14 +187,7 @@ export function openReplySheet({ note, reply = null, onSave, onDelete }) {
     const body = form.elements.body.value.trim();
     return { fields: reply ? { body } : { kind: "note", body, reply_to_id: note.id }, problems: body ? [] : ["Write a few words."] };
   }, onSave);
-  form.querySelector("[data-delete]")?.addEventListener("click", async () => {
-    if (!confirm("Delete this reply?")) return;
-    const problem = await onDelete();
-    if (!problem) return dialog.close();
-    const error = form.querySelector(".form-error");
-    error.textContent = problem;
-    error.hidden = false;
-  });
+  deleteOnPress(dialog, form, "Delete this reply?", onDelete);
   showSheet(dialog);
   form.elements.body.focus();
 }
@@ -276,15 +268,7 @@ export function openNoteSheet({ note = null, kind = "note", date = "", about = [
     nameField.hidden = authorSelect.value !== "other";
     if (!nameField.hidden) form.elements.authorName.focus();
   });
-  form.querySelector("[data-delete]")?.addEventListener("click", async () => {
-    if (!confirm(deleteQuestion(note))) return;
-    const problem = await onDelete();
-    if (problem) {
-      const error = form.querySelector(".form-error");
-      error.textContent = problem;
-      error.hidden = false;
-    } else dialog.close();
-  });
+  deleteOnPress(dialog, form, deleteQuestion(note), onDelete);
 
   const read = () => noteFields({
     kind: kindNow(), title: form.elements.title.value, body: form.elements.body.value,

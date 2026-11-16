@@ -143,6 +143,9 @@ test("one review wrote the status and the focus when the same author wrote both 
 test("reads a focus as its lines, blanks dropped", () => {
   assert.deepEqual(focusLines(note({ body: "Two strength sessions.\n\n  Step-downs from the low step. \nLong run flat." })), ["Two strength sessions.", "Step-downs from the low step.", "Long run flat."]);
   assert.deepEqual(focusLines(note({ body: "Keep both sessions." })), ["Keep both sessions."]);
+  // Written as a list, it loses the markers: the page draws its own.
+  assert.deepEqual(focusLines(note({ body: "- Two sessions\n* Step-downs\n• Long run flat\n1. Sleep\n2) Eat\n10 km easy on Sunday\n-5 at dawn" })),
+    ["Two sessions", "Step-downs", "Long run flat", "Sleep", "Eat", "10 km easy on Sunday", "-5 at dawn"]);
   assert.deepEqual(focusLines(null), []);
 });
 

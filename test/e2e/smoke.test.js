@@ -622,7 +622,7 @@ test("sets a goal on the Coach tab, writes a status, and accepts the agent's pro
   await page.locator(".goal-list").getByText('Ski season & "quiet" knees').waitFor();
 
   // One Write button: the sheet asks what kind of note it is.
-  await page.getByRole("button", { name: "Write" }).click();
+  await page.getByRole("button", { name: "Write", exact: true }).click();
   const noteSheet = page.locator("#note-sheet");
   await noteSheet.locator('input[name="kind"][value="status"]').check();
   await noteSheet.locator('input[name="title"]').fill("Settling in");

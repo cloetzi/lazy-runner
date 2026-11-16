@@ -160,9 +160,10 @@ export function sameReview(status, focus) {
     (status.author_name ?? null) === (focus.author_name ?? null) && localDate(status.created_at) === localDate(focus.created_at);
 }
 
-// A focus as its lines, blanks dropped: one thing to do each. One line (or
-// none) reads as a paragraph instead.
-export const focusLines = (note) => (note?.body ?? "").split("\n").map((line) => line.trim()).filter(Boolean);
+// A focus as its lines, blanks dropped: one thing to do each, without the
+// dash, bullet or number it may have been written with (the page draws its
+// own). One line (or none) reads as a paragraph instead.
+export const focusLines = (note) => (note?.body ?? "").split("\n").map((line) => line.trim().replace(/^(?:[-*•–]|\d{1,2}[.)])\s+/, "")).filter(Boolean);
 
 export const tidyCountPath = (before) => `/api/coach/tidy?before=${before}`;
 export const tidyRequest = (before) => ({ method: "POST", path: "/api/coach/tidy", body: { before } });
