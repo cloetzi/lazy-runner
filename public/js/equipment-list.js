@@ -1,5 +1,5 @@
 import { parseWeight, withWeight, quickWeights } from "./inventory.js";
-import { escape, icon } from "./html.js";
+import { html, icon } from "./html.js";
 import { getJson, paths, loadProblem, errorMessage, send, STALE_NOTE } from "./api.js";
 
 // The inventory, drawn in a list: toggle what you own and, for gear that
@@ -25,9 +25,9 @@ export function mountEquipment(list, { unitFor = (item) => item.unit, describe =
     try {
       const { data, stale } = await getJson(paths.equipment);
       inventory = data;
-      list.innerHTML = (stale ? `<li class="row muted">${escape(STALE_NOTE)}</li>` : "") + data.filter((item) => !item.any_weight).map(row).join("");
+      list.innerHTML = html`${stale ? html`<li class="row muted">${STALE_NOTE}</li>` : ""}${data.filter((item) => !item.any_weight).map(row)}`;
     } catch (error) {
-      list.innerHTML = `<li class="row">${escape(loadProblem("the equipment", error))}</li>`;
+      list.innerHTML = html`<li class="row">${loadProblem("the equipment", error)}</li>`;
     }
   }
 
@@ -35,13 +35,13 @@ export function mountEquipment(list, { unitFor = (item) => item.unit, describe =
     const weighted = item.weights.length > 0 || item.unit;
     const unit = weighted && (picked.has(item.id) ? item.unit : unitFor(item));
     const line = describe(item, inventory);
-    return `
+    return html`
       <li class="row inventory-item${item.owned ? "" : " not-owned"}" data-id="${item.id}">
         <label class="owned">
           <input type="checkbox" data-field="owned" ${item.owned ? "checked" : ""}>
-          <span>${escape(item.name)}</span>
+          <span>${item.name}</span>
         </label>
-        ${line ? `<p class="unlocks muted">${escape(line)}</p>` : ""}
+        ${line ? html`<p class="unlocks muted">${line}</p>` : ""}
         ${weighted && item.owned ? weightsHtml(item, unit) : ""}
         <p class="status muted" aria-live="polite"></p>
       </li>`;
@@ -50,23 +50,23 @@ export function mountEquipment(list, { unitFor = (item) => item.unit, describe =
   // Owned gear in set weights: a chip per weight, a field and Add for one
   // more, the common sizes not listed yet, and lb or kg.
   function weightsHtml(item, unit) {
-    const name = escape(item.name);
+    const { name } = item;
     const quick = quickWeights(item.slug, unit, item.weights);
-    return `
+    return html`
       <div class="weights">
-        <ul class="weight-chips" aria-label="${name} weights">${item.weights.map((weight) => `
-          <li class="weight-chip">${weight} ${unit}<button type="button" class="chip-remove" data-remove="${weight}" aria-label="Remove ${weight} ${unit}">${icon("close")}</button></li>`).join("")}
+        <ul class="weight-chips" aria-label="${name} weights">${item.weights.map((weight) => html`
+          <li class="weight-chip">${weight} ${unit}<button type="button" class="chip-remove" data-remove="${weight}" aria-label="Remove ${weight} ${unit}">${icon("close")}</button></li>`)}
         </ul>
         <div class="weight-add">
           <input type="text" inputmode="decimal" data-field="new-weight" placeholder="Weight" aria-label="Add a ${name} weight, in ${unit}"
             aria-describedby="weights-hint-${item.id}" enterkeyhint="done" autocomplete="off">
           <button type="button" class="secondary small" data-add-weight>Add</button>
           <div class="segmented" role="group" aria-label="${name} weights in">
-            ${["lb", "kg"].map((choice) => `<button type="button" data-unit="${choice}" aria-pressed="${choice === unit}">${choice}</button>`).join("")}
+            ${["lb", "kg"].map((choice) => html`<button type="button" data-unit="${choice}" aria-pressed="${choice === unit}">${choice}</button>`)}
           </div>
         </div>
-        ${quick.length ? `<div class="weight-quick" role="group" aria-label="Add a common size, in ${unit}">${quick.map((weight) => `
-          <button type="button" class="secondary small" data-quick="${weight}">+ ${weight}</button>`).join("")}</div>` : ""}
+        ${quick.length ? html`<div class="weight-quick" role="group" aria-label="Add a common size, in ${unit}">${quick.map((weight) => html`
+          <button type="button" class="secondary small" data-quick="${weight}">+ ${weight}</button>`)}</div>` : ""}
         <p class="weights-hint muted" id="weights-hint-${item.id}">Add each weight once, even if you have a pair.</p>
         <p class="form-error" role="alert" hidden></p>
       </div>`;
@@ -158,7 +158,7 @@ export function mountEquipment(list, { unitFor = (item) => item.unit, describe =
       const line = item && describe(item, inventory);
       const shown = element.querySelector(".unlocks");
       if (shown && line) shown.textContent = line;
-      else if (line) element.querySelector(".owned").insertAdjacentHTML("afterend", `<p class="unlocks muted">${escape(line)}</p>`);
+      else if (line) element.querySelector(".owned").insertAdjacentHTML("afterend", html`<p class="unlocks muted">${line}</p>`);
       else shown?.remove();
     }
   };

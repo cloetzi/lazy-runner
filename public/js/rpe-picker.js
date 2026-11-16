@@ -2,21 +2,21 @@
 // form, when logging an activity, on an activity's sheet and in Today's
 // question. The anchors are the player's (RPE_ANCHORS in player.js).
 
-import { escape } from "./html.js";
+import { html } from "./html.js";
 import { RPE_ANCHORS } from "./player.js";
 
 // The anchors as buttons, `rpe` pressed. As toggles (the default) a tap
 // picks one and a tap on the picked one takes it back (see toggleRpe); with
 // `answer`, each closes its dialog with "rpe:<n>" as the value.
 export function rpeOptions({ rpe = null, answer = false } = {}) {
-  return RPE_ANCHORS.map((a) => answer
-    ? `<button value="rpe:${a.rpe}">${escape(a.label)}</button>`
-    : `<button type="button" data-rpe="${a.rpe}" aria-pressed="${a.rpe === rpe}">${escape(a.label)}</button>`).join("");
+  return html`${RPE_ANCHORS.map((a) => answer
+    ? html`<button value="rpe:${a.rpe}">${a.label}</button>`
+    : html`<button type="button" data-rpe="${a.rpe}" aria-pressed="${a.rpe === rpe}">${a.label}</button>`)}`;
 }
 
 // The picker with its group around it.
 export function rpePicker(options = {}) {
-  return `<div class="rpe segmented fill" role="group" aria-label="How hard it was">${rpeOptions(options)}</div>`;
+  return html`<div class="rpe segmented fill" role="group" aria-label="How hard it was">${rpeOptions(options)}</div>`;
 }
 
 // Makes the toggles in `container` keep at most one pressed, calling

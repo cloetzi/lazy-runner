@@ -5,7 +5,7 @@ import { preferredDistanceUnit, setPreferredDistanceUnit, adoptServerDistanceUni
 import { createOutbox, describeChange } from "./outbox.js";
 import { storedAccount, pageAccount, signOut, signOutHere, deviceName, startOidc, oidcOutcome } from "./account.js";
 import { getJson, paths, send, errorMessage } from "./api.js";
-import { escape, busy } from "./html.js";
+import { html, busy } from "./html.js";
 import { mountNav } from "./nav.js";
 import { testSound } from "./beeper.js";
 import { installHint } from "./pwa.js";
@@ -28,7 +28,7 @@ const units = document.getElementById("units");
 const distanceUnits = document.getElementById("distance-units");
 const leadIn = document.querySelector('[data-setting="leadIn"]');
 document.getElementById("gear-lead-in").textContent = GEAR_LEAD_IN;
-leadIn.innerHTML = LEAD_IN_CHOICES.map((seconds) => `<button data-value="${seconds}">${seconds} s</button>`).join("");
+leadIn.innerHTML = LEAD_IN_CHOICES.map((seconds) => html`<button data-value="${seconds}">${seconds} s</button>`).join("");
 
 // A device that can't vibrate (an iPad, an iPhone) has nothing to choose:
 // the row is left out rather than shown with a note.
@@ -111,7 +111,7 @@ function showError(element, message) {
 }
 
 function renderAccount(account = storedAccount(storage)) {
-  $("account-who").innerHTML = account ? `Signed in as <strong>${escape(account.username)}</strong>.` : "Signed in.";
+  $("account-who").innerHTML = account ? html`Signed in as <strong>${account.username}</strong>.` : "Signed in.";
 }
 
 // ---------- Changes not saved (parked by the outbox) ----------
@@ -123,15 +123,15 @@ function renderUnsent() {
   $("unsent").hidden = parked.length === 0;
   $("unsent-list").innerHTML = parked.map((group) => {
     const more = group.dependants;
-    const follows = more > 0 ? ` <span class="muted">and ${more} ${more === 1 ? "change" : "changes"} that build on it</span>` : "";
+    const follows = more > 0 ? html` <span class="muted">and ${more} ${more === 1 ? "change" : "changes"} that build on it</span>` : "";
     const answer = group.status && !group.error?.includes(String(group.status)) ? `${group.error} (${group.status})` : group.error;
-    return `
+    return html`
     <li>
-      <span class="device-name"><strong>${escape(describeChange(group.entries[0]))}</strong>${follows}<br>
-        <span class="muted">${escape(savedAt(group.at))} · The server said: ${escape(answer)}</span></span>
+      <span class="device-name"><strong>${describeChange(group.entries[0])}</strong>${follows}<br>
+        <span class="muted">${savedAt(group.at)} · The server said: ${answer}</span></span>
       <span class="account-actions">
-        <button class="secondary small" data-retry-unsent="${escape(group.id)}">Try again</button>
-        <button class="secondary small danger" data-discard-unsent="${escape(group.id)}">Discard</button>
+        <button class="secondary small" data-retry-unsent="${group.id}">Try again</button>
+        <button class="secondary small danger" data-discard-unsent="${group.id}">Discard</button>
       </span>
     </li>`;
   }).join("");
@@ -210,8 +210,8 @@ passwordForm.onsubmit = async (event) => {
     $("change-password-open").setAttribute("aria-expanded", "false");
     const done = hasPassword ? "Password changed" : "Password set";
     $("account-who").insertAdjacentHTML("beforeend", others
-      ? ` ${done}; your other devices are signed out and your API tokens revoked.`
-      : ` ${done}.`);
+      ? html` ${done}; your other devices are signed out and your API tokens revoked.`
+      : html` ${done}.`);
     loadDevices();
     loadTokens();
     loadIdentities();
@@ -237,15 +237,15 @@ async function loadDevices() {
     if (stale) throw new Error("offline");
     devices = data.devices;
   } catch {
-    $("devices").innerHTML = `<li class="muted">The list shows when the server is reachable.</li>`;
+    $("devices").innerHTML = html`<li class="muted">The list shows when the server is reachable.</li>`;
     $("sign-out-others").hidden = true;
     return;
   }
-  $("devices").innerHTML = devices.map((device) => `
+  $("devices").innerHTML = devices.map((device) => html`
     <li>
-      <span class="device-name">${escape(deviceName(device.device))}${device.current ? " <strong>(this device)</strong>" : ""}<br>
-        <span class="muted">${escape(lastUsed(device.last_used_at))}</span></span>
-      ${device.current ? "" : `<button class="secondary small danger" data-sign-out-device="${device.id}">Sign out</button>`}
+      <span class="device-name">${deviceName(device.device)}${device.current ? html` <strong>(this device)</strong>` : ""}<br>
+        <span class="muted">${lastUsed(device.last_used_at)}</span></span>
+      ${device.current ? "" : html`<button class="secondary small danger" data-sign-out-device="${device.id}">Sign out</button>`}
     </li>`).join("");
   $("sign-out-others").hidden = !devices.some((device) => !device.current);
 }
@@ -318,25 +318,25 @@ async function loadUsers() {
   } catch (error) {
     // Not the owner after all (the server decides): no People section.
     if (error.status === 403) return showPeople(false);
-    $("user-list").innerHTML = `<li class="muted">The list shows when the server is reachable.</li>`;
+    $("user-list").innerHTML = html`<li class="muted">The list shows when the server is reachable.</li>`;
     $("invite-list").innerHTML = "";
     return;
   }
   const me = storedAccount(storage)?.id;
-  $("user-list").innerHTML = users.map((user) => `
+  $("user-list").innerHTML = users.map((user) => html`
     <li>
-      <span class="device-name"><strong>${escape(user.username)}</strong>${user.id === me ? " (you)" : ""}<br>
-        <span class="muted">${escape([user.owner ? "owner" : "", user.password_change_required ? "temporary password" : "", joined(user.created_at)].filter(Boolean).join(" · "))}</span></span>
-      ${user.id === me ? "" : `<span class="account-actions">
-        <button class="secondary small" data-reset-user="${user.id}" data-name="${escape(user.username)}">Reset password</button>
-        <button class="secondary small danger" data-remove-user="${user.id}" data-name="${escape(user.username)}">Remove</button>
+      <span class="device-name"><strong>${user.username}</strong>${user.id === me ? " (you)" : ""}<br>
+        <span class="muted">${[user.owner ? "owner" : "", user.password_change_required ? "temporary password" : "", joined(user.created_at)].filter(Boolean).join(" · ")}</span></span>
+      ${user.id === me ? "" : html`<span class="account-actions">
+        <button class="secondary small" data-reset-user="${user.id}" data-name="${user.username}">Reset password</button>
+        <button class="secondary small danger" data-remove-user="${user.id}" data-name="${user.username}">Remove</button>
       </span>`}
     </li>`).join("");
   $("invite-list").innerHTML = invites.length === 0
-    ? `<li class="muted">No invites waiting.</li>`
-    : invites.map((invite) => `
+    ? html`<li class="muted">No invites waiting.</li>`
+    : invites.map((invite) => html`
     <li>
-      <span class="device-name">${invite.label ? `<strong>${escape(invite.label)}</strong>` : "Invite link"}<br><span class="muted">works until ${escape(until(invite.expires_at))}</span></span>
+      <span class="device-name">${invite.label ? html`<strong>${invite.label}</strong>` : "Invite link"}<br><span class="muted">works until ${until(invite.expires_at)}</span></span>
       <button class="secondary small danger" data-revoke-invite="${invite.id}">Revoke</button>
     </li>`).join("");
 }
@@ -556,11 +556,11 @@ async function loadIdentities() {
     : `Link your ${provider} sign-in to use it instead of a password.`;
   // The only way in can't be unlinked: set a password first.
   const canUnlink = (identity) => data.password || !identity.current;
-  $("identity-list").innerHTML = data.identities.map((identity) => `
+  $("identity-list").innerHTML = data.identities.map((identity) => html`
     <li>
-      <span class="device-name">${escape(identity.username ?? provider)}<br>
-        <span class="muted">${escape(identity.last_used_at ? lastUsed(identity.last_used_at) : "never used")}</span></span>
-      ${canUnlink(identity) ? `<button class="secondary small danger" data-unlink="${identity.id}">Unlink</button>` : ""}
+      <span class="device-name">${identity.username ?? provider}<br>
+        <span class="muted">${identity.last_used_at ? lastUsed(identity.last_used_at) : "never used"}</span></span>
+      ${canUnlink(identity) ? html`<button class="secondary small danger" data-unlink="${identity.id}">Unlink</button>` : ""}
     </li>`).join("");
   $("link-identity").textContent = `Link ${provider}`;
   $("link-identity").hidden = linked;
@@ -619,18 +619,18 @@ async function loadTokens() {
     if (stale) throw new Error("offline");
     tokens = data.tokens;
   } catch {
-    $("tokens").innerHTML = `<li class="muted">The list shows when the server is reachable.</li>`;
+    $("tokens").innerHTML = html`<li class="muted">The list shows when the server is reachable.</li>`;
     return;
   }
   // Revoked here or elsewhere: the secret on show is no use any more.
   if (shown && shown === shownTokenId && !tokens.some((token) => String(token.id) === shown)) hideSecret();
   $("tokens").innerHTML = tokens.length === 0
-    ? `<li class="muted">No tokens yet.</li>`
-    : tokens.map((token) => `
+    ? html`<li class="muted">No tokens yet.</li>`
+    : tokens.map((token) => html`
     <li>
-      <span class="device-name">${escape(token.name)}<br>
-        <span class="muted">${token.scope === "api" ? "MCP and REST" : "MCP only"} · ${escape(token.last_used_at ? lastUsed(token.last_used_at) : "never used")}</span></span>
-      <button class="secondary small danger" data-revoke-token="${token.id}" data-name="${escape(token.name)}">Revoke</button>
+      <span class="device-name">${token.name}<br>
+        <span class="muted">${token.scope === "api" ? "MCP and REST" : "MCP only"} · ${token.last_used_at ? lastUsed(token.last_used_at) : "never used"}</span></span>
+      <button class="secondary small danger" data-revoke-token="${token.id}" data-name="${token.name}">Revoke</button>
     </li>`).join("");
 }
 

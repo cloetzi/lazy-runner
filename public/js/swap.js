@@ -1,7 +1,7 @@
 import { equipmentNames } from "./howto.js";
 import { createFigure } from "./figure-view.js";
 import { formatWeight } from "./weights.js";
-import { escape, icon, showSheet } from "./html.js";
+import { html, icon, showSheet } from "./html.js";
 import { getJson } from "./api.js";
 import { shortlist } from "./player.js";
 
@@ -38,13 +38,13 @@ export function openSwap({
   note = "For the rest of this session. The program stays as it is.", alreadyIn = "In this session",
 }) {
   const dialog = document.getElementById("swap") ?? document.body.appendChild(Object.assign(document.createElement("dialog"), { id: "swap", className: "sheet" }));
-  dialog.innerHTML = `
+  dialog.innerHTML = html`
     <form method="dialog" class="howto">
       <header>
-        <h2>Swap ${escape(current.name)}</h2>
+        <h2>Swap ${current.name}</h2>
         <button class="icon-button" aria-label="Close">${icon("close")}</button>
       </header>
-      <p class="muted">${escape(note)}</p>
+      <p class="muted">${note}</p>
       <div class="list" id="swap-list"><p class="muted">Loading…</p></div>
     </form>`;
 
@@ -73,9 +73,10 @@ export function openSwap({
       stills.forEach((figure) => figure.destroy());
       stills = [];
       options = [...back, ...shown];
-      list.innerHTML = options.length ? options.map((exercise, i) => row(exercise, i)).join("") +
-        (shown.length < best.length + rest.length ? `<button type="button" class="row more" data-more>Show everything (${best.length + rest.length - shown.length} more)</button>` : "")
-        : `<p class="muted">Nothing in the library can stand in for this one.</p>`;
+      const more = shown.length < best.length + rest.length
+        ? html`<button type="button" class="row more" data-more>Show everything (${best.length + rest.length - shown.length} more)</button>` : "";
+      list.innerHTML = options.length ? html`${options.map((exercise, i) => row(exercise, i))}${more}`
+        : html`<p class="muted">Nothing in the library can stand in for this one.</p>`;
       list.querySelectorAll("[data-still]").forEach((box) => {
         const exercise = options[Number(box.dataset.still)];
         if (exercise.animation) stills.push(createFigure(box, exercise.animation, { still: true }));
@@ -86,10 +87,10 @@ export function openSwap({
       if (exercise.weight) bits.push(formatWeight(exercise.weight, unit));
       const meta = bits.filter(Boolean).join(" · ");
       const backLabel = exercise.id === planned.id ? "Back to planned: " : "";
-      const tag = exercise.id !== planned.id && inSession.has(exercise.id) ? `<span class="tag">${escape(alreadyIn)}</span>` : "";
-      return `<button class="row" data-pick="${i}">
+      const tag = exercise.id !== planned.id && inSession.has(exercise.id) ? html`<span class="tag">${alreadyIn}</span>` : "";
+      return html`<button class="row" data-pick="${i}">
         <span class="swap-still" data-still="${i}" aria-hidden="true"></span>
-        <span class="row-text"><span class="row-title">${backLabel}${escape(exercise.name)}${tag}</span>${meta ? `<span class="row-meta">${escape(meta)}</span>` : ""}</span>
+        <span class="row-text"><span class="row-title">${backLabel}${exercise.name}${tag}</span>${meta ? html`<span class="row-meta">${meta}</span>` : ""}</span>
         ${icon("chevron-right")}
       </button>`;
     };
@@ -100,6 +101,6 @@ export function openSwap({
     });
     draw(best);
   }, () => {
-    list.innerHTML = `<p>Swapping needs a connection the first time. Try again once you're back online.</p>`;
+    list.innerHTML = html`<p>Swapping needs a connection the first time. Try again once you're back online.</p>`;
   });
 }

@@ -1,4 +1,4 @@
-import { escape, icon, busy, showSheet } from "./html.js";
+import { html, icon, busy, showSheet } from "./html.js";
 import { NEEDS_CONNECTION, offline } from "./api.js";
 import { longDay, shortDay, addDays, localToday } from "./calendar.js";
 import { KINDS, KIND_LABELS, noteFields, goalFields, authorLabel, authorBadge, writtenOn } from "./coach.js";
@@ -48,8 +48,8 @@ function saveOnSubmit(dialog, form, read, save) {
 // Who wrote a note and when, with their badge: "Coach agent · Nov 9".
 export function byline(note) {
   const badge = authorBadge(note);
-  return `<span class="author"><span class="author-badge ${note.author_kind}" aria-hidden="true">${badge.icon ? icon(badge.icon) : escape(badge.initials)}</span>` +
-    `<strong>${escape(authorLabel(note))}</strong><span class="muted"> · ${escape(writtenOn(note))}</span></span>`;
+  return html`<span class="author"><span class="author-badge ${note.author_kind}" aria-hidden="true">${badge.icon ? icon(badge.icon) : badge.initials}</span>
+    <strong>${authorLabel(note)}</strong><span class="muted"> · ${writtenOn(note)}</span></span>`;
 }
 
 // What a note is about, as a tag: "Session A, Nov 9", or its day.
@@ -61,11 +61,11 @@ export const aboutLabel = (note) => note.about
 // adds buttons to each.
 export function repliesHtml(note, actions = () => "") {
   if (!note.replies?.length) return "";
-  return `<ul class="note-replies" aria-label="Replies">${note.replies.map((r) => `
+  return html`<ul class="note-replies" aria-label="Replies">${note.replies.map((r) => html`
     <li class="note-reply">
-      <p class="entry-body">${escape(r.body)}</p>
+      <p class="entry-body">${r.body}</p>
       <p class="note-by">${byline(r)}${actions(r)}</p>
-    </li>`).join("")}</ul>`;
+    </li>`)}</ul>`;
 }
 
 // An agent's note: shown as it wrote it, with its replies, Reply and
@@ -73,18 +73,18 @@ export function repliesHtml(note, actions = () => "") {
 function openAgentNoteSheet({ note, onDelete, onReply }) {
   const dialog = sheet("note-sheet");
   const about = aboutLabel(note);
-  dialog.innerHTML = `
+  dialog.innerHTML = html`
     <form class="howto agent-note" novalidate>
       <header>
-        <h2>${escape(note.title ?? KIND_LABELS[note.kind])}</h2>
+        <h2>${note.title ?? KIND_LABELS[note.kind]}</h2>
         <button class="icon-button" type="button" data-close aria-label="Close">${icon("close")}</button>
       </header>
-      <p class="note-by">${byline(note)}${about ? ` <span class="tag">${escape(about)}</span>` : ""}</p>
-      <p class="entry-body">${escape(note.body)}</p>
+      <p class="note-by">${byline(note)}${about ? html` <span class="tag">${about}</span>` : ""}</p>
+      <p class="entry-body">${note.body}</p>
       ${repliesHtml(note)}
       <p class="muted small-print">An agent's note stays as it wrote it.${onReply ? " A reply goes under it, and your coach agent reads it with the note." : ""}</p>
       <p class="form-error" role="alert" hidden></p>
-      ${onReply ? `<button class="primary" type="button" data-reply>Reply</button>` : ""}
+      ${onReply ? html`<button class="primary" type="button" data-reply>Reply</button>` : ""}
       <div class="danger-zone"><button class="quiet small danger" type="button" data-delete>${icon("trash")}Delete the note</button></div>
     </form>`;
   const form = dialog.querySelector("form");
@@ -116,23 +116,23 @@ export const deleteQuestion = (note, what = "this note") => {
 export function openReplySheet({ note, reply = null, onSave, onDelete }) {
   const dialog = sheet("reply-sheet");
   const about = aboutLabel(note);
-  dialog.innerHTML = `
+  dialog.innerHTML = html`
     <form class="howto note-form reply-form" novalidate>
       <header>
         <h2>${reply ? "Edit the reply" : "Reply"}</h2>
         <button class="icon-button" type="button" data-close aria-label="Close">${icon("close")}</button>
       </header>
       <blockquote class="replying-to">
-        <p class="small-print"><strong>${escape(authorLabel(note))}</strong><span class="muted"> · ${escape(writtenOn(note))}${note.title ? ` · ${escape(note.title)}` : ""}</span></p>
-        <p class="replying-body small-print">${escape(note.body)}</p>
+        <p class="small-print"><strong>${authorLabel(note)}</strong><span class="muted"> · ${writtenOn(note)}${note.title ? html` · ${note.title}` : ""}</span></p>
+        <p class="replying-body small-print">${note.body}</p>
       </blockquote>
-      ${about ? `<p class="reply-about small-print"><span class="muted">About</span> <span class="tag">${escape(about)}</span><span class="muted">, the same as the note</span></p>` : ""}
+      ${about ? html`<p class="reply-about small-print"><span class="muted">About</span> <span class="tag">${about}</span><span class="muted">, the same as the note</span></p>` : ""}
       <label class="field"><span>Your reply</span>
-        <textarea name="body" rows="3" maxlength="5000" required placeholder="A few words are enough">${escape(reply?.body ?? "")}</textarea>
+        <textarea name="body" rows="3" maxlength="5000" required placeholder="A few words are enough">${reply?.body ?? ""}</textarea>
       </label>
       <p class="form-error" role="alert" hidden></p>
       <button class="primary" type="submit">Save reply</button>
-      ${reply && onDelete ? `<div class="danger-zone"><button class="quiet small danger" type="button" data-delete>${icon("trash")}Delete the reply</button></div>` : ""}
+      ${reply && onDelete ? html`<div class="danger-zone"><button class="quiet small danger" type="button" data-delete>${icon("trash")}Delete the reply</button></div>` : ""}
     </form>`;
   const form = dialog.querySelector("form");
   saveOnSubmit(dialog, form, () => {
@@ -169,37 +169,37 @@ export function openNoteSheet({ note = null, kind = "note", date = "", about = [
   const author = note?.author_kind === "human" ? note.author_name : "user";
   const names = [...new Set([...(author !== "user" ? [author] : []), ...coaches])];
 
-  dialog.innerHTML = `
+  dialog.innerHTML = html`
     <form class="howto note-form" novalidate>
       <header>
         <h2>${editing ? "Edit the note" : "Write a note"}</h2>
         <button class="icon-button" type="button" data-close aria-label="Close">${icon("close")}</button>
       </header>
       <div class="segmented fill" role="radiogroup" aria-label="Kind">
-        ${KINDS.map((k) => `<label><input type="radio" name="kind" value="${k}"${k === current.kind ? " checked" : ""}><span>${KIND_LABELS[k]}</span></label>`).join("")}
+        ${KINDS.map((k) => html`<label><input type="radio" name="kind" value="${k}"${k === current.kind ? " checked" : ""}><span>${KIND_LABELS[k]}</span></label>`)}
       </div>
-      <p class="muted small-print" data-hint>${escape(HINTS[current.kind])}</p>
+      <p class="muted small-print" data-hint>${HINTS[current.kind]}</p>
       <label class="field"><span>Title <span class="muted" data-title-optional>(optional)</span></span>
-        <input name="title" maxlength="200" value="${escape(current.title)}">
+        <input name="title" maxlength="200" value="${current.title}">
       </label>
       <label class="field"><span>What's going on</span>
-        <textarea name="body" rows="4" maxlength="5000" required>${escape(current.body)}</textarea>
+        <textarea name="body" rows="4" maxlength="5000" required>${current.body}</textarea>
       </label>
       <div class="note-meta">
         <label class="field"><span>About <span class="muted">(optional)</span></span>
           <select name="about">
             <option value="">Nothing in particular</option>
-            ${aboutChoices.map((a) => `<option value="${escape(a.value)}"${a.value === aboutValue ? " selected" : ""}>${escape(a.label)}</option>`).join("")}
+            ${aboutChoices.map((a) => html`<option value="${a.value}"${a.value === aboutValue ? " selected" : ""}>${a.label}</option>`)}
           </select>
         </label>
         <label class="field"><span>Day <span class="muted">(optional)</span></span>
-          <input type="date" name="date" value="${escape(current.date)}">
+          <input type="date" name="date" value="${current.date}">
         </label>
       </div>
       <label class="field"><span>Written by</span>
         <select name="author">
           <option value="user"${author === "user" ? " selected" : ""}>You</option>
-          ${names.map((n) => `<option value="${escape(n)}"${n === author ? " selected" : ""}>${escape(n)}</option>`).join("")}
+          ${names.map((n) => html`<option value="${n}"${n === author ? " selected" : ""}>${n}</option>`)}
           <option value="other">Another coach…</option>
         </select>
       </label>
@@ -208,7 +208,7 @@ export function openNoteSheet({ note = null, kind = "note", date = "", about = [
       </label>
       <p class="form-error" role="alert" hidden></p>
       <button class="primary" type="submit">Save</button>
-      ${editing ? `<div class="danger-zone"><button class="quiet small danger" type="button" data-delete>${icon("trash")}Delete the note</button></div>` : ""}
+      ${editing ? html`<div class="danger-zone"><button class="quiet small danger" type="button" data-delete>${icon("trash")}Delete the note</button></div>` : ""}
     </form>`;
 
   const form = dialog.querySelector("form");
@@ -254,24 +254,24 @@ export function openNoteSheet({ note = null, kind = "note", date = "", about = [
 export function openGoalSheet({ goal = null, onSave, onStatus, onDelete }) {
   const dialog = sheet("goal-sheet");
   const editing = Boolean(goal);
-  dialog.innerHTML = `
+  dialog.innerHTML = html`
     <form class="howto goal-form" novalidate>
       <header>
         <h2>${editing ? "Edit the goal" : "Add a goal"}</h2>
         <button class="icon-button" type="button" data-close aria-label="Close">${icon("close")}</button>
       </header>
       <label class="field"><span>Goal</span>
-        <input name="title" maxlength="200" required value="${escape(goal?.title ?? "")}" placeholder="Half marathon under 1:50">
+        <input name="title" maxlength="200" required value="${goal?.title ?? ""}" placeholder="Half marathon under 1:50">
       </label>
       <label class="field"><span>Why it matters <span class="muted">(optional)</span></span>
-        <textarea name="why" rows="3" maxlength="2000">${escape(goal?.why ?? "")}</textarea>
+        <textarea name="why" rows="3" maxlength="2000">${goal?.why ?? ""}</textarea>
       </label>
       <label class="field"><span>By <span class="muted">(optional)</span></span>
-        <input type="date" name="target_date" value="${escape(goal?.target_date ?? "")}">
+        <input type="date" name="target_date" value="${goal?.target_date ?? ""}">
       </label>
       <p class="form-error" role="alert" hidden></p>
       <button class="primary" type="submit">Save</button>
-      ${editing ? `
+      ${editing ? html`
       <div class="goal-actions">
         <button class="secondary small" type="button" data-status="achieved">${icon("check")}Achieved</button>
         <button class="secondary small" type="button" data-status="dropped">Drop it</button>
@@ -301,13 +301,13 @@ export function openGoalSheet({ goal = null, onSave, onStatus, onDelete }) {
 // Resolves a concern, with an optional word on how.
 export function openResolveSheet({ note, onResolve }) {
   const dialog = sheet("resolve-sheet");
-  dialog.innerHTML = `
+  dialog.innerHTML = html`
     <form class="howto" novalidate>
       <header>
         <h2>Resolve the concern</h2>
         <button class="icon-button" type="button" data-close aria-label="Close">${icon("close")}</button>
       </header>
-      <p><strong>${escape(note.title ?? "Concern")}</strong></p>
+      <p><strong>${note.title ?? "Concern"}</strong></p>
       <label class="field"><span>How it was resolved <span class="muted">(optional)</span></span>
         <textarea name="resolution" rows="2" maxlength="2000" placeholder="Gone after a week of easy runs"></textarea>
       </label>
@@ -326,7 +326,7 @@ export function openResolveSheet({ note, onResolve }) {
 export function openTidySheet({ count, onTidy }) {
   const dialog = sheet("tidy-sheet");
   const today = localToday();
-  dialog.innerHTML = `
+  dialog.innerHTML = html`
     <form class="howto" novalidate>
       <header>
         <h2>Tidy up the notes</h2>

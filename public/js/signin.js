@@ -1,6 +1,6 @@
 import { errorMessage, send } from "./api.js";
 import { adoptAccount, checkSignedIn, inviteToken, nextPath, oidcOutcome, signInHref, signOut, startOidc, welcomeHref, whoIsSignedIn } from "./account.js";
-import { escape, busy } from "./html.js";
+import { html, busy } from "./html.js";
 
 // The sign-in page. It signs you in; on a fresh install it creates the
 // owner account with the setup code from the server's log; with an invite
@@ -147,7 +147,7 @@ for (const input of document.querySelectorAll("input[type=password]")) {
   const toggle = document.createElement("button");
   toggle.type = "button";
   toggle.className = "quiet small show-password";
-  toggle.innerHTML = `Show<span class="visually-hidden"> password</span>`;
+  toggle.innerHTML = html`Show<span class="visually-hidden"> password</span>`;
   toggle.onclick = () => {
     const shown = input.type === "password";
     input.type = shown ? "text" : "password";
@@ -201,7 +201,7 @@ if (me.signInWith) {
   offerOidc(joinForm, me.signInWith, { invite });
 }
 if (me.user && invite) {
-  document.getElementById("invite-signed-in-who").innerHTML = `This device is signed in as <strong>${escape(me.user.username)}</strong>.`;
+  document.getElementById("invite-signed-in-who").innerHTML = html`This device is signed in as <strong>${me.user.username}</strong>.`;
   show(signedInCard);
 } else if (me.user) await signedIn(me.user);
 // An install with no owner yet needs setting up, invite link or not.

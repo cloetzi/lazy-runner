@@ -1,5 +1,5 @@
 import { getJson, send, errorMessage } from "./api.js";
-import { escape, busy } from "./html.js";
+import { html, busy } from "./html.js";
 import { byFit, fitLine, gearChips } from "./gear.js";
 
 // The example programs, drawn in a list with an Import button each: in the
@@ -51,27 +51,27 @@ export function mountExamples({ list, error, done, href = "/#workouts", onImport
       if (stale) throw new Error("offline");
       examples = data;
     } catch {
-      list.innerHTML = `<li class="muted">The list shows when the server is reachable.</li>`;
+      list.innerHTML = html`<li class="muted">The list shows when the server is reachable.</li>`;
       return;
     }
-    list.innerHTML = byFit(examples).map((example) => `
+    list.innerHTML = byFit(examples).map((example) => html`
       <li>
         <div class="example-head">
-          <span class="device-name"><strong>${escape(example.name)}</strong><br>
-            <span class="muted">${escape(exampleSummary(example))}</span></span>
+          <span class="device-name"><strong>${example.name}</strong><br>
+            <span class="muted">${exampleSummary(example)}</span></span>
           ${example.imported
-            ? `<span class="imported-mark">Imported <span aria-hidden="true">✓</span></span>`
-            : `<button class="secondary small" data-import="${escape(example.slug)}" data-name="${escape(example.name)}">Import</button>`}
+            ? html`<span class="imported-mark">Imported <span aria-hidden="true">✓</span></span>`
+            : html`<button class="secondary small" data-import="${example.slug}" data-name="${example.name}">Import</button>`}
         </div>
-        ${example.description ? `<p class="example-description">${escape(example.description)}</p>` : ""}
-        <p class="example-fit${example.missing_exercises ? " short" : ""}">${escape(fitLine(example))}</p>
+        ${example.description ? html`<p class="example-description">${example.description}</p>` : ""}
+        <p class="example-fit${example.missing_exercises ? " short" : ""}">${fitLine(example)}</p>
         ${gearLine(example)}
-        <details class="example-contents" data-slug="${escape(example.slug)}"${open.has(example.slug) ? " open" : ""}>
+        <details class="example-contents" data-slug="${example.slug}"${open.has(example.slug) ? " open" : ""}>
           <summary>What's in it</summary>
-          <ul>${example.workouts.map((workout) => `
-            <li><strong>${escape(workoutHeading(workout))}</strong>
-              <span class="muted">${escape((workout.exercises ?? []).join(", "))}</span></li>`).join("")}</ul>
-          ${example.imported ? `<button class="quiet small" data-import="${escape(example.slug)}" data-name="${escape(example.name)}" data-copy="true">Import another copy</button>` : ""}
+          <ul>${example.workouts.map((workout) => html`
+            <li><strong>${workoutHeading(workout)}</strong>
+              <span class="muted">${(workout.exercises ?? []).join(", ")}</span></li>`)}</ul>
+          ${example.imported ? html`<button class="quiet small" data-import="${example.slug}" data-name="${example.name}" data-copy="true">Import another copy</button>` : ""}
         </details>
       </li>`).join("");
   }
@@ -90,7 +90,7 @@ export function mountExamples({ list, error, done, href = "/#workouts", onImport
       const response = await send(`/api/examples/${encodeURIComponent(button.dataset.import)}/import`, { body: copy ? { copy: true } : {} });
       const json = await response.json().catch(() => null);
       if (!response.ok) return showError(errorMessage(json, response.status));
-      done.innerHTML = `${escape(json.name)} is in your <a href="${escape(href)}">workouts</a>.`;
+      done.innerHTML = html`${json.name} is in your <a href="${href}">workouts</a>.`;
       done.hidden = false;
       imported = true;
       onImported(json);

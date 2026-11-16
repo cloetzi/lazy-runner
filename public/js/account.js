@@ -10,7 +10,7 @@
 // Kept free of the DOM so the rules can be tested.
 
 import { send } from "./api.js";
-import { escape } from "./html.js";
+import { html } from "./html.js";
 import { AHEAD_KEY } from "./offline.js";
 
 export const ACCOUNT_KEY = "account";
@@ -267,16 +267,16 @@ export function welcomeHref(next) {
 // the queue waits for the server then and nothing else would tell.
 export function syncNote(pending, waiting, here) {
   const changes = `${pending} ${pending === 1 ? "change" : "changes"}`;
-  if (waiting === "server") return `${changes} waiting to sync: the server isn't saving changes at the moment, they'll go once it does`;
-  if (waiting !== "auth") return `${changes} waiting to sync`;
-  return `<a href="${escape(signInHref(here))}">Sign in again</a> to sync ${changes}`;
+  if (waiting === "server") return html`${changes} waiting to sync: the server isn't saving changes at the moment, they'll go once it does`;
+  if (waiting !== "auth") return html`${changes} waiting to sync`;
+  return html`<a href="${signInHref(here)}">Sign in again</a> to sync ${changes}`;
 }
 
 // The notice on Today while changes are parked (outbox.js), as HTML: they
 // wait in Settings, Account, for a retry or to be discarded.
 export function parkedNote(count) {
   const changes = count === 1 ? "A change" : `${count} changes`;
-  return `<p>${changes} couldn't be saved: the server kept failing, so ${count === 1 ? "it was" : "they were"} set aside to let the rest through.</p>
+  return html`<p>${changes} couldn't be saved: the server kept failing, so ${count === 1 ? "it was" : "they were"} set aside to let the rest through.</p>
     <a class="button secondary small" href="/settings.html#unsent">Review in Settings</a>`;
 }
 

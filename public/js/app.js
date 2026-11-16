@@ -6,7 +6,7 @@ import { stepTargetWeight, sameWeight, sameShownWeight, inUnit, preferredUnit, a
 import { createFigure } from "./figure-view.js";
 import { openHowto, equipmentNames, loadEquipmentNames, knowsEquipmentNames, ownedEquipment, equipmentId, comesInWeights, isAnyWeight, markOwned } from "./howto.js";
 import { gearChips, missingGear, nameList } from "./gear.js";
-import { escape, icon, authorLine, busy, showSheet } from "./html.js";
+import { html, icon, authorLine, busy, showSheet } from "./html.js";
 import { offlineToday } from "./offline.js";
 import { setupRows, setupLeft } from "./setup.js";
 import { blockName, blockSummary, stepSummary, alternatingText, setWeight, includedKinds, framingFor, framePlan, gearList, carrierOf } from "./workout.js";
@@ -125,7 +125,7 @@ async function loadToday(workoutId, sessionId) {
     if (error.code === "no_workouts") return renderSetup();
     // A new user's day read before this doesn't draw under the error.
     state.setupAsk += 1;
-    $("today").innerHTML = `<p>${escape(loadProblem("today's session", error, { hint: false }))}</p>
+    $("today").innerHTML = html`<p>${loadProblem("today's session", error, { hint: false })}</p>
       <button class="secondary" id="retry">Try again</button>`;
     $("retry").onclick = () => loadToday(workoutId, sessionId);
     return false;
@@ -143,7 +143,7 @@ function renderSetup() {
   }
   $("today-date").textContent = "";
   $("today-day").hidden = true;
-  $("today").innerHTML = `
+  $("today").innerHTML = html`
     <h2>Nothing to train yet</h2>
     <p>Start from an example program, fitted to the gear you own, or build a workout of your own from the exercise library.</p>
     <div class="card-actions">
@@ -184,13 +184,13 @@ async function loadSetup() {
   drawSetup();
 }
 
-const setupList = (rows) => `
-  <ul class="setup-list">${rows.map((row) => `
+const setupList = (rows) => html`
+  <ul class="setup-list">${rows.map((row) => html`
     <li class="${row.done ? "done" : ""}">
-      ${row.done ? icon("check", "Done:") : `<span class="setup-dot" aria-hidden="true"></span>`}
-      <span>${row.href && !row.done ? `<a href="${row.href}">${escape(row.label)}</a>` : `<strong>${escape(row.label)}</strong>`}
-        ${row.done ? "" : `<span class="muted">${escape(row.hint)}</span>`}</span>
-    </li>`).join("")}
+      ${row.done ? icon("check", "Done:") : html`<span class="setup-dot" aria-hidden="true"></span>`}
+      <span>${row.href && !row.done ? html`<a href="${row.href}">${row.label}</a>` : html`<strong>${row.label}</strong>`}
+        ${row.done ? "" : html`<span class="muted">${row.hint}</span>`}</span>
+    </li>`)}
   </ul>`;
 
 // With no workout yet, the rest of set-up sits under the "Nothing to train
@@ -207,12 +207,12 @@ function drawSetup() {
   if (later) {
     card.hidden = true;
     const rest = rows.filter((row) => row.key !== "program" && !row.done);
-    later.innerHTML = rest.length ? `<h3>Then, when you like</h3>${setupList(rest)}` : "";
+    later.innerHTML = rest.length ? html`<h3>Then, when you like</h3>${setupList(rest)}` : "";
     return;
   }
   card.hidden = setupHidden() || !setupLeft(rows);
   if (card.hidden) return;
-  card.innerHTML = `
+  card.innerHTML = html`
     <div class="setup-head">
       <h2 id="setup-title">Getting set up</h2>
       <button class="quiet small" type="button" id="setup-hide">Hide</button>
@@ -268,7 +268,7 @@ function renderWeek() {
   $("week").hidden = !board;
   if (!board) return;
   $("week").innerHTML = weekSummaryHtml({
-    week: queuedWeek(board.week, outbox.queued(), localToday()), board, unit: state.distanceUnit, heading: "<h2>This week</h2>",
+    week: queuedWeek(board.week, outbox.queued(), localToday()), board, unit: state.distanceUnit, heading: html`<h2>This week</h2>`,
   });
 }
 
@@ -310,13 +310,13 @@ function renderDay() {
     const current = session?.id === s.id;
     const mark = current && ["planned", "in_progress"].includes(s.status) ? "next" : markFor(s, date, null);
     const meta = [current ? "On the card" : STATUS_LABELS[mark], `${s.workout.estimated_minutes} min`].join(" · ");
-    return `
+    return html`
       <li class="cal-row${current ? " is-next" : ""}">
-        <button class="row" data-day-session="${s.id}" data-status="${s.status}"${current ? ` aria-current="true"` : ""}>
+        <button class="row" data-day-session="${s.id}" data-status="${s.status}"${current ? html` aria-current="true"` : ""}>
           <span class="mark ${mark}" aria-hidden="true"></span>
           <span class="row-text">
-            <span class="row-title${s.status === "skipped" ? " struck" : ""}">${escape(s.workout.title)}</span>
-            <span class="row-meta">${escape(meta)}</span>
+            <span class="row-title${s.status === "skipped" ? " struck" : ""}">${s.workout.title}</span>
+            <span class="row-meta">${meta}</span>
           </span>
         </button>
       </li>`;
@@ -330,21 +330,21 @@ function renderToday() {
   const toggles = workouts.length > 1 && !["in_progress", "done"].includes(status);
   const parts = workouts.map((w) => {
     const on = kinds.includes(w.kind);
-    const toggle = toggles ? `<label class="part-target"><input type="checkbox" class="part-toggle" data-part="${w.kind}"${on ? " checked" : ""}${w.kind === "workout" ? " disabled" : ""} aria-label="Include the ${escape(w.title)}"></label>` : "";
-    return `<li class="${[toggles && "part-row", !on && "left-out"].filter(Boolean).join(" ")}">${toggle}<button class="row" data-view="${w.id}">
-      <span class="row-text"><span class="row-title">${escape(w.title)}</span><span class="row-meta">${w.estimated_minutes} min</span></span>${icon("chevron-right")}</button></li>`;
-  }).join("");
+    const toggle = toggles ? html`<label class="part-target"><input type="checkbox" class="part-toggle" data-part="${w.kind}"${on ? " checked" : ""}${w.kind === "workout" ? " disabled" : ""} aria-label="Include the ${w.title}"></label>` : "";
+    return html`<li class="${[toggles && "part-row", !on && "left-out"].filter(Boolean).join(" ")}">${toggle}<button class="row" data-view="${w.id}">
+      <span class="row-text"><span class="row-title">${w.title}</span><span class="row-meta">${w.estimated_minutes} min</span></span>${icon("chevron-right")}</button></li>`;
+  });
   const estimated_minutes = workouts.filter((w) => kinds.includes(w.kind)).reduce((sum, w) => sum + w.estimated_minutes, 0);
   $("today-date").textContent = new Date(`${state.today.date}T12:00`)
     .toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" });
   renderDay();
-  const note = `${session?.note ? `<p class="planner-note">${escape(session.note)}</p>` : ""}${authorLine(plannedBy(session, state.today.date), "p")}`;
+  const note = html`${session?.note ? html`<p class="planner-note">${session.note}</p>` : ""}${authorLine(plannedBy(session, state.today.date), "p")}`;
 
   if (status === "done" && session.completion?.ended_early) {
     const { exercises, done } = sessionProgress({ items: state.today.plan.items, logged: loggedFromServer(state.today.plan.items, state.today.logged) });
-    $("today").innerHTML = `
-      <h2>${escape(title)}</h2>
-      <p>You did part of ${escape(title)} today: ${done} of ${exercises} exercises.</p>
+    $("today").innerHTML = html`
+      <h2>${title}</h2>
+      <p>You did part of ${title} today: ${done} of ${exercises} exercises.</p>
       <ul class="list parts">${parts}</ul>
       <button class="primary large" id="start">Pick up again</button>
       <button class="secondary" id="pick">Pick another</button>`;
@@ -354,8 +354,8 @@ function renderToday() {
   }
 
   if (status === "done") {
-    $("today").innerHTML = `
-      <h2>${escape(title)} <span class="done-check">${icon("check", "done")}</span></h2>
+    $("today").innerHTML = html`
+      <h2>${title} <span class="done-check">${icon("check", "done")}</span></h2>
       <p>Done for today. Nice work.</p>
       <ul class="list parts">${parts}</ul>
       <button class="secondary" id="pick">Train again</button>`;
@@ -363,17 +363,17 @@ function renderToday() {
     return;
   }
 
-  const offlineNote = offline ? `<p class="muted">Offline: this is the last plan the app saw. What you log syncs later.</p>` : "";
+  const offlineNote = offline ? html`<p class="muted">Offline: this is the last plan the app saw. What you log syncs later.</p>` : "";
 
   // Never trained and nothing planned: not a rest day but the first session,
   // with planning the week as the other way on.
   // Offline, a finished first session may still be in the outbox; a day
   // that already holds sessions is the rest-day card's to explain.
   if (source === "default" && !offline && !state.today.next_planned && !state.today.day?.length && state.today.trained === false) {
-    $("today").innerHTML = `
+    $("today").innerHTML = html`
       <p class="muted">Your first session</p>
-      <h2>${escape(title)}</h2>
-      ${subtitle ? `<p>${escape(subtitle)}</p>` : ""}
+      <h2>${title}</h2>
+      ${subtitle ? html`<p>${subtitle}</p>` : ""}
       ${offlineNote}
       <ul class="list parts">${parts}</ul>
       <p class="muted">About ${estimated_minutes} minutes</p>
@@ -390,18 +390,18 @@ function renderToday() {
   if (source === "default") {
     const next = state.today.next_planned;
     const heading = state.today.day?.length ? "No workout planned today" : "Nothing planned today";
-    $("today").innerHTML = next ? `
+    $("today").innerHTML = next ? html`
       <p class="muted">Rest day</p>
       <h2>${heading}</h2>
-      <p>Next on the calendar: <strong>${escape(next.workout.title)}</strong>, ${escape(longDay(next.date))}.</p>
-      ${next.note ? `<p class="planner-note">${escape(next.note)}</p>` : ""}
+      <p>Next on the calendar: <strong>${next.workout.title}</strong>, ${longDay(next.date)}.</p>
+      ${next.note ? html`<p class="planner-note">${next.note}</p>` : ""}
       ${authorLine(plannedBy(next, state.today.date), "p")}
       ${offlineNote}
       <button class="primary large" id="bring-forward">Do it today</button>
-      <button class="secondary" id="pick">Pick another</button>` : `
+      <button class="secondary" id="pick">Pick another</button>` : html`
       <p class="muted">Rest day</p>
       <h2>${heading}</h2>
-      <p>Rest, or train anyway: next in the rotation is ${escape(title)}${subtitle ? `, ${escape(subtitle)}` : ""}.</p>
+      <p>Rest, or train anyway: next in the rotation is ${title}${subtitle ? html`, ${subtitle}` : ""}.</p>
       ${offlineNote}
       <ul class="list parts">${parts}</ul>
       <p class="muted">About ${estimated_minutes} minutes</p>
@@ -414,17 +414,17 @@ function renderToday() {
   }
 
   const planned = status === "planned" && source === "session";
-  $("today").innerHTML = `
-    ${status === "skipped" ? `<p class="muted">Skipped today</p>` : source === "picked" ? `<p class="muted">Picked</p>` : ""}
-    <h2>${escape(title)}</h2>
-    <p>${escape(subtitle ?? "")}</p>
+  $("today").innerHTML = html`
+    ${status === "skipped" ? html`<p class="muted">Skipped today</p>` : source === "picked" ? html`<p class="muted">Picked</p>` : ""}
+    <h2>${title}</h2>
+    <p>${subtitle ?? ""}</p>
     ${note}
     ${offlineNote}
     <ul class="list parts">${parts}</ul>
     <p class="muted">About ${estimated_minutes} minutes</p>
     <button class="primary large" id="start">${status === "skipped" ? "Train anyway" : "Start"}</button>
-    ${status === "skipped" ? "" : `<div class="secondary-actions">
-      ${planned ? `<button class="secondary" id="move">Move</button>` : ""}
+    ${status === "skipped" ? "" : html`<div class="secondary-actions">
+      ${planned ? html`<button class="secondary" id="move">Move</button>` : ""}
       <button class="secondary" id="skip-today">Skip today</button>
     </div>`}
     <button class="quiet" id="pick">${source === "picked" ? "Pick another" : "Train something else"}</button>`;
@@ -498,11 +498,11 @@ function renderActivities() {
   const fulfils = new Map(days.filter((d) => d.state === "done").map((d) => [String(d.activity_key ?? d.activity_id), routineTitle(todayRoutine(d))]));
   const section = $("today-activities");
   section.hidden = false;
-  section.innerHTML = `
-    ${plans.length ? `<h2>Also today</h2>
-      <ul class="list day-sessions">${plans.map((d) => routineRow(d, todayRoutine(d), state.distanceUnit, "data-today-routine", state.today.date)).join("")}</ul>` : ""}
-    ${list.length ? `<h2>Activities today</h2>
-      <ul class="list day-sessions">${list.map((a) => activityRow(a, state.distanceUnit, "data-today-activity", fulfils.get(activityKey(a)))).join("")}</ul>` : ""}
+  section.innerHTML = html`
+    ${plans.length ? html`<h2>Also today</h2>
+      <ul class="list day-sessions">${plans.map((d) => routineRow(d, todayRoutine(d), state.distanceUnit, "data-today-routine", state.today.date))}</ul>` : ""}
+    ${list.length ? html`<h2>Activities today</h2>
+      <ul class="list day-sessions">${list.map((a) => activityRow(a, state.distanceUnit, "data-today-activity", fulfils.get(activityKey(a))))}</ul>` : ""}
     <button class="quiet" id="log-activity">${icon("plus")}Log an activity</button>`;
   renderWeek();
 }
@@ -592,12 +592,12 @@ async function askHowHard() {
 // cool-down that frame each session.
 async function openWorkouts() {
   show("workouts");
-  $("workouts-list").innerHTML = `<p class="muted">Loading…</p>`;
+  $("workouts-list").innerHTML = html`<p class="muted">Loading…</p>`;
   try {
     // What is owned comes with the names: the cards mark missing gear.
     const [{ data: programs, stale }] = await Promise.all([getJson(paths.workouts), loadEquipmentNames()]);
     if (programs.length === 0) {
-      $("workouts-list").innerHTML = offlineNote(stale) + `
+      $("workouts-list").innerHTML = html`${offlineNote(stale)}
         <section class="card">
           <h2>No workouts yet</h2>
           <p>Start from an example program, or build a workout of your own from the exercise library.</p>
@@ -608,20 +608,20 @@ async function openWorkouts() {
         </section>`;
       return;
     }
-    $("workouts-list").innerHTML = offlineNote(stale) + programs.map((program) => {
+    $("workouts-list").innerHTML = html`${offlineNote(stale)}${programs.map((program) => {
       const mains = program.workouts.filter((w) => w.kind === "workout");
       const frame = program.workouts.filter((w) => w.kind !== "workout");
-      return `
+      return html`
         <section class="program">
-          <h2${programs.length > 1 ? "" : ` class="visually-hidden"`}>${escape(program.name)}</h2>
-          <div class="workout-grid">${mains.map((w) => workoutCard(w, 3)).join("")}</div>
-          ${frame.length ? `<h3>Every session</h3>
+          <h2${programs.length > 1 ? "" : html` class="visually-hidden"`}>${program.name}</h2>
+          <div class="workout-grid">${mains.map((w) => workoutCard(w, 3))}</div>
+          ${frame.length ? html`<h3>Every session</h3>
             <p class="muted">Each workout starts with the warm-up and ends with the cool-down. Leave them out on Today, or start one on its own.</p>
-            <div class="workout-grid">${frame.map((w) => workoutCard(w, 4)).join("")}</div>` : ""}
+            <div class="workout-grid">${frame.map((w) => workoutCard(w, 4))}</div>` : ""}
         </section>`;
-    }).join("");
+    })}`;
   } catch (error) {
-    $("workouts-list").innerHTML = `<p>${escape(loadProblem("the workouts", error, { hint: false }))}</p>`;
+    $("workouts-list").innerHTML = html`<p>${loadProblem("the workouts", error, { hint: false })}</p>`;
   }
 }
 
@@ -632,7 +632,7 @@ async function openWorkouts() {
 // the line saying so closes the sheet onto them.
 function openExamplesSheet() {
   const dialog = $("examples-sheet") ?? document.body.appendChild(Object.assign(document.createElement("dialog"), { id: "examples-sheet", className: "sheet" }));
-  dialog.innerHTML = `
+  dialog.innerHTML = html`
     <div class="howto">
       <header>
         <h2>From an example</h2>
@@ -667,17 +667,17 @@ function workoutCard(workout, level) {
   const minutes = workout.framed_minutes > workout.estimated_minutes
     ? `${workout.estimated_minutes} min, ${workout.framed_minutes} with warm-up and cool-down`
     : `${workout.estimated_minutes} min`;
-  const facts = [`${icon("clock")}${minutes}`];
-  if (main) facts.push(workout.last_done ? `Last done ${escape(shortDate(workout.last_done))}` : "Not done yet");
-  const shown = workout.exercises.slice(0, 4).map((name) => `<li>${escape(name)}</li>`);
-  if (workout.exercises.length > 4) shown.push(`<li>+${workout.exercises.length - 4} more</li>`);
-  return `
+  const facts = [html`${icon("clock")}${minutes}`];
+  if (main) facts.push(workout.last_done ? html`Last done ${shortDate(workout.last_done)}` : "Not done yet");
+  const shown = workout.exercises.slice(0, 4).map((name) => html`<li>${name}</li>`);
+  if (workout.exercises.length > 4) shown.push(html`<li>+${workout.exercises.length - 4} more</li>`);
+  return html`
     <article class="card workout-card${workout.up_next ? " up-next" : ""}">
       <a class="workout-link" href="${routeHash("workout", workout.id)}">
-        <h${level}>${escape(workout.title)}${workout.up_next ? ` <span class="badge">Up next</span>` : ""}</h${level}>
-        ${workout.subtitle ? `<p class="muted">${escape(workout.subtitle)}</p>` : ""}
-        <p class="facts">${facts.map((fact) => `<span>${fact}</span>`).join("")}</p>
-        <ul class="workout-exercises">${shown.join("")}</ul>
+        <h${level}>${workout.title}${workout.up_next ? html` <span class="badge">Up next</span>` : ""}</h${level}>
+        ${workout.subtitle ? html`<p class="muted">${workout.subtitle}</p>` : ""}
+        <p class="facts">${facts.map((fact) => html`<span>${fact}</span>`)}</p>
+        <ul class="workout-exercises">${shown}</ul>
         ${gearChips(workout.equipment, { names: equipmentNames, owned: ownedEquipment() })}
       </a>
       <div class="workout-actions">
@@ -700,7 +700,7 @@ async function openWorkout(id) {
   state.workoutNote = "";
   $("workout-start").hidden = true;
   $("workout-actions").hidden = true;
-  $("workout-blocks").innerHTML = `<p class="muted">Loading…</p>`;
+  $("workout-blocks").innerHTML = html`<p class="muted">Loading…</p>`;
   show("workout", id);
   aimBack("workout");
   try {
@@ -711,7 +711,7 @@ async function openWorkout(id) {
     renderWorkout();
     $("workout-blocks").insertAdjacentHTML("afterbegin", offlineNote(stale));
   } catch (error) {
-    $("workout-blocks").innerHTML = `<p>${escape(loadProblem("this workout", error, { hint: false }))}</p>`;
+    $("workout-blocks").innerHTML = html`<p>${loadProblem("this workout", error, { hint: false })}</p>`;
     loaded("workout", id, null);
   }
 }
@@ -723,13 +723,13 @@ function renderWorkout() {
   $("workout-subtitle").textContent = [workout.subtitle, `about ${workout.estimated_minutes} min`].filter(Boolean).join(" · ");
   const gear = [...new Set(workout.blocks.flatMap((block) => block.steps.flatMap((step) => neededEquipment(step) ?? [])))];
   const changes = workoutChanges(workout.changes, [workout.id]).map((change) => withoutUndo(change, state.workoutStale));
-  $("workout-blocks").innerHTML = agentChangesHtml(changes) + (gear.length ? `<div class="workout-gear"><h2 class="visually-hidden">Gear</h2>
-      ${gearChips(gear, { names: equipmentNames, owned: ownedEquipment(), label: "Gear it needs", classes: "equipment-list" })}</div>` : "") +
-    workout.blocks.map((block, b) => `
+  const gearList = gear.length ? html`<div class="workout-gear"><h2 class="visually-hidden">Gear</h2>
+      ${gearChips(gear, { names: equipmentNames, owned: ownedEquipment(), label: "Gear it needs", classes: "equipment-list" })}</div>` : "";
+  $("workout-blocks").innerHTML = html`${agentChangesHtml(changes)}${gearList}${workout.blocks.map((block, b) => html`
     <section class="card block">
-      <h2 class="block-head"><span class="block-label">${escape(blockName(block.label))}</span><span class="block-meta">${escape(blockSummary(block))}</span></h2>
-      <ol class="steps">${block.steps.map((step, s) => stepRow(step, `${b}:${s}`)).join("")}</ol>
-    </section>`).join("");
+      <h2 class="block-head"><span class="block-label">${blockName(block.label)}</span><span class="block-meta">${blockSummary(block)}</span></h2>
+      <ol class="steps">${block.steps.map((step, s) => stepRow(step, `${b}:${s}`))}</ol>
+    </section>`)}`;
   $("workout-start").hidden = false;
   renderWorkoutOwn();
 }
@@ -737,10 +737,10 @@ function renderWorkout() {
 // An agent's edits of a workout, each with its reason and the button
 // that changes it back: in the workout view and on Get ready.
 function agentChangesHtml(changes) {
-  return changes.map((change) => {
+  return html`${changes.map((change) => {
     const line = changeHtml(change, { today: localToday(), tag: "p" });
-    return line ? `<div class="agent-change">${line}${undoButton(change, change.title)}</div>` : "";
-  }).join("");
+    return line ? html`<div class="agent-change">${line}${undoButton(change, change.title)}</div>` : "";
+  })}`;
 }
 
 // Takes an agent's edit of a workout or a weight back, now (it answers
@@ -770,10 +770,10 @@ function renderWorkoutOwn() {
   actions.hidden = false;
   if (!workout.editable) {
     $("workout-subtitle").textContent += " · Deleted: its sessions stay in the history";
-    actions.innerHTML = `<button class="secondary small" data-own="duplicate">Duplicate to edit</button>`;
+    actions.innerHTML = html`<button class="secondary small" data-own="duplicate">Duplicate to edit</button>`;
     return;
   }
-  actions.innerHTML = `
+  actions.innerHTML = html`
     <a class="button secondary small" href="${routeHash("edit", workout.id)}" id="workout-edit">Edit</a>
     <details class="more-actions">
       <summary title="More">${icon("more")}<span class="visually-hidden">More for this workout</span></summary>
@@ -819,12 +819,12 @@ function stepRow(step, ref) {
   const missing = missingGear(neededEquipment(step), ownedEquipment());
   const equipment = equipmentNames((neededEquipment(step) ?? []).filter((slug) => !missing.includes(slug)));
   const seed = step.weight && !sameShownWeight(step.weight, weight, state.unit) ? ` · plan: ${formatWeight(step.weight, state.unit)}` : "";
-  const stepper = takesWeight(step) ? weightStepper(step.exercise.name, shownWeight(weight), `data-step="${ref}"`) : "";
-  return `<li>
+  const stepper = takesWeight(step) ? weightStepper(step.exercise.name, shownWeight(weight), html`data-step="${ref}"`) : "";
+  return html`<li>
     <div class="step-text">
-      <button class="step-name" data-howto="${ref}" aria-label="How to do ${escape(step.exercise.name)}">${escape(step.exercise.name)}${icon("info")}</button>
-      <p class="muted">${escape(stepSummary(step))}${equipment.length ? ` · ${escape(equipment.join(", "))}` : ""}${seed}</p>
-      ${missing.length ? gearShort(missing, state.workout.editable ? `data-swap-step="${ref}"` : "") : ""}
+      <button class="step-name" data-howto="${ref}" aria-label="How to do ${step.exercise.name}">${step.exercise.name}${icon("info")}</button>
+      <p class="muted">${stepSummary(step)}${equipment.length ? html` · ${equipment.join(", ")}` : ""}${seed}</p>
+      ${missing.length ? gearShort(missing, state.workout.editable ? html`data-swap-step="${ref}"` : "") : ""}
     </div>
     ${stepper}
   </li>`;
@@ -841,17 +841,17 @@ function gearShort(missing, swap) {
   // A generic weight reads as what it is: any weight will do.
   const names = equipmentNames(missing).map((name, i) => (isAnyWeight(missing[i]) ? "a weight" : name));
   const tickable = missing.filter((slug) => !isAnyWeight(slug) && equipmentId(slug) != null);
-  return `<div class="gear-short">
-    <p>${icon("close")}<span>Needs ${escape(nameList(names))}: not yours yet.</span></p>
+  return html`<div class="gear-short">
+    <p>${icon("close")}<span>Needs ${nameList(names)}: not yours yet.</span></p>
     <div class="gear-ways">
       ${tickable.map((slug) => {
         const [name] = equipmentNames([slug]);
         // With more than one to tick, each button names its own.
-        const label = tickable.length > 1 ? `I have ${escape(name)}` : `I have this<span class="visually-hidden">: ${escape(name)}</span>`;
-        return `<button type="button" class="secondary small" data-have="${escape(slug)}">${label}</button>`;
-      }).join("")}
-      ${tickable.length < missing.length ? `<a class="button secondary small" href="/equipment.html">Add your weights</a>` : ""}
-      ${swap ? `<button type="button" class="secondary small" ${swap}>${icon("swap")}Swap</button>` : ""}
+        const label = tickable.length > 1 ? html`I have ${name}` : html`I have this<span class="visually-hidden">: ${name}</span>`;
+        return html`<button type="button" class="secondary small" data-have="${slug}">${label}</button>`;
+      })}
+      ${tickable.length < missing.length ? html`<a class="button secondary small" href="/equipment.html">Add your weights</a>` : ""}
+      ${swap ? html`<button type="button" class="secondary small" ${swap}>${icon("swap")}Swap</button>` : ""}
     </div>
   </div>`;
 }
@@ -966,11 +966,11 @@ function takesWeight(thing) {
 // The - and + buttons around a weight, in the workout view and on Get ready.
 // `data` is the attribute that says which step or target they change.
 function weightStepper(name, shown, data) {
-  return `
+  return html`
     <div class="stepper">
-      <button class="secondary" data-weight="down" ${data} aria-label="Less weight for ${escape(name)}">${icon("minus")}</button>
+      <button class="secondary" data-weight="down" ${data} aria-label="Less weight for ${name}">${icon("minus")}</button>
       <span>${shown}</span>
-      <button class="secondary" data-weight="up" ${data} aria-label="More weight for ${escape(name)}">${icon("plus")}</button>
+      <button class="secondary" data-weight="up" ${data} aria-label="More weight for ${name}">${icon("plus")}</button>
     </div>`;
 }
 
@@ -1088,14 +1088,14 @@ function showReady() {
   state.readyGear = gear;
   const owned = ownedEquipment();
   // Gear the user doesn't own is no row to tick: it says so, with the ways out.
-  $("ready-pickup").innerHTML = gear.map((row, i) => missingGear(row.equipment ? [row.equipment] : [], owned).length ? `
+  $("ready-pickup").innerHTML = gear.map((row, i) => missingGear(row.equipment ? [row.equipment] : [], owned).length ? html`
     <li class="ready-missing"><div class="row"><span class="row-text">
-      <span class="row-title">${escape(gearTitle(row))}</span>
-      <span class="row-meta">${escape(row.exercises.join(", "))}</span>
-    </span></div>${gearShort([row.equipment], `data-swap-row="${i}"`)}</li>` : `
+      <span class="row-title">${gearTitle(row)}</span>
+      <span class="row-meta">${row.exercises.join(", ")}</span>
+    </span></div>${gearShort([row.equipment], html`data-swap-row="${i}"`)}</li>` : html`
     <li><label class="row check-row"><input type="checkbox"><span class="row-text">
-      <span class="row-title">${escape(gearTitle(row))}</span>
-      <span class="row-meta">${escape(row.exercises.join(", "))}</span>
+      <span class="row-title">${gearTitle(row)}</span>
+      <span class="row-meta">${row.exercises.join(", ")}</span>
     </span></label></li>`).join("");
   $("ready-go").textContent = startLabel(run.items[run.index] ?? run.items[0]);
   $("ready-need").hidden = gear.length === 0;
@@ -1106,9 +1106,9 @@ function showReady() {
     const change = weightChange(changes, t.exercise.id);
     // In its own unit, the gear's, as the stepper beside it shows it.
     const line = change && changeHtml(change, { today: localToday(), tag: "p" });
-    return `<li><span>${escape(t.exercise.name)}</span>
-      ${weightStepper(t.exercise.name, shownLoad(t.weight, t.weights_held), `data-target="${i}"`)}
-      ${line ? `<div class="agent-change">${line}${undoButton(change, `${t.exercise.name}'s weight`)}</div>` : ""}</li>`;
+    return html`<li><span>${t.exercise.name}</span>
+      ${weightStepper(t.exercise.name, shownLoad(t.weight, t.weights_held), html`data-target="${i}"`)}
+      ${line ? html`<div class="agent-change">${line}${undoButton(change, `${t.exercise.name}'s weight`)}</div>` : ""}</li>`;
   }).join("");
   show("ready");
 }
@@ -1440,11 +1440,12 @@ function setText(id, text) {
   const el = $(id);
   if (el.textContent !== String(text)) el.textContent = text;
 }
-function setHtml(id, html) {
+function setHtml(id, markup) {
   const el = $(id);
-  if (drawn.get(el) === html) return;
-  el.innerHTML = html;
-  drawn.set(el, html);
+  const text = String(markup);
+  if (drawn.get(el) === text) return;
+  el.innerHTML = text;
+  drawn.set(el, text);
 }
 function setHidden(id, hidden) {
   const el = $(id);
@@ -1520,11 +1521,11 @@ function render() {
     setHidden("set-label", !setLabel(item));
     setHidden("side", !item.side);
     // The side as a large letter as well as the word.
-    setHtml("side", item.side ? `<span class="side-letter" aria-hidden="true">${item.side === "left" ? "L" : "R"}</span>${item.side === "left" ? "Left" : "Right"} side` : "");
+    setHtml("side", item.side ? html`<span class="side-letter" aria-hidden="true">${item.side === "left" ? "L" : "R"}</span>${item.side === "left" ? "Left" : "Right"} side` : "");
     renderLoadLine(item);
     setText("details", details(item));
     renderGear(item, run.index);
-    setHtml("cues", item.exercise.cues.map((cue) => `<li>${escape(cue)}</li>`).join(""));
+    setHtml("cues", item.exercise.cues.map((cue) => html`<li>${cue}</li>`).join(""));
   }
   // A set of reps counts what was done, the target until changed: "7" over
   // "of 8", with − and + either side.
@@ -1698,7 +1699,7 @@ function renderGear(item, index) {
   const names = item ? equipmentNames(otherGear(item)) : [];
   setHidden("equipment", names.length === 0);
   $("equipment").classList.toggle("changed", names.length > 0 && equipmentChanges(state.run.items, index));
-  setHtml("equipment", names.map((name) => `<li>${escape(name)}</li>`).join(""));
+  setHtml("equipment", names.map((name) => html`<li>${name}</li>`).join(""));
 }
 
 function label(item) {
@@ -1723,19 +1724,19 @@ function quit() {
   const sheet = $("end-sheet");
   // With nothing logged, Discard loses nothing and is the likely choice. With
   // sets logged it throws them away: it looks it, and sits apart under a line.
-  const keep = `<button class="${sets ? "primary" : "secondary"}" value="keep">Keep going</button>`;
-  const finish = `<button class="secondary" value="finish">Finish here</button>`;
+  const keep = html`<button class="${sets ? "primary" : "secondary"}" value="keep">Keep going</button>`;
+  const finish = html`<button class="secondary" value="finish">Finish here</button>`;
   const discard = sets
-    ? `<div class="danger-zone stretch"><button class="secondary danger" value="discard">Discard</button></div>`
-    : `<button class="primary" value="discard">Discard</button>`;
-  sheet.innerHTML = `
+    ? html`<div class="danger-zone stretch"><button class="secondary danger" value="discard">Discard</button></div>`
+    : html`<button class="primary" value="discard">Discard</button>`;
+  sheet.innerHTML = html`
     <form method="dialog" class="howto">
       <h2>End this session?</h2>
       <p class="muted">${sets
         ? `${done} of ${exercises} exercises done, ${sets} ${sets === 1 ? "set" : "sets"}. Finish here keeps them${state.run.pickedUp ? "" : "; Discard deletes the session"}.`
         : "Nothing logged yet."}</p>
-      ${state.run.pickedUp ? `<div class="choices">${keep + finish}</div>`
-        : sets ? `<div class="choices">${keep + finish}</div>${discard}` : `<div class="choices">${discard + keep + finish}</div>`}
+      ${state.run.pickedUp ? html`<div class="choices">${keep}${finish}</div>`
+        : sets ? html`<div class="choices">${keep}${finish}</div>${discard}` : html`<div class="choices">${discard}${keep}${finish}</div>`}
     </form>`;
   sheet.returnValue = "keep";
   sheet.addEventListener("close", () => {
@@ -1801,7 +1802,7 @@ function showToast(text, action, onAction, kind = "") {
   toast.dataset.kind = kind;
   // In the player it sits just under the top bar, however tall that is.
   if (!$("player").hidden) toast.style.setProperty("--toast-top", `${$("player").querySelector(".player-top").getBoundingClientRect().bottom + 8}px`);
-  toast.innerHTML = `<span>${escape(text)}</span><button class="secondary small">${escape(action)}</button>`;
+  toast.innerHTML = html`<span>${text}</span><button class="secondary small">${action}</button>`;
   toast.querySelector("button").onclick = () => {
     hideToast();
     onAction();
@@ -1837,7 +1838,7 @@ function showFinish() {
     [done === exercises ? exercises : `${done}/${exercises}`, "exercises"],
     [sets === planned ? sets : `${sets}/${planned}`, "sets"],
     [run.minutes, run.minutes === 1 ? "minute" : "minutes"],
-  ].map(([value, label]) => `<div><dt>${label}</dt><dd>${value}</dd></div>`).join("");
+  ].map(([value, label]) => html`<div><dt>${label}</dt><dd>${value}</dd></div>`).join("");
   const summary = [skipped && `${skipped} skipped`, swaps && plural(swaps, "swap"), framingLine(frames)].filter(Boolean).join(" · ");
   $("summary").textContent = summary;
   $("summary").hidden = !summary;
@@ -1853,9 +1854,9 @@ function showFinish() {
 function renderChanges() {
   const changes = Object.entries(state.run.weights);
   $("changes-box").hidden = changes.length === 0;
-  $("changes").innerHTML = changes.map(([id, c]) => `
+  $("changes").innerHTML = changes.map(([id, c]) => html`
     <li class="${c.keep ? "" : "undone"}">
-      <span>${escape(c.name)}: ${shownWeight(c.keep ? c.to : c.from)}</span>
+      <span>${c.name}: ${shownWeight(c.keep ? c.to : c.from)}</span>
       <button class="secondary small" data-toggle-change="${id}">${c.keep ? `Undo (${shownWeight(c.from)})` : `Keep ${shownWeight(c.to)}`}</button>
     </li>`).join("");
 }
@@ -1889,7 +1890,7 @@ async function submitFinish() {
   const result = outbox.result(key);
   if (!synced) {
     $("finish-result").innerHTML = outbox.waiting() === "auth"
-      ? `Saved on this device. <a href="${escape(signInHref(location))}">Sign in again</a> and it will sync.`
+      ? html`Saved on this device. <a href="${signInHref(location)}">Sign in again</a> and it will sync.`
       : "Saved on this device. It will sync when the server is reachable.";
     return;
   }
@@ -1947,7 +1948,7 @@ async function showNextUp() {
 
 async function openHistory() {
   show("history");
-  $("history-list").innerHTML = `<li class="row muted">Loading…</li>`;
+  $("history-list").innerHTML = html`<li class="row muted">Loading…</li>`;
   $("history-exercises").innerHTML = "";
   try {
     const [{ data: history, stale }, { data: exercises, stale: staleExercises }] = await Promise.all([
@@ -1959,25 +1960,25 @@ async function openHistory() {
       stale || staleExercises ? STALE_NOTE : ""].filter(Boolean).join(" · ");
     $("history-list").innerHTML = history.sessions.length
       ? history.sessions.map(historyRow).join("")
-      : `<li class="row muted">Nothing in the last four weeks yet. <a href="/#today">Go to Today</a> to train.</li>`;
+      : html`<li class="row muted">Nothing in the last four weeks yet. <a href="/#today">Go to Today</a> to train.</li>`;
     $("history-exercises").innerHTML = exercises.length
       ? exercises.map(exerciseRow).join("")
-      : `<li class="row muted">Exercises show up here once you log a set.</li>`;
+      : html`<li class="row muted">Exercises show up here once you log a set.</li>`;
   } catch (error) {
-    $("history-list").innerHTML = `<li class="row">${escape(loadProblem("the history", error))}</li>`;
+    $("history-list").innerHTML = html`<li class="row">${loadProblem("the history", error)}</li>`;
   }
 }
 
 function historyRow(session) {
-  return `<li><button class="row" data-session="${session.id}"><span class="row-text"><span class="row-title">${escape(session.workout.title)}</span>
-    <span class="row-meta">${escape([weekdayDate(session.date), sessionSummary(session)].join(" · "))}</span></span>${icon("chevron-right")}</button></li>`;
+  return html`<li><button class="row" data-session="${session.id}"><span class="row-text"><span class="row-title">${session.workout.title}</span>
+    <span class="row-meta">${[weekdayDate(session.date), sessionSummary(session)].join(" · ")}</span></span>${icon("chevron-right")}</button></li>`;
 }
 
 function exerciseRow(exercise) {
   const bits = [`last ${weekdayDate(exercise.last_date)}`, `${exercise.sessions} ${exercise.sessions === 1 ? "session" : "sessions"}`];
   if (exercise.remembered) bits.push(formatWeight(exercise.remembered, state.unit));
-  return `<li><button class="row" data-exercise="${exercise.id}"><span class="row-text"><span class="row-title">${escape(exercise.name)}</span>
-    <span class="row-meta">${escape(bits.join(" · "))}</span></span>${icon("chevron-right")}</button></li>`;
+  return html`<li><button class="row" data-exercise="${exercise.id}"><span class="row-text"><span class="row-title">${exercise.name}</span>
+    <span class="row-meta">${bits.join(" · ")}</span></span>${icon("chevron-right")}</button></li>`;
 }
 
 // Weight and reps per session for one exercise, newest first.
@@ -1986,7 +1987,7 @@ async function openExerciseHistory(id) {
   aimBack("exercise-history");
   $("exercise-history-name").textContent = "";
   $("exercise-history-remembered").textContent = "";
-  $("exercise-history-list").innerHTML = `<li class="row muted">Loading…</li>`;
+  $("exercise-history-list").innerHTML = html`<li class="row muted">Loading…</li>`;
   try {
     const { data: history, stale } = await getJson(`/api/exercises/${id}/history`);
     $("exercise-history-name").textContent = history.exercise.name;
@@ -1998,17 +1999,17 @@ async function openExerciseHistory(id) {
     ].filter(Boolean).join(" · ");
     $("exercise-history-list").innerHTML = history.sessions.length
       ? history.sessions.map(exerciseSessionRow).join("")
-      : `<li class="row muted">Nothing logged yet.</li>`;
+      : html`<li class="row muted">Nothing logged yet.</li>`;
   } catch (error) {
-    $("exercise-history-list").innerHTML = `<li class="row">${escape(loadProblem("this exercise's history", error))}</li>`;
+    $("exercise-history-list").innerHTML = html`<li class="row">${loadProblem("this exercise's history", error)}</li>`;
     loaded("exercise-history", id, null);
   }
 }
 
 function exerciseSessionRow(session) {
   const swapped = session.sets.some((set) => set.swapped) ? " · as a swap" : "";
-  return `<li class="row"><span class="row-text"><span class="row-title sets">${escape(setsSummary(session.sets, state.unit))}</span>
-    <span class="row-meta">${escape(`${weekdayDate(session.date)} · ${session.workout.title}${swapped}`)}</span></span></li>`;
+  return html`<li class="row"><span class="row-text"><span class="row-title sets">${setsSummary(session.sets, state.unit)}</span>
+    <span class="row-meta">${`${weekdayDate(session.date)} · ${session.workout.title}${swapped}`}</span></span></li>`;
 }
 
 function weekdayDate(iso) {
@@ -2024,7 +2025,7 @@ async function openSession(id) {
   $("session-summary").textContent = "";
   $("session-note").hidden = true;
   $("session-delete").hidden = true;
-  $("session-exercises").innerHTML = `<li class="muted">Loading…</li>`;
+  $("session-exercises").innerHTML = html`<li class="muted">Loading…</li>`;
   $("session-exercises").hidden = false;
   $("session-frames").innerHTML = "";
   try {
@@ -2040,17 +2041,17 @@ async function openSession(id) {
     const rows = parts.find((part) => part.part === "workout")?.entries ?? [];
     $("session-exercises").innerHTML = session.exercises.length
       ? rows.map(sessionExerciseRow).join("")
-      : `<li class="muted">No sets were logged in this session.</li>`;
+      : html`<li class="muted">No sets were logged in this session.</li>`;
     $("session-exercises").hidden = session.exercises.length > 0 && rows.length === 0;
-    $("session-frames").innerHTML = parts.filter((part) => part.part !== "workout").map((part) => `
+    $("session-frames").innerHTML = parts.filter((part) => part.part !== "workout").map((part) => html`
       <details class="session-part">
-        <summary>${escape(partLine(part))}</summary>
-        <ul class="list">${part.entries.map(sessionExerciseRow).join("")}</ul>
+        <summary>${partLine(part)}</summary>
+        <ul class="list">${part.entries.map(sessionExerciseRow)}</ul>
       </details>`).join("");
     Object.assign($("session-delete").dataset, { delete: session.id, label: `${session.workout.title} on ${date}` });
     $("session-delete").hidden = false;
   } catch (error) {
-    $("session-exercises").innerHTML = `<li>${escape(loadProblem("this session", error))}</li>`;
+    $("session-exercises").innerHTML = html`<li>${loadProblem("this session", error)}</li>`;
     loaded("session", id, null);
   }
 }
@@ -2060,9 +2061,9 @@ function sessionExerciseRow(entry) {
   const notes = [];
   if (entry.instead_of) notes.push(`instead of ${entry.instead_of.name}`);
   if (done && skipped) notes.push(`${skipped} skipped`);
-  return `<li><button class="row${done ? "" : " skipped"}" data-exercise="${entry.exercise.id}"><span class="row-text">
-    <span class="row-title">${escape(entry.exercise.name)}</span>
-    <span class="row-meta sets">${escape([done || "Skipped", ...notes].join(" · "))}</span></span>${icon("chevron-right")}</button></li>`;
+  return html`<li><button class="row${done ? "" : " skipped"}" data-exercise="${entry.exercise.id}"><span class="row-text">
+    <span class="row-title">${entry.exercise.name}</span>
+    <span class="row-meta sets">${[done || "Skipped", ...notes].join(" · ")}</span></span>${icon("chevron-right")}</button></li>`;
 }
 
 // Deleting needs the server, like loading the history does, so it is not
@@ -2134,16 +2135,16 @@ function renderParked(view, note = "") {
   const { exercises, done } = sessionProgress(run);
   const started = new Date(run.startedAt).toLocaleString(undefined, { weekday: "short", hour: "2-digit", minute: "2-digit" });
   const where = run.stage === "finish" ? "finished, not saved yet" : `${done} of ${exercises} exercises done`;
-  box.innerHTML = `
+  box.innerHTML = html`
     <p class="muted">Session in progress</p>
-    <h2>${escape(run.title)}</h2>
-    <p>Started ${escape(started)} · ${escape(where)}</p>
-    ${note ? `<p><strong>${escape(note)}</strong></p>` : ""}
+    <h2>${run.title}</h2>
+    <p>Started ${started} · ${where}</p>
+    ${note ? html`<p><strong>${note}</strong></p>` : ""}
     <button class="primary large" data-parked="resume">Resume</button>
     <div class="secondary-actions">
       <button class="secondary" data-parked="finish">Finish with what I did</button>
     </div>
-    ${run.pickedUp ? "" : `<div class="danger-zone"><button class="secondary small danger" data-parked="discard">Discard</button></div>`}`;
+    ${run.pickedUp ? "" : html`<div class="danger-zone"><button class="secondary small danger" data-parked="discard">Discard</button></div>`}`;
 }
 
 function askAboutParked() {
@@ -2187,8 +2188,8 @@ function renderRejected() {
   if (rejected.length === 0) return;
   const count = `${rejected.length} ${rejected.length === 1 ? "change" : "changes"}`;
   const reasons = [...new Set(rejected.map((r) => r.error))];
-  $("sync-rejected").innerHTML = `
-    <p>${count} could not be saved: ${escape(reasons.join("; "))}</p>
+  $("sync-rejected").innerHTML = html`
+    <p>${count} could not be saved: ${reasons.join("; ")}</p>
     <button class="secondary small" data-dismiss-rejected>Dismiss</button>`;
 }
 
@@ -2216,7 +2217,7 @@ document.addEventListener("visibilitychange", () => {
 
 // Shown over a view the service worker answered from its cache.
 function offlineNote(stale) {
-  return stale ? `<p class="muted">${escape(STALE_NOTE)}</p>` : "";
+  return stale ? html`<p class="muted">${STALE_NOTE}</p>` : "";
 }
 
 // Shows one view. The views with a page in the sidebar get a URL hash, so a
@@ -2310,7 +2311,7 @@ function linkedFrom() {
 const BACK_BUTTONS = { workout: "workout-back", "exercise-history": "exercise-history-back", session: "session-back" };
 function aimBack(view) {
   state.back = backFor(view, { cameFrom: state.trail.at(-2) ?? null, referrer: linkedFrom(), origin: location.origin });
-  $(BACK_BUTTONS[view]).innerHTML = `${icon("chevron-left")}${escape(state.back.label)}`;
+  $(BACK_BUTTONS[view]).innerHTML = html`${icon("chevron-left")}${state.back.label}`;
   nav.setCurrent(state.back.page);
 }
 

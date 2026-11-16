@@ -16,7 +16,7 @@ import { weekOf, weekdayDay, shortDay } from "./calendar.js";
 import { agentName, writtenDay } from "./coach.js";
 import { weekdaysLabel } from "./routines.js";
 import { formatDistance, sportLabel } from "./activities.js";
-import { escape, authorLine } from "./html.js";
+import { html, raw, authorLine } from "./html.js";
 import { formatWeight } from "./weights.js";
 
 // "Sat 21" in the week of `near`, else "Sat Nov 21".
@@ -181,7 +181,7 @@ export const withoutUndo = (change, stale) => (change && stale ? { ...change, un
 export function changeHtml(change, { today, unit, weightUnit, tag = "span" } = {}) {
   const line = changeLine(change, { today, unit, weightUnit });
   if (!line) return null;
-  return `${authorLine(line, tag)}${change.reason ? `<${tag} class="change-reason">${escape(change.reason)}</${tag}>` : ""}`;
+  return html`${authorLine(line, tag)}${change.reason && html`${raw(`<${tag} class="change-reason">`)}${change.reason}${raw(`</${tag}>`)}`}`;
 }
 
 // The button that takes `change` back, named for a screen reader by what
@@ -192,8 +192,8 @@ export function changeHtml(change, { today, unit, weightUnit, tag = "span" } = {
 export function undoButton(change, title = change?.title, { sheet = false, classes = "secondary small", disabled = false } = {}) {
   const label = undoLabel(change);
   if (!label) return "";
-  const how = sheet ? `value="undo"` : `type="button" data-undo="${change.id}"`;
-  return `<button class="${classes}" ${how}${disabled ? " disabled" : ""} aria-label="${escape(undoName(change, title))}">${escape(label)}</button>`;
+  const how = sheet ? html`value="undo"` : html`type="button" data-undo="${change.id}"`;
+  return html`<button class="${classes}" ${how}${disabled && raw(" disabled")} aria-label="${undoName(change, title)}">${label}</button>`;
 }
 
 // Taking a change back, on the device's own day (sent now, not queued: it

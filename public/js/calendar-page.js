@@ -2,7 +2,7 @@ import { createOutbox } from "./outbox.js";
 import { pageAccount, syncNote } from "./account.js";
 import { mountNav } from "./nav.js";
 import { getJson, loadProblem, paths, sendChange, STALE_NOTE, unreachable, offline } from "./api.js";
-import { escape, icon, authorLine, busy, showSheet } from "./html.js";
+import { html, icon, authorLine, busy, showSheet } from "./html.js";
 import {
   addDays, addMonths, weekOf, monthWeeks, rangeFor, dayName, shortDay, longDay, weekdayDay, weekLabel, monthLabel, localToday, isDate,
   byDay, upNext, markFor, movable, plannable, STATUS_LABELS,
@@ -195,7 +195,7 @@ function render() {
 
   // A range not loaded yet shows nothing rather than a week of Rest.
   if (state.loaded !== rangeKey()) {
-    $("calendar-body").innerHTML = state.failed ? "" : `<p class="muted">Loading…</p>`;
+    $("calendar-body").innerHTML = state.failed ? "" : html`<p class="muted">Loading…</p>`;
     // An arrow key left the month: the focus waits on the body until the
     // next month is drawn, and the keys still work there. Nothing to wait
     // for once the load failed.
@@ -226,16 +226,16 @@ function render() {
 function weekView({ sessions, activities, routineDays, days, activityDays, noteDays, routineDayMap, fulfils, next, changeDays, changeShown }) {
   const week = weekOf(state.focus);
   const thisWeek = week.includes(state.today);
-  const header = `<section class="card week-summary" aria-label="${escape(thisWeek ? "This week" : weekLabel(state.focus, state.today))}">${weekSummaryHtml({
+  const header = html`<section class="card week-summary" aria-label="${thisWeek ? "This week" : weekLabel(state.focus, state.today)}">${weekSummaryHtml({
     week: { sessions, activities, routineDays, routines: state.routines }, board: state.board, unit: distanceUnit(),
     when: thisWeek ? "current" : week[0] > state.today ? "future" : "past",
   })}</section>`;
-  return `${header}<ol class="week-days">${week.map((date) => {
+  return html`${header}<ol class="week-days">${week.map((date) => {
     const parts = [days[date] ?? [], activityDays[date] ?? [], next, { notes: noteDays[date], routineDays: routineDayMap[date], fulfils, changes: changeDays[date], changeShown }];
     const missed = parts[0].some((s) => markFor(s, state.today, next) === "missed");
     const folded = thisWeek && date < state.today && !missed && !state.unfolded.has(date);
-    return `<li>${folded ? foldedDay(date, ...parts) : dayCard(date, ...parts)}</li>`;
-  }).join("")}</ol>`;
+    return html`<li>${folded ? foldedDay(date, ...parts) : dayCard(date, ...parts)}</li>`;
+  })}</ol>`;
 }
 
 // What is on a day, a phrase each ("Session A, done"), as the folded line
@@ -255,11 +255,11 @@ function dayItems(sessions, activities, next, notes = [], routineDays = [], chan
 function foldedDay(date, sessions, activities, next, { notes = [], routineDays = [], changes = [] } = {}) {
   const items = dayItems(sessions, activities, next, [], routineDays, changes);
   if (notes.length) items.push(notes.length === 1 ? "1 note" : `${notes.length} notes`);
-  return `
+  return html`
     <section class="day past folded" data-date="${date}">
       <button class="row folded-day" data-unfold="${date}" aria-expanded="false">
-        <span class="folded-date">${escape(weekdayDay(date))}</span>
-        <span class="folded-items">${escape(items.length ? items.join(" · ") : "Rest")}</span>
+        <span class="folded-date">${weekdayDay(date)}</span>
+        <span class="folded-items">${items.length ? items.join(" · ") : "Rest"}</span>
         ${icon("chevron-down")}
       </button>
     </section>`;
@@ -290,28 +290,28 @@ const addLabel = (date) => (date > state.today ? "Plan a workout, run or routine
 // activities and notes, or Rest.
 function dayCard(date, sessions, activities, next, { heading = "h3", notes = [], routineDays = [], fulfils = new Map(), changes = [], changeShown = new Set() } = {}) {
   const classes = ["day", date === state.today && "today", date < state.today && "past"].filter(Boolean).join(" ");
-  const plan = `<button class="icon-button" data-add="${date}" aria-label="${escape(`${addLabel(date)} on ${longDay(date)}`)}">${icon("plus")}</button>`;
-  return `
+  const plan = html`<button class="icon-button" data-add="${date}" aria-label="${`${addLabel(date)} on ${longDay(date)}`}">${icon("plus")}</button>`;
+  return html`
     <section class="${classes}" data-date="${date}">
       <header class="day-head">
-        <${heading} class="day-title"><span>${escape(dayName(date, state.today))}</span> <span class="muted">${escape(shortDay(date))}</span></${heading}>
+        <${heading} class="day-title"><span>${dayName(date, state.today)}</span> <span class="muted">${shortDay(date)}</span></${heading}>
         ${plan}
       </header>
       ${sessions.length || activities.length || routineDays.length
-        ? `<ul class="list day-sessions">${sessions.map((s) => sessionRow(s, next)).join("")}${routineDays.map((d) => routineRow(d, routineOf(d), distanceUnit(), "data-routine-day", state.today, changeShown.has(d) ? routineChange(d) : null)).join("")}${activities.map((a) => activityRow(a, distanceUnit(), "data-activity", fulfils.get(String(activityKey(a))))).join("")}${notes.map((n) => noteRow(n, "data-note")).join("")}</ul>`
-        : `${notes.length ? `<ul class="list day-sessions">${notes.map((n) => noteRow(n, "data-note")).join("")}</ul>` : ""}<p class="rest muted">Rest</p>`}
-      ${changes.length ? `<ul class="day-changes">${changes.map(dayChangeRow).join("")}</ul>` : ""}
+        ? html`<ul class="list day-sessions">${sessions.map((s) => sessionRow(s, next))}${routineDays.map((d) => routineRow(d, routineOf(d), distanceUnit(), "data-routine-day", state.today, changeShown.has(d) ? routineChange(d) : null))}${activities.map((a) => activityRow(a, distanceUnit(), "data-activity", fulfils.get(String(activityKey(a)))))}${notes.map((n) => noteRow(n, "data-note"))}</ul>`
+        : html`${notes.length ? html`<ul class="list day-sessions">${notes.map((n) => noteRow(n, "data-note"))}</ul>` : ""}<p class="rest muted">Rest</p>`}
+      ${changes.length ? html`<ul class="day-changes">${changes.map(dayChangeRow)}</ul>` : ""}
     </section>`;
 }
 
 // A session an agent moved away from the day or removed from it, in one
 // muted line, with Put it back while it can be.
 function dayChangeRow(line) {
-  return `
+  return html`
     <li>
-      <span>${escape(line.text)}</span>
+      <span>${line.text}</span>
       ${line.undo ? undoButton(line.undo, undefined, { classes: "quiet small" }) : ""}
-      ${line.reason ? `<span class="change-reason">${escape(line.reason)}</span>` : ""}
+      ${line.reason ? html`<span class="change-reason">${line.reason}</span>` : ""}
     </li>`;
 }
 
@@ -326,20 +326,20 @@ function sessionRow(session, next) {
   const mark = markFor(session, state.today, next);
   const change = sessionChange(session);
   const meta = [STATUS_LABELS[mark], session.workout.estimated_minutes && `${session.workout.estimated_minutes} min`, session.pending && "not synced yet"]
-    .filter(Boolean).map(escape).join(" · ");
-  const drag = movable(session) ? ` draggable="true"` : "";
-  return `
-    <li class="cal-row${mark === "next" ? " is-next" : ""}" data-key="${escape(keyOf(session))}"${drag}>
-      <button class="row" data-open="${escape(keyOf(session))}">
+    .filter(Boolean).join(" · ");
+  const drag = movable(session) ? html` draggable="true"` : "";
+  return html`
+    <li class="cal-row${mark === "next" ? " is-next" : ""}" data-key="${keyOf(session)}"${drag}>
+      <button class="row" data-open="${keyOf(session)}">
         ${sessionTile(session, mark)}
         <span class="row-text">
-          <span class="row-title${mark === "skipped" || mark === "missed" ? " struck" : ""}">${escape(session.workout.title)}</span>
+          <span class="row-title${mark === "skipped" || mark === "missed" ? " struck" : ""}">${session.workout.title}</span>
           <span class="row-meta">${meta}</span>
-          ${session.note ? `<span class="row-note">${escape(session.note)}</span>` : ""}
+          ${session.note ? html`<span class="row-note">${session.note}</span>` : ""}
           ${changeHtml(change, { today: state.today, unit: distanceUnit() }) ?? authorLine(plannedBy(session, state.today))}
         </span>
       </button>
-      ${mark === "missed" ? `<button class="secondary small" data-do-today="${escape(keyOf(session))}">Do today</button>` : ""}
+      ${mark === "missed" ? html`<button class="secondary small" data-do-today="${keyOf(session)}">Do today</button>` : ""}
       ${undoButton(change, session.workout.title)}
     </li>`;
 }
@@ -350,11 +350,11 @@ const distanceUnit = () => preferredDistanceUnit(storage);
 // day's tile is drawn (CM7). `size` is "" in a day's list, "chip-tile" in the month.
 function sessionTile(session, mark, size = "") {
   const agent = size && session.created_by === "llm";
-  return `<span class="sport-tile ${mark}${size ? ` ${size}` : ""}" aria-hidden="true">${icon("workouts")}${agent ? `<span class="tile-agent"></span>` : ""}</span>`;
+  return html`<span class="sport-tile ${mark}${size ? ` ${size}` : ""}" aria-hidden="true">${icon("workouts")}${agent ? html`<span class="tile-agent"></span>` : ""}</span>`;
 }
 
 const chip = (tile, label, { gone = false, key = null, drag = false } = {}) =>
-  `<li class="chip"${key ? ` data-key="${escape(key)}"` : ""}${drag ? ` draggable="true"` : ""}>${tile}<span class="chip-label${gone ? " struck" : ""}">${escape(label)}</span></li>`;
+  html`<li class="chip"${key ? html` data-key="${key}"` : ""}${drag ? html` draggable="true"` : ""}>${tile}<span class="chip-label${gone ? " struck" : ""}">${label}</span></li>`;
 
 const MAX_CHIPS = 3;
 
@@ -365,8 +365,8 @@ const MAX_CHIPS = 3;
 // its button.
 function monthView({ days, activityDays, noteDays, routineDayMap, fulfils, next, changeDays, changeShown }) {
   const month = state.focus.slice(0, 7);
-  const head = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((d) => `<span class="month-weekday" role="columnheader">${d}</span>`).join("");
-  const weeks = monthWeeks(state.focus).map((week) => `<div class="month-week" role="row">${week.map((date) => {
+  const head = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((d) => html`<span class="month-weekday" role="columnheader">${d}</span>`);
+  const weeks = monthWeeks(state.focus).map((week) => html`<div class="month-week" role="row">${week.map((date) => {
     const sessions = days[date] ?? [];
     const activities = activityDays[date] ?? [];
     const notes = noteDays[date] ?? [];
@@ -381,23 +381,23 @@ function monthView({ days, activityDays, noteDays, routineDayMap, fulfils, next,
         return chip(sessionTile(s, mark, "chip-tile"), s.workout.title, { gone: mark === "skipped" || mark === "missed", key: keyOf(s), drag: movable(s) });
       }),
       ...routineDays.map((d) => routineChip(d, routineOf(d))),
-      ...activities.map((a) => chip(`<span class="sport-tile done chip-tile" aria-hidden="true">${icon(sportIcon(a.sport))}</span>`, activityChipLabel(a, distanceUnit()))),
-      ...(notes.length ? [chip(`<span class="note-tile chip-tile" aria-hidden="true">${icon("coach")}</span>`, notes.length === 1 ? "Note" : `${notes.length} notes`)] : []),
+      ...activities.map((a) => chip(html`<span class="sport-tile done chip-tile" aria-hidden="true">${icon(sportIcon(a.sport))}</span>`, activityChipLabel(a, distanceUnit()))),
+      ...(notes.length ? [chip(html`<span class="note-tile chip-tile" aria-hidden="true">${icon("coach")}</span>`, notes.length === 1 ? "Note" : `${notes.length} notes`)] : []),
     ];
-    const shown = chips.length > MAX_CHIPS + 1 ? [...chips.slice(0, MAX_CHIPS), `<li class="chip more-chip"><span class="chip-label">+${chips.length - MAX_CHIPS} more</span></li>`] : chips;
-    return `
+    const shown = chips.length > MAX_CHIPS + 1 ? [...chips.slice(0, MAX_CHIPS), html`<li class="chip more-chip"><span class="chip-label">+${chips.length - MAX_CHIPS} more</span></li>`] : chips;
+    return html`
       <div class="${classes}" role="gridcell" aria-selected="${date === state.focus}" data-date="${date}">
-        <button class="month-date" data-select="${date}" tabindex="${date === state.focus ? 0 : -1}" aria-label="${escape(label)}">${Number(date.slice(8))}</button>
-        <ul class="chips" aria-hidden="true">${shown.join("")}</ul>
+        <button class="month-date" data-select="${date}" tabindex="${date === state.focus ? 0 : -1}" aria-label="${label}">${Number(date.slice(8))}</button>
+        <ul class="chips" aria-hidden="true">${shown}</ul>
       </div>`;
-  }).join("")}</div>`).join("");
-  return `
+  })}</div>`);
+  return html`
     <div class="month">
-      <div class="month-grid" role="grid" aria-label="${escape(monthLabel(state.focus))}" aria-describedby="month-keys">
+      <div class="month-grid" role="grid" aria-label="${monthLabel(state.focus)}" aria-describedby="month-keys">
         <div class="month-week" role="row">${head}</div>${weeks}
       </div>
       <p class="visually-hidden" id="month-keys">Arrow keys move a day or a week, Home and End to the start or end of the week, Page Up and Page Down a month.</p>
-      <section class="card day-panel" aria-label="${escape(longDay(state.focus))}">${dayCard(state.focus, days[state.focus] ?? [], activityDays[state.focus] ?? [], next, { heading: "h2", notes: noteDays[state.focus], routineDays: routineDayMap[state.focus], fulfils, changes: changeDays[state.focus], changeShown })}</section>
+      <section class="card day-panel" aria-label="${longDay(state.focus)}">${dayCard(state.focus, days[state.focus] ?? [], activityDays[state.focus] ?? [], next, { heading: "h2", notes: noteDays[state.focus], routineDays: routineDayMap[state.focus], fulfils, changes: changeDays[state.focus], changeShown })}</section>
     </div>`;
 }
 
@@ -416,9 +416,9 @@ function showSelectedDay() {
 function openKeySheet() {
   const dialog = document.getElementById("key-sheet") ??
     document.body.appendChild(Object.assign(document.createElement("dialog"), { id: "key-sheet", className: "sheet calendar-sheet" }));
-  const tile = (classes, glyph) => `<span class="sport-tile ${classes}" aria-hidden="true">${icon(glyph)}</span>`;
-  const row = (mark, term, text) => `<li>${mark}<span><strong>${escape(term)}</strong><span class="muted">${escape(text)}</span></span></li>`;
-  dialog.innerHTML = `
+  const tile = (classes, glyph) => html`<span class="sport-tile ${classes}" aria-hidden="true">${icon(glyph)}</span>`;
+  const row = (mark, term, text) => html`<li>${mark}<span><strong>${term}</strong><span class="muted">${text}</span></span></li>`;
+  dialog.innerHTML = html`
     <form method="dialog" class="howto">
       <header>
         <h2>What the marks mean</h2>
@@ -428,7 +428,7 @@ function openKeySheet() {
       <ul class="key-list">
         ${row(tile("done", "workouts"), "Strength session", "A workout from your programs")}
         ${row(tile("done", "sport-run"), "Run, ride, hike and more", "Each sport has its icon")}
-        ${row(`<span class="note-tile" aria-hidden="true">${icon("coach")}</span>`, "Note", "From you or your coach")}
+        ${row(html`<span class="note-tile" aria-hidden="true">${icon("coach")}</span>`, "Note", "From you or your coach")}
       </ul>
       <h3>Where it stands</h3>
       <ul class="key-list">
@@ -440,8 +440,8 @@ function openKeySheet() {
       </ul>
       <h3>Also</h3>
       <ul class="key-list">
-        ${row(`<span class="sport-tile planned" aria-hidden="true">${icon("sport-run")}<span class="tile-agent"></span></span>`, "Your coach agent planned it", "A dot in the month; the day names the agent")}
-        ${row(`<span class="key-today" aria-hidden="true">14</span>`, "Today", "The date in orange")}
+        ${row(html`<span class="sport-tile planned" aria-hidden="true">${icon("sport-run")}<span class="tile-agent"></span></span>`, "Your coach agent planned it", "A dot in the month; the day names the agent")}
+        ${row(html`<span class="key-today" aria-hidden="true">14</span>`, "Today", "The date in orange")}
       </ul>
       <p class="muted">A done run says what and how far: Run 9.4 km. Where a day is too narrow for words, the month shows the marks alone; the day under the grid names them.</p>
     </form>`;
@@ -457,8 +457,8 @@ function renderSync() {
   $("sync-rejected").hidden = rejected.length === 0;
   if (rejected.length === 0) return;
   const reasons = [...new Set(rejected.map((r) => r.error))];
-  $("sync-rejected").innerHTML = `
-    <p>${rejected.length} ${rejected.length === 1 ? "change" : "changes"} could not be saved: ${escape(reasons.join("; "))}</p>
+  $("sync-rejected").innerHTML = html`
+    <p>${rejected.length} ${rejected.length === 1 ? "change" : "changes"} could not be saved: ${reasons.join("; ")}</p>
     <button class="secondary small" data-dismiss-rejected>Dismiss</button>`;
 }
 

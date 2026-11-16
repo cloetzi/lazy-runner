@@ -1,6 +1,6 @@
 import { createFigure } from "./figure-view.js";
 import { openHowto, equipmentNames, learnEquipmentNames } from "./howto.js";
-import { escape } from "./html.js";
+import { html } from "./html.js";
 import { mountNav } from "./nav.js";
 import { getJson, paths, loadProblem, STALE_NOTE } from "./api.js";
 import { preferredUnit } from "./weights.js";
@@ -60,9 +60,8 @@ async function optional(path) {
 function fillEquipment() {
   const select = document.getElementById("library-equipment");
   const used = gearUsed(exercises, equipment);
-  select.innerHTML = `<option value="">Any equipment</option><option value="${BODYWEIGHT}">No equipment</option>` +
-    equipment.filter((item) => used.has(item.slug))
-      .map((item) => `<option value="${escape(item.slug)}">${escape(item.name)}</option>`).join("");
+  select.innerHTML = html`<option value="">Any equipment</option><option value="${BODYWEIGHT}">No equipment</option>${equipment
+    .filter((item) => used.has(item.slug)).map((item) => html`<option value="${item.slug}">${item.name}</option>`)}`;
   select.value = settings.equipment;
 }
 
@@ -94,9 +93,11 @@ function render() {
   const countLineElement = document.getElementById("library-count");
   // Nothing owned yet: the way to see the rest, right after the count.
   const hint = !review && settings.owned && owned.size === 0
-    ? `. <a href="/equipment.html">Tell us what you own</a> to see more.` : "";
+    ? html`. <a href="/equipment.html">Tell us what you own</a> to see more.` : "";
   // "your gear" is what Equipment holds: it goes there to change it.
-  countLineElement.innerHTML = escape(count).replace("your gear", `<a href="/equipment.html">your gear</a>`) + hint + (stale ? ` · ${escape(STALE_NOTE)}` : "");
+  const [before, ...after] = count.split("your gear");
+  const linked = after.length ? html`${before}<a href="/equipment.html">your gear</a>${after.join("your gear")}` : count;
+  countLineElement.innerHTML = html`${linked}${hint}${stale ? ` · ${STALE_NOTE}` : ""}`;
   document.getElementById("library-empty").hidden = shown.length > 0;
 
   for (const box of document.querySelectorAll("[data-figure]")) {
@@ -114,7 +115,7 @@ function section(id, title, list) {
   const element = document.getElementById(id);
   element.hidden = list.length === 0;
   const level = title ? 3 : 2;
-  element.innerHTML = `${title ? `<h2>${title}</h2>` : ""}<div class="library-grid">${list.map((exercise) => card(exercise, level)).join("")}</div>`;
+  element.innerHTML = html`${title ? html`<h2>${title}</h2>` : ""}<div class="library-grid">${list.map((exercise) => card(exercise, level))}</div>`;
 }
 
 function card(exercise, level) {
@@ -122,18 +123,18 @@ function card(exercise, level) {
   if (exercise.unilateral) details.push("per side");
   if (exercise.alternating) details.push("alternating sides");
   const you = review ? [] : [lastLine(logged.get(exercise.id), preferredUnit(storage), weekdayDate), usedInLine(programs, exercise.id)].filter(Boolean);
-  return `
+  return html`
     <article class="card figure-card">
       ${exercise.animation
-        ? `<div class="figure-box" data-figure="${exercise.id}"></div>`
-        : `<div class="figure-box placeholder"><span>No animation yet</span></div>`}
-      <h${level}>${escape(exercise.name)}</h${level}>
-      <p class="muted">${escape(details.join(" · "))}</p>
-      ${you.map((line) => `<p class="card-you">${escape(line)}</p>`).join("")}
-      <ul class="card-cues">${exercise.cues.map((cue) => `<li>${escape(cue)}</li>`).join("")}</ul>
+        ? html`<div class="figure-box" data-figure="${exercise.id}"></div>`
+        : html`<div class="figure-box placeholder"><span>No animation yet</span></div>`}
+      <h${level}>${exercise.name}</h${level}>
+      <p class="muted">${details.join(" · ")}</p>
+      ${you.map((line) => html`<p class="card-you">${line}</p>`)}
+      <ul class="card-cues">${exercise.cues.map((cue) => html`<li>${cue}</li>`)}</ul>
       <div class="card-actions">
         <button class="secondary small" data-howto="${exercise.id}">How to</button>
-        ${!review && logged.has(exercise.id) ? `<a class="button secondary small" href="${historyHref(exercise)}">History</a>` : ""}
+        ${!review && logged.has(exercise.id) ? html`<a class="button secondary small" href="${historyHref(exercise)}">History</a>` : ""}
       </div>
     </article>`;
 }
@@ -188,7 +189,7 @@ function remember(value) {
 }
 
 document.getElementById("library-areas").innerHTML = [{ id: "", label: "All areas" }, ...AREAS]
-  .map((area) => `<button data-area="${area.id}">${escape(area.label)}</button>`).join("");
+  .map((area) => html`<button data-area="${area.id}">${area.label}</button>`).join("");
 document.getElementById("review-controls").hidden = !review;
 
 for (const controls of document.querySelectorAll(".library-controls")) {

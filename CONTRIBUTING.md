@@ -111,7 +111,9 @@ then `BASE_URL=http://localhost:3999 SERVER_LOG=/tmp/e2e.log npm run test:e2e`.
   mirrored for the right. Accent the moving limb, highlight the target muscle,
   time rep-based moves to the step's tempo where there is one. Check new poses on
   the Exercises page in both colour schemes.
-- Frontend: no frameworks or bundlers. Keep the player usable one-handed and
+- Frontend: no frameworks or bundlers. Markup only in html`` templates
+  (`public/js/html.js`), which escape what they are given; never build it
+  by adding strings. Keep the player usable one-handed and
   readable from a distance; respect `prefers-color-scheme`.
 
 ## Keep it publishable
