@@ -195,8 +195,9 @@ as null when it has no value (`nullable`).
   session done or skipped, changing or deleting an activity the user
   logged, changing or ending the user's routines and confirming, skipping or
   moving any routine's day, changing or deleting the user's own coach
-  notes, replying to a note, deleting an agent's note they replied to, taking a plan change back and
-  marking agent news seen are the user's, a 403. An agent writes at most 20
+  notes, replying to a note, deleting an agent's note they replied to,
+  taking a plan change back and marking agent news seen are the user's, a
+  403. An agent writes at most 20
   coach notes a day (409 past that).
 - **Writes come from the app.** A POST, PUT, PATCH or DELETE needs
   `Sec-Fetch-Site: same-origin` (or, without it, an `Origin` equal to the

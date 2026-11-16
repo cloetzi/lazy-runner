@@ -62,6 +62,9 @@ describe "API tokens" do
 
   describe "its scope" do
     it "is MCP alone unless REST access is asked for" do
+      post_json "/api/account/tokens", name: "Old script", scope: nil
+      _(json["token"]["scope"]).must_equal "mcp"
+      ApiToken.first!(name: "Old script").destroy
       post_json "/api/account/tokens", name: "Coach agent"
       _(json["token"]["scope"]).must_equal "mcp"
       mcp_only = json["secret"]

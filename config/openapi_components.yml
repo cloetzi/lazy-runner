@@ -1084,7 +1084,7 @@ components:
         date: { type: string, format: date, nullable: true }
         activity_id: { type: integer, nullable: true }
         session_id: { type: integer, nullable: true }
-        reply_to_id: { type: integer, nullable: true, description: "A reply to a note the user didn't write: kind note, author user, and no date, activity or session (its note's are shown)." }
+        reply_to_id: { type: integer, nullable: true, description: "A reply to a note the user didn't write: kind note, author user, and no date, activity or session (its note's are shown). The user's alone: with an API token it is a 403." }
     CoachNoteChange:
       type: object
       properties:
