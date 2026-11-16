@@ -252,13 +252,14 @@ describe "workouts API" do
       end
     end
 
-    it "refuses a step's suggestion, which the app no longer gives" do
+    it "ignores a suggestion on a step, as an editor draft from before 0.6.0 may hold" do
       blocks = structure
       blocks.first[:steps].first[:suggestion] = { direction: "up", value: 45, unit: "lb", reason: "Felt too easy" }
 
       put_json "/api/workouts/#{copy.id}", blocks: blocks
 
-      _(last_response.status).must_equal 422
+      _(last_response.status).must_equal 200
+      _(json["blocks"].first["steps"].first.keys).wont_include "suggestion"
     end
 
     it "replaces the blocks and steps, keeping the ids it names" do

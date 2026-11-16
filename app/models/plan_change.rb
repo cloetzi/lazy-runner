@@ -288,7 +288,9 @@ class PlanChange < Record
     raise NotUndoable, "this change was taken back already"
   rescue Sequel::ValidationFailed => error
     raise NotUndoable, "it can't be taken back: #{error.errors.full_messages.join(", ")}"
-  rescue Session::Settled, Routine::Settled, Workout::Running, Workout::ReadOnly => error
+  rescue NotUndoable, Record::UserOnly
+    raise
+  rescue Refusal => error
     raise NotUndoable, "it can't be taken back: #{error.message}"
   rescue WorkoutStructure::Invalid => error
     raise NotUndoable, "it can't be taken back as it was: #{error.message}"

@@ -86,8 +86,9 @@ class ApplicationController < RageController::API
     Current.agent_name = request.env["lazy_runner.agent_name"]
     # The plan changes one request makes share a batch (PlanChange).
     Current.plan_batch = nil
-    # The day the request counts from (Current.today).
-    Current.client_today = given_today
+    # The day the request counts from (Current.today), read here so a
+    # malformed one is a 400 before anything is written or rendered.
+    Current.client_today = (DateRange.date(params[:today], :today) if params[:today].present?)
   end
 
   # A user given a temporary password (the owner reset theirs) chooses
@@ -206,22 +207,12 @@ class ApplicationController < RageController::API
     render json: { error: { code:, message:, **details.compact } }, status:
   end
 
-  # The client may send its own local date. Without one, today is the day in
-  # the server's time zone (TZ, see config/initializers/time_zone.rb).
+  # The client may send its own local date. Without one, it is today
+  # (Current.today: the device's `today` when sent, else the server's).
   def date_param(key = :date)
-    return Time.zone.today if params[key].blank?
+    return Current.today if params[key].blank?
 
     DateRange.date(params[key], key)
-  end
-
-  # The day a request counts from, as Current.today gives it to the models:
-  # the client's own `today` (its local date) when it is within a day of
-  # the server's, which covers time zones and a change sent just after
-  # midnight; else the server's today.
-  def given_today
-    server = Time.zone.today
-    given = DateRange.date(params[:today], :today) if params[:today].present?
-    given && ((server - 1)..(server + 1)).cover?(given) ? given : server
   end
 
   # Which parts of a framed workout to run: "warmup,cooldown" or a list of

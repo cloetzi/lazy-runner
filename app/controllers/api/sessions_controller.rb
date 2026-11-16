@@ -54,17 +54,14 @@ module Api
       Session.settable!(status)
 
       client_ref = string_param(:client_ref).presence
-      today = Current.today
       if client_ref && (session = Session.first(client_ref:))
-        session.today = today
         return render_with_plan(session)
       end
 
       begin
         session = Session.add!(
-          today:,
           workout: Workout.find!(required!(:workout_id)),
-          date: params[:date].present? ? date_param : today,
+          date: date_param,
           position: position_param,
           status:,
           part_kinds: parts_param,
@@ -77,7 +74,6 @@ module Api
         # A concurrent create with the same client_ref got there first.
         raise unless client_ref && (session = Session.first(client_ref:))
 
-        session.today = today
         return render_with_plan(session)
       end
       render_with_plan(session, status: :created)
@@ -222,9 +218,6 @@ module Api
 
     private
 
-    # What the player showed for a set whose step the session no longer runs:
-    # the planned exercise, its block and the target, as record_plan takes
-    # them. Raises when the request doesn't say which exercise was planned.
     # Where on its day a session goes, 1 first; nil when not given.
     def position_param
       return if params[:position].blank?

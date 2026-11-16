@@ -14,7 +14,7 @@ class CoachNews
   # server's, as GET /api/me counts them.
   def initialize(user, today: Current.today)
     @today = today
-    @since = user.coach_seen_at || (@today - DEFAULT_DAYS).in_time_zone.to_time
+    @since = user.coach_seen_at || (Time.zone.today - DEFAULT_DAYS).in_time_zone.to_time
   end
 
   # How many things are news: the dot's count.

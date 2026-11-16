@@ -46,9 +46,6 @@ class SetLog < Record
   # before parts were kept, whose step has gone, counts as main.
   def main? = part.nil? || part == "workout"
 
-  # The part a step is in for a session: its own workout is the main one
-  # ("workout", whatever that workout's kind), anything else the kind of the
-  # warm-up or cool-down it frames it with.
   # A set for a step the session can't take: one of another workout, or one
   # it no longer runs that comes without what the player showed.
   class NotPartOfSession < Refusal
@@ -80,7 +77,8 @@ class SetLog < Record
     exercise = exercise_id ? Exercise.find!(exercise_id) : (linked&.exercise || planned[0])
     # In the unit of the gear the step is done with, unless swapped.
     unit = linked && linked.exercise_id == exercise.id ? Step.unit_for(linked.equipment, exercise) : exercise.gear_unit
-    weight = exercise.in_weight_unit((weight || {})[:value], (weight || {})[:unit], unit)
+    given = weight || {}
+    weight = exercise.in_weight_unit(given[:value], given[:unit], unit)
     attempts = 0
     begin
       log = find_or_new(user_id: session.user_id, session_id: session.id, step_ref:, set_number:, side:)
@@ -130,6 +128,9 @@ class SetLog < Record
   end
   private_class_method :shown_plan
 
+  # The part a step is in for a session: its own workout is the main one
+  # ("workout", whatever that workout's kind), anything else the kind of the
+  # warm-up or cool-down it frames it with.
   def self.part_of(session, step)
     step.block.workout_id == session.workout_id ? "workout" : step.block.workout.kind
   end

@@ -480,6 +480,7 @@ components:
         target: { description: "From GET; ignored." }
         weight_unit: { description: "From GET; ignored." }
         allowed_weights: { description: "From GET; ignored." }
+        suggestion: { description: "From a GET before 0.6.0; ignored." }
     BlockInput:
       type: object
       description: A block as the builder writes it; one from GET /api/workouts/:id fits as it is.
