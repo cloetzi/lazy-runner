@@ -288,7 +288,7 @@ test("runs Workout 1, finishes offline and syncs once back online", async () => 
   await context.close();
 });
 
-// Fetched ahead while online, the whole app opens offline (#267): a workout
+// Fetched ahead while online, the whole app opens offline: a workout
 // never opened before, the calendar, the coach board and history.
 test("opens another workout, the calendar, the coach board and history offline", async () => {
   const programs = await getJson("/api/workouts");

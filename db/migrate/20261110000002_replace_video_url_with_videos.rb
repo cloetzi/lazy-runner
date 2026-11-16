@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-# Exercises carry a list of demo videos from the seeds (#235), each
+# Exercises carry a list of demo videos from the seeds, each
 # { url, title, channel }, in place of the one video_url no seed ever set.
 # Both are plain ADD and DROP COLUMN (the sqlite3 gem's SQLite has native
 # DROP COLUMN), so no table is copied and no constraint is lost.

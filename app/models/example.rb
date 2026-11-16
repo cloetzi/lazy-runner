@@ -3,7 +3,7 @@
 require "yaml"
 
 # An example program, read from db/examples/<slug>.yml: a user imports one
-# to have its workouts as their own (#183). Nothing of it is stored until
+# to have its workouts as their own. Nothing of it is stored until
 # then, and an imported copy is an ordinary program of the user's
 # (`source: user`, or `llm` through MCP), editable like any workout of
 # theirs; `example_slug` notes where it came from.

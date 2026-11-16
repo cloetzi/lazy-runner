@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-# Every user's data is their own (#175). The personal tables are dropped and
+# Every user's data is their own. The personal tables are dropped and
 # made again with a `user_id` (deleted with its user), so nothing kept from
 # before belongs to anyone: the data of the one-user install goes. The
 # exercise library and the equipment catalogue stay, shared and seeded; what

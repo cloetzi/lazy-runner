@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-# What a workout edit changed (#290), for the record of plan changes: the
+# What a workout edit changed, for the record of plan changes: the
 # workout as it was and is (`snapshot`, in the form Workout#revise! takes,
 # so undo can write it back), and a short line a person reads ("Block B: 3
 # rounds (was 2); Split squat instead of Goblet squat in Main").

@@ -156,7 +156,7 @@ describe "plan changes API" do
     end
   end
 
-  describe "workout edits and remembered weights (#290)" do
+  describe "workout edits and remembered weights" do
     let(:squat) { exercise("goblet-squat") }
 
     def blocks

@@ -7,7 +7,7 @@
 # weights, and is no longer the unit anyone's weights are in.
 #
 # An `any_weight` item is the generic "weight" an exercise needs when any
-# dumbbell or kettlebell will do (#225): nobody owns it as such, but it
+# dumbbell or kettlebell will do: nobody owns it as such, but it
 # counts as owned with any gear in set weights, and its weights are all of
 # theirs.
 class Equipment < Record

@@ -31,7 +31,7 @@
 // sign-in page with `?gate`: that page load asks the network too, and a
 // redirect or sign-in challenge goes to the browser, which shows the proxy's
 // sign-in.
-// Otherwise it comes from the release as usual (#222).
+// Otherwise it comes from the release as usual.
 
 const RELEASE_PREFIX = "release-";
 const DATA_CACHE = "data";

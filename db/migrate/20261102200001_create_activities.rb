@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-# Activities (#177): runs, rides and other sports, as they happened, logged
+# Activities: runs, rides and other sports, as they happened, logged
 # by hand or sent by a script or an agent with the numbers its source gave.
 # Nothing derived is kept (no pace, load or score). An activity that came
 # from somewhere else is known by `source` + `external_id` within its user,

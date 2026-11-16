@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
-# Exercises no longer link to demo videos elsewhere (#276): the column #235
-# added goes. A plain DROP COLUMN (the sqlite3 gem's SQLite has it natively),
+# Exercises no longer link to demo videos elsewhere: the `videos`
+# column goes. A plain DROP COLUMN (the sqlite3 gem's SQLite has it natively),
 # so no table is copied and no constraint is lost.
 Sequel.migration do
   up do

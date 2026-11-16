@@ -1,0 +1,17 @@
+name: Idea
+description: A feature or a change you'd like.
+labels: [enhancement]
+body:
+  - type: textarea
+    id: idea
+    attributes:
+      label: The idea
+      description: What you'd like the app to do, and what you're trying to get done with it.
+    validations:
+      required: true
+  - type: checkboxes
+    id: pr
+    attributes:
+      label: A pull request
+      options:
+        - label: I'd like to write it myself, once we agree on the change (see CONTRIBUTING.md).

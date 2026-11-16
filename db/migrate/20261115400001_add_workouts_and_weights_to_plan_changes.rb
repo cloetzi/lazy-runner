@@ -1,8 +1,8 @@
 # frozen_string_literal: true
 
-# Workout edits and remembered weights join the record of plan changes
-# (#290): a workout changed or archived (`item_kind` workout, `workout_id`)
-# and an exercise's remembered weight set (`weight`, `exercise_id`), with a
+# Workout edits and remembered weights join the record of plan changes:
+# a workout changed or archived (`item_kind` workout, `workout_id`) and
+# an exercise's remembered weight set (`weight`, `exercise_id`), with a
 # readable `summary` of what a workout edit changed. Both links are plain
 # keys going null with their row, as the session and routine ones are.
 # Changing the CHECKs copies the table on SQLite, and the copy keeps none of

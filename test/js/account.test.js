@@ -154,7 +154,7 @@ test("signs out on the server once it can after signing out on this device alone
 });
 
 // A sign-in the server ended (expired, signed out elsewhere, the user
-// removed) leaves no copies of their answers to serve offline (#210).
+// removed) leaves no copies of their answers to serve offline.
 test("forgets the copies of API answers when the app says nobody is signed in, and keeps what waits to sync", async () => {
   const storage = memoryStorage({ account: JSON.stringify(someone), outbox: "[1]", run: "{}", [AHEAD_KEY]: "1" });
   const caches = fakeCaches();

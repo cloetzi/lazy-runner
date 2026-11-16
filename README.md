@@ -18,9 +18,15 @@ it reaches (such as Garmin).
 
 ## Status
 
-Early development (iteration 1). The features below work, every built-in
-exercise has its animation, and the app installs to the home screen and runs a
-session offline, syncing when the connection returns.
+Version 0.x, and still changing: the features
+below work, every built-in exercise has its animation, and the app installs
+to the home screen and runs a session offline, syncing when the connection
+returns. Until 1.0 a release can break things; the changelog says what.
+
+> [!WARNING]
+> **Do not expose the Lazy Runner to the internet.** It is built for a home
+> network or a VPN, behind a reverse proxy that gives it TLS. See
+> [SECURITY.md](SECURITY.md) for what it assumes and the risks it accepts.
 
 ## Features (v1)
 
@@ -246,9 +252,28 @@ bundle exec rubocop     # lint
 npm test                # player logic tests
 ```
 
+## Contributing
+
+Issues are welcome; pull requests by arrangement, so open an issue first.
+[CONTRIBUTING.md](CONTRIBUTING.md) has the commands and conventions, and
+[SECURITY.md](SECURITY.md) how to report a vulnerability privately.
+
+`CLAUDE.md` and `.claude/` are there because much of the app is written with
+Claude Code: `CLAUDE.md` is the guidance it reads (with a map of the code that
+is useful to anyone), and `.claude/` holds a hook that sets up the toolchain
+in its cloud sessions and does nothing elsewhere.
+
 ## Content and licensing
 
-The repository is built so it can be open-sourced later: no secrets, personal data
-or deployment-specific values, and no copied third-party images or text. Exercise
-cues and animations are original. The licence will be chosen when the project is
-published.
+The Lazy Runner is **source available, free to use**: under the
+[Apache License 2.0 with the Commons Clause](LICENSE). You may use it, change
+it and share it, at home or at work, but not sell it: offering it, or a
+service whose value comes mainly from it, for a fee (hosting and support
+included) is not allowed. Because of that condition it is not open source in
+the OSI sense.
+
+The exercise cues, instructions and animations are original and under the same
+licence. Comments in `db/seeds/` link to the pages an exercise's form was
+checked against; nothing is copied from them. Swagger UI, which draws the API
+reference, is included in `lib/api_reference/swagger-ui` under its own Apache
+2.0 licence and NOTICE.

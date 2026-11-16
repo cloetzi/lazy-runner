@@ -344,7 +344,7 @@ class AuthApp < Roda
       # A locked account is turned away before its password is checked, and
       # one that signs in only with the OIDC provider has no password to
       # check (Rodauth then hashes nothing): hash anyway, so either answers
-      # in the time any other sign-in takes (#208). Defined here, not as the
+      # in the time any other sign-in takes. Defined here, not as the
       # before_login_attempt setting, which runs after the lockout feature
       # has already turned a locked account away.
       def before_login_attempt

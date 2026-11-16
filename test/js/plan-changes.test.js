@@ -131,7 +131,7 @@ test("a copy kept on the device offers no undo", () => {
   assert.equal(withoutUndo(null, true), null);
 });
 
-test("says what an agent changed in a workout, or the weight it set, with Change it back (#290)", () => {
+test("says what an agent changed in a workout, or the weight it set, with Change it back", () => {
   const edit = change({ item_kind: "workout", workout_id: 3, title: "Workout 1", action: "changed", summary: "3 rounds in block B (was 2)", was: {}, now: {} });
   assert.equal(changeLine(edit, { today }), "Coach agent changed this workout · today: 3 rounds in block B (was 2)");
   assert.equal(undoLabel(edit), "Change it back");

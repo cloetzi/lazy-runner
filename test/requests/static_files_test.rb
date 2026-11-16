@@ -22,7 +22,7 @@ describe "static files" do
   end
 
   # Nothing from another origin runs where the session is, and no other
-  # site frames the app (#206).
+  # site frames the app.
   it "lets only the app's own scripts run, and no other site frame it" do
     get "/"
 

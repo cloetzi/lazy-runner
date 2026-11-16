@@ -6,7 +6,7 @@
 # where it is given, in total, before Rodauth sees them. Per-IP limits would
 # only see the proxy in front. A total is shared by everyone who counts
 # against it, so lib/auth/throttles.rb keeps one only where an anonymous stream of
-# attempts can't spend what real users need (#207). Each key takes room until
+# attempts can't spend what real users need. Each key takes room until
 # its attempts leave the window, so the table holds at most `max_keys`: past
 # that, a new key takes the place of the one added longest ago. A flood of
 # made-up usernames can then forget a real one's attempts, never refuse it;

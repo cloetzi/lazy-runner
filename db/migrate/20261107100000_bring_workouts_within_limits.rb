@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-# Workouts saved before their limits (#204) may be past them: a block of a
+# Workouts saved before their limits may be past them: a block of a
 # trillion rounds still stalls the server when its plan is drawn, and a
 # title too long fails every later save. Each value is brought within its
 # limit; a row within them is left as it is.

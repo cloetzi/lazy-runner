@@ -10,7 +10,7 @@ module Auth
   module Throttles
     # Sign-in attempts, ten a minute per username. They count apart from each
     # other, so a stream of made-up usernames can't use up the attempts of
-    # real users, whose hashing is bounded by how few they are (#207).
+    # real users, whose hashing is bounded by how few they are.
     SIGN_INS = Throttle.new(per_key: Throttle::Limit.new(10, 60))
     # The dummy hash a sign-in with an unknown username costs: 60 a minute in
     # all. Past that, such a sign-in waits as long as a hash takes instead, so

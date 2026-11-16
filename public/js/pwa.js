@@ -1,5 +1,5 @@
 // Registers the service worker that keeps the app usable offline (see /sw.js),
-// and polishes the app added to the Home Screen (#267).
+// and polishes the app added to the Home Screen.
 if (globalThis.navigator && "serviceWorker" in navigator) {
   navigator.serviceWorker.register("/sw.js").catch(() => {
     // Not allowed here (e.g. plain http on another host): the app still works online.

@@ -4,7 +4,7 @@
 class Block < Record
   # A workout is something a person does in one go: these bound what one
   # block can ask for (the builder's own steppers stay well inside them),
-  # so no workout makes the player plan do unbounded work (#204).
+  # so no workout makes the player plan do unbounded work.
   MAX_ROUNDS = 20
   MAX_REST_SECONDS = 600
   MAX_LABEL = 60

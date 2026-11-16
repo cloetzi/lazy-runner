@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-# What agents did since the user last looked at Coach (#259), for the
+# What agents did since the user last looked at Coach, for the
 # "Since you last looked" card and the dot on the Coach tab: the changes they
 # made to the plan (not taken back), the notes they wrote, the goals they
 # proposed and the activities they copied. "Since" is when the user last

@@ -28,7 +28,7 @@ class SessionDetail
     logs.group_by { [it.step_ref || [it.block_label, it.planned_exercise_id], it.exercise_id] }.values.map do |sets|
       first = sets.first
       # The unit its target was logged in, that of the gear the step was done
-      # with then (#197), else its exercise's.
+      # with then, else its exercise's.
       unit = sets.filter_map { it.target[:weight] }.first&.dig(:unit) || first.exercise.weight_unit
       {
         exercise: first.exercise.values.slice(:id, :slug, :name),

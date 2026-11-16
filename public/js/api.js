@@ -62,7 +62,7 @@ export async function sendChange({ method, path, body }, fetchFn = fetch) {
 }
 
 // What a sheet that saves straight away (a coach note, a goal, a routine)
-// says while the device is offline: unlike the rest, it isn't queued (#267).
+// says while the device is offline: unlike the rest, it isn't queued.
 export const NEEDS_CONNECTION = "You're offline, and this needs a connection to save. Keep it open and save it once you're back online.";
 
 // Whether the browser knows it has no network. (It can't tell the other way

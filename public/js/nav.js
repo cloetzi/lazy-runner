@@ -11,7 +11,7 @@ import { createOutbox } from "./outbox.js";
 // wants a sign-in): the sign-in page, back here afterwards. Someone else
 // than last time: forget the last one's things on this device and draw the
 // page again. Offline: carry on with what is here. An installed app may stay
-// open for days and has no reload button on iOS (#222), so the page asks
+// open for days and has no reload button on iOS, so the page asks
 // again when the connection returns after it was offline, and when it comes
 // back on screen after being offline or away for a while. Those later checks
 // leave a session under way alone; its sets wait in the outbox.

@@ -90,7 +90,7 @@ module Auth
     # A write the PWA queued for one user (X-Lazy-Runner-User, see
     # public/js/outbox.js) is refused while someone else is signed in: another
     # tab may send it in the moment between the next person's sign-in and
-    # the device dropping the queue (#205).
+    # the device dropping the queue.
     def refuse_other_user(r)
       meant = r.env["HTTP_X_LAZY_RUNNER_USER"]
       return if meant.nil? || !Csrf.unsafe?(r) || meant == env["lazy_runner.user_id"].to_s

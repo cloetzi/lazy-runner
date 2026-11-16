@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-# The Coach tab (#179): the user's goals, which anchor it, and the coach's
+# The Coach tab: the user's goals, which anchor it, and the coach's
 # notes (status, focus, concerns and a journal), written by the user, a
 # coach they name, or an agent.
 #

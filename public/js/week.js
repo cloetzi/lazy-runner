@@ -1,7 +1,7 @@
 // How a week adds up, kept free of the DOM so node can test it: what was
 // planned against what was done, by kind (strength first, then each sport
 // family), with the plain sum of the distance a sport covered. Counts and
-// sums only: no score, load or pace (decision 6 in #240).
+// sums only: no score, load or pace.
 //
 // Strength is the week's workout sessions (a warm-up or cool-down done on
 // its own is not one) and any strength activity logged on a day without a

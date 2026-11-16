@@ -1,4 +1,4 @@
-// "Since you last looked" on Coach (#259), kept free of the DOM so node can
+// "Since you last looked" on Coach, kept free of the DOM so node can
 // test it: what agents did since the user last marked it seen (GET
 // /api/coach/news), one group per agent, newest first, a line per change
 // to the plan and a line each for the activities copied and the notes and

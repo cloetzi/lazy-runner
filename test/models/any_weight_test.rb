@@ -2,7 +2,7 @@
 
 require "test_helper"
 
-# The generic weight (#225): exercises that need one weight, any dumbbell or
+# The generic weight: exercises that need one weight, any dumbbell or
 # kettlebell, and how the gear owned stands in for it.
 describe "the generic weight" do
   let(:weight) { equipment("weight") }

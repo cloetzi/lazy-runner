@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-# A remembered weight can be "no weight" (#230): stepping below the lightest
+# A remembered weight can be "no weight": stepping below the lightest
 # weight keeps the exercise without one, rather than falling back to the
 # weight a workout step sets. Allowing NULL copies the table on SQLite; it
 # has no CHECK constraints or partial indexes to make again.

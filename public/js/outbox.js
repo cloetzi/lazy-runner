@@ -26,7 +26,7 @@
 // they are signed in, and another tab may flush in between. So each entry
 // is skipped here when the device's account is someone else's, and sent
 // with its user's id, which the server checks against the session: a 409
-// user_mismatch drops it unseen, as the clearing would have (#205).
+// user_mismatch drops it unseen, as the clearing would have.
 //
 // A server error usually means an outage, and the queue waits for it to end.
 // But a change that hits a bug answers 5xx for good, and would hold up every

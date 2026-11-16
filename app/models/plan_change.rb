@@ -1,8 +1,8 @@
 # frozen_string_literal: true
 
-# One change to the plan (#258): a session or routine planned, moved,
+# One change to the plan: a session or routine planned, moved,
 # removed, changed or ended, a workout changed or archived, or an exercise's
-# remembered weight set (#290), by the user in the app (`manual`) or by an agent
+# remembered weight set, by the user in the app (`manual`) or by an agent
 # (`llm`: a request or MCP call made with an API token, named by it). It says
 # what the item was called, the days it left and joined, the fields it
 # changed (`was` before, `now` after; a removal's `was` holds what putting it

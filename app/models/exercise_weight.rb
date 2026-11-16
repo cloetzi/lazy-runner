@@ -3,7 +3,7 @@
 # A user's remembered weight for an exercise. Shared by every workout of
 # theirs the exercise appears in, and always wins over the seed value. Reps and seconds are not
 # remembered: they belong to each workout's step. A null `value` remembers
-# "no weight" (#230): the exercise is done without one, whatever the steps
+# "no weight": the exercise is done without one, whatever the steps
 # set, until a weight is remembered again.
 class ExerciseWeight < Record
   UNITS = %w[lb kg].freeze

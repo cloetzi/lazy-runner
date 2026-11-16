@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-# Personal API tokens (#37): how an assistant (MCP) or a script signs in as
+# Personal API tokens: how an assistant (MCP) or a script signs in as
 # a user. Only a token's SHA-256 digest is kept; the token itself is shown
 # once, when it is made. Revoking one deletes it.
 Sequel.migration do

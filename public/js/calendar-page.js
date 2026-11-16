@@ -358,10 +358,10 @@ const chip = (tile, label, { gone = false, key = null, drag = false } = {}) =>
 
 const MAX_CHIPS = 3;
 
-// The month grid at the full width, the selected day under it (#253).
+// The month grid at the full width, the selected day under it.
 // Each chip is a tile and what and how much; a cell too narrow for words
 // shows the tiles alone (a container query in app.css). The grid is one tab
-// stop: the arrow keys move the selected day (#254), and the whole cell is
+// stop: the arrow keys move the selected day, and the whole cell is
 // its button.
 function monthView({ days, activityDays, noteDays, routineDayMap, fulfils, next, changeDays, changeShown }) {
   const month = state.focus.slice(0, 7);
@@ -697,7 +697,7 @@ $("calendar-switch").onclick = (event) => {
 
 $("calendar-key").onclick = openKeySheet;
 
-// One tab stop for the month grid, arrow keys inside it (#254): they move
+// One tab stop for the month grid, arrow keys inside it: they move
 // the selected day, and the focus follows it.
 const KEY_MOVES = {
   ArrowLeft: (d) => addDays(d, -1), ArrowRight: (d) => addDays(d, 1),

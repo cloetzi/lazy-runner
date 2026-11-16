@@ -734,7 +734,7 @@ function renderWorkout() {
   renderWorkoutOwn();
 }
 
-// An agent's edits of a workout (#290), each with its reason and the button
+// An agent's edits of a workout, each with its reason and the button
 // that changes it back: in the workout view and on Get ready.
 function agentChangesHtml(changes) {
   return changes.map((change) => {

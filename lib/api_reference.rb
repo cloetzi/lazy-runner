@@ -5,7 +5,7 @@ require "rack/files"
 # The API reference at /api/openapi: Rage's OpenAPI document at /json, and a
 # page of our own that reads it with Swagger UI. Rage's own page loads
 # swagger-ui-dist@^5 from unpkg, a floating version with no integrity check,
-# into the origin that holds the session (#206). This one serves an exact
+# into the origin that holds the session. This one serves an exact
 # release, kept in lib/api_reference/swagger-ui (its package.json says which,
 # with its licence), from this server, under a Content-Security-Policy that
 # lets nothing else run.

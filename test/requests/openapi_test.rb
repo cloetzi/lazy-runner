@@ -21,7 +21,7 @@ describe "API description" do
   end
 
   # Rage's own page loads swagger-ui-dist@^5 from unpkg; this one serves an
-  # exact release from this server, and lets nothing else run (#206).
+  # exact release from this server, and lets nothing else run.
   describe "the reference page" do
     def page(path = "")
       get "/api/openapi#{path}", {}, { "rack.input" => StringIO.new }

@@ -14,7 +14,7 @@ export function offlineToday(today, date) {
   return { ...today, date, session: null, source: "default", day: [], activities: [], next_planned: next, offline: true };
 }
 
-// Fetching ahead (#267): while online, the device fetches what the pages
+// Fetching ahead: while online, the device fetches what the pages
 // read, so the whole app opens offline, not only what was opened before:
 // every workout (its view, and Today's start of it), this week and this
 // month on the calendar with what is up next, the coach board, history, and

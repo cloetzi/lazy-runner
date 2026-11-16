@@ -2,7 +2,7 @@
 
 require "test_helper"
 
-# Gear in mixed units: dumbbells in lb, the kettlebell in kg (#197).
+# Gear in mixed units: dumbbells in lb, the kettlebell in kg.
 describe "weights with gear in mixed units" do
   let(:fly) { exercise("reverse-fly") }
   let(:fly_step) { step_for("cycle-1-workout-1", "reverse-fly") }

@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-# Who an invite is for (#275): an optional label the owner gives it, such
+# Who an invite is for: an optional label the owner gives it, such
 # as "For Sam", so two waiting invites can be told apart. ADD COLUMN, so no
 # table is copied.
 Sequel.migration do

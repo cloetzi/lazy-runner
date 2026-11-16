@@ -135,7 +135,7 @@ class Record
 
   # What an agent writes (`created_by: llm`) carries its name: the name of
   # the API token it connected with (Current.agent_name, set for a token's
-  # request or MCP call), so the app shows one name for it everywhere (#247).
+  # request or MCP call), so the app shows one name for it everywhere.
   # A row written without a token has none, and the app shows its default.
   # What a token writes is always the agent's, whatever the request says.
   module AgentSigned

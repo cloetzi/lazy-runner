@@ -184,7 +184,7 @@ describe "workouts API" do
     end
 
     # The player walks every round of every step, in the one worker every
-    # user shares: a workout can't ask for unbounded work (#204).
+    # user shares: a workout can't ask for unbounded work.
     it "keeps a workout to a size a person does in one go" do
       count = Workout.count
       body = new_workout(title: "x" * 101)

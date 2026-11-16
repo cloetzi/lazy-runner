@@ -1,6 +1,9 @@
 # CLAUDE.md
 
-Guidance for Claude (and other contributors) working in this repository.
+Guidance for Claude working in this repository. The commands, conventions
+and rules for everyone are in CONTRIBUTING.md, imported here:
+
+@CONTRIBUTING.md
 
 ## What this is
 
@@ -12,25 +15,14 @@ fails when it misses a table or column, so update it with every migration),
 `api.md` (conventions; the reference is generated at `/api/openapi`) and
 `design.md`. Keep them short and current when a change touches what they say.
 
-## Commands
-
-```sh
-bundle install
-bundle exec rage s          # dev server on http://localhost:3000 (migrates and seeds on boot)
-bundle exec rake test       # Ruby tests (Minitest)
-bundle exec rubocop         # lint (.rubocop.yml); -a fixes what is safe to fix
-npm test                    # player logic tests (node:test, no dependencies)
-npm ci && npm run test:e2e  # browser smoke test (Playwright) against a server with a fresh database at BASE_URL
-docker build --build-arg RUBY_VERSION="$(cat .ruby-version)" -t lazy-runner .
-```
-
 ## Claude Code cloud sessions
 
 `.claude/hooks/session-start.sh` (registered in `.claude/settings.json`) runs at
 the start of every cloud session and does nothing elsewhere. It leaves `ruby`,
 `bundle` and `node` on the PATH at the `.ruby-version` and `.node-version`
 versions, with gems and `node_modules` installed and `LANG=C.UTF-8` (the
-image defaults to US-ASCII), so the commands above run directly; no Docker per test run. How:
+image defaults to US-ASCII), so the commands in CONTRIBUTING.md run directly, the e2e test
+included; no Docker per test run. How:
 
 - Ruby is built from the ruby-lang.org source (checksum from its `index.txt`)
   into `/opt/ruby-<version>`. Where the environment blocks ruby-lang.org, the
@@ -45,11 +37,6 @@ image defaults to US-ASCII), so the commands above run directly; no Docker per t
 - Every step is skipped when its result is there, so only a fresh container
   pays for the build; a warm start takes about 1 s.
 
-For the e2e test, start a server on a fresh database first, logging to a
-file (the test reads the setup code there):
-`rm -f storage/production.sqlite3* && SECURE_COOKIES=false bundle exec rage s -e production -p 3999 > /tmp/e2e.log 2>&1 &`
-then `BASE_URL=http://localhost:3999 SERVER_LOG=/tmp/e2e.log npm run test:e2e`.
-
 ## Layout
 
 - `app/controllers/api/` JSON endpoints, one controller per resource.
@@ -58,8 +45,8 @@ then `BASE_URL=http://localhost:3999 SERVER_LOG=/tmp/e2e.log npm run test:e2e`.
   such as `PlayerPlan`, which flattens workouts into the ordered screens the
   player walks through. Queries are datasets: subsets and `dataset_module`
   methods on the model, `eager` for what a list reads. `Session` and
-  `Routine` record every change to the plan themselves (`PlanChange.record!`,
-  #258), with `PlanChange.because(reason)` and `quietly` around the calls;
+  `Routine` record every change to the plan themselves (`PlanChange.record!`),
+  with `PlanChange.because(reason)` and `quietly` around the calls;
   undo runs the same model code the other way.
 - `lib/auth_app.rb` accounts and sign-in: Rodauth (JSON only) as Roda
   middleware inside Rage (`config/initializers/sign_in.rb`), with Roda's
@@ -94,7 +81,7 @@ then `BASE_URL=http://localhost:3999 SERVER_LOG=/tmp/e2e.log npm run test:e2e`.
   `id_param`, `boolean_param`, `hash_param`) for anything that reaches a
   query or a `dig`; `test/requests/wrong_types_test.rb` sends every
   documented field the wrong types.
-- Data is per user (#175): the library and the equipment catalogue are
+- Data is per user: the library and the equipment catalogue are
   shared, everything else has a `user_id` (or a parent with one). A
   per-user model calls `per_user` (`Record`), and then every query on it
   is the signed-in user's (`Current.user!`, raising with nobody signed in):
@@ -206,88 +193,6 @@ then `BASE_URL=http://localhost:3999 SERVER_LOG=/tmp/e2e.log npm run test:e2e`.
   `test/e2e` a Playwright run through the real server, offline finish included
   (CI runs it with the Playwright version in `package-lock.json`).
   `test/lib/boot_test.rb` runs the production boot in its own process.
-
-## Conventions
-
-- **Tests use Minitest spec style with expectations**: `describe`/`it` and
-  `_(value).must_equal expected`, `_ { ... }.must_raise Error`. Never `assert_*`,
-  never RSpec.
-- Versions have one source of truth each: Ruby in `.ruby-version` (read by the
-  Gemfile, CI and the Docker build arg), Node in `.node-version`. Never repeat
-  a version number elsewhere.
-- Use the latest stable release of everything (Ruby, gems, Node, base images,
-  GitHub Actions) unless there is a stated reason not to.
-  Renovate (the hosted app, `renovate.json`) keeps them there: weekly grouped
-  PRs as Conventional Commits, minor and patch ones squash-merged once CI is
-  green; majors, new Ruby or Node minors and lock file maintenance left for
-  review; a dependency dashboard issue. An older pin needs a `packageRules`
-  entry saying why. Not covered: the vendored Swagger UI (by hand) and the
-  Debian release in the session-start hook's fallback image.
-- CI runs on GitHub-hosted runners (`ubuntu-latest`) and only tests and
-  lints: Ruby, RuboCop, node and e2e as parallel jobs, toolchains from setup
-  actions reading the version files, dependencies cached. The image is built only for a release
-  (`.github/workflows/release.yml`). Keep branch builds lean.
-- Commits follow [Conventional Commits](https://www.conventionalcommits.org/):
-  `type(scope): summary` with `feat`, `fix`, `perf`, `refactor`, `docs`,
-  `test`, `ci`, `build` or `chore`, and `!` or a `BREAKING CHANGE:` footer for
-  a breaking change. A squash merge's title is the commit, so PR titles follow
-  it too. release-please reads them on main to keep a release PR open with the
-  next version and changelog (`feat` bumps the minor version, `fix` and `perf`
-  the patch, while below 1.0 a breaking change bumps the minor). It runs once
-  CI passes on main; merging the release PR tags the release and publishes
-  the image. The version is release-please's
-  (`.release-please-manifest.json`, `version.txt`, `CHANGELOG.md`): never
-  bump it by hand.
-- Use `it` in short blocks rather than `_1`, and name the parameter in a
-  block over more than one line.
-- RuboCop (`.rubocop.yml`): its defaults with new cops on, all Metrics off,
-  lines up to 140, and a frozen string literal comment in every Ruby file.
-  CI fails on any offence and there is no todo file: fix it, or disable the
-  cop on that line with `-- why`.
-- Every API change gets a request test in `test/requests/`. Timing logic gets a
-  unit test.
-- Seeds are the source of truth for the library, examples for programs.
-  Change exercises, equipment and examples in YAML, not in migrations. An
-  example change reaches only later imports: users' copies are theirs. The
-  loader never deletes a logged set: set logs carry their own exercise,
-  planned exercise, block and target, and only lose the link to a step that
-  leaves. An exercise dropped from the seeds with sets logged (or a step
-  naming it) is retired, not deleted. Keep it that way.
-- Rage specifics: requests run in fibers, and with Sequel's
-  `fiber_concurrency` extension they take turns on the one connection: a
-  fiber holds it for a whole transaction, so keep transactions short and
-  never wait on another request inside one. The boot disconnects once it has
-  migrated and seeded (see `config/initializers/database.rb`). Tests run
-  fibers synchronously, key connections by thread so request fibers share the
-  test's, and wrap each test in a transaction rolled back at the end, with the
-  app's transactions as savepoints (see `test/test_helper.rb`).
-- Sequel gotchas:
-  - A plain `save` writes every column of the in-memory record, stale ones
-    included; use `update`, `save_changes` or `update_columns` (no hooks or
-    timestamps) unless writing the whole record is the point.
-  - `Model#==` compares values, not ids; compare ids in tests.
-  - `column_changed?` misses a JSON column changed in place; `changing?` sees it.
-  - Aggregates come back untyped on SQLite (`MAX(date)` is a String) and need
-    `.as(:name)` in `select_map`/`select_hash`.
-  - Iterate a dataset you write to inside the loop with `.all.each`, not
-    `.each`, which streams from an open statement.
-  - A value that can't be typecast stays as given; `Record#after_validation`
-    refuses it unless a validation named it first.
-  - A model's `after_update` calls `super` first, or `column_previously_changed?`
-    reads the save before.
-- Animations: side-on figure facing right, angles in degrees (0 forward, 90
-  down). Per-side exercises are authored for the left side (near limbs) and
-  mirrored for the right. Accent the moving limb, highlight the target muscle,
-  time rep-based moves to the step's tempo where there is one. Check new poses on
-  the Exercises page in both colour schemes.
-- Frontend: no frameworks or bundlers. Keep the player usable one-handed and
-  readable from a distance; respect `prefers-color-scheme`.
-
-## Keep it open-sourceable
-
-No secrets, personal data, hostnames or homelab-specific values in the repo. No
-copied third-party images or text: exercise cues are written fresh, and the
-animations are original. Deployment configuration lives elsewhere.
 
 ## Workflow
 

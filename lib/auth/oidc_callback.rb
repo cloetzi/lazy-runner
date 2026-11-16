@@ -59,7 +59,7 @@ module Auth
       client.secret = settings.client_secret
       # The callback URL is OIDC_REDIRECT_URI, the same on the way out and
       # back, never this request's Host or X-Forwarded-Host: those come from
-      # the client, which could send the provider's code to its own host (#209).
+      # the client, which could send the provider's code to its own host.
       options.full_host = URI.join(settings.redirect_uri, "/").to_s.chomp("/")
       client.redirect_uri = settings.redirect_uri
     end

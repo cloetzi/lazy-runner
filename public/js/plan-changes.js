@@ -1,4 +1,4 @@
-// What the calendar says about an agent's changes to the plan (#258, #259),
+// What the calendar says about an agent's changes to the plan,
 // kept free of the DOM so node can test it. The server records every change
 // to a session or routine; the calendar gives each item the latest one an
 // agent made, not taken back (`change`), and a line for each session an
@@ -7,7 +7,7 @@
 // an item, once, and only into a day that has not gone by. A change of
 // yours is not shown: the mark means someone else changed it.
 //
-// Workout edits and remembered weights are recorded the same way (#290):
+// Workout edits and remembered weights are recorded the same way:
 // `item_kind` workout (with a `summary` of what changed) or weight (`was`
 // and `now` the value and unit, both null while nothing was remembered),
 // shown on the workout and on Get ready.

@@ -2,7 +2,7 @@
 
 # The part of the session a set was logged in (warmup, workout or cooldown),
 # kept on the set like its block and target, so History and the coach can
-# tell the main workout from its framing after the workout changes (#265).
+# tell the main workout from its framing after the workout changes.
 # Sets logged before are filled in from their step where it still exists:
 # the session's own workout is the main one, anything else is the kind of
 # the warm-up or cool-down it framed it with.

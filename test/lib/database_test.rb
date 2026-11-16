@@ -70,8 +70,8 @@ describe Database do
   # SQLite can't change a column default or add a constraint in place, so
   # Sequel copies the table, and the copy has none of the CHECK constraints
   # or partial indexes: a migration doing that has to make them again.
-  # Dropped on purpose: the seed-only rules, when programs became examples (#183);
-  # the weight suggestions with their table (#264).
+  # Dropped on purpose: the seed-only rules, when programs became examples;
+  # the weight suggestions with their table.
   DROPPED = {
     programs: %w[programs_seed_slug index_programs_on_slug], workouts: %w[workouts_seed_slug index_workouts_on_slug],
     weight_suggestions: :all

@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-# Onboarding and invites (#184). Others join by an invite link the owner
+# Onboarding and invites. Others join by an invite link the owner
 # makes: one use, seven days. Only the token's SHA-256 digest is kept, so the
 # table alone lets nobody in; using an invite or revoking it deletes it.
 #

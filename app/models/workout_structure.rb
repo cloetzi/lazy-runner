@@ -27,12 +27,12 @@ class WorkoutStructure
   STEP_KEYS = %w[id exercise_id reps duration_seconds tempo weight weights_held per_side note equipment].freeze
   # What GET /api/workouts/:id adds to each, ignored here, so a workout read
   # can be edited and sent back as it is. `suggestion` is what an older GET
-  # gave (until #264), for a page still on that release.
+  # gave before the app stopped suggesting weights, for a page still on that release.
   BLOCK_EXTRAS = %w[position].freeze
   STEP_EXTRAS = %w[position exercise equipment_needed target weight_unit allowed_weights suggestion].freeze
   WEIGHT_KEYS = %w[value unit].freeze
   # How big one workout can be: the player walks every round of every step,
-  # so rounds x steps is bounded as well as each part (#204).
+  # so rounds x steps is bounded as well as each part.
   MAX_BLOCKS = 12
   MAX_STEPS = 30
   MAX_STEP_ROUNDS = 300

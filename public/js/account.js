@@ -92,7 +92,7 @@ export async function adoptAccount(user, { storage, caches }) {
 // copy answered).
 // Redirects aren't followed: the app never redirects /api/me, so one is a
 // sign-in page in front of it; followed to another origin, it would look
-// like no network (#222). A browser shows such a redirect as an opaque one.
+// like no network. A browser shows such a redirect as an opaque one.
 export async function whoIsSignedIn(fetchFn = fetch) {
   let response;
   try {
@@ -145,7 +145,7 @@ export async function signOut({ storage, caches, fetchFn = fetch }) {
 
 // Signs out on this device alone, when the server can't be reached: it
 // forgets the user's things, and notes that the server still has to be
-// told, which `checkSignedIn` does the next time it can (#222).
+// told, which `checkSignedIn` does the next time it can.
 export async function signOutHere({ storage, caches }) {
   await forgetAccount({ storage, caches });
   note(storage, true);
@@ -171,8 +171,8 @@ function note(storage, value) {
 //
 // When the app answers that nobody is signed in (a sign-in that expired, was
 // ended on another device or by the owner, or a user removed), the copies of
-// API answers go, so none is served offline to whoever uses the device next
-// (#210). What waits to sync and a session under way stay: they sync once
+// API answers go, so none is served offline to whoever uses the device next.
+// What waits to sync and a session under way stay: they sync once
 // the same user signs in again, and go if someone else does.
 export async function checkSignedIn({ storage, caches, fetchFn = fetch }) {
   const me = await whoIsSignedIn(fetchFn);

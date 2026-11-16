@@ -2,7 +2,7 @@
 
 require "test_helper"
 
-# Workout edits and remembered weights in the record of plan changes (#290).
+# Workout edits and remembered weights in the record of plan changes.
 describe WorkoutChange do
   let(:today) { Date.new(2026, 11, 11) }
   let(:strength) { workout("cycle-1-workout-1") }

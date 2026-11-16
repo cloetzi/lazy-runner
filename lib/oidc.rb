@@ -4,7 +4,7 @@ require "securerandom"
 require "uri"
 require "omniauth_openid_connect"
 
-# Signing in with an OpenID Connect provider, next to passwords (#185):
+# Signing in with an OpenID Connect provider, next to passwords:
 # set OIDC_ISSUER, OIDC_CLIENT_ID and OIDC_CLIENT_SECRET, and the sign-in
 # page offers "Sign in with <OIDC_NAME>". Unset, the routes don't exist.
 # How the flow runs is in lib/auth/oidc_callback.rb; the provider's own settings stay
@@ -24,7 +24,7 @@ require "omniauth_openid_connect"
 # - OIDC_REDIRECT_URI: the callback URL as registered with the provider,
 #   `https://<the app's host>/api/auth/oidc/callback`. Required: worked out
 #   from the request instead, a client could choose it with Host or
-#   X-Forwarded-Host, and so where the provider sends a code (#209).
+#   X-Forwarded-Host, and so where the provider sends a code.
 # - OIDC_CLIENT_AUTH_METHOD: client_secret_basic (the default) or
 #   client_secret_post, as the client is registered.
 # - OIDC_SIGNING_ALG: the ID token's signature algorithm, RS256 by default;

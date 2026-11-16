@@ -61,7 +61,7 @@ class UserEquipment < Record.Model(:user_equipment)
 
   # Relabelling the unit (20 lb dumbbells were 20 kg all along) relabels the
   # weights that were one of the item's in the old unit: the steps done with
-  # it and the remembered weights of exercises it is the gear for (#197).
+  # it and the remembered weights of exercises it is the gear for.
   def after_update
     super
     return unless column_previously_changed?(:unit) && equipment.unit

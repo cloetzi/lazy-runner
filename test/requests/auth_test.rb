@@ -148,7 +148,7 @@ describe "accounts and sign-in" do
     end
 
     # Each username counts apart, so attempts with made-up ones don't keep
-    # a real user out, and past a budget they stop costing a hash (#207).
+    # a real user out, and past a budget they stop costing a hash.
     it "lets the real user in through a stream of made-up usernames" do
       hashes = 0
       counter = Module.new do
@@ -197,7 +197,7 @@ describe "accounts and sign-in" do
 
   # The PWA's queued changes name the user they were made by: one queued
   # before someone else signed in on the device never lands in their
-  # account (#205).
+  # account.
   describe "a queued change for another user" do
     before { sign_in(user) }
 

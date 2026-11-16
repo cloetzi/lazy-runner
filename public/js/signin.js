@@ -92,7 +92,7 @@ wire(newPasswordForm, "/api/auth/change-password");
 // No answer, or one from something in front of the app: say which, and
 // offer to ask again, since an installed app on iOS has no reload button.
 // Trying again loads this page with `?gate`, which asks the network too, so
-// a sign-in page in front of the app shows (sw.js, #222).
+// a sign-in page in front of the app shows (see sw.js).
 function offerRetry(message) {
   status.textContent = message;
   status.hidden = false;

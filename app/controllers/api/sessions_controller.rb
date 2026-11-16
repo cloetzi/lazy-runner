@@ -264,7 +264,7 @@ module Api
         session.update(status: "done")
       end
       # `suggestions` stays, always empty, for a page still on a release from
-      # before the app stopped suggesting weights (#264).
+      # before the app stopped suggesting weights.
       render json: { session: session.refresh, completion:, suggestions: [] }
     end
 

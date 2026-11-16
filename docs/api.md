@@ -111,7 +111,7 @@ as null when it has no value (`nullable`).
   concerns and the notes the user replied to.
 - **Plan changes** are recorded by the models (`GET /api/plan_changes`):
   every session or routine planned, moved, removed, changed or ended, every
-  workout edited or archived and every remembered weight set (#290), by the
+  workout edited or archived and every remembered weight set, by the
   user (`manual`) or an agent with a token (`llm`), with the fields before
   and after (for a workout a `summary` line instead; the structure before is
   kept for undo) and the reason given. `POST /api/plan_changes/:id/undo` takes the

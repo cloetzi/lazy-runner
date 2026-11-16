@@ -100,7 +100,7 @@ describe "signing in with an OpenID Connect provider" do
     end
 
     # A client chooses its request's Host and forwarded headers, so they
-    # can't choose where the provider sends the code (#209).
+    # can't choose where the provider sends the code.
     it "keeps to its redirect URI whatever host the request names" do
       Oidc.settings = PROVIDER.settings(redirect_uri: "https://runner.example.test/api/auth/oidc/callback")
       header "Host", "attacker.example"
@@ -511,7 +511,7 @@ describe "signing in with an OpenID Connect provider" do
   end
 
   # A failed password sign-in costs one Argon2 verification whoever it names,
-  # so its time doesn't tell an account that signs in only here (#208).
+  # so its time doesn't tell an account that signs in only here.
   describe "a wrong password for an account without one" do
     def verifications
       count = 0

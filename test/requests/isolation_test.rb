@@ -2,7 +2,7 @@
 
 require "test_helper"
 
-# Every user sees and changes only their own records (#175): another user's
+# Every user sees and changes only their own records: another user's
 # id is a 404 wherever an id is taken, and lists leave their records out.
 describe "one user's data, kept from another" do
   include RequestHelpers

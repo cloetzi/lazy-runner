@@ -163,7 +163,7 @@ $("sign-out").onclick = async () => {
   if (outcome === "done") return location.assign("/signin.html");
   // No server to sign out with (offline, or something in front of the app
   // answers instead): this device can still let go, so it isn't stuck on
-  // the last user's copies, and tells the server once it can (#222).
+  // the last user's copies, and tells the server once it can.
   const unreachable = "Couldn't reach the server to sign out. Sign out on this device now? It forgets your account and any unsynced changes here, and signs out on the server once it can reach it.";
   if (outcome === "refused" || !confirm(unreachable)) {
     return showError($("account-error"), outcome === "refused" ? "The server didn't sign you out. Reload the page and try again." : "Couldn't reach the server to sign out. Try again when you're online.");

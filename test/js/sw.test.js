@@ -219,7 +219,7 @@ test("does not keep redirects or errors", async () => {
   assert.equal(sw.data().size, 0);
 });
 
-// Room for 50 workouts fetched ahead, three entries each, and the rest (#267).
+// Room for 50 workouts fetched ahead, three entries each, and the rest.
 test("never holds more than the last 200 answers", async () => {
   const sw = worker({ network: async (request) => ok(request.url) });
 

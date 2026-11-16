@@ -63,7 +63,7 @@ test("marks it seen up to the newest thing shown", () => {
   assert.deepEqual(seenRequest(empty), { method: "POST", path: "/api/coach/seen", body: {} });
 });
 
-test("says what an agent changed in a workout, linking to it, and the weights it set (#290)", () => {
+test("says what an agent changed in a workout, linking to it, and the weights it set", () => {
   const news = {
     ...empty, latest: at(11),
     changes: [

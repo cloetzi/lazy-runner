@@ -11,7 +11,7 @@ require "rack/mime"
 #
 # Every file goes out with a Content-Security-Policy: the PWA is plain ES
 # modules and styles from this origin, so nothing from anywhere else runs in
-# the origin that holds the session, and no other site frames it (#206).
+# the origin that holds the session, and no other site frames it.
 class StaticFiles
   POLICY = [
     "default-src 'self'", "script-src 'self'", "style-src 'self' 'unsafe-inline'", "img-src 'self' data:",

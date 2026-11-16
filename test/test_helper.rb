@@ -71,7 +71,7 @@ end
 
 # Every query a request makes on a table of one user's records names
 # user_id; one that doesn't (an `everyone` or a raw DB query) could read or
-# change another user's (#175). The
+# change another user's. The
 # check runs only while a request is answered (RequestHelpers::APP), so a
 # test's own lookups are free, and a test that made such a query fails. It
 # reads the SQL as text, so it is a tripwire, not a proof: a query naming

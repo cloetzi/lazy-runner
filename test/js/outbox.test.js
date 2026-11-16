@@ -335,7 +335,7 @@ test("drops someone else's change unseen, with the changes that build on it", as
 });
 
 // Someone else signed in on this device, and account.js hasn't cleared the
-// queue yet: the server sees the entry was for another user (#205).
+// queue yet: the server sees the entry was for another user.
 test("drops a change unseen when the server says someone else is signed in", async () => {
   const server = fakeServer([
     { status: 409, json: { error: { code: "user_mismatch", message: "This change is another user's" } } },

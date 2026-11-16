@@ -8,7 +8,7 @@ class Step < Record
   SETUP_SECONDS = 10
   # Seconds for each phase of one rep, for example "2111" or "301".
   TEMPO = /\A\d{3,4}\z/
-  # Bounds on what one step asks for (#204).
+  # Bounds on what one step asks for.
   MAX_REPS = 1000
   MAX_SECONDS = 3600
   MAX_NOTE = 500
@@ -80,7 +80,7 @@ class Step < Record
   # The unit its weights are kept in: that of the gear in set weights it is
   # done with (its own, else its exercise's), so a goblet squat done with a
   # kettlebell in kg reads in kg even while the exercise names dumbbells in
-  # lb (#197); else its exercise's (Exercise#weight_unit).
+  # lb; else its exercise's (Exercise#weight_unit).
   def gear_unit
     self.class.unit_for(equipment, exercise) || Setting.unit
   end

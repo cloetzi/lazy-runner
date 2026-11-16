@@ -193,7 +193,7 @@ test("weights step through what the step's gear owns, with no weight below the l
   // Owned weights in another unit are converted to the one the exercise keeps.
   const kg = [{ slug: "dumbbell", owned: true, weights: [5], unit: "kg" }];
   assert.deepEqual(weightOptions(newStep({ ...squat, equipment: ["dumbbell"] }, kg), kg, "lb"), { unit: "kg", allowed: [5] });
-  // A step done with other gear keeps that gear's unit when gear comes in mixed units (#197).
+  // A step done with other gear keeps that gear's unit when gear comes in mixed units.
   const mixed = { ...newStep(squat, inventory), equipment: ["kettlebell"], weight: null };
   mixed.exercise = { ...squat, equipment: ["dumbbell"] };
   assert.deepEqual(weightOptions(mixed, [...inventory.filter((i) => i.slug !== "kettlebell"), { slug: "kettlebell", owned: true, weights: [16], unit: "kg" }], "lb"), { unit: "kg", allowed: [16] });
