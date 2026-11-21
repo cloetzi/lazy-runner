@@ -11,7 +11,7 @@ import { rangeFor } from "./calendar.js";
 export function offlineToday(today, date) {
   if (today.date === date) return { ...today, offline: true };
   const next = today.next_planned?.date > date ? today.next_planned : null;
-  return { ...today, date, session: null, source: "default", day: [], activities: [], next_planned: next, offline: true };
+  return { ...today, date, session: null, source: "default", day: [], activities: [], check_in: null, next_planned: next, offline: true };
 }
 
 // Fetching ahead: while online, the device fetches what the pages

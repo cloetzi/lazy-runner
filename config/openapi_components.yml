@@ -1182,13 +1182,14 @@ components:
         invited: { type: boolean, nullable: true, description: "The owner's: someone else has an account or a pending invite. Null for anyone else." }
     Today:
       type: object
-      required: [date, source, session, day, next_planned, trained, activities, routines, routine_days, logged, program, workout_id, title, subtitle, estimated_minutes, workouts, plan, changes, weight_steps, unit, distance_unit]
+      required: [date, source, session, day, next_planned, trained, activities, check_in, routines, routine_days, logged, program, workout_id, title, subtitle, estimated_minutes, workouts, plan, changes, weight_steps, unit, distance_unit]
       properties:
         date: { type: string, format: date }
         source: { type: string, enum: [session, default, picked], description: "Where the workout comes from: one of the day's sessions, the one up next in the rotation, or `workout_id`." }
         session: { allOf: [{ $ref: "#/components/schemas/Session" }], nullable: true }
         day: { type: array, description: Every session on the date, in order., items: { $ref: "#/components/schemas/Session" } }
         next_planned: { allOf: [{ $ref: "#/components/schemas/Session" }], nullable: true, description: The first session planned after the date. }
+        check_in: { allOf: [{ $ref: "#/components/schemas/CheckIn" }], nullable: true, description: "The date's check-in; null when nothing was logged." }
         trained: { type: boolean, description: Whether any session was ever done; false for someone about to train for the first time. }
         activities: { type: array, description: The date's activities, in the order they started., items: { $ref: "#/components/schemas/Activity" } }
         routines: { type: array, description: The routines with a day on the date., items: { $ref: "#/components/schemas/Routine" } }

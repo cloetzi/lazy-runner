@@ -71,6 +71,8 @@ const SHELL = [
   "/js/calendar-sheets.js",
   "/js/calendar.js",
   "/js/catalog.js",
+  "/js/check-in-sheets.js",
+  "/js/check-ins.js",
   "/js/coach-news.js",
   "/js/coach-page.js",
   "/js/coach-sheets.js",

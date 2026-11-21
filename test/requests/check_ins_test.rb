@@ -140,6 +140,11 @@ describe "check-ins API" do
     get "/api/calendar", from: "2026-11-16", to: "2026-11-22"
     _(json["check_ins"].map { it["date"] }).must_equal %w[2026-11-20 2026-11-21]
 
+    get "/api/today", date: "2026-11-20"
+    _(json["check_in"]["day"]["feeling"]).must_equal "good"
+    get "/api/today", date: "2026-11-19"
+    _(json["check_in"]).must_be_nil
+
     get "/api/coach"
     _(json["week"]["check_ins"].map { it["date"] }).must_equal %w[2026-11-20 2026-11-21]
 

@@ -48,4 +48,6 @@
   <symbol id="sport-yoga" viewBox="0 0 24 24"><circle cx="12" cy="4.5" r="2"/><path d="M6 8.5l6 2 6-2M12 10.5v4.5M5 19.5c2.5-3 4.5-4.5 7-4.5s4.5 1.5 7 4.5M8 19.5h8"/></symbol>
   <symbol id="sport-strength" viewBox="0 0 24 24"><path d="M7 6.5v11M17 6.5v11M4 9.5v5M20 9.5v5M7 12h10"/></symbol>
   <symbol id="sport-activity" viewBox="0 0 24 24"><path d="M3 12h4l2.5-6 5 12 2.5-6h4"/></symbol>
+  <symbol id="check-in" viewBox="0 0 24 24"><path d="M3 12.5h4l2.2-5.5 4.3 11 2.3-5.5H21"/></symbol>
+  <symbol id="night" viewBox="0 0 24 24"><path d="M19.5 14.6A7.8 7.8 0 0 1 9.4 4.5a7.8 7.8 0 1 0 10.1 10.1z"/></symbol>
 </svg>

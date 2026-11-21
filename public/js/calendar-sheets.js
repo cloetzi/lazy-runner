@@ -1,5 +1,5 @@
 import { html, icon, authorLine, showSheet } from "./html.js";
-import { longDay, weekdayDay, dayName, moveChoices, movable, shownStatus, STATUS_LABELS } from "./calendar.js";
+import { longDay, weekdayDay, dayName, moveChoices, movable, shownStatus, localToday, STATUS_LABELS } from "./calendar.js";
 import {
   KNOWN_SPORTS, sportIcon, sportLabel, activityTitle, activityFacts, activityKey, formatDistance, formatClimb, formatDuration,
   distanceInMetres, climbInMetres, durationInSeconds, changeRequest, deleteRequest, activityOrigin, sourceLabel,
@@ -10,6 +10,7 @@ import { routeHash } from "./routes.js";
 import { KIND_LABELS, authorLabel, plannedBy, writtenOn, howItFelt } from "./coach.js";
 import { weekSummary, summaryLine, watching } from "./week.js";
 import { changeHtml, undoButton } from "./plan-changes.js";
+import { nightTitle, dayTitle } from "./check-ins.js";
 
 // The calendar's sheets, used by the Calendar page and by Today: planning a
 // workout on a day, a session's own sheet to move, skip or remove it, and
@@ -198,15 +199,17 @@ export function editActivity({ activity, unit, today, send, notes = [] }) {
 
 // What the day's plus adds: a workout to do (from today on), a run or other
 // sport planned for the day (Maybe or Planned) or every week, an activity
-// done (up to today), or a coach's note. `on` holds onWorkout, onOnce,
-// onRoutine, onActivity and onNote; a choice without its handler is left out.
-export function openAddSheet({ date, onWorkout, onOnce, onRoutine, onActivity, onNote }) {
+// done, the night and how the day felt (up to today), or a coach's note.
+// A choice without its handler is left out.
+export function openAddSheet({ date, onWorkout, onOnce, onRoutine, onActivity, onNight, onDay, onNote }) {
   const dialog = sheet("add-sheet");
   const choices = [
     onWorkout && html`<button class="secondary add-choice" value="workout">${icon("workouts")}<span><strong>Workout</strong><span class="muted">Plan one of your workouts</span></span></button>`,
     onOnce && html`<button class="secondary add-choice" value="once">${icon("sport-run")}<span><strong>Run or other sport</strong><span class="muted">Maybe, or planned, on this day</span></span></button>`,
     onRoutine && html`<button class="secondary add-choice" value="routine">${icon("calendar")}<span><strong>Routine</strong><span class="muted">Every week, such as a run on Wednesdays</span></span></button>`,
     onActivity && html`<button class="secondary add-choice" value="activity">${icon("sport-activity")}<span><strong>Activity</strong><span class="muted">Log a run, ride or anything you did</span></span></button>`,
+    onNight && html`<button class="secondary add-choice" value="night">${icon("night")}<span><strong>${nightTitle(date, localToday())}</strong><span class="muted">Sleep, drinks, a late one</span></span></button>`,
+    onDay && html`<button class="secondary add-choice" value="day">${icon("check-in")}<span><strong>${dayTitle(date, localToday())}</strong><span class="muted">Energy, stress, anything sore or off</span></span></button>`,
     onNote && html`<button class="secondary add-choice" value="note">${icon("coach")}<span><strong>Note</strong><span class="muted">How it went, what to watch, for you and your coach</span></span></button>`,
   ].filter(Boolean);
   dialog.innerHTML = html`
@@ -222,6 +225,8 @@ export function openAddSheet({ date, onWorkout, onOnce, onRoutine, onActivity, o
     if (dialog.returnValue === "once") onOnce();
     if (dialog.returnValue === "routine") onRoutine();
     if (dialog.returnValue === "activity") onActivity();
+    if (dialog.returnValue === "night") onNight();
+    if (dialog.returnValue === "day") onDay();
     if (dialog.returnValue === "note") onNote();
   };
   dialog.returnValue = "";

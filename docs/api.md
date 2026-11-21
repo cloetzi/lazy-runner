@@ -100,7 +100,7 @@ as null when it has no value (`nullable`).
   day with neither goes, answering 204); `DELETE` the same path clears it.
   An agent only fills fields left empty (MCP `log_check_in`), up to a week
   back; with an API token, the REST API refuses to change a group the user
-  logged (403).
+  logged (403). `GET /api/today` carries the day's `check_in`.
 - **Goals are the user's.** The app adds, edits, orders (`position`, 1
   first) and closes them (`achieved`, `dropped`). An agent only proposes one
   over MCP: a `proposed` goal the user accepts (`POST /api/goals/:id/accept`,

@@ -123,8 +123,8 @@
           </div>
         </div>
 
-        <div class="settings-group" id="activity-group">
-          <h3 class="settings-group-title">After an activity <span class="tag">This device</span></h3>
+        <div class="settings-group" id="today-group">
+          <h3 class="settings-group-title">Questions on Today <span class="tag">This device</span></h3>
           <div class="list">
             <div class="setting-row" id="ask-rpe">
               <div class="row-text">
@@ -132,6 +132,16 @@
                 <span class="setting-note">When a run or another activity arrives from elsewhere, Today asks once how hard it felt.</span>
               </div>
               <div class="segmented" role="group" aria-labelledby="ask-rpe-label" data-setting="askRpe">
+                <button data-value="true">On</button>
+                <button data-value="false">Off</button>
+              </div>
+            </div>
+            <div class="setting-row" id="ask-check-in">
+              <div class="row-text">
+                <span class="row-title" id="ask-check-in-label">Ask for a check-in on Today</span>
+                <span class="setting-note">How you slept and how you feel, for your coach. Off hides the card; the Calendar still offers it.</span>
+              </div>
+              <div class="segmented" role="group" aria-labelledby="ask-check-in-label" data-setting="askCheckIn">
                 <button data-value="true">On</button>
                 <button data-value="false">Off</button>
               </div>
