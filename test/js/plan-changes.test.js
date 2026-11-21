@@ -66,12 +66,13 @@ test("names what the button acts on for a screen reader", () => {
   assert.equal(undoTarget(change()), "Session B, to Sat 21");
   assert.equal(undoTarget(change({ action: "removed", from_date: "2026-11-21" })), "Session B, on Sat 21");
   assert.equal(undoTarget(change({ action: "changed" }), "Long run"), "Long run");
-  assert.equal(undoTarget(change({ action: "ended" }), ""), "it");
+  assert.equal(undoTarget(change(), null), "to Sat 21");
+  assert.equal(undoTarget(change({ action: "ended" }), null), null);
+  assert.match(String(undoButton(change({ action: "ended" }), null)), /data-undo="7">Plan it again<\/button>/);
 });
 
 test("a row's button carries the change's id, a sheet's closes it with undo", () => {
-  assert.match(String(undoButton(change(), "Session B")), /type="button" data-undo="7">Move it back<span class="visually-hidden">: Session B, to Sat 21<\/span><\/button>/);
-  assert.doesNotMatch(String(undoButton(change(), "Session B")), /aria-label/);
+  assert.match(String(undoButton(change(), "Session B")), /type="button" data-undo="7" aria-label="Move it back: Session B, to Sat 21">Move it back<\/button>/);
   assert.match(String(undoButton(change(), "Session B", { sheet: true })), /value="undo"/);
   assert.equal(String(undoButton(change({ undoable: false }), "Session B")), "");
 });
@@ -92,7 +93,7 @@ test("lines a day that lost a session, with Put it back for a removal", () => {
   assert.equal(line.text, "Session B removed by Coach agent");
   assert.equal(line.reason, "Legs fresh for Sunday");
   assert.equal(line.undo, removed);
-  assert.match(String(undoButton(line.undo, undefined, { classes: "quiet small" })), /class="quiet small" type="button" data-undo="8">Put it back<span class="visually-hidden">: Session B, on Wed 18</);
+  assert.match(String(undoButton(line.undo, undefined, { classes: "quiet small" })), /class="quiet small" type="button" data-undo="8" aria-label="Put it back: Session B, on Wed 18">Put it back</);
 });
 
 test("offers Move it back on the line when the session went outside the days shown", () => {

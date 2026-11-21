@@ -464,9 +464,10 @@ test("plans a session on the calendar and moves it to another day", async () => 
   await page.goto(`/calendar.html#${later}`);
   await page.locator(`[data-date="${later}"] [data-open="${planned.id}"]`).waitFor();
 
-  // An agent moves it a day on; its row offers Move it back, named by
-  // the words it shows and then what it acts on.
+  // An agent moves it a day on; Move it back is named by the words it
+  // shows and then what it acts on.
   const token = await api.post("/api/account/tokens", { headers: { "Sec-Fetch-Site": "same-origin" }, data: { name: "Planner e2e" } });
+  assert.equal(token.status(), 201);
   const { secret } = await token.json();
   const agent = await request.newContext({ baseURL: BASE_URL });
   const dayAfter = await page.evaluate((date) => {
@@ -481,9 +482,15 @@ test("plans a session on the calendar and moves it to another day", async () => 
   assert.equal(agentMoved.status(), 200);
   assert.doesNotMatch(await agentMoved.text(), /"isError":true/);
   await agent.dispose();
+  // A reload, since a new hash alone draws the copy the page already has;
+  // the session's sheet offers to move it back.
   await page.goto(`/calendar.html#${dayAfter}`);
-  await page.getByRole("button", { name: /^Move it back: Session A, to / }).first().waitFor();
+  await page.reload();
+  await page.locator(`[data-date="${dayAfter}"] [data-open="${planned.id}"]`).click();
+  await page.locator("#session-sheet").getByRole("button", { name: /^Move it back: Session A, to / }).waitFor();
   await accessible(page, "the calendar with an agent's move that can be taken back");
+  // Seen, so the Coach test starts with only its own agent's news.
+  assert.equal((await api.post("/api/coach/seen", { headers: { "Sec-Fetch-Site": "same-origin" }, data: {} })).ok(), true);
   assert.deepEqual(errors, []);
   await context.close();
 });
