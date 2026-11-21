@@ -83,25 +83,48 @@
     },
     {
       "description": [
-        ".ruby-version, Gemfile.lock's RUBY VERSION and ruby/setup-ruby in one PR, so CI",
-        "gets a setup-ruby that knows the new Ruby. Ruby patches are often security fixes,",
-        "so they open at any time, without the release age; after the Actions group above."
+        "Ruby in one PR: .ruby-version, Gemfile.lock's RUBY VERSION, the Gemfile's ruby",
+        "constraint and ruby/setup-ruby, so CI gets a setup-ruby that knows the new Ruby.",
+        "At any time rather than Monday; fix(deps) for the whole group, since Ruby ships",
+        "in the image. After the Actions group above, which it takes setup-ruby from."
       ],
       "matchDepNames": ["ruby", "ruby/setup-ruby"],
-      "matchManagers": ["ruby-version", "custom.regex", "github-actions"],
+      "matchManagers": ["ruby-version", "custom.regex", "bundler", "github-actions"],
       "groupName": "Ruby",
-      "schedule": ["at any time"],
-      "minimumReleaseAge": null
+      "semanticCommitType": "fix",
+      "schedule": ["at any time"]
     },
     {
-      "description": "Ruby ships in the image, so its bump is fix(deps) and gets released; setup-ruby alone stays ci(deps).",
+      "description": "A Ruby patch is often a security fix, so it waits a day instead of three: long enough for the ruby:<version>-slim image the release builds from. setup-ruby waits a day too, so the release that knows the new Ruby joins the same PR.",
+      "matchManagers": ["ruby-version", "custom.regex", "github-actions"],
+      "matchDepNames": ["ruby", "ruby/setup-ruby"],
+      "matchUpdateTypes": ["patch", "minor", "digest"],
+      "minimumReleaseAge": "1 day"
+    },
+    {
+      "description": "Ruby minors keep the three days.",
       "matchManagers": ["ruby-version", "custom.regex"],
       "matchDepNames": ["ruby"],
-      "semanticCommitType": "fix"
+      "matchUpdateTypes": ["minor"],
+      "minimumReleaseAge": "3 days"
+    },
+    {
+      "description": "The Gemfile's ruby constraint (~> 4.0) moves only with a major; .ruby-version and the custom manager own Gemfile.lock's RUBY VERSION.",
+      "matchManagers": ["bundler"],
+      "matchDepNames": ["ruby"],
+      "matchUpdateTypes": ["minor", "patch"],
+      "enabled": false
     },
     {
       "description": "A new Ruby or Node minor or major is its own PR to review; a patch merges itself.",
       "matchManagers": ["ruby-version", "custom.regex", "nodenv"],
+      "matchUpdateTypes": ["minor", "major"],
+      "automerge": false
+    },
+    {
+      "description": "The same for the Gemfile's ruby constraint, which moves only with a new Ruby major.",
+      "matchManagers": ["bundler"],
+      "matchDepNames": ["ruby"],
       "matchUpdateTypes": ["minor", "major"],
       "automerge": false
     }

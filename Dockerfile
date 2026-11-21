@@ -11,7 +11,7 @@ FROM ruby:${RUBY_VERSION}-slim AS build
 RUN apt-get update -qq && apt-get install -y --no-install-recommends build-essential && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 ENV BUNDLE_DEPLOYMENT=1 BUNDLE_WITHOUT=development:test BUNDLE_PATH=/usr/local/bundle
-COPY Gemfile Gemfile.lock .ruby-version ./
+COPY Gemfile Gemfile.lock ./
 RUN bundle install && rm -rf /usr/local/bundle/cache
 
 FROM ruby:${RUBY_VERSION}-slim
