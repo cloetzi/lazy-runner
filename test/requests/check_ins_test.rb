@@ -84,14 +84,14 @@ describe "check-ins API" do
       _(json["error"]["message"]).must_include "from 2026-11-14 to today"
     end
 
-    it "forgets the agent's mark once the user clears what it wrote" do
+    it "keeps the agent's mark until the user has seen it" do
       Current.set(agent_name: "Coach agent") { CheckIn.fill!(Date.new(2026, 11, 21), day: { feeling: "rough" }) }
       put_json "/api/check_ins/2026-11-21/night", night
-      _(json["agent_name"]).must_equal "Coach agent"
-
       delete "/api/check_ins/2026-11-21/day"
-      _(json["agent_name"]).must_be_nil
-      _(json["agent_at"]).must_be_nil
+
+      _(json["agent_name"]).must_equal "Coach agent"
+      get "/api/coach/news"
+      _(json["check_ins"].map { it["date"] }).must_equal %w[2026-11-21]
     end
   end
 

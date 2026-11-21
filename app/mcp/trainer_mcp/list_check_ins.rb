@@ -8,7 +8,8 @@ module TrainerMcp
       night Garmin's sleep and overnight HRV for that date measure; `day` is how they felt that day (feeling
       rough/ok/good, stress low/normal/high, sore no/a_bit/a_lot with sore_areas, ill, a note). Either is null when
       nothing was logged, and a day with neither is left out: a missing day means nothing was logged, not a good day.
-      `logged_by` is manual for the user, llm for an agent that logged what the user told it. Without dates, the 14
+      `logged_by` says who started the group: manual for the user, llm for an agent from what the user told it (an
+      agent may have filled its empty fields since). Without dates, the 14
       days up to today; at most 366 days.
     TEXT
     input_schema(

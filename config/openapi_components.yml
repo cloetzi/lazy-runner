@@ -849,7 +849,7 @@ components:
             drinks: { type: string, nullable: true, enum: [none, 1-2, 3+] }
             tags: { type: array, items: { type: string, enum: [late_to_bed, ate_late, travelling, woke_a_lot] } }
             note: { type: string, nullable: true }
-            logged_by: { type: string, enum: [manual, llm], description: "Who logged it first: the user, or an agent from what the user told it." }
+            logged_by: { type: string, enum: [manual, llm], description: "Who started the group: the user, or an agent from what the user told it (an agent may have filled empty fields since)." }
         day:
           type: object
           nullable: true

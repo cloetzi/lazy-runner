@@ -112,7 +112,7 @@ class CheckIn < Record
   end
   private_class_method :date!, :agent_window!
 
-  def empty?(group) = FIELDS.fetch(group).values.all? { blank_value?(it) }
+  def group_empty?(group) = FIELDS.fetch(group).values.all? { blank_value?(it) }
 
   def write_group(group, fields)
     fields = known_fields(group, fields)
@@ -123,9 +123,7 @@ class CheckIn < Record
 
     FIELDS.fetch(group).each { |name, column| put(column, normal(column, fields[name])) }
     signed(group, Current.agent_name ? "llm" : "manual")
-    agent_wrote(!empty?(group)) if Current.agent_name
-    # Nothing of an agent's left: it is no longer news.
-    agent_wrote(false) unless Current.agent_name || BY.values.any? { self[it] == "llm" }
+    agent_wrote if Current.agent_name && !group_empty?(group)
   end
 
   def fill_groups(groups)
@@ -135,28 +133,30 @@ class CheckIn < Record
       next if fields.nil?
 
       fields = known_fields(group, fields)
-      before = empty?(group)
+      before = group_empty?(group)
+      # In what the user logged, `ill` false and an empty list are their answer.
+      users = self[BY.fetch(group)] == "manual"
       fields.each do |name, value|
         column = FIELDS.fetch(group).fetch(name)
         value = normal(column, value)
         next if blank_value_for?(column, value)
 
-        if blank_value?(column)
+        if users ? get(column).nil? : blank_value?(column)
           put(column, value)
           filled << "#{group}.#{name}"
         else
           kept << "#{group}.#{name}"
         end
       end
-      signed(group, "llm") if before && !empty?(group)
+      signed(group, "llm") if before && !group_empty?(group)
     end
-    agent_wrote(true) if filled.any?
+    agent_wrote if filled.any?
     [filled, kept]
   end
 
   # Saves the check-in, or deletes it when both groups are empty.
   def keep_or_delete
-    if GROUPS.all? { empty?(it) }
+    if GROUPS.all? { group_empty?(it) }
       # A value that couldn't be read leaves the group empty, but is still wrong.
       raise Sequel::ValidationFailed, self if @ill_unread && !valid?
 
@@ -168,7 +168,7 @@ class CheckIn < Record
   end
 
   def group_json(group)
-    return nil if empty?(group)
+    return nil if group_empty?(group)
 
     FIELDS.fetch(group).to_h { |name, column| [name, get(column)] }.merge(logged_by: self[BY.fetch(group)])
   end
@@ -205,16 +205,15 @@ class CheckIn < Record
     fields
   end
 
-  # Names the agent and the time for "Since you last looked", or forgets them.
-  def agent_wrote(wrote)
-    return unless wrote || agent_at
-
-    self.agent_name = wrote ? Current.agent_name : nil
-    self.agent_at = wrote ? Time.now : nil
+  # Names the agent and the time for "Since you last looked". It stays news
+  # until the user has seen it, whatever is written after.
+  def agent_wrote
+    self.agent_name = Current.agent_name
+    self.agent_at = Time.now
   end
 
   def signed(group, by)
-    self[BY.fetch(group)] = empty?(group) ? nil : by
+    self[BY.fetch(group)] = group_empty?(group) ? nil : by
   end
 
   # Text trimmed (blank is nil), a list without repeats, `ill` false when

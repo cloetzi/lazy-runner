@@ -76,6 +76,24 @@ describe CheckIn do
       _(check_in.agent_at).wont_be_nil
     end
 
+    it "takes ill false and an empty list in what the user logged as their answer" do
+      CheckIn.write!(today, "day", { feeling: "good", sore: "no" })
+      check_in, filled, kept = as_agent { CheckIn.fill!(today, day: { ill: true, sore_areas: %w[knees], note: "Tired" }) }
+
+      _(filled).must_equal %w[day.note]
+      _(kept).must_equal %w[day.ill day.sore_areas]
+      _(check_in.group_json("day").values_at(:ill, :sore_areas, :note)).must_equal [false, [], "Tired"]
+    end
+
+    it "stays news after the user writes the other group" do
+      CheckIn.write!(today, "night", { sleep: "poor" })
+      as_agent { CheckIn.fill!(today, night: { drinks: "3+" }) }
+      check_in = CheckIn.write!(today, "day", { feeling: "ok" })
+
+      _(check_in.agent_name).must_equal "Coach agent"
+      _(check_in.agent_at).wont_be_nil
+    end
+
     it "can't change or clear a group the user logged" do
       CheckIn.write!(today, "night", { sleep: "poor" })
 
