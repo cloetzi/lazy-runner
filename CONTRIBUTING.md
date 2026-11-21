@@ -56,7 +56,8 @@ then `BASE_URL=http://localhost:3999 SERVER_LOG=/tmp/e2e.log npm run test:e2e`.
   review; a dependency dashboard issue. Security updates (GitHub's and
   OSV's advisories) open at once. Ruby and `ruby/setup-ruby` share a PR
   (so setup-ruby knows the new version) that opens at any time rather than
-  on Monday, and a Ruby patch waits a day instead of three. An older pin needs a `packageRules`
+  on Monday as `fix(deps)` (a setup-ruby bump alone too), and a Ruby patch
+  and setup-ruby wait a day instead of three. An older pin needs a `packageRules`
   entry saying why. Not covered: the vendored Swagger UI (by hand) and the
   Debian release in the session-start hook's fallback image.
 - CI runs on GitHub-hosted runners (`ubuntu-latest`) and only tests and
