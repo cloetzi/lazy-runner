@@ -3,7 +3,8 @@
 # What agents did since the user last looked at Coach, for the
 # "Since you last looked" card and the dot on the Coach tab: the changes they
 # made to the plan (not taken back), the notes they wrote, the goals they
-# proposed and the activities they copied. "Since" is when the user last
+# proposed, the activities they copied and the check-ins they filled in
+# from what the user told them. "Since" is when the user last
 # marked it seen (`users.coach_seen_at`), else the last two weeks.
 class CoachNews
   DEFAULT_DAYS = 14
@@ -18,7 +19,7 @@ class CoachNews
   end
 
   # How many things are news: the dot's count.
-  def count = [changes, notes, goals, activities].sum(&:count)
+  def count = [changes, notes, goals, activities, check_ins].sum(&:count)
 
   def as_json(*)
     changes = self.changes.eager(:session).all
@@ -26,13 +27,15 @@ class CoachNews
     notes = self.notes.all
     goals = self.goals.all
     copied = self.copied
-    newest = [*changes, *notes, *goals].map(&:created_at) + copied.map { it[:created_at] }
+    check_ins = self.check_ins.all
+    newest = [*changes, *notes, *goals].map(&:created_at) + copied.map { it[:created_at] } + check_ins.map(&:agent_at)
     {
       # To the microsecond, so marking it seen up to it covers the newest.
       since:, latest: newest.max&.iso8601(6),
       changes: changes.map { it.as_json(lookup:) },
       notes:, goals:,
-      activities: copied
+      activities: copied,
+      check_ins:
     }
   end
 
@@ -56,6 +59,8 @@ class CoachNews
   def notes = CoachNote.by_agent.where(made_since).newest_first.eager(:replies)
   def goals = Goal.proposed.where(created_by: "llm").where(made_since).order(Sequel.desc(:id))
   def activities = Activity.where(created_by: "llm").where(made_since)
+  # The days an agent filled something in on, newest first.
+  def check_ins = CheckIn.where(Sequel[:agent_at] > @since).order(Sequel.desc(:agent_at))
 
   private
 

@@ -22,10 +22,11 @@ module TrainerMcp
   BRIEF_URI = "lazy-runner://brief"
 
   TOOLS = [
-    SearchExercises, GetExercise, ListEquipment, ListWorkouts, GetWorkout, TrainingSummary, ListSessions, ListActivities,
+    SearchExercises, GetExercise, ListEquipment, ListWorkouts, GetWorkout, TrainingSummary, ListSessions, ListActivities, ListCheckIns,
     ListRoutines, ListPlanChanges, ListExamples, GetCoachBoard, ListCoachNotes,
     CreateWorkout, ImportExample, UpdateWorkout, DuplicateWorkout, ArchiveWorkout,
-    SetExerciseWeight, UpdateEquipment, PlanSessions, MoveSession, RemoveSession, LogActivities, PlanRoutine, UpdateRoutine, EndRoutine,
+    SetExerciseWeight, UpdateEquipment, PlanSessions, MoveSession, RemoveSession, LogActivities, LogCheckIn,
+    PlanRoutine, UpdateRoutine, EndRoutine,
     WriteCoachNote, UpdateCoachNote, DeleteCoachNotes, ResolveConcern, ProposeGoal
   ].freeze
 

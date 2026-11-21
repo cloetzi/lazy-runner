@@ -92,6 +92,15 @@ as null when it has no value (`nullable`).
   that activity: the fields sent win, the ones left out (or null) are
   kept, and `rpe` and `note` are filled only while empty, so the person's
   own stay. A deleted import comes back if its source sends it again.
+- **Check-ins are what the user says about a day**, for the coach to read
+  beside a watch's numbers: `night` (the night that ended that morning, as
+  Garmin dates sleep and overnight HRV) and `day` (how they felt), each
+  optional. `PUT /api/check_ins/:date/night` or `/day` writes that group
+  whole (a field left out is cleared; an empty one clears the group, and a
+  day with neither goes, answering 204); `DELETE` the same path clears it.
+  An agent only fills fields left empty (MCP `log_check_in`), up to a week
+  back; with an API token, the REST API refuses to change a group the user
+  logged (403).
 - **Goals are the user's.** The app adds, edits, orders (`position`, 1
   first) and closes them (`achieved`, `dropped`). An agent only proposes one
   over MCP: a `proposed` goal the user accepts (`POST /api/goals/:id/accept`,
@@ -102,7 +111,7 @@ as null when it has no value (`nullable`).
   `author_name`) or an agent (`llm`, over MCP only). The current status or
   focus is the newest of its kind; deleting it brings the one before back.
   A concern stays open until `PATCH` sends `resolved: true`. `GET /api/coach`
-  is the whole board with this week's sessions, activities, routines and
+  is the whole board with this week's sessions, activities, check-ins, routines and
   routine days as plain lists, nothing summed; `GET /api/coach/notes` pages the journal with
   `before`, filtered by `kind` and `author`. A reply (`reply_to_id`) is the
   user's answer to a note they didn't write: it comes in its note's `replies`,
@@ -128,7 +137,8 @@ as null when it has no value (`nullable`).
 - **Since you last looked** (`GET /api/coach/news`): what agents did since
   the user last marked it seen (`POST /api/coach/seen` with the `latest` it
   gave, so nothing made meanwhile is lost; only the user marks it): plan
-  changes, notes, proposed goals and copied activities. `GET /api/me`
+  changes, notes, proposed goals, copied activities and check-ins an agent
+  filled in. `GET /api/me`
   counts them (`coach_unseen`) for the dot on the Coach tab.
 - **Weights** come back in the unit the user's gear comes in (`unit` in
   `/api/equipment`, theirs to set): an exercise's in that of its gear, a
@@ -262,6 +272,7 @@ change reaches every future session of it.
 | `training_summary` | Sessions in a date range (28 days by default) with how they felt and what was done per exercise, weekly counts, remembered weights |
 | `list_sessions` | The calendar over a date range (as `GET /api/sessions`), each session with its workout, minutes and completion |
 | `list_activities` | Activities over a date range (as `GET /api/activities`), with the user's distance unit |
+| `list_check_ins` | What the user said about their nights and days (as `GET /api/check_ins`), the 14 days up to today by default; a day with nothing logged is left out |
 | `list_routines` | Routines with days in a date range (by default the 7 days before today and the 21 from today on), the days with their state (tentative, confirmed, done, skipped, missed) and raw counts per state |
 | `list_plan_changes` | Changes to the plan, workouts and remembered weights since a day (14 days back by default), by the user, an agent or both, each with who, when, the days, the fields before and after, a workout edit's summary, the reason and whether the user took it back |
 | `list_examples` | The example programs (as `GET /api/examples`) |
@@ -276,6 +287,7 @@ change reaches every future session of it.
 | `move_session` | A planned or missed session to another day or place, with a `reason` (required for the user's), or a new note on one the assistant planned |
 | `remove_session` | A planned or missed session off the calendar, with a `reason` (required for the user's) |
 | `log_activities` | Up to 500 activities, all or nothing (as `POST /api/activities`), marked `created_by: llm`; distances in metres or with a unit (`"5 mi"`), no RPE or note |
+| `log_check_in` | What the user told the assistant about a night or a day, today or up to 7 days back; fills only fields left empty, answering what it filled and kept |
 | `plan_routine` | A weekly or one-off routine for a sport or a workout, always tentative, marked `created_by: llm`; distance in metres or with a unit |
 | `update_routine` | A routine the assistant planned (as `PATCH /api/routines/:id`, so a reschedule with days gone by starts a new one), with an optional `reason` |
 | `end_routine` | Ends a routine the assistant planned from today on, or deletes one without days gone by, with an optional `reason` |
@@ -305,7 +317,8 @@ back through the API.
 |----------|-------|
 | Today | `GET /today` (the day's session, framed and flattened for the player) |
 | Workouts | `GET/POST /workouts`, `GET/PATCH/PUT/DELETE /workouts/:id`, `POST /workouts/:id/duplicate`, `GET /programs` |
-| Calendar | `GET /calendar` (sessions, activities and dated notes over a range) |
+| Calendar | `GET /calendar` (sessions, activities, check-ins and dated notes over a range) |
+| Check-ins | `GET /check_ins`, `PUT/DELETE /check_ins/:date/night`, `PUT/DELETE /check_ins/:date/day` |
 | Coach | `GET /coach`, `GET /coach/news`, `POST /coach/seen`, `GET/POST /coach/notes`, `PATCH/DELETE /coach/notes/:id`, `GET/POST /goals`, `PATCH/DELETE /goals/:id`, `POST /goals/:id/accept`, `POST /goals/:id/dismiss` |
 | Activities | `GET/POST /activities`, `PATCH/DELETE /activities/:id` |
 | Sessions | `GET/POST /sessions`, `GET/PATCH/DELETE /sessions/:id`, `POST /sessions/:id/sets`, `POST /sessions/:id/complete`, `PATCH /sessions/:id/completion` |

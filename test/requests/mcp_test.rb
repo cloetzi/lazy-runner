@@ -96,10 +96,10 @@ describe "MCP server" do
 
     it "lists the read tools marked read-only, then the write tools" do
       reads = %w[search_exercises get_exercise list_equipment list_workouts get_workout training_summary list_sessions list_activities
-                 list_routines list_plan_changes list_examples get_coach_board list_coach_notes]
+                 list_check_ins list_routines list_plan_changes list_examples get_coach_board list_coach_notes]
       writes = %w[create_workout import_example update_workout duplicate_workout archive_workout set_exercise_weight update_equipment
-                  plan_sessions move_session remove_session log_activities plan_routine update_routine end_routine write_coach_note
-                  update_coach_note delete_coach_notes resolve_concern propose_goal]
+                  plan_sessions move_session remove_session log_activities log_check_in plan_routine update_routine end_routine
+                  write_coach_note update_coach_note delete_coach_notes resolve_concern propose_goal]
 
       _(tools.keys).must_equal reads + writes
       _(tools.values_at(*reads).map { it["annotations"].values_at("readOnlyHint", "destructiveHint") }.uniq).must_equal [[true, false]]
@@ -1231,6 +1231,40 @@ describe "MCP server" do
       names = rpc("tools/list")["tools"].map { it["name"] }
 
       _(names.grep(/routine/)).must_equal %w[list_routines plan_routine update_routine end_routine]
+    end
+  end
+
+  describe "check-ins" do
+    before { travel_to Time.zone.local(2026, 11, 21, 12) }
+    after { travel_back }
+
+    it "lists what the user said about the last two weeks, a missing day left out" do
+      CheckIn.write!("2026-11-21", "night", { sleep: "poor", drinks: "3+" })
+      CheckIn.write!("2026-11-01", "day", { stress: "high" })
+
+      answer = call_tool("list_check_ins")
+
+      _(answer.slice("from", "to")).must_equal({ "from" => "2026-11-08", "to" => "2026-11-21" })
+      _(answer["check_ins"]).must_equal [{ "date" => "2026-11-21", "weekday" => "Saturday",
+                                           "night" => { "sleep" => "poor", "drinks" => "3+", "tags" => [], "logged_by" => "manual" } }]
+    end
+
+    it "logs what the user told it, filling only what is empty" do
+      CheckIn.write!("2026-11-21", "night", { sleep: "poor" })
+
+      answer = call_tool("log_check_in", date: "2026-11-21", night: { sleep: "good", drinks: "3+", note: "Birthday" })
+
+      _(answer["filled"]).must_equal %w[night.drinks night.note]
+      _(answer["kept"]).must_equal %w[night.sleep]
+      _(CheckIn.first.values.slice(:sleep, :drinks, :agent_name)).must_equal({ sleep: "poor", drinks: "3+", agent_name: "Trainer agent" })
+      _(call_tool("get_coach_board")["week"]["check_ins"].first["night"]["drinks"]).must_equal "3+"
+    end
+
+    it "refuses a day more than a week back, and a call with nothing to log" do
+      _(_ { call_tool("log_check_in", date: "2026-11-13", day: { ill: true }) }.must_raise(McpToolError).message)
+        .must_include "from 2026-11-14 to today"
+      _(_ { call_tool("log_check_in", date: "2026-11-21") }.must_raise(McpToolError).message).must_include "night` or `day`"
+      _(CheckIn.count).must_equal 0
     end
   end
 

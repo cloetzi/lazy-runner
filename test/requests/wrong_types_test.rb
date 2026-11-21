@@ -76,7 +76,9 @@ describe "wrongly typed parameters" do
       [:post, "/api/coach/notes", { kind: "note", body: "Rest well" }],
       [:patch, "/api/coach/notes/#{note.id}", { resolved: false }],
       [:post, "/api/coach/tidy", { before: "2026-11-11" }],
-      [:post, "/api/coach/seen", { until: "2026-11-11T12:00:00Z" }]
+      [:post, "/api/coach/seen", { until: "2026-11-11T12:00:00Z" }],
+      [:put, "/api/check_ins/2026-11-10/night", { sleep: "poor" }],
+      [:put, "/api/check_ins/2026-11-10/day", { feeling: "ok" }]
     ]
   end
 

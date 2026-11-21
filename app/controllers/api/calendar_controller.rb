@@ -22,6 +22,7 @@ module Api
     #   the sessions an agent moved away from a day in the range or removed
     #   from it, not taken back, for the days of this week on (until their
     #   week is over), by the day they left (`from_date`).
+    #   `check_ins` are the days in the range with a check-in (GET /api/check_ins).
     #   `distance_unit` is the unit distances are shown in (GET /api/settings).
     # @param from? {Date} The first day.
     # @param to? {Date} The last day.
@@ -37,6 +38,7 @@ module Api
       render json: {
         sessions: sessions.map { it.as_json.merge(change: changes.of(it)) },
         activities: Activity.where(date: days).in_order.all,
+        check_ins: CheckIn.where(date: days).in_order.all,
         notes: CoachNote.threads.eager(:activity, session: :workout).on_days(days).all,
         routines: routines.routines.map { it.as_json.merge(change: changes.of(it)) },
         routine_days: routines.days,

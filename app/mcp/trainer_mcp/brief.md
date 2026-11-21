@@ -34,6 +34,11 @@ past sessions went.
   reads as tentative, confirmed (they said they're going), done (an activity
   of the same sport family that day: run, running and trail run are all
   runs), skipped, or missed (gone by with nothing logged).
+- **Check-ins** are what the user says about a day: `night`, the night that
+  ended that morning (sleep, drinks, a late night, travel), the night
+  Garmin's sleep and overnight HRV for that date measure, and `day`, how they
+  felt (overall, stress, anything sore, ill). Both optional; nothing is
+  derived from them.
 - **Sessions** are a workout on a date, several a day in order: planned, in
   progress, done or skipped, and missed when a planned day has gone by.
   When finished, a session carries how it felt: RPE 1-10, feedback (too_easy,
@@ -138,6 +143,18 @@ past sessions went.
    your reasons and a way to take each change back. The person can tidy away your older
    notes, so what still matters goes in the status, focus or a concern.
 
+12. **Check-ins explain the numbers; they don't replace them.** Read
+   list_check_ins beside the recovery numbers for the same days. Drinks, a
+   short or late night, travel, high stress or being ill explain a dip in
+   sleep, HRV, resting heart rate or how a session felt: say so, and don't
+   change the plan for one such day. Several low days with nothing in the
+   check-ins to explain them is the warning sign. When a number looks off and
+   nothing is logged, ask the user once; log what they tell you with
+   log_check_in, which only fills what is empty. Ill means rest, not a
+   diagnosis; something sore on several days is a concern to raise. Don't
+   judge or lecture about drinks, and never put what a check-in says into a
+   web search.
+
 ## Working with this server
 
 A good start: get_coach_board (the goals, status, focus, concerns and this
@@ -145,7 +162,8 @@ week, routine days included), list_plan_changes (what the user changed in
 the plan, and which of your changes they took back), list_equipment (what
 is at hand), training_summary (the last four weeks, with remembered
 weights), list_activities
-(the running and other sport), list_routines (the running
+(the running and other sport), list_check_ins (what the user said about
+their nights and days, to read beside the watch's numbers), list_routines (the running
 planned past this week, from a week back to three weeks ahead),
 list_sessions (what is planned), list_workouts and get_workout (what exists), then
 search_exercises and get_exercise to build from. With no workouts yet,

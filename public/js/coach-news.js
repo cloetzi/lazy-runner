@@ -69,18 +69,20 @@ function changeItem(change, today, unit, weightUnit) {
 // sessions add up to one line ("Planned 6 sessions, Nov 16 to Dec 3", with
 // the reason they share), then
 // the other changes in the order made. Then the activities copied (kind
-// "copied"). An agent that only proposed goals has a group with no items.
+// "copied") and the check-ins it filled in from what the user told it (kind
+// "checkin"). An agent that only proposed goals has a group with no items.
 export function newsGroups(news, { today, unit = "km", weightUnit } = {}) {
   const groups = new Map();
   const group = (name, time) => {
     const who = name || AGENT_NAME;
-    const found = groups.get(who) ?? { who, latest: time, plan: [], copied: [], notes: [], goals: [] };
+    const found = groups.get(who) ?? { who, latest: time, plan: [], copied: [], checkIns: [], notes: [], goals: [] };
     if (time > found.latest) found.latest = time;
     groups.set(who, found);
     return found;
   };
   for (const change of news?.changes ?? []) group(change.agent_name, change.created_at).plan.push(change);
   for (const copied of news?.activities ?? []) group(copied.agent_name, copied.created_at).copied.push(copied);
+  for (const checkIn of news?.check_ins ?? []) group(checkIn.agent_name, checkIn.agent_at).checkIns.push(checkIn);
   for (const note of news?.notes ?? []) group(note.author_name, note.created_at).notes.push(note);
   for (const goal of news?.goals ?? []) group(goal.agent_name, goal.created_at).goals.push(goal);
 
@@ -102,6 +104,11 @@ export function newsGroups(news, { today, unit = "km", weightUnit } = {}) {
       const from = copied.sources.length ? ` from ${listed(copied.sources.map(sourceLabel))}` : "";
       items.push({ kind: "copied", text: `Copied ${plural(copied.count, "activity", "activities")}${from}, ${span(copied.from, copied.to)}`, reason: null, href: calendarHref(copied.to), title: "them", undo: null });
     }
+    if (g.checkIns.length) {
+      const days = g.checkIns.map((c) => c.date).sort();
+      const text = days.length === 1 ? `Added to your check-in, ${span(days[0], days[0])}` : `Added to your check-ins, ${span(days[0], days.at(-1))}`;
+      items.push({ kind: "checkin", text, reason: null, href: calendarHref(days.at(-1)), title: days.length === 1 ? "it" : "them", undo: null });
+    }
     const wrote = ["status", "focus", "concern", "note"].map((kind) => {
       const count = g.notes.filter((n) => n.kind === kind).length;
       return count ? plural(count, kind, { status: "statuses", focus: "focus notes" }[kind]) : null;
@@ -113,10 +120,10 @@ export function newsGroups(news, { today, unit = "km", weightUnit } = {}) {
 
 // How many things are news, as GET /api/me counts them for the Coach tab.
 export const newsCount = (news) => (news?.changes?.length ?? 0) + (news?.notes?.length ?? 0) + (news?.goals?.length ?? 0) +
-  (news?.activities ?? []).reduce((sum, copied) => sum + copied.count, 0);
+  (news?.activities ?? []).reduce((sum, copied) => sum + copied.count, 0) + (news?.check_ins?.length ?? 0);
 
 // Whether there is anything to show.
-export const hasNews = (news) => Boolean(news) && ["changes", "notes", "goals", "activities"].some((key) => news[key]?.length);
+export const hasNews = (news) => Boolean(news) && ["changes", "notes", "goals", "activities", "check_ins"].some((key) => news[key]?.length);
 
 // Marking it seen, up to the newest thing shown, so anything made since
 // stays news.

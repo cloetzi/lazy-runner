@@ -45,6 +45,7 @@ module Auth
       "sessions" => :signed_in,
       "activities" => :signed_in,
       "calendar" => :signed_in,
+      "check_ins" => :signed_in,
       "plan_changes" => :signed_in,
       "routines" => :signed_in,
       "goals" => :signed_in,

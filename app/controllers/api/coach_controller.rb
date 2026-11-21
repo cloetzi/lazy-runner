@@ -27,7 +27,8 @@ module Api
     #   it can be taken back on `today` (the sender's own date); the notes
     #   they wrote and the goals they proposed, newest first; and the
     #   activities they copied, counted by agent, with their first and last
-    #   day and the sources they came from. `latest` is when the newest of them was
+    #   day and the sources they came from; and the check-ins they filled in,
+    #   newest first. `latest` is when the newest of them was
     #   made (null when there is nothing), the time to mark seen.
     # @param today? {Date} The sender's own date, which undo counts from.
     # @response 200 #/components/schemas/CoachNews
