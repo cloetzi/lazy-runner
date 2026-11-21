@@ -95,11 +95,11 @@
       "schedule": ["at any time"]
     },
     {
-      "description": "A Ruby patch is often a security fix, so it skips the release age; setup-ruby and Ruby minors keep it.",
+      "description": "A Ruby patch is often a security fix, so it waits a day instead of three: long enough for the ruby:<version>-slim image the release builds from. setup-ruby and Ruby minors keep three.",
       "matchManagers": ["ruby-version", "custom.regex", "bundler"],
       "matchDepNames": ["ruby"],
       "matchUpdateTypes": ["patch"],
-      "minimumReleaseAge": null
+      "minimumReleaseAge": "1 day"
     },
     {
       "description": "A new Ruby or Node minor or major is its own PR to review; a patch merges itself.",
