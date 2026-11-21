@@ -102,16 +102,15 @@ export function undoLabel(change) {
   return { moved: "Move it back", removed: "Put it back", changed: "Change it back", ended: "Plan it again" }[change.action] ?? null;
 }
 
-// What the button says to a screen reader, which hears it away from its
-// row: "Move Session B back to Sat 21", "Put Session B back on Sat 21".
-export function undoName(change, title = change.title) {
+// What the button acts on, which a screen reader adds to its visible words
+// since it hears the button away from its row: "Session B, to Sat 21" (so
+// "Move it back: Session B, to Sat 21"), "Session B, on Sat 21".
+export function undoTarget(change, title = change.title) {
   const name = title || "it";
   switch (change.action) {
-    case "moved": return `Move ${name} back to ${dayNear(oldDay(change), change.to_date)}`;
-    case "removed": return `Put ${name} back on ${dayNear(change.from_date, change.from_date)}`;
-    case "changed": return `Change ${name} back`;
-    case "ended": return `Plan ${name} again`;
-    default: return undoLabel(change) ?? "";
+    case "moved": return `${name}, to ${dayNear(oldDay(change), change.to_date)}`;
+    case "removed": return `${name}, on ${dayNear(change.from_date, change.from_date)}`;
+    default: return name;
   }
 }
 
@@ -184,8 +183,9 @@ export function changeHtml(change, { today, unit, weightUnit, tag = "span" } = {
   return html`${authorLine(line, tag)}${change.reason && inLine(tag, "change-reason", change.reason)}`;
 }
 
-// The button that takes `change` back, named for a screen reader by what
-// it does to `title`; empty when it can't be taken back. On a row it
+// The button that takes `change` back, its visible words followed by
+// what it acts on (`title`) for a screen reader, so a voice command of
+// what it shows still finds it; empty when it can't be taken back. On a row it
 // carries the change's id in data-undo; in a sheet (`sheet`) it closes the
 // sheet with "undo". `classes` are the button's (quiet on a day's line);
 // `disabled` while another change is on its way.
@@ -193,7 +193,7 @@ export function undoButton(change, title = change?.title, { sheet = false, class
   const label = undoLabel(change);
   if (!label) return "";
   const how = sheet ? html`value="undo"` : html`type="button" data-undo="${change.id}"`;
-  return html`<button class="${classes}" ${how}${disabled && " disabled"} aria-label="${undoName(change, title)}">${label}</button>`;
+  return html`<button class="${classes}" ${how}${disabled && " disabled"}>${label}<span class="visually-hidden">: ${undoTarget(change, title)}</span></button>`;
 }
 
 // Taking a change back, on the device's own day (sent now, not queued: it

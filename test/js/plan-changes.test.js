@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
-  changeLine, undoLabel, undoName, dayChangeLines, dayNear, changeHtml, undoButton, undoRequest,
+  changeLine, undoLabel, undoTarget, dayChangeLines, dayNear, changeHtml, undoButton, undoRequest,
   sessionChange, routineChangeOn, changeShownOn, withoutUndo, workoutChanges, weightChange,
 } from "../../public/js/plan-changes.js";
 
@@ -62,14 +62,16 @@ test("offers the button that fits, only while the change can be taken back", () 
   assert.equal(undoLabel(null), null);
 });
 
-test("names the button for a screen reader by what it does", () => {
-  assert.equal(undoName(change()), "Move Session B back to Sat 21");
-  assert.equal(undoName(change({ action: "removed", from_date: "2026-11-21" })), "Put Session B back on Sat 21");
-  assert.equal(undoName(change({ action: "changed" }), "Long run"), "Change Long run back");
+test("names what the button acts on for a screen reader", () => {
+  assert.equal(undoTarget(change()), "Session B, to Sat 21");
+  assert.equal(undoTarget(change({ action: "removed", from_date: "2026-11-21" })), "Session B, on Sat 21");
+  assert.equal(undoTarget(change({ action: "changed" }), "Long run"), "Long run");
+  assert.equal(undoTarget(change({ action: "ended" }), ""), "it");
 });
 
 test("a row's button carries the change's id, a sheet's closes it with undo", () => {
-  assert.match(String(undoButton(change(), "Session B")), /type="button" data-undo="7" aria-label="Move Session B back to Sat 21">Move it back</);
+  assert.match(String(undoButton(change(), "Session B")), /type="button" data-undo="7">Move it back<span class="visually-hidden">: Session B, to Sat 21<\/span><\/button>/);
+  assert.doesNotMatch(String(undoButton(change(), "Session B")), /aria-label/);
   assert.match(String(undoButton(change(), "Session B", { sheet: true })), /value="undo"/);
   assert.equal(String(undoButton(change({ undoable: false }), "Session B")), "");
 });
@@ -90,7 +92,7 @@ test("lines a day that lost a session, with Put it back for a removal", () => {
   assert.equal(line.text, "Session B removed by Coach agent");
   assert.equal(line.reason, "Legs fresh for Sunday");
   assert.equal(line.undo, removed);
-  assert.match(String(undoButton(line.undo, undefined, { classes: "quiet small" })), /class="quiet small" type="button" data-undo="8" aria-label="Put Session B back on Wed 18">Put it back</);
+  assert.match(String(undoButton(line.undo, undefined, { classes: "quiet small" })), /class="quiet small" type="button" data-undo="8">Put it back<span class="visually-hidden">: Session B, on Wed 18</);
 });
 
 test("offers Move it back on the line when the session went outside the days shown", () => {
@@ -135,7 +137,7 @@ test("says what an agent changed in a workout, or the weight it set, with Change
   const edit = change({ item_kind: "workout", workout_id: 3, title: "Workout 1", action: "changed", summary: "3 rounds in block B (was 2)", was: {}, now: {} });
   assert.equal(changeLine(edit, { today }), "Coach agent changed this workout · today: 3 rounds in block B (was 2)");
   assert.equal(undoLabel(edit), "Change it back");
-  assert.equal(undoName(edit), "Change Workout 1 back");
+  assert.equal(undoTarget(edit), "Workout 1");
   assert.equal(changeLine({ ...edit, action: "archived", undoable: false }, { today }), "Coach agent archived this workout · today");
 
   const weight = change({ item_kind: "weight", exercise_id: 9, title: "Goblet squat", action: "changed", was: { value: 20, unit: "lb" }, now: { value: 25, unit: "lb" } });
