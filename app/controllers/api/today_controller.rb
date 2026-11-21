@@ -17,7 +17,8 @@ module Api
     #   and `next_planned` is the first planned after it. `activities` are the
     #   date's activities, in the order they started, and `routine_days` the
     #   days of `routines` that show on it, read with the date as today
-    #   (tentative, confirmed, done or skipped). `trained` says whether any
+    #   (tentative, confirmed, done or skipped). `check_in` is the date's
+    #   check-in, null when nothing was logged. `trained` says whether any
     #   session was ever done, so a first session can be told apart from a
     #   rest day. `changes` are the edits an agent made to its parts and the
     #   weights it set for their exercises, each item's latest while nothing
@@ -64,6 +65,7 @@ module Api
         next_planned: summarized.where(status: "planned", date: date.next_day..).in_order.first&.as_json(today: date),
         trained: !Session.where(status: "done").empty?,
         activities: Activity.where(date:).in_order.all,
+        check_in: CheckIn.first(date:),
         **routine_days(date),
         # The sets already logged in the session, so the player can pick up
         # where it was left.

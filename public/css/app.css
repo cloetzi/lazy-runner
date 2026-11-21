@@ -633,7 +633,7 @@ body[data-focus] .more-sheet, body[data-focus] .scrim, body[data-focus] .skip-li
 @media (min-width: 60rem) {
   #home { max-width: var(--wide); display: grid; grid-template-columns: minmax(0, var(--measure)) minmax(14rem, 18rem); align-items: start; }
   #home > * { grid-column: 1 / -1; }
-  #home > #today, #home > #today-day, #home > #today-setup { grid-column: 1; }
+  #home > #today, #home > #today-day, #home > #today-setup, #home > #today-check-in { grid-column: 1; }
   #home > #week { grid-column: 2; grid-row: 2 / span 2; }
 }
 
@@ -1828,6 +1828,32 @@ code.command { display: block; padding: var(--space-2) var(--space-3); overflow-
 .note-tile .icon { width: 1.25rem; height: 1.25rem; }
 .note-tile.small { width: 1.75rem; height: 1.75rem; border-radius: var(--radius-sm); }
 .note-tile.small .icon { width: 1rem; height: 1rem; }
+/* Check-ins (check-in-sheets.js): a neutral tile like a note's, a moon for
+   the night and a pulse for the day; dashed on Today until it is filled. */
+.checkin-tile {
+  flex: none; display: inline-grid; place-items: center; width: 2.25rem; height: 2.25rem; border-radius: var(--radius-md);
+  background: var(--surface); border: 1px solid var(--border); color: var(--muted);
+}
+.checkin-tile .icon { width: 1.25rem; height: 1.25rem; }
+.checkin-tile.small { width: 1.75rem; height: 1.75rem; border-radius: var(--radius-sm); }
+.checkin-tile.small .icon { width: 1rem; height: 1rem; }
+.checkin-cal-row .row { align-items: flex-start; }
+.checkin-cal-row .row-meta, .checkin-row .row-meta { white-space: normal; }
+.checkin-card { display: grid; gap: var(--space-2); }
+.checkin-card .checkin-tile { background: var(--bg); }
+.checkin-card-head { display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-3); }
+.checkin-card-head h2 { margin: 0; }
+.checkin-why { font-size: var(--text-sm); }
+.checkin-list { margin: 0; }
+.checkin-row { gap: var(--space-3); }
+.checkin-row .checkin-summary { color: var(--text); font-weight: 600; }
+.checkin-row.empty .checkin-tile { border-style: dashed; }
+.checkin-add { display: inline-flex; align-items: center; gap: var(--space-1); flex: none; color: var(--text); font-weight: 600; }
+.checkin-add .icon { width: 1.1rem; height: 1.1rem; }
+.checkin-form { display: grid; gap: var(--space-3); }
+.checkin-form > p { margin: 0; }
+.checkin-chips { grid-template-columns: repeat(auto-fit, minmax(6.5rem, 1fr)); }
+.checkin-ill { grid-template-columns: minmax(8rem, max-content); }
 /* Replies under a coach note (#263): indented, oldest first. */
 .howto ul.note-replies, ul.note-replies {
   list-style: none; margin: 0 0 0 var(--space-2); padding: 0 0 0 var(--space-4); border-left: 2px solid var(--border);

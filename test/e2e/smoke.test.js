@@ -546,6 +546,54 @@ test("logs a run on the calendar, and Today asks how hard an imported one was", 
   await context.close();
 });
 
+test("checks in last night on Today, and how yesterday felt on the calendar", async () => {
+  const { context, page, errors } = await ownerPage();
+
+  await page.goto("/");
+  const today = await page.evaluate(() => {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+  });
+  await page.locator('#today-check-in [data-check-in="night"]').click();
+  const night = page.locator("#night-sheet");
+  await night.getByRole("button", { name: "Poor" }).click();
+  await night.getByRole("button", { name: "3+" }).click();
+  await night.getByRole("checkbox", { name: "Late to bed" }).check();
+  await night.locator("textarea").fill("Birthday dinner");
+  await accessible(page, "the Last night sheet");
+  await night.getByRole("button", { name: "Save" }).click();
+
+  const logged = await eventually(async () => (await getJson(`/api/check_ins?from=${today}&to=${today}`)).check_ins[0]);
+  assert.deepEqual(logged.night, { sleep: "poor", drinks: "3+", tags: ["late_to_bed"], note: "Birthday dinner", logged_by: "manual" });
+  assert.equal(logged.day, null);
+  await page.locator("#today-check-in").getByText("Slept poorly · 3+ drinks · Late to bed").waitFor();
+
+  // Yesterday's, from the day's plus on the calendar.
+  const yesterday = await page.evaluate((date) => {
+    const day = new Date(`${date}T12:00:00Z`);
+    day.setUTCDate(day.getUTCDate() - 1);
+    return day.toISOString().slice(0, 10);
+  }, today);
+  await page.goto(`/calendar.html#${yesterday}`);
+  // A day gone by this week is folded to a line: open it first.
+  await page.locator(`[data-unfold="${yesterday}"], [data-add="${yesterday}"]`).first().waitFor();
+  if (await page.locator(`[data-unfold="${yesterday}"]`).count()) await page.locator(`[data-unfold="${yesterday}"]`).click();
+  await page.locator(`[data-add="${yesterday}"]`).click();
+  await page.locator('#add-sheet button[value="day"]').click();
+  const day = page.locator("#day-sheet");
+  await day.getByRole("button", { name: "Rough" }).click();
+  await day.getByRole("button", { name: "A bit" }).click();
+  await day.getByRole("checkbox", { name: "Knees" }).check();
+  await accessible(page, "the How I felt sheet");
+  await day.getByRole("button", { name: "Save" }).click();
+
+  const felt = await eventually(async () => (await getJson(`/api/check_ins?from=${yesterday}&to=${yesterday}`)).check_ins[0]?.day);
+  assert.deepEqual([felt.feeling, felt.sore, felt.sore_areas], ["rough", "a_bit", ["knees"]]);
+  await page.locator(`.day[data-date="${yesterday}"] [data-check-in="day"]`).waitFor();
+  assert.deepEqual(errors, []);
+  await context.close();
+});
+
 test("plans a weekly ride and a maybe-hike, and logging the hike ticks it off", async () => {
   const { context, page, errors } = await ownerPage();
 

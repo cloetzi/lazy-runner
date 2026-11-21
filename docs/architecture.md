@@ -210,7 +210,8 @@ called, how a day of it reads on the device's today, queued activities that
 tick a day off, the routine form and its requests), `coach.js` (who wrote a note, the
 week as days, the journal's filters, the note and goal forms and their requests), `plan-changes.js`
 (what an agent's change to the plan says on the calendar, and the undo
-request), `coach-news.js` (Coach's "Since you last looked", grouped by
+request), `check-ins.js` (a night's and a day's summary and title, the
+check-in requests and their queued overlay), `coach-news.js` (Coach's "Since you last looked", grouped by
 agent, each change with its reason), `week.js` (how a week adds up: planned against
 done by kind, distance sums), `unit-setting.js` (the lb/kg and km/mi settings and this
 device's copy of each), `catalog.js`, `inventory.js`, `gear.js` (owned and

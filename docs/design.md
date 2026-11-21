@@ -125,6 +125,14 @@ components, pages, player, figure.
   and the month. The month grid takes the full width with the selected day
   under it; its chips say what and how much ("Run 9.4 km", "Session B"),
   and a cell under 6rem wide (a container query) shows the tiles alone.
+- **Check-ins** (`check-in-sheets.js`): a neutral tile like a note's
+  (`.checkin-tile`), a moon for the night and a pulse for the day. Today
+  has one card under the day's, two rows dashed with Add until filled, so
+  the day's orange button stays the only one; Settings (this device) hides
+  it. A day on the Calendar shows the night first ("Last night", else
+  "Night, Thu to Fri") and how it felt after its plan; nothing in the
+  month's cells, the day under the grid has the rows. The sheets' choices
+  are segmented buttons a second tap clears, through the outbox.
   The month is offered from the tablet tier (the rail's query). Its grid is
   one tab stop: the arrow keys move the selected day (a week up and down),
   Home and End go to the week's ends, Page Up and Page Down a month, and

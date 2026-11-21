@@ -37,6 +37,8 @@ import {
   moveRequest as moveDayRequest, resetRequest as resetDayRequest, endRequest as endRoutineRequest,
 } from "./routines.js";
 import { routineRow, dayKey, openRoutineDaySheet } from "./routine-sheets.js";
+import { withQueuedCheckIns } from "./check-ins.js";
+import { todayCheckInHtml, openCheckInSheet } from "./check-in-sheets.js";
 
 // A kept session touched this recently reopens on load (a reload or an app
 // switch mid-workout); an older one waits on Today for the user to choose.
@@ -116,6 +118,7 @@ async function loadToday(workoutId, sessionId) {
     renderToday();
     drawSetup();
     renderActivities();
+    renderCheckIn();
     if (!stale) askHowHard();
     return true;
   } catch (error) {
@@ -140,6 +143,7 @@ function renderSetup() {
   if (!state.today?.setup || state.today.date !== localToday()) {
     state.today = null;
     $("today-activities").hidden = true;
+    $("today-check-in").hidden = true;
   }
   $("today-date").textContent = "";
   $("today-day").hidden = true;
@@ -242,8 +246,9 @@ async function loadSetupDay() {
     // Read again since, or a workout made meanwhile brought the card back.
     if (ask !== state.setupAsk || (state.today && !state.today.setup) || localToday() !== date) return;
     state.distanceUnit = adoptServerDistanceUnit(storage, data.distance_unit, { queued: outbox.queued(), stale });
-    state.today = { date, setup: true, activities: data.activities, routines: data.routines, routine_days: data.routine_days };
+    state.today = { date, setup: true, activities: data.activities, routines: data.routines, routine_days: data.routine_days, check_in: data.check_ins?.[0] ?? null };
     renderActivities();
+    renderCheckIn();
     if (!stale) askHowHard();
   } catch {
     // The setup card alone.
@@ -469,6 +474,36 @@ async function skipToday() {
   outbox.enqueue(skipRequest(state.today, uniqueId()));
   await sync();
   loadToday();
+}
+
+// ---------- Check-in ----------
+
+// The day's check-in as the server gave it, with what the outbox still holds.
+function todayCheckIn() {
+  const { date, check_in: checkIn } = state.today;
+  return withQueuedCheckIns(checkIn ? [checkIn] : [], outbox.queued()).find((c) => c.date === date) ?? null;
+}
+
+// Under the day's card: last night and how the day feels, each opening its
+// own sheet, unless the device's setting leaves it out.
+function renderCheckIn() {
+  const section = $("today-check-in");
+  section.hidden = !state.today || !readSettings(storage).askCheckIn;
+  if (!section.hidden) section.innerHTML = todayCheckInHtml(todayCheckIn(), state.today.date);
+}
+
+function openTodayCheckIn(group) {
+  const date = state.today.date;
+  openCheckInSheet({
+    group, date, today: date, checkIn: todayCheckIn(),
+    send: async (request) => {
+      outbox.enqueue(request);
+      renderCheckIn();
+      if (await sync()) reloadToday();
+      // A change the server refused has left the outbox: show the day without it.
+      else renderCheckIn();
+    },
+  });
 }
 
 // ---------- Activities today ----------
@@ -2539,6 +2574,10 @@ $("today-day").addEventListener("click", (event) => {
 $("today").addEventListener("click", (event) => {
   const button = event.target.closest("button[data-view]");
   if (button) go(routeHash("workout", button.dataset.view));
+});
+$("today-check-in").addEventListener("click", (event) => {
+  const row = event.target.closest("[data-check-in]");
+  if (row) openTodayCheckIn(row.dataset.checkIn);
 });
 $("today-activities").addEventListener("click", (event) => {
   if (event.target.closest("#log-activity")) return logActivity();

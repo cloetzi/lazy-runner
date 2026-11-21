@@ -4,7 +4,8 @@
 
 export const LEAD_IN_CHOICES = [3, 5, 10];
 // askRpe: Today asks how hard an activity sent from elsewhere was.
-export const DEFAULTS = { sound: true, vibration: true, leadIn: 5, askRpe: true };
+// askCheckIn: Today shows the check-in card (last night, how I feel).
+export const DEFAULTS = { sound: true, vibration: true, leadIn: 5, askRpe: true, askCheckIn: true };
 const KEY = "settings";
 
 // Unknown or broken values fall back to the default, one setting at a time.
@@ -13,6 +14,7 @@ const VALID = {
   vibration: (value) => typeof value === "boolean",
   leadIn: (value) => LEAD_IN_CHOICES.includes(value),
   askRpe: (value) => typeof value === "boolean",
+  askCheckIn: (value) => typeof value === "boolean",
 };
 
 export function readSettings(storage) {

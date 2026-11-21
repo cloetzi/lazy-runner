@@ -167,6 +167,9 @@ included; no Docker per test run. How:
   sessions it moved away from a day or removed, show with their reason and a
   button that takes them back (`plan-changes.js`, sent at once). Activities keep what was sent (metres, seconds) and
   nothing derived; `activities.js` gives known sports their sprite icon.
+  Check-ins (last night, how the day felt) are a card on Today, rows on
+  the Calendar's day and tiles on Coach's week (`check-in-sheets.js`, logic
+  in `check-ins.js`), written through the outbox.
   The Coach page (`coach-page.js`, sheets in `coach-sheets.js`, logic in
   `coach.js`) draws `/api/coach` as four kinds of thing, each with its own
   look (`docs/design.md`): a band for "Since you last looked"

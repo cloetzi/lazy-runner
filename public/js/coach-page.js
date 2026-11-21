@@ -5,6 +5,8 @@ import { localToday, shortDay, longDay, weekdayDay, STATUS_LABELS } from "./cale
 import { STATE_LABELS, routineTitle } from "./routines.js";
 import { routineTile } from "./routine-sheets.js";
 import { activityTitle, sportIcon, preferredDistanceUnit } from "./activities.js";
+import { checkInsByDay } from "./check-ins.js";
+import { checkInTiles, checkInSaid } from "./check-in-sheets.js";
 import {
   authorLabel, writtenOn, writtenMonth, knownCoaches, weekDays, agentName, sameReview, focusLines,
   KIND_LABELS, JOURNAL_FILTERS, journalPath, tidyCountPath, tidyRequest,
@@ -398,10 +400,12 @@ function pastGoals() {
 // This week as seven days, each a column of the Calendar's tiles (a done
 // session filled, a missed one struck, a planned run outlined) that opens
 // its day on the Calendar. A run that ticked off its routine's day shows
-// once, as the run; the notes dated to a day are one tile. The tiles are a picture; each day says what is on it
+// once, as the run; the notes dated to a day are one tile, and a night or
+// a day checked in has its own. The tiles are a picture; each day says what is on it
 // to a screen reader.
 function weekStrip({ week }) {
   const now = today();
+  const checkIns = checkInsByDay(week.check_ins ?? []);
   const tile = (classes, glyph) => html`<span class="sport-tile small ${classes}">${icon(glyph)}</span>`;
   const days = weekDays(week, now).map(({ date, sessions, routineDays, activities, notes }) => {
     const tiles = [
@@ -409,12 +413,14 @@ function weekStrip({ week }) {
       ...routineDays.map(({ day, routine }) => routineTile(routine, day.state, "small")),
       ...activities.map(({ activity }) => tile("done", sportIcon(activity.sport))),
       ...(notes.length ? [html`<span class="note-tile small">${icon("coach")}</span>`] : []),
+      ...checkInTiles(checkIns[date]),
     ];
     const said = [
       ...sessions.map(({ session, mark }) => `${session.workout.title}, ${STATUS_LABELS[mark].toLowerCase()}`),
       ...routineDays.map(({ day, routine }) => `${routine ? routineTitle(routine) : "Routine"}, ${STATE_LABELS[day.state].toLowerCase()}`),
       ...activities.map(({ activity }) => activityTitle(activity)),
       ...(notes.length ? [notes.length === 1 ? "1 note" : `${notes.length} notes`] : []),
+      ...checkInSaid(checkIns[date]),
     ];
     return html`
       <li>

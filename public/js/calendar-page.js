@@ -10,6 +10,8 @@ import {
 } from "./calendar.js";
 import { openPlanSheet, openSessionSheet, openAddSheet, openLogActivitySheet, activityRow, editActivity, noteRow, weekSummaryHtml } from "./calendar-sheets.js";
 import { openNoteSheet, aboutChoices } from "./coach-sheets.js";
+import { withQueuedCheckIns, checkInsByDay } from "./check-ins.js";
+import { checkInRow, openCheckInSheet } from "./check-in-sheets.js";
 import { notesByDay, notesAbout, knownCoaches, noteRequest, changeNoteRequest, deleteNoteRequest, plannedBy, agentName } from "./coach.js";
 import {
   withQueuedActivities, removedActivityIds, byDay as activitiesByDay, sportIcon, activityTitle, activityKey, preferredDistanceUnit, adoptServerDistanceUnit,
@@ -61,6 +63,7 @@ const state = {
   sessions: [], // the shown range, as the server last gave it
   activities: [], // the shown range's activities, as the server last gave them
   notes: [], // the shown range's coach notes
+  checkIns: [], // the shown range's check-ins
   routines: [], // the routines with days in the shown range
   routineDays: [], // their days, as the server read them on state.today
   planChanges: [], // the sessions an agent moved away from a day shown or removed from it
@@ -102,6 +105,7 @@ async function load() {
     state.sessions = range.data.sessions;
     state.activities = range.data.activities;
     state.notes = range.data.notes ?? [];
+    state.checkIns = range.data.check_ins ?? [];
     state.routines = range.data.routines ?? [];
     state.routineDays = range.data.routine_days ?? [];
     state.planChanges = range.data.plan_changes ?? [];
@@ -110,7 +114,7 @@ async function load() {
     if (range.data.distance_unit) adoptServerDistanceUnit(storage, range.data.distance_unit, { queued: outbox.queued(), stale: range.stale });
     state.upcoming = upcoming.data;
     state.stale = range.stale || upcoming.stale;
-    if ([state.sessions, state.activities, state.notes, state.routineDays, state.upcoming].some((list) => list.length)) {
+    if ([state.sessions, state.activities, state.notes, state.checkIns, state.routineDays, state.upcoming].some((list) => list.length)) {
       try {
         storage.setItem(usedKey(), "1");
       } catch {
@@ -167,6 +171,7 @@ function shown() {
     // In the month only the chosen day's list shows, with its lines.
     changeShown: changeShownOn(listed(routineDays).filter((d) => view() === "week" || d.on === state.focus), routineOf),
     changeDays: dayChangeLines(state.planChanges.map((c) => withoutUndo(c, state.stale)), view() === "month" ? { from: state.focus, to: state.focus } : { from, to }),
+    checkInDays: checkInsByDay(withQueuedCheckIns(state.checkIns, queue).filter((c) => c.date >= from && c.date <= to)),
     days: byDay(sessions), activityDays: activitiesByDay(activities), noteDays: notesByDay(state.notes, withQueued(state.sessions, queue, state.today)), routineDayMap: routineDaysByDay(listed(routineDays)),
   };
 }
@@ -223,7 +228,7 @@ function render() {
 // The week opens on today: the days gone by fold to one line each (a tap
 // opens one), and today scrolls up under the bar when the page opens.
 // A day with a missed session stays open, so its Do today is at hand.
-function weekView({ sessions, activities, routineDays, days, activityDays, noteDays, routineDayMap, fulfils, next, changeDays, changeShown }) {
+function weekView({ sessions, activities, routineDays, days, activityDays, noteDays, checkInDays, routineDayMap, fulfils, next, changeDays, changeShown }) {
   const week = weekOf(state.focus);
   const thisWeek = week.includes(state.today);
   const header = html`<section class="card week-summary" aria-label="${thisWeek ? "This week" : weekLabel(state.focus, state.today)}">${weekSummaryHtml({
@@ -231,7 +236,7 @@ function weekView({ sessions, activities, routineDays, days, activityDays, noteD
     when: thisWeek ? "current" : week[0] > state.today ? "future" : "past",
   })}</section>`;
   return html`${header}<ol class="week-days">${week.map((date) => {
-    const parts = [days[date] ?? [], activityDays[date] ?? [], next, { notes: noteDays[date], routineDays: routineDayMap[date], fulfils, changes: changeDays[date], changeShown }];
+    const parts = [days[date] ?? [], activityDays[date] ?? [], next, { notes: noteDays[date], checkIn: checkInDays[date], routineDays: routineDayMap[date], fulfils, changes: changeDays[date], changeShown }];
     const missed = parts[0].some((s) => markFor(s, state.today, next) === "missed");
     const folded = thisWeek && date < state.today && !missed && !state.unfolded.has(date);
     return html`<li>${folded ? foldedDay(date, ...parts) : dayCard(date, ...parts)}</li>`;
@@ -240,20 +245,22 @@ function weekView({ sessions, activities, routineDays, days, activityDays, noteD
 
 // What is on a day, a phrase each ("Session A, done"), as the folded line
 // and the month's day label read it.
-function dayItems(sessions, activities, next, notes = [], routineDays = [], changes = []) {
+function dayItems(sessions, activities, next, notes = [], routineDays = [], changes = [], checkIn = null) {
   const by = (item) => (item?.created_by === "llm" ? `, by ${agentName(item)}` : "");
   return [
+    ...(checkIn?.night ? ["night"] : []),
     ...sessions.map((s) => `${s.workout.title}, ${STATUS_LABELS[markFor(s, state.today, next)].toLowerCase()}${by(s)}`),
     ...routineDays.map((d) => `${routineTitle(routineOf(d) ?? {})}, ${ROUTINE_LABELS[d.state].toLowerCase()}${by(routineOf(d))}`),
     ...activities.map(activityTitle),
+    ...(checkIn?.day ? ["how you felt"] : []),
     ...notes.map((n) => `note: ${n.title ?? n.body}`),
     ...changes.map((c) => c.text),
   ];
 }
 
 // A day gone by in one line: "Mon 9 · Session A, done · Easy run, missed".
-function foldedDay(date, sessions, activities, next, { notes = [], routineDays = [], changes = [] } = {}) {
-  const items = dayItems(sessions, activities, next, [], routineDays, changes);
+function foldedDay(date, sessions, activities, next, { notes = [], routineDays = [], changes = [], checkIn = null } = {}) {
+  const items = dayItems(sessions, activities, next, [], routineDays, changes, checkIn);
   if (notes.length) items.push(notes.length === 1 ? "1 note" : `${notes.length} notes`);
   return html`
     <section class="day past folded" data-date="${date}">
@@ -283,12 +290,13 @@ function bringTodayIntoView() {
 }
 
 // What the day's plus adds: a workout from today on, an activity up to today, or a note.
-const addLabel = (date) => (date > state.today ? "Plan a workout, run or routine, or write a note" : date < state.today ? "Log an activity or write a note" : "Add a workout, run, routine, activity or note");
+const addLabel = (date) => (date > state.today ? "Plan a workout, run or routine, or write a note" : date < state.today ? "Log an activity or a check-in, or write a note" : "Add a workout, run, routine, activity, check-in or note");
 
 // One day: its name, a plus to plan a workout (from today on), log an
-// activity (up to today) or write a note, its sessions in order, then its
-// activities and notes, or Rest.
-function dayCard(date, sessions, activities, next, { heading = "h3", notes = [], routineDays = [], fulfils = new Map(), changes = [], changeShown = new Set() } = {}) {
+// activity or a check-in (up to today) or write a note, then the night
+// that began it, its sessions in order, its activities, how the day felt
+// and its notes, or Rest.
+function dayCard(date, sessions, activities, next, { heading = "h3", notes = [], checkIn = null, routineDays = [], fulfils = new Map(), changes = [], changeShown = new Set() } = {}) {
   const classes = ["day", date === state.today && "today", date < state.today && "past"].filter(Boolean).join(" ");
   const plan = html`<button class="icon-button" data-add="${date}" aria-label="${`${addLabel(date)} on ${longDay(date)}`}">${icon("plus")}</button>`;
   return html`
@@ -298,8 +306,8 @@ function dayCard(date, sessions, activities, next, { heading = "h3", notes = [],
         ${plan}
       </header>
       ${sessions.length || activities.length || routineDays.length
-        ? html`<ul class="list day-sessions">${sessions.map((s) => sessionRow(s, next))}${routineDays.map((d) => routineRow(d, routineOf(d), distanceUnit(), "data-routine-day", state.today, changeShown.has(d) ? routineChange(d) : null))}${activities.map((a) => activityRow(a, distanceUnit(), "data-activity", fulfils.get(String(activityKey(a)))))}${notes.map((n) => noteRow(n, "data-note"))}</ul>`
-        : html`${notes.length ? html`<ul class="list day-sessions">${notes.map((n) => noteRow(n, "data-note"))}</ul>` : ""}<p class="rest muted">Rest</p>`}
+        ? html`<ul class="list day-sessions">${checkInRow(checkIn, "night", state.today)}${sessions.map((s) => sessionRow(s, next))}${routineDays.map((d) => routineRow(d, routineOf(d), distanceUnit(), "data-routine-day", state.today, changeShown.has(d) ? routineChange(d) : null))}${activities.map((a) => activityRow(a, distanceUnit(), "data-activity", fulfils.get(String(activityKey(a)))))}${checkInRow(checkIn, "day", state.today)}${notes.map((n) => noteRow(n, "data-note"))}</ul>`
+        : html`${notes.length || checkIn ? html`<ul class="list day-sessions">${checkInRow(checkIn, "night", state.today)}${checkInRow(checkIn, "day", state.today)}${notes.map((n) => noteRow(n, "data-note"))}</ul>` : ""}<p class="rest muted">Rest</p>`}
       ${changes.length ? html`<ul class="day-changes">${changes.map(dayChangeRow)}</ul>` : ""}
     </section>`;
 }
@@ -363,7 +371,7 @@ const MAX_CHIPS = 3;
 // shows the tiles alone (a container query in app.css). The grid is one tab
 // stop: the arrow keys move the selected day, and the whole cell is
 // its button.
-function monthView({ days, activityDays, noteDays, routineDayMap, fulfils, next, changeDays, changeShown }) {
+function monthView({ days, activityDays, noteDays, checkInDays, routineDayMap, fulfils, next, changeDays, changeShown }) {
   const month = state.focus.slice(0, 7);
   const head = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((d) => html`<span class="month-weekday" role="columnheader">${d}</span>`);
   const weeks = monthWeeks(state.focus).map((week) => html`<div class="month-week" role="row">${week.map((date) => {
@@ -373,7 +381,7 @@ function monthView({ days, activityDays, noteDays, routineDayMap, fulfils, next,
     const routineDays = routineDayMap[date] ?? [];
     const classes = ["month-day", date.slice(0, 7) !== month && "outside", date === state.today && "today",
       date === state.focus && "selected", date < state.today && "past"].filter(Boolean).join(" ");
-    const items = dayItems(sessions, activities, next, notes, routineDays, changeDays[date]);
+    const items = dayItems(sessions, activities, next, notes, routineDays, changeDays[date], checkInDays[date]);
     const label = `${longDay(date)}: ${items.length ? items.join("; ") : "rest"}`;
     const chips = [
       ...sessions.map((s) => {
@@ -397,7 +405,7 @@ function monthView({ days, activityDays, noteDays, routineDayMap, fulfils, next,
         <div class="month-week" role="row">${head}</div>${weeks}
       </div>
       <p class="visually-hidden" id="month-keys">Arrow keys move a day or a week, Home and End to the start or end of the week, Page Up and Page Down a month.</p>
-      <section class="card day-panel" aria-label="${longDay(state.focus)}">${dayCard(state.focus, days[state.focus] ?? [], activityDays[state.focus] ?? [], next, { heading: "h2", notes: noteDays[state.focus], routineDays: routineDayMap[state.focus], fulfils, changes: changeDays[state.focus], changeShown })}</section>
+      <section class="card day-panel" aria-label="${longDay(state.focus)}">${dayCard(state.focus, days[state.focus] ?? [], activityDays[state.focus] ?? [], next, { heading: "h2", notes: noteDays[state.focus], checkIn: checkInDays[state.focus], routineDays: routineDayMap[state.focus], fulfils, changes: changeDays[state.focus], changeShown })}</section>
     </div>`;
 }
 
@@ -510,13 +518,21 @@ async function plan(date) {
 // to today, or a note on any day.
 function add(date) {
   openAddSheet({
-    date,
+    date, today: state.today,
     onWorkout: date >= state.today ? () => plan(date) : null,
     onOnce: date >= state.today ? () => planRoutine({ date, once: true }) : null,
     onRoutine: date >= state.today ? () => planRoutine({ date }) : null,
     onActivity: date <= state.today ? () => logActivity(date) : null,
+    onNight: date <= state.today ? () => checkIn(date, "night") : null,
+    onDay: date <= state.today ? () => checkIn(date, "day") : null,
     onNote: () => writeNote(date),
   });
+}
+
+// A day's night or how it felt, written whole through the outbox.
+function checkIn(date, group) {
+  const checkInOn = withQueuedCheckIns(state.checkIns, outbox.queued()).find((c) => c.date === date) ?? null;
+  openCheckInSheet({ group, date, today: state.today, checkIn: checkInOn, send });
 }
 
 // Sends a note change now (notes don't go through the outbox), then reads
@@ -715,7 +731,7 @@ $("calendar-body").addEventListener("keydown", (event) => {
 });
 
 $("calendar-body").addEventListener("click", (event) => {
-  const target = event.target.closest("[data-add], [data-open], [data-activity], [data-routine-day], [data-note], [data-do-today], [data-undo], [data-unfold], [data-select], .month-day");
+  const target = event.target.closest("[data-add], [data-open], [data-activity], [data-routine-day], [data-note], [data-check-in], [data-do-today], [data-undo], [data-unfold], [data-select], .month-day");
   if (!target) return;
   if (target.dataset.undo) return undoFrom(target);
   if (target.dataset.unfold) {
@@ -727,6 +743,7 @@ $("calendar-body").addEventListener("click", (event) => {
   }
   if (target.dataset.add) return add(target.dataset.add);
   if (target.dataset.routineDay) return openRoutineDay(target.dataset.routineDay);
+  if (target.dataset.checkIn) return checkIn(target.dataset.date, target.dataset.checkIn);
   if (target.dataset.note) return writeNote(null, state.notes.find((n) => String(n.id) === target.dataset.note));
   if (target.dataset.open) return open(target.dataset.open);
   if (target.dataset.activity) return openActivity(target.dataset.activity);
