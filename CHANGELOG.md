@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.9.1](https://github.com/cloetzi/lazy-runner/compare/v0.9.0...v0.9.1) (2026-11-21)
+
+
+### Bug Fixes
+
+* **deps:** update rodauth for GHSA-jv3v-q542-9c26, finish the Ruby group ([#37](https://github.com/cloetzi/lazy-runner/issues/37)) ([3dbdfdc](https://github.com/cloetzi/lazy-runner/commit/3dbdfdc4449ed86b9556f06ca21d93aa016f444d))
+* **deps:** update ruby ([#35](https://github.com/cloetzi/lazy-runner/issues/35)) ([caf7879](https://github.com/cloetzi/lazy-runner/commit/caf7879ddd1e138f90f3438dfb8df02629aaba18))
+
 ## [0.9.0](https://github.com/cloetzi/lazy-runner/compare/v0.8.0...v0.9.0) (2026-11-16)
 
 
