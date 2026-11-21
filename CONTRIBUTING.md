@@ -43,15 +43,18 @@ then `BASE_URL=http://localhost:3999 SERVER_LOG=/tmp/e2e.log npm run test:e2e`.
   never RSpec. An expected hash goes in braces,
   `must_equal({ "a" => 1 })`: without them Minitest 6.1 takes it for
   keywords and compares with nil.
-- Versions have one source of truth each: Ruby in `.ruby-version` (read by the
-  Gemfile, CI and the Docker build arg), Node in `.node-version`. Never repeat
-  a version number elsewhere.
+- Versions have one source of truth each: Ruby in `.ruby-version` (read by
+  CI, the Docker build arg and the session hook), Node in `.node-version`.
+  Never repeat a version number elsewhere; the Gemfile only asks for Ruby
+  `~> 4.0`, so a patch bump can't fail a frozen `bundle install`.
 - Use the latest stable release of everything (Ruby, gems, Node, base images,
   GitHub Actions) unless there is a stated reason not to.
   Renovate (the hosted app, `renovate.json`) keeps them there: weekly grouped
   PRs as Conventional Commits, minor and patch ones squash-merged once CI is
   green; majors, new Ruby or Node minors and lock file maintenance left for
-  review; a dependency dashboard issue. An older pin needs a `packageRules`
+  review; a dependency dashboard issue. Security updates (GitHub's and
+  OSV's advisories) and Ruby patches, with `ruby/setup-ruby` in the same PR
+  so it knows the new version, open at once rather than on Monday. An older pin needs a `packageRules`
   entry saying why. Not covered: the vendored Swagger UI (by hand) and the
   Debian release in the session-start hook's fallback image.
 - CI runs on GitHub-hosted runners (`ubuntu-latest`) and only tests and
