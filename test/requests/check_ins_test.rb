@@ -52,11 +52,46 @@ describe "check-ins API" do
       _(last_response.status).must_equal 422
       _(json["error"]["fields"].keys).must_equal ["sleep"]
 
-      put_json "/api/check_ins/2026-11-21/week", night
+      put_json "/api/check_ins/2026-11-21/night", night.merge(mood: "fine")
       _(last_response.status).must_equal 422
+      _(json["error"]["message"]).must_include "night has no mood"
+
+      put_json "/api/check_ins/2026-11-21/week", night
+      _(last_response.status).must_equal 400
 
       put_json "/api/check_ins/21-11-2026/night", night
+      _(last_response.status).must_equal 400
+      _(CheckIn.count).must_equal 0
+    end
+
+    it "lets an API token fill only what the user left empty, in the past week" do
+      put_json "/api/check_ins/2026-11-21/night", night
+      token = ApiToken.issue!(user, "Coach agent", scope: "api").last
+      @signed_out = true
+      @fetch_site = nil
+      header "Authorization", "Bearer #{token}"
+
+      put_json "/api/check_ins/2026-11-21/night", sleep: "good"
+      _(last_response.status).must_equal 403
+
+      put_json "/api/check_ins/2026-11-21/day", feeling: "rough"
+      _(last_response.status).must_equal 200
+      _(json["day"]["logged_by"]).must_equal "llm"
+      _(json["agent_name"]).must_equal "Coach agent"
+
+      put_json "/api/check_ins/2026-11-10/day", feeling: "rough"
       _(last_response.status).must_equal 422
+      _(json["error"]["message"]).must_include "from 2026-11-14 to today"
+    end
+
+    it "forgets the agent's mark once the user clears what it wrote" do
+      Current.set(agent_name: "Coach agent") { CheckIn.fill!(Date.new(2026, 11, 21), day: { feeling: "rough" }) }
+      put_json "/api/check_ins/2026-11-21/night", night
+      _(json["agent_name"]).must_equal "Coach agent"
+
+      delete "/api/check_ins/2026-11-21/day"
+      _(json["agent_name"]).must_be_nil
+      _(json["agent_at"]).must_be_nil
     end
   end
 

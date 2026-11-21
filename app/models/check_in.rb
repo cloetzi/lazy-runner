@@ -60,8 +60,10 @@ class CheckIn < Record
   # Answers the check-in, or nil when the day has none left.
   def self.write!(date, group, fields, today: Current.today)
     group = group!(group)
+    date = date!(date)
+    agent_window!(date, today) if Current.agent_name
     db.transaction(savepoint: true) do
-      check_in = on(date!(date))
+      check_in = on(date)
       check_in.today = today
       check_in.write_group(group, fields)
       check_in.keep_or_delete
@@ -79,10 +81,7 @@ class CheckIn < Record
   # "night.sleep".
   def self.fill!(date, night: nil, day: nil, today: Current.today)
     date = date!(date)
-    if date < today - AGENT_DAYS_BACK
-      raise Problem, "a check-in can be logged from #{(today - AGENT_DAYS_BACK).iso8601} to today, #{today.iso8601}"
-    end
-
+    agent_window!(date, today)
     db.transaction(savepoint: true) do
       check_in = on(date)
       check_in.today = today
@@ -101,12 +100,17 @@ class CheckIn < Record
     GROUPS.include?(group) ? group : raise(Problem, "group must be night or day")
   end
 
-  def self.date!(value)
-    DateRange.date(value, :date)
-  rescue DateRange::Invalid => error
-    raise Problem, error.message
+  # A day as YYYY-MM-DD, else DateRange::Invalid (a 400, as a bad date
+  # is everywhere in the API).
+  def self.date!(value) = DateRange.date(value, :date)
+
+  # An agent logs what the user told it about the last week only.
+  def self.agent_window!(date, today)
+    return if date >= today - AGENT_DAYS_BACK
+
+    raise Problem, "a check-in can be logged from #{(today - AGENT_DAYS_BACK).iso8601} to today, #{today.iso8601}"
   end
-  private_class_method :date!
+  private_class_method :date!, :agent_window!
 
   def empty?(group) = FIELDS.fetch(group).values.all? { blank_value?(it) }
 
@@ -119,6 +123,9 @@ class CheckIn < Record
 
     FIELDS.fetch(group).each { |name, column| put(column, normal(column, fields[name])) }
     signed(group, Current.agent_name ? "llm" : "manual")
+    agent_wrote(!empty?(group)) if Current.agent_name
+    # Nothing of an agent's left: it is no longer news.
+    agent_wrote(false) unless Current.agent_name || BY.values.any? { self[it] == "llm" }
   end
 
   def fill_groups(groups)
@@ -143,10 +150,7 @@ class CheckIn < Record
       end
       signed(group, "llm") if before && !empty?(group)
     end
-    if filled.any?
-      self.agent_name = Current.agent_name
-      self.agent_at = Time.now
-    end
+    agent_wrote(true) if filled.any?
     [filled, kept]
   end
 
@@ -201,6 +205,14 @@ class CheckIn < Record
     fields
   end
 
+  # Names the agent and the time for "Since you last looked", or forgets them.
+  def agent_wrote(wrote)
+    return unless wrote || agent_at
+
+    self.agent_name = wrote ? Current.agent_name : nil
+    self.agent_at = wrote ? Time.now : nil
+  end
+
   def signed(group, by)
     self[BY.fetch(group)] = empty?(group) ? nil : by
   end
@@ -208,6 +220,7 @@ class CheckIn < Record
   # Text trimmed (blank is nil), a list without repeats, `ill` false when
   # left out. Anything else is kept as sent, for validation to refuse.
   def normal(column, value)
+    value = Record.boolean(value) if column == :ill && value.is_a?(String)
     if column == :ill && !(value.nil? || value == true || value == false)
       @ill_unread = true
       return false

@@ -37,8 +37,10 @@ module Api
     # @response 403 #/components/responses/Forbidden
     # @response 422 #/components/responses/Invalid
     def update
-      fields = params.slice(*CheckIn::FIELDS.fetch(CheckIn.group!(params[:group])).keys)
-      check_in = CheckIn.write!(params[:date], params[:group], fields)
+      # Every field sent but the path's, `today` and the ones Rage adds, so a
+      # misspelt one is refused rather than read as left out.
+      fields = params.to_h.transform_keys(&:to_sym).except(:date, :group, :today, :controller, :action)
+      check_in = CheckIn.write!(params[:date], group, fields)
       check_in ? render(json: check_in) : head(:no_content)
     end
 
@@ -46,11 +48,19 @@ module Api
     # @description Answers what is left of the day, or 204 when nothing is.
     # @response 200 #/components/schemas/CheckIn
     # @response 204
+    # @response 400 #/components/responses/BadRequest
     # @response 403 #/components/responses/Forbidden
     # @response 422 #/components/responses/Invalid
     def destroy
-      check_in = CheckIn.clear!(params[:date], params[:group])
+      check_in = CheckIn.clear!(params[:date], group)
       check_in ? render(json: check_in) : head(:no_content)
+    end
+
+    private
+
+    def group
+      group = params[:group]
+      CheckIn::GROUPS.include?(group) ? group : raise(BadRequest.param(:group, "must be night or day"))
     end
   end
 end

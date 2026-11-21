@@ -34,7 +34,7 @@ Sequel.migration do
       DateTime :updated_at, null: false
 
       index %i[user_id date], unique: true, name: :index_check_ins_on_user_id_and_date
-      index %i[user_id agent_at], name: :index_check_ins_on_agent_at
+      index %i[user_id agent_at], name: :index_check_ins_on_user_id_and_agent_at
       constraint(:check_ins_sleep) { (sleep =~ nil) | Sequel.expr(sleep: %w[poor ok good]) }
       constraint(:check_ins_drinks) { (drinks =~ nil) | Sequel.expr(drinks: %w[none 1-2 3+]) }
       constraint(:check_ins_feeling) { (feeling =~ nil) | Sequel.expr(feeling: %w[rough ok good]) }

@@ -21,7 +21,8 @@ module TrainerMcp
       Log what the user told you about a day ("had a few beers last night", "knees sore today"), for today or up to
       #{CheckIn::AGENT_DAYS_BACK} days back: `night` is the night that ended on that date's morning, `day` how they
       felt that day. Send only what they said, never a guess. It fills only fields still empty: what the user logged
-      is theirs and stays (the answer lists it under `kept`). The user sees it in the app.
+      is theirs and stays (the answer lists it under `kept`). `ill: false` and empty lists change nothing: leave them
+      out. The user sees it in the app.
     TEXT
     input_schema(
       properties: {
@@ -36,7 +37,11 @@ module TrainerMcp
     def self.answer(date:, night: nil, day: nil)
       raise Problem, "send what the user said in `night` or `day`" if night.blank? && day.blank?
 
-      check_in, filled, kept = CheckIn.fill!(date, night:, day:)
+      check_in, filled, kept = begin
+        CheckIn.fill!(date, night:, day:)
+      rescue DateRange::Invalid => error
+        raise Problem, error.message
+      end
       { check_in: check_in && ListCheckIns.shown(check_in), filled:, kept: }
     end
   end

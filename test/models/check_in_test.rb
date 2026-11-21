@@ -38,7 +38,7 @@ describe CheckIn do
     it "refuses values it doesn't know, and a day after today" do
       _ { CheckIn.write!(today, "night", { sleep: "terrible" }) }.must_raise Sequel::ValidationFailed
       _ { CheckIn.write!(today, "day", { sore_areas: ["elbows"] }) }.must_raise Sequel::ValidationFailed
-      _ { CheckIn.write!(today, "day", { ill: "yes" }) }.must_raise Sequel::ValidationFailed
+      _ { CheckIn.write!(today, "day", { ill: 7 }) }.must_raise Sequel::ValidationFailed
       _ { CheckIn.write!(today, "day", { note: "x" * 501 }) }.must_raise Sequel::ValidationFailed
       _ { CheckIn.write!(today + 1, "night", { sleep: "good" }) }.must_raise Sequel::ValidationFailed
       _ { CheckIn.write!(today, "night", { feeling: "good" }) }.must_raise CheckIn::Problem

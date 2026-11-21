@@ -93,3 +93,20 @@ test("says what an agent changed in a workout, linking to it, and the weights it
   ]);
   assert.equal(group.items[0].showLabel, "Show Workout 1");
 });
+
+test("says which days an agent added to the check-ins, and counts them", () => {
+  const news = {
+    ...empty, latest: at(12),
+    check_ins: [
+      { date: "2026-11-16", agent_name: "Coach agent", agent_at: at(12) },
+      { date: "2026-11-15", agent_name: "Coach agent", agent_at: at(11) },
+    ],
+  };
+  assert.equal(hasNews(news), true);
+  assert.equal(newsCount(news), 2);
+  assert.deepEqual(newsGroups(news, { today }).map((g) => g.items.map((i) => [i.kind, i.text, i.href])), [[
+    ["checkin", "Added to your check-ins, Nov 15 to Nov 16", "/calendar.html#2026-11-16"],
+  ]]);
+  const one = newsGroups({ ...news, check_ins: news.check_ins.slice(0, 1) }, { today });
+  assert.equal(one[0].items[0].text, "Added to your check-in, Nov 16");
+});
