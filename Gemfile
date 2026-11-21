@@ -23,7 +23,7 @@ gem "mcp", "~> 1.8"
 # Roda middleware inside Rage (lib/auth_app.rb), with Argon2 password hashes.
 gem "argon2", "~> 2.3"
 gem "roda", "~> 3.109"
-gem "rodauth", "~> 2.49"
+gem "rodauth", "~> 2.51"
 # Signing in with an OpenID Connect provider (OIDC_ISSUER), next to passwords.
 gem "omniauth_openid_connect", "~> 0.8"
 gem "rodauth-omniauth", "~> 0.6"
