@@ -33,6 +33,7 @@ class CoachBoard
 
   def week_sessions = Session.summarized.where(date: week).in_order.all
   def week_activities = Activity.where(date: week).in_order.all
+  def week_check_ins = CheckIn.where(date: week).in_order.all
   # The routines with days this week, and those days, read against the
   # board's today.
   def week_routines = @week_routines ||= RoutineCalendar.new(week, today: @today)
@@ -65,7 +66,7 @@ class CoachBoard
       notes_before: latest_journal.last,
       week: {
         from: week.begin.iso8601, to: week.end.iso8601,
-        sessions: week_sessions, activities: week_activities, notes: week_notes,
+        sessions: week_sessions, activities: week_activities, check_ins: week_check_ins, notes: week_notes,
         routines: week_routines.routines, routine_days: week_routines.days
       }
     }

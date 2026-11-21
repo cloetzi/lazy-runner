@@ -38,6 +38,7 @@ erDiagram
     activities |o--o{ coach_notes : "noted on"
     sessions |o--o{ coach_notes : "noted on"
     coach_notes |o--o{ coach_notes : "replied to"
+    users ||--o{ check_ins : "checks in"
     users ||--o{ routines : "means to"
     workouts |o--o{ routines : "run by"
     routines ||--o{ routine_days : "changed on"
@@ -244,6 +245,25 @@ erDiagram
         string created_by "manual | llm"
         string agent_name "the agent's API token name, when llm"
     }
+    check_ins {
+        int id PK
+        int user_id FK
+        date date "unique with the user"
+        string sleep "poor | ok | good: the night that ended that morning"
+        string drinks "none | 1-2 | 3+, that night"
+        json night_tags "late_to_bed, ate_late, travelling, woke_a_lot"
+        text night_note
+        string night_by "manual | llm; null while the night is empty"
+        string feeling "rough | ok | good: the day"
+        string stress "low | normal | high"
+        string sore "no | a_bit | a_lot"
+        json sore_areas "knees, calves, achilles, shins, hamstrings, hips, back, other"
+        bool ill
+        text day_note
+        string day_by "manual | llm; null while the day is empty"
+        string agent_name "the last agent that filled a field"
+        datetime agent_at "when it did"
+    }
     routine_days {
         int id PK
         int routine_id FK
@@ -391,6 +411,9 @@ erDiagram
 - **Activities:** `activities`, runs and other sports as they happened, with
   the numbers as they were sent and nothing worked out from them. They sit
   beside sessions on the calendar.
+- **Check-ins:** `check_ins`, what the user says about a day: the night
+  that ended that morning (as Garmin dates sleep and overnight HRV) and how
+  they felt that day, each optional. Context for the coach, nothing derived.
 - **Routines:** `routines`, what the user means to do, tentatively: a sport or
   a workout, weekly or once. Their days are worked out when the calendar is
   read (`RoutineCalendar`); `routine_days` holds only the days the user
@@ -420,6 +443,7 @@ erDiagram
 | Goals | The user, in the app | An agent only proposes one (MCP `propose_goal`): `proposed` until the user accepts or dismisses it; dismissed ones stay so it isn't proposed again. |
 | Coach notes | The user or a coach they name in the app; an agent through MCP (`author_kind: llm`) | The agent changes, deletes and resolves only its own notes (at most 20 new a day); the app doesn't change an agent's note, but deletes it. |
 | Activities | The app, or a script through `POST /api/activities`, or an agent through MCP `log_activities` (`created_by: llm`) | One from elsewhere is matched by `source` + `external_id` and updated in place; the person's `rpe` and `note` are never overwritten by a resend, and one the person logged (`manual`) is left as it is when a token resends it. |
+| Check-ins | The user in the app (`PUT /api/check_ins/:date/night` or `/day`), or an agent through MCP `log_check_in` with what the user told it | The agent only fills fields left empty and never changes or clears what the user logged, today or up to 7 days back. |
 | Routines | The app, or an agent through MCP (`created_by: llm`) | The agent changes and ends only its own, and never confirms, skips or moves a day. Days gone by never change: rescheduling one with past days ends it yesterday and starts a new one. |
 | Plan changes | Written by the `Session` and `Routine` models on every change to the plan, whoever makes it | Kept for good. `llm` for a request or MCP call made with an API token. Only the latest change to an item is taken back, and only into a day not gone by (`POST /api/plan_changes/:id/undo`). |
 | `users`, `invites` | The setup code (the owner), then the owner's invites | Removing a user removes everything of theirs. Invites belong to the install, not a user. |
@@ -467,7 +491,7 @@ erDiagram
   `settings.distance_unit` (km or mi) only changes how they are shown.
 - **Constraints live in the database too:** check constraints on `steps`,
   `blocks`, `workouts`, `programs`, `sessions`, `activities`, `goals`,
-  `coach_notes`, `routines`, `routine_days`, `plan_changes` and `settings`,
+  `coach_notes`, `check_ins`, `routines`, `routine_days`, `plan_changes` and `settings`,
   a partial unique index on `activities (user_id, source, external_id)`,
   partial unique indexes on `sessions` and `activities (routine_id,
   routine_date)`, a

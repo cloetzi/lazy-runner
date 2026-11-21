@@ -834,11 +834,63 @@ components:
       oneOf:
         - $ref: "#/components/schemas/Activity"
         - $ref: "#/components/schemas/ActivityBatch"
+    CheckIn:
+      type: object
+      required: [date, night, day, agent_name, agent_at, updated_at]
+      properties:
+        date: { type: string, format: date }
+        night:
+          type: object
+          nullable: true
+          description: "The night that ended on the morning of `date`, as Garmin dates sleep and overnight HRV; null when nothing was logged."
+          required: [sleep, drinks, tags, note, logged_by]
+          properties:
+            sleep: { type: string, nullable: true, enum: [poor, ok, good] }
+            drinks: { type: string, nullable: true, enum: [none, 1-2, 3+] }
+            tags: { type: array, items: { type: string, enum: [late_to_bed, ate_late, travelling, woke_a_lot] } }
+            note: { type: string, nullable: true }
+            logged_by: { type: string, enum: [manual, llm], description: "Who logged it first: the user, or an agent from what the user told it." }
+        day:
+          type: object
+          nullable: true
+          description: How the user felt that day; null when nothing was logged.
+          required: [feeling, stress, sore, sore_areas, ill, note, logged_by]
+          properties:
+            feeling: { type: string, nullable: true, enum: [rough, ok, good] }
+            stress: { type: string, nullable: true, enum: [low, normal, high] }
+            sore: { type: string, nullable: true, enum: [no, a_bit, a_lot] }
+            sore_areas: { type: array, items: { type: string, enum: [knees, calves, achilles, shins, hamstrings, hips, back, other] } }
+            ill: { type: boolean }
+            note: { type: string, nullable: true }
+            logged_by: { type: string, enum: [manual, llm] }
+        agent_name: { type: string, nullable: true, description: "The last agent that filled a field, by its API token's name." }
+        agent_at: { type: string, format: date-time, nullable: true, description: When it did. }
+        updated_at: { type: string, format: date-time }
+    CheckIns:
+      type: object
+      required: [check_ins]
+      properties:
+        check_ins: { type: array, items: { $ref: "#/components/schemas/CheckIn" } }
+    CheckInWrite:
+      type: object
+      description: "The group named in the path, whole: night takes sleep, drinks, tags and note; day takes feeling, stress, sore, sore_areas, ill and note."
+      properties:
+        today: { type: string, format: date, description: "The sender's own date, which the day may not be after." }
+        sleep: { type: string, nullable: true, enum: [poor, ok, good] }
+        drinks: { type: string, nullable: true, enum: [none, 1-2, 3+] }
+        tags: { type: array, items: { type: string, enum: [late_to_bed, ate_late, travelling, woke_a_lot] } }
+        feeling: { type: string, nullable: true, enum: [rough, ok, good] }
+        stress: { type: string, nullable: true, enum: [low, normal, high] }
+        sore: { type: string, nullable: true, enum: [no, a_bit, a_lot] }
+        sore_areas: { type: array, items: { type: string, enum: [knees, calves, achilles, shins, hamstrings, hips, back, other] } }
+        ill: { type: boolean }
+        note: { type: string, nullable: true, maxLength: 500 }
     Calendar:
       type: object
-      required: [sessions, activities, notes, routines, routine_days, plan_changes, distance_unit]
+      required: [sessions, activities, check_ins, notes, routines, routine_days, plan_changes, distance_unit]
       properties:
         distance_unit: { $ref: "#/components/schemas/DistanceUnit" }
+        check_ins: { type: array, description: "The days in the range with a check-in, by day.", items: { $ref: "#/components/schemas/CheckIn" } }
         sessions:
           type: array
           items:
@@ -893,7 +945,7 @@ components:
         changes: { type: array, items: { $ref: "#/components/schemas/PlanChange" } }
     CoachNews:
       type: object
-      required: [since, latest, changes, notes, goals, activities]
+      required: [since, latest, changes, notes, goals, activities, check_ins]
       properties:
         since: { type: string, format: date-time, description: "When the user last marked it seen, else 14 days ago." }
         latest: { type: string, format: date-time, nullable: true, description: "When the newest of these was made, the time POST /api/coach/seen takes; null when there is nothing." }
@@ -913,6 +965,7 @@ components:
               to: { type: string, format: date, description: The last day of them. }
               sources: { type: array, items: { type: string }, description: Where they came from (their `source`). }
               created_at: { type: string, format: date-time, description: When the newest of them was copied. }
+        check_ins: { type: array, description: "The days an agent filled in something on, from what the user told it, newest first (`agent_at`).", items: { $ref: "#/components/schemas/CheckIn" } }
     PlanUndo:
       type: object
       required: [change, undone]
@@ -1108,12 +1161,13 @@ components:
         notes_before: { type: integer, nullable: true, description: "The `before` for GET /api/coach/notes?journal=true to page on; null when these are all." }
         week:
           type: object
-          required: [from, to, sessions, activities, notes, routines, routine_days]
+          required: [from, to, sessions, activities, check_ins, notes, routines, routine_days]
           properties:
             from: { type: string, format: date, description: Monday. }
             to: { type: string, format: date, description: Sunday. }
             sessions: { type: array, items: { $ref: "#/components/schemas/Session" } }
             activities: { type: array, items: { $ref: "#/components/schemas/Activity" } }
+            check_ins: { type: array, description: The days this week with a check-in., items: { $ref: "#/components/schemas/CheckIn" } }
             notes: { type: array, items: { $ref: "#/components/schemas/CoachNote" } }
             routines: { type: array, description: The routines with days this week., items: { $ref: "#/components/schemas/Routine" } }
             routine_days: { type: array, description: "Their days this week, read on `today`, as GET /api/calendar gives them.", items: { $ref: "#/components/schemas/RoutineDay" } }
