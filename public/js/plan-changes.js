@@ -102,17 +102,13 @@ export function undoLabel(change) {
   return { moved: "Move it back", removed: "Put it back", changed: "Change it back", ended: "Plan it again" }[change.action] ?? null;
 }
 
-// What the button says to a screen reader, which hears it away from its
-// row: "Move Session B back to Sat 21", "Put Session B back on Sat 21".
-export function undoName(change, title = change.title) {
-  const name = title || "it";
-  switch (change.action) {
-    case "moved": return `Move ${name} back to ${dayNear(oldDay(change), change.to_date)}`;
-    case "removed": return `Put ${name} back on ${dayNear(change.from_date, change.from_date)}`;
-    case "changed": return `Change ${name} back`;
-    case "ended": return `Plan ${name} again`;
-    default: return undoLabel(change) ?? "";
-  }
+// What the button acts on, which its name adds to its visible words since a
+// screen reader hears it away from its row: "Session B, to Sat 21" (so
+// "Move it back: Session B, to Sat 21"), "Session B, on Sat 21"; without a
+// title only the day ("to Sat 21"), or null when there is nothing to add.
+export function undoTarget(change, title = change.title) {
+  const day = { moved: () => `to ${dayNear(oldDay(change), change.to_date)}`, removed: () => `on ${dayNear(change.from_date, change.from_date)}` }[change.action]?.();
+  return [title, day].filter(Boolean).join(", ") || null;
 }
 
 // The lines for the sessions an agent moved away from a day or removed
@@ -184,16 +180,18 @@ export function changeHtml(change, { today, unit, weightUnit, tag = "span" } = {
   return html`${authorLine(line, tag)}${change.reason && inLine(tag, "change-reason", change.reason)}`;
 }
 
-// The button that takes `change` back, named for a screen reader by what
-// it does to `title`; empty when it can't be taken back. On a row it
-// carries the change's id in data-undo; in a sheet (`sheet`) it closes the
-// sheet with "undo". `classes` are the button's (quiet on a day's line);
+// The button that takes `change` back, named by its visible words and then
+// what it acts on (`title`), so a voice command of what it shows still
+// finds it: "Move it back: Session B, to Sat 21". Empty when it can't be
+// taken back. On a row it carries the change's id in data-undo; in a sheet
+// (`sheet`) it closes the sheet with "undo". `classes` are the button's (quiet on a day's line);
 // `disabled` while another change is on its way.
 export function undoButton(change, title = change?.title, { sheet = false, classes = "secondary small", disabled = false } = {}) {
   const label = undoLabel(change);
   if (!label) return "";
+  const target = undoTarget(change, title);
   const how = sheet ? html`value="undo"` : html`type="button" data-undo="${change.id}"`;
-  return html`<button class="${classes}" ${how}${disabled && " disabled"} aria-label="${undoName(change, title)}">${label}</button>`;
+  return html`<button class="${classes}" ${how}${disabled && " disabled"}${target && html` aria-label="${label}: ${target}"`}>${label}</button>`;
 }
 
 // Taking a change back, on the device's own day (sent now, not queued: it

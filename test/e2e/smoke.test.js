@@ -463,6 +463,34 @@ test("plans a session on the calendar and moves it to another day", async () => 
   // Its week shows it, under the day it moved to.
   await page.goto(`/calendar.html#${later}`);
   await page.locator(`[data-date="${later}"] [data-open="${planned.id}"]`).waitFor();
+
+  // An agent moves it a day on; Move it back is named by the words it
+  // shows and then what it acts on.
+  const token = await api.post("/api/account/tokens", { headers: { "Sec-Fetch-Site": "same-origin" }, data: { name: "Planner e2e" } });
+  assert.equal(token.status(), 201);
+  const { secret } = await token.json();
+  const agent = await request.newContext({ baseURL: BASE_URL });
+  const dayAfter = await page.evaluate((date) => {
+    const day = new Date(`${date}T12:00:00Z`);
+    day.setUTCDate(day.getUTCDate() + 1);
+    return day.toISOString().slice(0, 10);
+  }, later);
+  const agentMoved = await agent.post("/mcp", {
+    headers: { Accept: "application/json, text/event-stream", Host: new URL(BASE_URL).host, Authorization: `Bearer ${secret}` },
+    data: { jsonrpc: "2.0", id: 1, method: "tools/call", params: { name: "move_session", arguments: { session_id: planned.id, date: dayAfter, reason: "Rest after the long run" } } },
+  });
+  assert.equal(agentMoved.status(), 200);
+  assert.doesNotMatch(await agentMoved.text(), /"isError":true/);
+  await agent.dispose();
+  // A reload, since a new hash alone draws the copy the page already has;
+  // the session's sheet offers to move it back.
+  await page.goto(`/calendar.html#${dayAfter}`);
+  await page.reload();
+  await page.locator(`[data-date="${dayAfter}"] [data-open="${planned.id}"]`).click();
+  await page.locator("#session-sheet").getByRole("button", { name: /^Move it back: Session A, to / }).waitFor();
+  await accessible(page, "the calendar with an agent's move that can be taken back");
+  // Seen, so the Coach test starts with only its own agent's news.
+  assert.equal((await api.post("/api/coach/seen", { headers: { "Sec-Fetch-Site": "same-origin" }, data: {} })).ok(), true);
   assert.deepEqual(errors, []);
   await context.close();
 });
