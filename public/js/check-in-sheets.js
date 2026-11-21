@@ -16,10 +16,11 @@ const titleOf = (group, date, today) => (group === "night" ? nightTitle(date, to
 // Who logged it, when an agent did: "Added by Coach agent from your chat".
 const byAgent = (checkIn, group) => (checkIn?.[group]?.logged_by === "llm" ? `Added by ${agentName(checkIn)} from your chat` : "");
 
-// The row's lines: the summary, then the note, then who added it.
+// The row's lines after its summary: the note, who added it, and whether
+// it is still to be sent.
 function rowLines(checkIn, group) {
   const fields = checkIn?.[group];
-  return [summaryOf(group, fields), fields?.note, byAgent(checkIn, group), fields?.pending && "not synced yet"].filter(Boolean);
+  return [fields?.note, byAgent(checkIn, group), fields?.pending && "not synced yet"].filter(Boolean);
 }
 
 // Today: one card under the day's, a row for each group with Add until it
@@ -27,15 +28,16 @@ function rowLines(checkIn, group) {
 export function todayCheckInHtml(checkIn, date) {
   const row = (group) => {
     const filled = Boolean(checkIn?.[group]);
-    const [first, ...rest] = filled ? rowLines(checkIn, group) : [HINTS[group]];
+    const summary = filled ? summaryOf(group, checkIn[group]) : "";
+    const lines = filled ? rowLines(checkIn, group) : [HINTS[group]];
     return html`
       <li>
         <button class="row checkin-row${filled ? "" : " empty"}" type="button" data-check-in="${group}">
           <span class="checkin-tile" aria-hidden="true">${icon(GLYPHS[group])}</span>
           <span class="row-text">
             <span class="row-title">${titleOf(group, date, date)}</span>
-            ${first ? html`<span class="row-meta${filled ? " checkin-summary" : ""}">${first}</span>` : ""}
-            ${rest.map((line) => html`<span class="row-meta">${line}</span>`)}
+            ${summary ? html`<span class="row-meta checkin-summary">${summary}</span>` : ""}
+            ${lines.map((line) => html`<span class="row-meta">${line}</span>`)}
           </span>
           ${filled ? icon("chevron-right") : html`<span class="checkin-add">${icon("plus")}Add</span>`}
         </button>
@@ -49,15 +51,14 @@ export function todayCheckInHtml(checkIn, date) {
 // A day's row on the Calendar for one group, or nothing when it is empty.
 export function checkInRow(checkIn, group, today) {
   if (!checkIn?.[group]) return "";
-  const [first, ...rest] = rowLines(checkIn, group);
+  const lines = [summaryOf(group, checkIn[group]), ...rowLines(checkIn, group)].filter(Boolean);
   return html`
     <li class="cal-row checkin-cal-row ${group}-row">
       <button class="row" data-check-in="${group}" data-date="${checkIn.date}">
         <span class="checkin-tile" aria-hidden="true">${icon(GLYPHS[group])}</span>
         <span class="row-text">
           <span class="row-title">${titleOf(group, checkIn.date, today)}</span>
-          ${first ? html`<span class="row-meta">${first}</span>` : ""}
-          ${rest.map((line) => html`<span class="row-meta">${line}</span>`)}
+          ${lines.map((line) => html`<span class="row-meta">${line}</span>`)}
         </span>
       </button>
     </li>`;
@@ -158,7 +159,7 @@ export function openCheckInSheet({ group, date, today, checkIn, send }) {
   });
   form.querySelector("[data-clear]")?.addEventListener("click", () => {
     if (!confirm(`Clear ${group === "night" ? "the night" : "how you felt"} on ${longDay(date)}?`)) return;
-    send(clearRequest(date, group));
+    send(clearRequest(date, group, today));
     dialog.close();
   });
   dialog.returnValue = "";

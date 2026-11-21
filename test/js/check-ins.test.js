@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
-  nightSummary, daySummary, nightTitle, dayTitle, groupFields, checkInRequest, clearRequest, withQueuedCheckIns, checkInsByDay, checkInItems,
+  nightSummary, daySummary, nightTitle, dayTitle, groupFields, checkInRequest, clearRequest, withQueuedCheckIns, checkInsByDay,
 } from "../../public/js/check-ins.js";
 
 const today = "2026-11-21"; // a Saturday
@@ -33,8 +33,8 @@ test("sends only what was said, and clears a group left empty", () => {
 
   assert.deepEqual(checkInRequest(today, "night", { sleep: "poor", tags: [] }, today),
     { method: "PUT", path: "/api/check_ins/2026-11-21/night", body: { sleep: "poor", today } });
-  assert.deepEqual(checkInRequest(today, "day", { ill: false, sore_areas: [], note: "" }, today), clearRequest(today, "day"));
-  assert.deepEqual(clearRequest(today, "day"), { method: "DELETE", path: "/api/check_ins/2026-11-21/day" });
+  assert.deepEqual(checkInRequest(today, "day", { ill: false, sore_areas: [], note: "" }, today), clearRequest(today, "day", today));
+  assert.deepEqual(clearRequest(today, "day", today), { method: "DELETE", path: "/api/check_ins/2026-11-21/day?today=2026-11-21" });
 });
 
 test("lays the queued check-ins over the server's", () => {
@@ -44,7 +44,7 @@ test("lays the queued check-ins over the server's", () => {
   ];
   const queue = [
     checkInRequest(today, "night", { sleep: "poor", drinks: "3+" }, today),
-    clearRequest("2026-11-19", "day"),
+    clearRequest("2026-11-19", "day", today),
     checkInRequest("2026-11-20", "day", { stress: "high" }, today),
     { method: "POST", path: "/api/activities", body: { client_ref: "a" } },
   ];
@@ -58,10 +58,7 @@ test("lays the queued check-ins over the server's", () => {
   assert.equal(server[1].day, null, "the server's copy is left as it was");
 });
 
-test("finds a day's check-in, and says what is on it in a word or two", () => {
+test("finds a day's check-in", () => {
   const list = [{ date: today, night: { sleep: "ok" }, day: { feeling: "ok" } }];
   assert.equal(checkInsByDay(list)[today], list[0]);
-  assert.deepEqual(checkInItems(list[0]), ["night", "how you felt"]);
-  assert.deepEqual(checkInItems({ night: null, day: { feeling: "ok" } }), ["how you felt"]);
-  assert.deepEqual(checkInItems(undefined), []);
 });

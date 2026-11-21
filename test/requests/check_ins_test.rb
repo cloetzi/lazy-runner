@@ -108,6 +108,15 @@ describe "check-ins API" do
       delete "/api/check_ins/2026-11-21/day"
       _(last_response.status).must_equal 204
     end
+
+    it "takes the device's today, as a write does" do
+      put_json "/api/check_ins/2026-11-22/night", night.merge(today: "2026-11-22")
+      put_json "/api/check_ins/2026-11-22/day", stress: "high", today: "2026-11-22"
+
+      delete "/api/check_ins/2026-11-22/day?today=2026-11-22"
+      _(last_response.status).must_equal 200
+      _(json["night"]["sleep"]).must_equal "poor"
+    end
   end
 
   describe "GET /api/check_ins" do

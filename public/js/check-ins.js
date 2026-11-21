@@ -83,13 +83,15 @@ const path = (date, group) => `/api/check_ins/${date}/${group}`;
 // the device's, which the date may not be after.
 export function checkInRequest(date, group, values, today) {
   const fields = groupFields(group, values);
-  if (Object.keys(fields).length === 0) return clearRequest(date, group);
+  if (Object.keys(fields).length === 0) return clearRequest(date, group, today);
   return { method: "PUT", path: path(date, group), body: { ...fields, today } };
 }
 
-export const clearRequest = (date, group) => ({ method: "DELETE", path: path(date, group) });
+// Clears a group. `today` goes along as on a write: the other group, if it
+// has anything, is saved again and checked against it.
+export const clearRequest = (date, group, today) => ({ method: "DELETE", path: `${path(date, group)}?today=${today}` });
 
-const PATH = /^\/api\/check_ins\/(\d{4}-\d{2}-\d{2})\/(night|day)$/;
+const PATH = /^\/api\/check_ins\/(\d{4}-\d{2}-\d{2})\/(night|day)(?:\?.*)?$/;
 
 // The check-ins as they will be once the queued requests are sent: a group
 // written whole or cleared, and a day with neither left out. A group not
@@ -114,8 +116,3 @@ export function withQueuedCheckIns(checkIns, queue) {
 
 // The check-ins by their date.
 export const checkInsByDay = (checkIns) => Object.fromEntries(checkIns.map((c) => [c.date, c]));
-
-// What a folded day or a month cell says of them: "night", "how you felt".
-export function checkInItems(checkIn) {
-  return [checkIn?.night && "night", checkIn?.day && "how you felt"].filter(Boolean);
-}

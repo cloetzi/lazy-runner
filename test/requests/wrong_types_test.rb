@@ -155,7 +155,7 @@ describe "wrongly typed parameters" do
         next if names.empty?
 
         concrete = path.sub("/api/sessions/{id}", "/api/sessions/#{planned.id}").sub("/api/routines/{id}", "/api/routines/#{routine.id}")
-          .sub("{date}", "2026-11-14")
+          .sub("{date}", "2026-11-14").sub("{group}", "night")
         names.each do |name|
           ["#{name}[a]=b", "#{name}[]=1", "#{name}=%FF%FE"].each do |query|
             send(method, "#{concrete}?#{query}")

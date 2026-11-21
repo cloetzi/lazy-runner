@@ -10,7 +10,7 @@ import {
 } from "./calendar.js";
 import { openPlanSheet, openSessionSheet, openAddSheet, openLogActivitySheet, activityRow, editActivity, noteRow, weekSummaryHtml } from "./calendar-sheets.js";
 import { openNoteSheet, aboutChoices } from "./coach-sheets.js";
-import { withQueuedCheckIns, checkInsByDay, checkInItems } from "./check-ins.js";
+import { withQueuedCheckIns, checkInsByDay } from "./check-ins.js";
 import { checkInRow, openCheckInSheet } from "./check-in-sheets.js";
 import { notesByDay, notesAbout, knownCoaches, noteRequest, changeNoteRequest, deleteNoteRequest, plannedBy, agentName } from "./coach.js";
 import {
@@ -518,7 +518,7 @@ async function plan(date) {
 // to today, or a note on any day.
 function add(date) {
   openAddSheet({
-    date,
+    date, today: state.today,
     onWorkout: date >= state.today ? () => plan(date) : null,
     onOnce: date >= state.today ? () => planRoutine({ date, once: true }) : null,
     onRoutine: date >= state.today ? () => planRoutine({ date }) : null,

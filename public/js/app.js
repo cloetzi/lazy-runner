@@ -246,8 +246,9 @@ async function loadSetupDay() {
     // Read again since, or a workout made meanwhile brought the card back.
     if (ask !== state.setupAsk || (state.today && !state.today.setup) || localToday() !== date) return;
     state.distanceUnit = adoptServerDistanceUnit(storage, data.distance_unit, { queued: outbox.queued(), stale });
-    state.today = { date, setup: true, activities: data.activities, routines: data.routines, routine_days: data.routine_days };
+    state.today = { date, setup: true, activities: data.activities, routines: data.routines, routine_days: data.routine_days, check_in: data.check_ins?.[0] ?? null };
     renderActivities();
+    renderCheckIn();
     if (!stale) askHowHard();
   } catch {
     // The setup card alone.
@@ -499,6 +500,8 @@ function openTodayCheckIn(group) {
       outbox.enqueue(request);
       renderCheckIn();
       if (await sync()) reloadToday();
+      // A change the server refused has left the outbox: show the day without it.
+      else renderCheckIn();
     },
   });
 }

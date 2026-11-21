@@ -46,6 +46,7 @@ module Api
 
     # Clear a day's night or day check-in.
     # @description Answers what is left of the day, or 204 when nothing is.
+    # @param today? {Date} The sender's own date, which what is left is checked against, as on a write.
     # @response 200 #/components/schemas/CheckIn
     # @response 204
     # @response 400 #/components/responses/BadRequest
