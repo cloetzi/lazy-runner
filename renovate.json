@@ -26,6 +26,8 @@
   "timezone": "UTC",
   "schedule": ["before 6am on monday"],
   "minimumReleaseAge": "3 days",
+  "prHourlyLimit": 0,
+  "osvVulnerabilityAlerts": true,
   "labels": ["dependencies"],
   "automergeType": "pr",
   "automergeStrategy": "squash",
@@ -64,13 +66,6 @@
       "semanticCommitType": "chore"
     },
     {
-      "description": ".ruby-version and Gemfile.lock's RUBY VERSION in one PR.",
-      "matchManagers": ["ruby-version", "custom.regex"],
-      "matchDepNames": ["ruby"],
-      "groupName": "Ruby",
-      "semanticCommitType": "fix"
-    },
-    {
       "description": "The vendored Swagger UI release is updated by hand, all its files together.",
       "matchFileNames": ["lib/api_reference/swagger-ui/**"],
       "enabled": false
@@ -85,6 +80,24 @@
       "matchManagers": ["github-actions"],
       "groupName": "GitHub Actions",
       "semanticCommitType": "ci"
+    },
+    {
+      "description": [
+        ".ruby-version, Gemfile.lock's RUBY VERSION and ruby/setup-ruby in one PR, so CI",
+        "gets a setup-ruby that knows the new Ruby. Ruby patches are often security fixes,",
+        "so they open at any time, without the release age; after the Actions group above."
+      ],
+      "matchDepNames": ["ruby", "ruby/setup-ruby"],
+      "matchManagers": ["ruby-version", "custom.regex", "github-actions"],
+      "groupName": "Ruby",
+      "schedule": ["at any time"],
+      "minimumReleaseAge": null
+    },
+    {
+      "description": "Ruby ships in the image, so its bump is fix(deps) and gets released; setup-ruby alone stays ci(deps).",
+      "matchManagers": ["ruby-version", "custom.regex"],
+      "matchDepNames": ["ruby"],
+      "semanticCommitType": "fix"
     },
     {
       "description": "A new Ruby or Node minor or major is its own PR to review; a patch merges itself.",

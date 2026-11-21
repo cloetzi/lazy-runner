@@ -2,7 +2,10 @@
 
 source "https://rubygems.org"
 
-ruby file: ".ruby-version"
+# .ruby-version pins the exact Ruby for CI, the image and the session hook.
+# An exact pin here would fail a frozen bundle install whenever the running
+# Ruby and Gemfile.lock's RUBY VERSION are a patch apart.
+ruby "~> 4.0"
 
 gem "rack"
 gem "rage-rb", "~> 1.28"
