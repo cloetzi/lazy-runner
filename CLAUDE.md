@@ -157,7 +157,7 @@ included; no Docker per test run. How:
   example", `#examples`, `example-list.js`), and gear the user doesn't own is
   marked wherever gear is named (`gear.js`). Settings live on the Settings page: lb or kg on the server
   (`/api/settings`, sent through the outbox, with a copy in localStorage),
-  and km or mi the same way; beeps, vibration, lead-in and the RPE question
+  and km or mi the same way; beeps, When muted (Safari's audio session, `beeper.js`), vibration, lead-in and the RPE question
   on the device, read and written by `preferences.js`.
   The Calendar page (`calendar-page.js`, sheets in `calendar-sheets.js`, shared
   with Today) draws the server's sessions and activities (`/api/calendar`)

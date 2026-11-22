@@ -42,10 +42,10 @@ const press = (group, value) => {
   }
 };
 
-function render() {
+// settings: what was just chosen, when blocked storage can't keep it.
+function render(settings = readSettings(storage)) {
   press(units, preferredUnit(storage));
   press(distanceUnits, preferredDistanceUnit(storage));
-  const settings = readSettings(storage);
   for (const group of document.querySelectorAll("[data-setting]")) press(group, settings[group.dataset.setting]);
 }
 
@@ -98,9 +98,9 @@ for (const group of document.querySelectorAll("[data-setting]")) {
   group.onclick = (event) => {
     const value = event.target.closest("[data-value]")?.dataset.value;
     if (value == null) return;
-    writeSetting(storage, group.dataset.setting, JSON.parse(value));
-    if (group.dataset.setting === "playWhenMuted") applyAudioSession();
-    render();
+    const settings = writeSetting(storage, group.dataset.setting, JSON.parse(value));
+    applyAudioSession(settings);
+    render(settings);
   };
 }
 
