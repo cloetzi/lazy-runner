@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.10.0](https://github.com/cloetzi/lazy-runner/compare/v0.9.1...v0.10.0) (2026-11-21)
+
+
+### Features
+
+* **check-ins:** check in on Today, the Calendar and Coach ([#44](https://github.com/cloetzi/lazy-runner/issues/44)) ([37a4cad](https://github.com/cloetzi/lazy-runner/commit/37a4cad8d3999dc9b59728c6b0c8329ab21df384))
+* **check-ins:** log last night and how the day felt, for the coach ([#41](https://github.com/cloetzi/lazy-runner/issues/41)) ([a19b2b7](https://github.com/cloetzi/lazy-runner/commit/a19b2b7f5cbecd442c517c3ce070346b5e3468fb))
+
+
+### Bug Fixes
+
+* **a11y:** name the undo button by the words it shows ([#42](https://github.com/cloetzi/lazy-runner/issues/42)) ([34c93d4](https://github.com/cloetzi/lazy-runner/commit/34c93d46cc1c8afa08cb1baa87fe66d61b4cbc11)), closes [#28](https://github.com/cloetzi/lazy-runner/issues/28)
+
 ## [0.9.1](https://github.com/cloetzi/lazy-runner/compare/v0.9.0...v0.9.1) (2026-11-21)
 
 
