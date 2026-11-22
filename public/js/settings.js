@@ -7,7 +7,7 @@ import { storedAccount, pageAccount, signOut, signOutHere, deviceName, startOidc
 import { getJson, paths, send, errorMessage } from "./api.js";
 import { html, busy } from "./html.js";
 import { mountNav } from "./nav.js";
-import { testSound } from "./beeper.js";
+import { testSound, applyAudioSession } from "./beeper.js";
 import { installHint } from "./pwa.js";
 
 // The Settings page, in five sections, each with its own address
@@ -33,6 +33,8 @@ leadIn.innerHTML = html`${LEAD_IN_CHOICES.map((seconds) => html`<button data-val
 // A device that can't vibrate (an iPad, an iPhone) has nothing to choose:
 // the row is left out rather than shown with a note.
 if (!("vibrate" in navigator)) document.getElementById("vibration").hidden = true;
+// Only Safari lets a page choose whether its audio sounds when muted.
+document.getElementById("when-muted").hidden = !("audioSession" in navigator);
 
 const press = (group, value) => {
   for (const button of group.querySelectorAll("[data-value]")) {
@@ -40,10 +42,10 @@ const press = (group, value) => {
   }
 };
 
-function render() {
+// settings: what was just chosen, when blocked storage can't keep it.
+function render(settings = readSettings(storage)) {
   press(units, preferredUnit(storage));
   press(distanceUnits, preferredDistanceUnit(storage));
-  const settings = readSettings(storage);
   for (const group of document.querySelectorAll("[data-setting]")) press(group, settings[group.dataset.setting]);
 }
 
@@ -96,8 +98,9 @@ for (const group of document.querySelectorAll("[data-setting]")) {
   group.onclick = (event) => {
     const value = event.target.closest("[data-value]")?.dataset.value;
     if (value == null) return;
-    writeSetting(storage, group.dataset.setting, JSON.parse(value));
-    render();
+    const settings = writeSetting(storage, group.dataset.setting, JSON.parse(value));
+    applyAudioSession(settings);
+    render(settings);
   };
 }
 

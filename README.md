@@ -81,8 +81,9 @@ returns. Until 1.0 a release can break things; the changelog says what.
   - Exercise name, 2-4 cue lines, target (reps, weight, tempo or countdown),
     block and set progress, and what comes next.
   - Timed steps count down with beeps at start, 3-2-1 and end. Rep-based steps
-    have a Done button and an optional rest timer. On an iPad or iPhone, beeps
-    play alongside music and follow the mute setting; they come back after a
+    have a Done button and an optional rest timer. On an iPad or iPhone, with When
+    muted set to Play (the default) beeps sound in silent mode but stop your
+    music; set to Silent they mix with music and follow mute. They come back after a
     call or an app switch, and Test sound in Settings tries them.
   - Per-side steps run both sides automatically with a switch cue (a rising beep and "Switch sides" on screen).
   - Pause (rests too), previous (skips back over rests), skip, a weight/reps stepper, and swap: trade an

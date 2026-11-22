@@ -4,35 +4,73 @@ import { readSettings, vibrationPattern } from "./preferences.js";
 // Settings page. Browsers only allow audio after a user gesture, so call
 // unlock() from the Start button's click handler.
 //
-// The beeps mix with whatever else is playing (music, a podcast) and follow
-// the device's mute setting and volume: where the browser lets a page say so
-// (Safari's navigator.audioSession), the session is "ambient", the kind
-// that neither stops other audio nor sounds when muted. A call, Siri or a
-// switch to another app suspends the audio (Safari calls it
-// "interrupted"); it is resumed when the page is back, and failing that on
-// the next tap, which every browser counts as a gesture.
+// The beeps follow the device's volume. Whether they sound on a muted iPad
+// or iPhone is the "When muted" setting: Safari keeps Web Audio silent in
+// silent mode unless the page's audio session (navigator.audioSession) is
+// "playback", which in turn stops other audio (music, a podcast) for as long
+// as the page's audio runs, the whole workout. With the setting off, or the
+// beeps off, the session is "ambient": mixed with other audio, and silent
+// when muted. A call, Siri or a switch to another
+// app suspends the audio (Safari calls it "interrupted"); it is resumed
+// when the page is back, and failing that on the next tap, which every
+// browser counts as a gesture.
 let context = null;
 // A beep was asked for before any audio was unlocked (a session restored
 // after a reload, say): the next tap anywhere unlocks it.
 let wanted = false;
 
+// The audio session type for the Beeps and "When muted" settings: no
+// beeps, nothing to stop the music for.
+export function audioSessionType({ sound, playWhenMuted }) {
+  return sound && playWhenMuted ? "playback" : "ambient";
+}
+
+// Sets the page's audio session from the settings, where the browser has
+// one (Safari 17 and later). Called on every unlock and when the page is
+// shown again, and by Settings with what was just chosen (which blocked
+// storage may not keep).
+export function applyAudioSession(settings = readSettings(storage())) {
+  const session = globalThis.navigator?.audioSession;
+  if (!session) return;
+  const type = audioSessionType(settings);
+  try {
+    if (session.type !== type) session.type = type;
+  } catch {
+    // An older session API: the browser's default stands.
+  }
+}
+
 export function unlock() {
   if (!context) {
     const Context = globalThis.AudioContext;
     if (!Context) return;
-    if (navigator.audioSession) {
-      try {
-        navigator.audioSession.type = "ambient";
-      } catch {
-        // An older session API: the browser's default stands.
-      }
+    try {
+      context = new Context();
+    } catch {
+      wanted = false; // Too many contexts, or audio switched off: no beeps, and no retry on every tap.
+      return;
     }
-    context = new Context();
     // Stopped while the page shows (Siri over it, say): started again. A
     // hidden page is left stopped; coming back resumes it.
     context.addEventListener("statechange", resume);
   }
+  applyAudioSession();
   resume();
+  prime();
+}
+
+// Safari starts a context's output only once it has played something
+// inside a gesture: one silent sample, played straight away.
+function prime() {
+  if (!context || context.state === "closed") return;
+  try {
+    const source = context.createBufferSource();
+    source.buffer = context.createBuffer(1, 1, context.sampleRate);
+    source.connect(context.destination);
+    source.start(0);
+  } catch {
+    // Nothing to prime with: the beeps still try.
+  }
 }
 
 // Whether the audio has stopped and should be started again.
@@ -48,11 +86,19 @@ function resume() {
 // browser may only allow a resume then.
 // (Not in node, where the tests import this for needsResume.)
 if (globalThis.document) {
+  // Shown again, perhaps after When muted changed on Settings.
+  const shown = () => {
+    applyAudioSession();
+    resume();
+  };
   document.addEventListener("visibilitychange", () => {
-    if (document.visibilityState === "visible") resume();
+    if (document.visibilityState === "visible") shown();
   });
-  window.addEventListener("pageshow", resume);
-  const gesture = () => (wanted && !context ? unlock() : resume());
+  window.addEventListener("pageshow", shown);
+  const gesture = () => {
+    if (wanted && !context) unlock();
+    else if (context && needsResume(context.state)) unlock();
+  };
   for (const type of ["pointerdown", "keydown"]) document.addEventListener(type, gesture, { capture: true, passive: true });
 }
 

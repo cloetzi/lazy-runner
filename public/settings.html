@@ -94,11 +94,22 @@
                 <button data-value="false">Off</button>
               </div>
             </div>
+            <!-- Only where the browser has an audio session (Safari): elsewhere mute is the system's. -->
+            <div class="setting-row" id="when-muted" hidden>
+              <div class="row-text">
+                <span class="row-title" id="when-muted-label">When muted</span>
+                <span class="setting-note">Play sounds the beeps in silent mode, but stops your music for the workout. Silent mixes them with your music, but a muted iPad or iPhone stays quiet.</span>
+              </div>
+              <div class="segmented" role="group" aria-labelledby="when-muted-label" data-setting="playWhenMuted">
+                <button data-value="true">Play</button>
+                <button data-value="false">Silent</button>
+              </div>
+            </div>
             <!-- Test sound keeps its hint, as a row of its own under Beeps. -->
             <div class="setting-row" id="test-sound-row">
               <div class="row-text">
-                <span class="row-title">Volume and mute</span>
-                <span class="setting-note">Beeps play alongside your music, at the device's volume. A muted iPad or iPhone stays silent.</span>
+                <span class="row-title">Volume</span>
+                <span class="setting-note">Beeps play at the device's volume.</span>
                 <span class="setting-note" id="test-sound-note" role="status" hidden>This browser didn't play sound. Tap again, or check that it may play audio for this site.</span>
               </div>
               <button class="secondary small" type="button" id="test-sound">Test sound</button>

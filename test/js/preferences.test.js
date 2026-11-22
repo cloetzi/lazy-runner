@@ -16,7 +16,7 @@ test("reads the defaults from empty, broken or blocked storage", () => {
 
 test("keeps each valid setting and replaces only the bad ones", () => {
   const storage = memoryStorage({ settings: JSON.stringify({ sound: false, vibration: "yes", leadIn: 7, askRpe: "no" }) });
-  assert.deepEqual(readSettings(storage), { sound: false, vibration: true, leadIn: 5, askRpe: true, askCheckIn: true });
+  assert.deepEqual(readSettings(storage), { sound: false, playWhenMuted: true, vibration: true, leadIn: 5, askRpe: true, askCheckIn: true });
 });
 
 test("saves one setting at a time and reads it back", () => {
@@ -24,7 +24,7 @@ test("saves one setting at a time and reads it back", () => {
   writeSetting(storage, "leadIn", 10);
   writeSetting(storage, "sound", false);
   writeSetting(storage, "askRpe", false);
-  assert.deepEqual(readSettings(storage), { sound: false, vibration: true, leadIn: 10, askRpe: false, askCheckIn: true });
+  assert.deepEqual(readSettings(storage), { sound: false, playWhenMuted: true, vibration: true, leadIn: 10, askRpe: false, askCheckIn: true });
 });
 
 test("refuses unknown settings and values it would not read back", () => {
