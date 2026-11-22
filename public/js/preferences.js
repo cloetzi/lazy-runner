@@ -5,12 +5,15 @@
 export const LEAD_IN_CHOICES = [3, 5, 10];
 // askRpe: Today asks how hard an activity sent from elsewhere was.
 // askCheckIn: Today shows the check-in card (last night, how I feel).
-export const DEFAULTS = { sound: true, vibration: true, leadIn: 5, askRpe: true, askCheckIn: true };
+// playWhenMuted: the beeps sound on a muted iPad or iPhone, pausing other
+// audio there (see audioSessionType in beeper.js).
+export const DEFAULTS = { sound: true, playWhenMuted: true, vibration: true, leadIn: 5, askRpe: true, askCheckIn: true };
 const KEY = "settings";
 
 // Unknown or broken values fall back to the default, one setting at a time.
 const VALID = {
   sound: (value) => typeof value === "boolean",
+  playWhenMuted: (value) => typeof value === "boolean",
   vibration: (value) => typeof value === "boolean",
   leadIn: (value) => LEAD_IN_CHOICES.includes(value),
   askRpe: (value) => typeof value === "boolean",
