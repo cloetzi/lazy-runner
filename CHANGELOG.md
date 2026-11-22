@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.10.1](https://github.com/cloetzi/lazy-runner/compare/v0.10.0...v0.10.1) (2026-11-22)
+
+
+### Bug Fixes
+
+* **player:** play the beeps on a muted iPad, with a When muted setting ([#46](https://github.com/cloetzi/lazy-runner/issues/46)) ([8b848f0](https://github.com/cloetzi/lazy-runner/commit/8b848f0b26e7c31659f845074c8e6b7e94a9a1e1))
+
 ## [0.10.0](https://github.com/cloetzi/lazy-runner/compare/v0.9.1...v0.10.0) (2026-11-21)
 
 
