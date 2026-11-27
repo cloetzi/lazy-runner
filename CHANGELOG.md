@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.10.2](https://github.com/cloetzi/lazy-runner/compare/v0.10.1...v0.10.2) (2026-11-27)
+
+
+### Bug Fixes
+
+* **deps:** update gems ([#53](https://github.com/cloetzi/lazy-runner/issues/53)) ([20b4335](https://github.com/cloetzi/lazy-runner/commit/20b43351a40503a4f6738628d7c69a4c64db2825))
+* **deps:** update rack-protection to 4.2.2 for GHSA-vvhm-j6m8-64cw ([#49](https://github.com/cloetzi/lazy-runner/issues/49)) ([4385927](https://github.com/cloetzi/lazy-runner/commit/438592751f0e9cd75bbc22ac9df18bfa2f0a1cca))
+* **deps:** update ruby/setup-ruby action to v1.344.0 ([#55](https://github.com/cloetzi/lazy-runner/issues/55)) ([e0dac96](https://github.com/cloetzi/lazy-runner/commit/e0dac96df70ba35b2df03262a74c706c4c989345))
+* **deps:** update ruby/setup-ruby action to v1.345.0 ([#56](https://github.com/cloetzi/lazy-runner/issues/56)) ([d0a7462](https://github.com/cloetzi/lazy-runner/commit/d0a7462ef65d8f80f4c8c72d4dee9341433863d2))
+
 ## [0.10.1](https://github.com/cloetzi/lazy-runner/compare/v0.10.0...v0.10.1) (2026-11-22)
 
 
